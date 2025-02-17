@@ -1,0 +1,411 @@
+/* =========================
+   General Page Styling 
+========================= */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f3f6fb;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+/* =========================
+   Header Section 
+========================= */
+.accounts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.accounts-header h1 {
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Add Account Button */
+.add-account-btn {
+    padding: 10px 18px;
+    font-size: 14px;
+    border: none;
+    font-weight: bold;
+    color: white;
+    background-color: #4CAF50;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0px 2px 3px rgba(0, 0, 0, 0.1);
+}
+
+.add-account-btn:hover {
+    background-color: #45A049;
+}
+
+/* =========================
+   Table Section 
+========================= */
+.accounts-table-container {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.accounts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.accounts-table th {
+    background-color: black;
+    color: white;
+    font-weight: bold;
+    padding: 12px;
+    text-align: center;
+    border-bottom: 2px solid #ddd;
+}
+
+.accounts-table td {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.accounts-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* No Accounts Text */
+.no-accounts {
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    color: #777;
+    padding: 20px;
+}
+
+/* =========================
+   Action Buttons 
+========================= */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.edit-btn, .delete-btn {
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: none;
+}
+
+/* Edit Button */
+.edit-btn {
+    background-color: #2980b9;
+    color: white;
+}
+
+.edit-btn:hover {
+    background-color: #2471a3;
+}
+
+/* Delete Button */
+.delete-btn {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.delete-btn:hover {
+    background-color: #c0392b;
+}
+
+.role-label {
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.role-admin {
+    background-color: #2c3e50;
+    color: white;
+}
+
+.role-secretary {
+    background-color: #3498db;
+    color: white;
+}
+
+.role-client {
+    background-color: #27ae60;
+    color: white;
+}
+
+/* =========================
+   Add Account Overlay 
+========================= */
+.overlay {
+    display: none;
+    position: fixed;
+    top: 0; 
+    left: 0;
+    width: 100vw; 
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7); 
+    z-index: 1000;
+    backdrop-filter: blur(3px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.overlay-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    width: 350px;
+    text-align: center;
+    animation: modalFadeIn 0.3s ease-in-out;
+}
+
+.overlay-content h2 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+    text-align: center;
+}
+
+.account-form label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #34495e;
+}
+
+.account-form input, 
+.account-form select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.form-buttons {
+    display: flex;
+    justify-content: space-between;
+}
+
+.save-btn, .cancel-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.save-btn {
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+}
+
+.cancel-btn {
+    background-color: #3a3a3a;
+    color: white;
+    border: none;
+}
+
+.save-btn:hover {
+    background-color: #27ae60;
+}
+
+.cancel-btn:hover {
+    background-color: #000000;
+}
+
+/* Overlay Fade-In Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* =========================
+   Delete Confirmation Overlay 
+========================= */
+.delete-overlay {
+    display: none;
+    position: fixed;
+    top: 0; 
+    left: 0;
+    width: 100vw; 
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1100;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease-in-out;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.delete-overlay-content {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    width: 350px;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    animation: modalFadeIn 0.3s ease-in-out;
+}
+
+.delete-overlay-content h2 {
+    font-size: 20px;
+    font-weight: bold;
+    color: #e74c3c;
+    margin-bottom: 10px;
+}
+
+.delete-overlay-content p {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 20px;
+}
+
+.delete-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.confirm-delete-btn, .cancel-delete-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 20px;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.3s;
+}
+
+/* Confirm Delete Button */
+.confirm-delete-btn {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.confirm-delete-btn:hover {
+    background-color: #c0392b;
+}
+
+/* Cancel Button */
+.cancel-delete-btn {
+    background-color: #7f8c8d;
+    color: white;
+}
+
+.cancel-delete-btn:hover {
+    background-color: #636e72;
+}
+
+/* Modal Fade-In Animation */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#deleteOverlay {
+    display: none;
+}
+
+#deleteOverlay.active {
+    display: flex;
+}
+
+/* =========================
+   Delete Confirmation Overlay Buttons 
+========================= */
+.confirm-btn, .cancel-delete-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 20px;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.3s;
+}
+/* =========================
+   Confirm and Cancel Buttons 
+========================= */
+.confirm-btn {
+    background-color: #d9534f;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.confirm-btn:hover {
+    background-color: #c9302c;
+}
+
+.cancel-btn {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.cancel-btn:hover {
+    background-color: #5a6268;
+}
+
+
+
+.modal-buttons {
+    margin-top: 16px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.error-message {
+    color: red;
+    font-size: 14px;
+    margin-bottom: 10px;
+    text-align: center;
+}

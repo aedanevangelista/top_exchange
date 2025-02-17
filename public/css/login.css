@@ -1,0 +1,81 @@
+.formHeading {
+    margin-bottom: 40px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    
+}
+
+.h1{
+font-size: 80px;
+font-weight: 800;
+}
+
+.h2{
+    font-size: 64px;
+    font-weight: 800;
+}
+
+.h3{
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.h4{
+    font-size: 16px;
+    font-weight: 800;
+}
+
+
+body {
+    font-family: 'Tahoma';
+    background-color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    width: 440px;
+    text-align: start;
+}
+
+input, button {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+button {
+    background: #000000;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #333333;
+}
+
+label {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.excerptOne {
+    font-size: 16px;
+    color: #646464;
+}
