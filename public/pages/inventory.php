@@ -1,6 +1,8 @@
 <?php
 session_start();
 include "../../backend/db_connection.php";
+include "../../backend/check_role.php";
+checkRole(['admin', 'secretary']); // Only admins and secretaries can access
 
 // Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {

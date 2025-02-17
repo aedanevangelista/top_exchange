@@ -1,5 +1,7 @@
 <?php
 session_start();
+include "../../backend/check_role.php";
+checkRole(['admin', 'secretary', 'accountant']); // Allow access to all roles
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -7,7 +9,6 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -28,65 +29,65 @@ if (!isset($_SESSION['user_id'])) {
 
         <!-- Main content -->
         <div class="main-content">
-        <div class="overview-container">
-            <h2>Dashboard</h2>
-            <button class="input-po-btn">Input P.O</button>
-        </div>
+            <div class="overview-container">
+                <h2>Dashboard</h2>
+                <button class="input-po-btn">Input P.O</button>
+            </div>
 
-        <div class="top-section">
-            <!-- CLIENT ORDERS -->
-            <div class="client-orders-container">
-                <h3>CLIENT ORDERS</h3>
-                <select id="client-orders-filter">
-                    <option value="month">Monthly</option>
-                    <option value="year">Yearly</option>
+            <div class="top-section">
+                <!-- CLIENT ORDERS -->
+                <div class="client-orders-container">
+                    <h3>CLIENT ORDERS</h3>
+                    <select id="client-orders-filter">
+                        <option value="month">Monthly</option>
+                        <option value="year">Yearly</option>
+                    </select>
+                    <div class="client-orders">
+                        <canvas id="clientOrdersChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- PACKS SOLD SINCE -->
+                <div class="packs-sold-container">
+                    <!-- Header with Year Dropdown -->
+                    <div class="packs-sold-header">
+                        <span>Packs sold since</span>
+                        <select id="packs-sold-year" class="packs-sold-dropdown">
+                            <option value="2025">2025</option>
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                        </select>
+                    </div>
+
+                    <!-- Packs Count -->
+                    <div class="packs-sold-count" id="packs-sold-count">4000 Packs</div>
+
+                    <!-- Comparison with Previous Year Dropdown -->
+                    <div class="packs-comparison-row">
+                        <span id="packs-sold-percentage" class="packs-comparison">+10% since</span>
+                        <select id="packs-sold-compare-year" class="packs-sold-dropdown">
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                        </select>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- SALES PER DEPARTMENT -->
+            <div class="sales-department-container">
+                <h3>SALES PER DEPARTMENT</h3>
+                <select id="sales-per-department-filter">
+                    <option value="week" selected>This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="year">This Year</option>
                 </select>
-                <div class="client-orders">
-                    <canvas id="clientOrdersChart"></canvas>
+                <div class="chart-container">
+                    <canvas id="salesPerDepartmentChart"></canvas>
                 </div>
             </div>
 
-            <!-- PACKS SOLD SINCE -->
-            <div class="packs-sold-container">
-    <!-- Header with Year Dropdown -->
-    <div class="packs-sold-header">
-        <span>Packs sold since</span>
-        <select id="packs-sold-year" class="packs-sold-dropdown">
-            <option value="2025">2025</option>
-            <option value="2024">2024</option>
-            <option value="2023">2023</option>
-        </select>
-    </div>
-
-    <!-- Packs Count -->
-    <div class="packs-sold-count" id="packs-sold-count">4000 Packs</div>
-
-    <!-- Comparison with Previous Year Dropdown -->
-    <div class="packs-comparison-row">
-        <span id="packs-sold-percentage" class="packs-comparison">+10% since</span>
-        <select id="packs-sold-compare-year" class="packs-sold-dropdown">
-            <option value="2024">2024</option>
-            <option value="2023">2023</option>
-        </select>
-    </div>
-</div>
-
         </div>
-
-        <!-- SALES PER DEPARTMENT -->
-        <div class="sales-department-container">
-            <h3>SALES PER DEPARTMENT</h3>
-            <select id="sales-per-department-filter">
-                <option value="week" selected>This Week</option>
-                <option value="month">This Month</option>
-                <option value="year">This Year</option>
-            </select>
-            <div class="chart-container">
-                <canvas id="salesPerDepartmentChart"></canvas>
-            </div>
-        </div>
-
-    </div>
     </div>
 
     <!-- External Scripts -->

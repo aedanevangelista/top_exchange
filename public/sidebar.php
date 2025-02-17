@@ -29,10 +29,10 @@ $role = $_SESSION['role'] ?? ''; // Get user role from session
             <span class="menu-title"><b>DATA</b></span>
             <hr>
 
-            <!-- Show 'Clients' only to Admin -->
+            <!-- Show 'Customers' only to Admin -->
             <?php if ($role === 'admin'): ?>
-                <a href="/top_exchange/public/pages/clients.php" class="menu-item">
-                    <i class="fas fa-users"></i> Clients
+                <a href="/top_exchange/public/pages/customer.php" class="menu-item">
+                    <i class="fas fa-users"></i> Customers
                 </a>
             <?php endif; ?>
 
