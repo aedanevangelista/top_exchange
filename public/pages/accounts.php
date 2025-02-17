@@ -19,7 +19,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $checkStmt->store_result();
 
     if ($checkStmt->num_rows > 0) {
-        echo json_encode(['success' => false, 'reload' => false]);
+        echo json_encode(['success' => false, 'reload' => false, 'message' => 'Username already exists.']);
         $checkStmt->close();
         exit;
     }
@@ -52,7 +52,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $checkStmt->store_result();
 
     if ($checkStmt->num_rows > 0) {
-        echo json_encode(['success' => false, 'reload' => false]);
+        echo json_encode(['success' => false, 'reload' => false, 'message' => 'Username already exists.']);
         $checkStmt->close();
         exit;
     }
@@ -70,6 +70,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     exit;
 }
 
+// Fetch accounts for display
 $sql = "SELECT id, username, role, created_at FROM accounts ORDER BY id ASC";
 $result = $conn->query($sql);
 ?>
@@ -83,6 +84,7 @@ $result = $conn->query($sql);
     <link rel="stylesheet" href="/top_exchange/public/css/accounts.css">
     <link rel="stylesheet" href="/top_exchange/public/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"> <!-- Add this line -->
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
@@ -154,7 +156,7 @@ $result = $conn->query($sql);
     <div id="addAccountOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-user-plus"></i> Add New Account</h2>
-            <p id="addAccountError" class="error-message"></p>
+            <div id="addAccountError" class="error-message"></div>
             <form id="addAccountForm" method="POST" class="account-form">
                 <input type="hidden" name="formType" value="add">
                 <label for="username">Username:</label>
@@ -165,7 +167,7 @@ $result = $conn->query($sql);
                 <select id="role" name="role" autocomplete="role" required>
                     <option value="admin">Admin</option>
                     <option value="secretary">Secretary</option>
-                    <option value="client">Client</option>
+                    <option value="accountant">Accountant</option>
                 </select>
                 <div class="form-buttons">
                     <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
@@ -181,7 +183,7 @@ $result = $conn->query($sql);
     <div id="editAccountOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-edit"></i> Edit Account</h2>
-            <p id="editAccountError" class="error-message"></p>
+            <div id="editAccountError" class="error-message"></div>
             <form id="editAccountForm" method="POST" class="account-form">
                 <input type="hidden" name="formType" value="edit">
                 <input type="hidden" id="edit-id" name="id">
@@ -193,7 +195,7 @@ $result = $conn->query($sql);
                 <select id="edit-role" name="role" autocomplete="role" required>
                     <option value="admin">Admin</option>
                     <option value="secretary">Secretary</option>
-                    <option value="client">Client</option>
+                    <option value="accountant">Accountant</option>
                 </select>
                 <div class="form-buttons">
                     <button type="submit" class="save-btn"><i class="fas fa-save"></i> Update</button>
@@ -221,6 +223,8 @@ $result = $conn->query($sql);
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script> <!-- Add jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script> <!-- Add this line -->
     <script src="/top_exchange/public/js/accounts.js"></script>
 </body>
 </html>
