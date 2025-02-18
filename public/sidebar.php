@@ -31,7 +31,7 @@ $role = $_SESSION['role'] ?? ''; // Get user role from session
 
             <!-- Show 'Customers' only to Admin -->
             <?php if ($role === 'admin'): ?>
-                <a href="/top_exchange/public/pages/customer.php" class="menu-item">
+                <a href="/top_exchange/public/pages/customers.php" class="menu-item">
                     <i class="fas fa-users"></i> Customers
                 </a>
             <?php endif; ?>
