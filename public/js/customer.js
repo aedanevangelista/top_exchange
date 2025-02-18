@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.delete-btn').forEach(button => {
         button.addEventListener('click', function () {
             if (confirm('Are you sure you want to delete this customer?')) {
-                fetch(`/top_exchange/backend/delete_customer.php`, {
+                fetch(`/top_exchange/backend/save_customer.php`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

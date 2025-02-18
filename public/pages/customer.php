@@ -4,6 +4,11 @@ include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
 checkRole(['admin', 'secretary']); // Only admins and secretaries can access
 
+// Enable error logging
+ini_set('log_errors', 'On');
+ini_set('error_log', 'error_log.log');
+error_reporting(E_ALL);
+
 function handleAjaxResponse($success, $message = '', $reload = false) {
     echo json_encode(['success' => $success, 'message' => $message, 'reload' => $reload]);
     exit;
@@ -40,7 +45,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
 
             $stmt->bind_param("sssss", $customer_name, $contact_number, $email, $address, $created_at);
             if ($stmt->execute()) {
-                handleAjaxResponse(true, '', true);
+                handleAjaxResponse(true, 'Customer added successfully.', true);
             } else {
                 handleDatabaseError($stmt);
             }
@@ -59,7 +64,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
 
             $stmt->bind_param("ssssi", $customer_name, $contact_number, $email, $address, $customer_id);
             if ($stmt->execute()) {
-                handleAjaxResponse(true, '', true);
+                handleAjaxResponse(true, 'Customer edited successfully.', true);
             } else {
                 handleDatabaseError($stmt);
             }
@@ -74,7 +79,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
 
             $stmt->bind_param("i", $customer_id);
             if ($stmt->execute()) {
-                handleAjaxResponse(true, '', true);
+                handleAjaxResponse(true, 'Customer deleted successfully.', true);
             } else {
                 handleDatabaseError($stmt);
             }
