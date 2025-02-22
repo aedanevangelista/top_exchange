@@ -169,11 +169,14 @@ body {
     top: 0; 
     left: 0;
     width: 100vw; 
-    height: 100vh; 
-    background: rgba(0, 0, 0, 0.5); 
-    justify-content: center; 
-    align-items: center; 
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7); 
     z-index: 1000;
+    backdrop-filter: blur(3px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease-in-out;
 }
 
 .overlay-content {
@@ -246,16 +249,9 @@ body {
     background-color: #e53935;
 }
 
-.close {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-}
-
-.close:hover,
-.close:focus {
-    color: black;
-    text-decoration: none;
-    cursor: pointer;
+/* =========================
+   Toast Notifications 
+========================= */
+#toast-container > .toast {
+    opacity: 1 !important;
 }

@@ -99,8 +99,6 @@ $result = $conn->query($sql);
         <!-- Edit Stock Modal -->
         <div id="editStockModal" class="overlay" style="display: none;">
             <div class="overlay-content">
-                <span class="close" onclick="closeModal()">&times;</span>
-                <h2>Edit Stock</h2>
                 <form id="edit-stock-form">
                     <input type="hidden" id="edit_product_id" name="product_id">
                     <label for="edit_stock_quantity">Stock Quantity:</label>
@@ -119,5 +117,11 @@ $result = $conn->query($sql);
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="../js/inventory.js"></script>
+    <script>
+        toastr.options = {
+            "positionClass": "toast-bottom-right",
+            "opacity": 1
+        };
+    </script>
 </body>
 </html>
