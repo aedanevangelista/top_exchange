@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function fetchInventory() {
-    fetch("get_inventory.php") 
+    fetch("api/get_inventory.php") 
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -56,7 +56,7 @@ function fetchInventory() {
 function updateStock(productId, action) {
     const amount = document.getElementById(`adjust-${productId}`).value;
 
-    fetch("update_stock.php", {
+    fetch("api/update_stock.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ product_id: productId, action: action, amount: amount })
@@ -89,7 +89,7 @@ function updateStockDirectly() {
     const productId = document.getElementById('edit_product_id').value;
     const stockQuantity = document.getElementById('edit_stock_quantity').value;
 
-    fetch("update_stock_direct.php", {
+    fetch("api/update_stock_direct.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ product_id: productId, stock_quantity: stockQuantity })
