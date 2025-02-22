@@ -24,8 +24,8 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // Show error prompt
-    function showErrorPrompt(message, isEdit = false) {
-        const errorPrompt = isEdit ? document.getElementById("editCustomerError") : document.getElementById("customerError");
+    function showErrorPrompt(message) {
+        const errorPrompt = document.getElementById("customerError");
         if (errorPrompt) {
             errorPrompt.textContent = message;
             setTimeout(() => {
@@ -33,6 +33,26 @@ document.addEventListener("DOMContentLoaded", function() {
             }, 2000);
         }
     }
+
+    // Convert created_at dates to relative time format
+    function convertCreatedAtDates() {
+        const createdAtElements = document.querySelectorAll('.created-at');
+        createdAtElements.forEach(element => {
+            const createdAt = element.getAttribute('data-created-at');
+            const now = moment();
+            const createdAtMoment = moment.utc(createdAt).local();
+            
+            if (now.isSame(createdAtMoment, 'day')) {
+                element.textContent = 'Just now';
+            } else {
+                const daysAgo = now.diff(createdAtMoment, 'days');
+                element.textContent = `${daysAgo} days ago`;
+            }
+        });
+    }
+
+    // Convert dates on page load
+    convertCreatedAtDates();
 
     // ----------------------------
     // ➕ ADD CUSTOMER LOGIC
@@ -42,7 +62,7 @@ document.addEventListener("DOMContentLoaded", function() {
     window.openAddCustomerForm = function() {
         document.getElementById("customer-modal").style.display = "flex";
         document.getElementById("formType").value = "add";
-        document.getElementById("modal-title").textContent = "Add Customer";
+        document.getElementById("modal-title").innerHTML = '<i class="fas fa-user-plus"></i> Add Customer';
         const customerError = document.getElementById("customerError");
         if (customerError) {
             customerError.innerText = ""; // Clear error
@@ -61,9 +81,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Close modal when clicking outside of it
     window.onclick = function(event) {
-        const modal = document.getElementById("customer-modal");
-        if (event.target === modal) {
+        const addModal = document.getElementById("customer-modal");
+        const deleteModal = document.getElementById("delete-modal");
+        if (event.target === addModal) {
             closeAddCustomerForm();
+        }
+        if (event.target === deleteModal) {
+            closeDeleteCustomerForm();
         }
     }
 
@@ -81,7 +105,7 @@ document.addEventListener("DOMContentLoaded", function() {
         .then(data => {
             if (data.success) {
                 closeAddCustomerForm();
-                showCustomToast("add", "Adding customer", 5000, () => {
+                showCustomToast("add", "Customer is being added", 5000, () => {
                     window.location.reload();
                 });
             } else {
@@ -98,14 +122,11 @@ document.addEventListener("DOMContentLoaded", function() {
     // ✏️ EDIT CUSTOMER LOGIC
     // ----------------------------
 
-    let editCustomerId = null;
-
     // Open Edit Customer Form Overlay
     window.openEditCustomerForm = function(customerId, customerName) {
-        editCustomerId = customerId;
         document.getElementById("customer-modal").style.display = "flex";
         document.getElementById("formType").value = "edit";
-        document.getElementById("modal-title").innerHTML = '<i class="fas fa-user"></i> Edit Customer';
+        document.getElementById("modal-title").innerHTML = '<i class="fas fa-user-edit"></i> Edit Customer';
 
         // Pre-fill form fields
         document.getElementById("customer_id").value = customerId;
@@ -116,8 +137,18 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
+    // Close Edit Customer Form Overlay
+    window.closeEditCustomerForm = function() {
+        document.getElementById("customer-modal").style.display = "none";
+        document.getElementById("customer-form").reset();
+        const customerError = document.getElementById("customerError");
+        if (customerError) {
+            customerError.innerText = ""; // Clear error
+        }
+    }
+
     // Submit Edit Customer Form with AJAX
-    function submitEditCustomerForm(event) {
+    document.getElementById("customer-form").addEventListener("submit", function(event) {
         event.preventDefault();
         var formData = new FormData(this);
         formData.append("ajax", true);
@@ -129,8 +160,8 @@ document.addEventListener("DOMContentLoaded", function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                closeAddCustomerForm();
-                showCustomToast("edit", "Editing customer", 5000, () => {
+                closeEditCustomerForm();
+                showCustomToast("edit", "Customer is being edited", 5000, () => {
                     window.location.reload();
                 });
             } else {
@@ -141,39 +172,63 @@ document.addEventListener("DOMContentLoaded", function() {
             console.error("Error:", error);
             showErrorPrompt("An unexpected error occurred.");
         });
-    }
+    });
 
     // ----------------------------
     // 🗑️ DELETE CUSTOMER LOGIC
     // ----------------------------
 
+    // Open Delete Customer Form Overlay
+    window.openDeleteCustomerForm = function(customerId) {
+        document.getElementById("delete-modal").style.display = "flex";
+        document.getElementById("delete_customer_id").value = customerId;
+    }
+
+    // Close Delete Customer Form Overlay
+    window.closeDeleteCustomerForm = function() {
+        document.getElementById("delete-modal").style.display = "none";
+        document.getElementById("delete-form").reset();
+    }
+
+    // Submit Delete Customer Form with AJAX
+    document.getElementById("delete-form").addEventListener("submit", function(event) {
+        event.preventDefault();
+        var formData = new FormData(this);
+        formData.append("ajax", true);
+        formData.append("formType", "delete");
+
+        fetch("/top_exchange/backend/delete_customer.php", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeDeleteCustomerForm();
+                showCustomToast("delete", "Customer is being deleted", 5000, () => {
+                    window.location.reload();
+                });
+            } else {
+                showCustomToast("delete", "Failed to delete customer.", 5000);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showCustomToast("delete", "An unexpected error occurred.", 5000);
+        });
+    });
+
+    // Bind edit button click event to openEditCustomerForm function
+    document.querySelectorAll('.edit-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            openEditCustomerForm(this.dataset.id, this.dataset.name);
+        });
+    });
+
+    // Bind delete button click event to openDeleteCustomerForm function
     document.querySelectorAll('.delete-btn').forEach(button => {
         button.addEventListener('click', function () {
-            if (confirm('Are you sure you want to delete this customer?')) {
-                fetch(`/top_exchange/backend/delete_customer.php`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        ajax: true,
-                        formType: 'delete',
-                        customer_id: this.dataset.id
-                    })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Customer deleted successfully.');
-                            location.reload();
-                        } else {
-                            alert('Failed to delete customer.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                    });
-            }
+            openDeleteCustomerForm(this.dataset.id);
         });
     });
 });

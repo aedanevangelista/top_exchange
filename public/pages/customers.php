@@ -14,14 +14,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
     try {
         if ($_POST['formType'] == 'add') {
             $customer_name = trim($_POST['customer_name']);
-            $created_at = date('Y-m-d H:i:s');
+            $created_at = gmdate('Y-m-d H:i:s'); // Use gmdate to get UTC time
+
+            // Check for duplicate customer name
+            $checkStmt = $conn->prepare("SELECT customer_id FROM customers WHERE customer_name = ?");
+            if ($checkStmt === false) throw new Exception($conn->error);
+
+            $checkStmt->bind_param("s", $customer_name);
+            $checkStmt->execute();
+            $checkStmt->store_result();
+
+            if ($checkStmt->num_rows > 0) {
+                handleAjaxResponse(false, "Customer name already exists.");
+            }
+            $checkStmt->close();
 
             $stmt = $conn->prepare("INSERT INTO customers (customer_name, created_at) VALUES (?, ?)");
             if ($stmt === false) throw new Exception($conn->error);
 
             $stmt->bind_param("ss", $customer_name, $created_at);
             if ($stmt->execute()) {
-                handleAjaxResponse(true, '', true);
+                handleAjaxResponse(true, "Customer added successfully.", true);
             } else {
                 handleAjaxResponse(false, $stmt->error);
             }
@@ -32,12 +45,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $customer_id = $_POST['customer_id'];
             $customer_name = trim($_POST['customer_name']);
 
+            // Check for duplicate customer name
+            $checkStmt = $conn->prepare("SELECT customer_id FROM customers WHERE customer_name = ? AND customer_id != ?");
+            if ($checkStmt === false) throw new Exception($conn->error);
+
+            $checkStmt->bind_param("si", $customer_name, $customer_id);
+            $checkStmt->execute();
+            $checkStmt->store_result();
+
+            if ($checkStmt->num_rows > 0) {
+                handleAjaxResponse(false, "Customer name already exists.");
+            }
+            $checkStmt->close();
+
             $stmt = $conn->prepare("UPDATE customers SET customer_name = ? WHERE customer_id = ?");
             if ($stmt === false) throw new Exception($conn->error);
 
             $stmt->bind_param("si", $customer_name, $customer_id);
             if ($stmt->execute()) {
-                handleAjaxResponse(true, '', true);
+                handleAjaxResponse(true, "Customer updated successfully.", true);
             } else {
                 handleAjaxResponse(false, $stmt->error);
             }
@@ -52,7 +78,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
 
             $stmt->bind_param("i", $customer_id);
             if ($stmt->execute()) {
-                handleAjaxResponse(true, '', true);
+                handleAjaxResponse(true, "Customer deleted successfully.", true);
             } else {
                 handleAjaxResponse(false, $stmt->error);
             }
@@ -63,7 +89,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
     }
 }
 
-$sql = "SELECT customer_id, customer_name, created_at FROM customers ORDER BY customer_name";
+$sql = "SELECT customer_id, customer_name, created_at FROM customers ORDER BY customer_id";
 $result = $conn->query($sql);
 ?>
 
@@ -101,10 +127,11 @@ $result = $conn->query($sql);
                     <?php
                     if ($result->num_rows > 0) {
                         while ($row = $result->fetch_assoc()) {
+                            $created_at = $row['created_at'];
                             echo "<tr>
                                     <td>{$row['customer_id']}</td>
                                     <td>{$row['customer_name']}</td>
-                                    <td>{$row['created_at']}</td>
+                                    <td class='created-at' data-created-at='{$created_at}'></td>
                                     <td class='action-buttons'>
                                         <button class='edit-btn' data-id='{$row['customer_id']}' data-name='{$row['customer_name']}'><i class='fas fa-edit'></i> Edit</button>
                                         <button class='delete-btn' data-id='{$row['customer_id']}'><i class='fas fa-trash'></i> Delete</button>
@@ -123,20 +150,38 @@ $result = $conn->query($sql);
     <!-- Add/Edit Customer Modal -->
     <div id="customer-modal" class="overlay" style="display: none;">
         <div class="overlay-content">
-            <h2 id="modal-title"><i class="fas fa-user-plus"></i></i> Add Customer</h2>
+            <h2 id="modal-title"><i class="fas fa-user-plus"></i> Add Customer</h2>
+            <span id="customerError" class="error"></span>
             <form id="customer-form" class="account-form">
                 <input type="hidden" name="formType" id="formType" value="add">
                 <input type="hidden" name="customer_id" id="customer_id">
                 <label for="customer_name">Customer Name:</label>
                 <input type="text" name="customer_name" id="customer_name" required>
-                <span id="customerError" class="error"></span>
                 <div class="form-buttons">
-                    <button type="submit" class="btn btn-primary">Save</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeAddCustomerForm()">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddCustomerForm()"><i class="fas fa-times"></i> Cancel</button>
                 </div>
             </form>
         </div>
     </div>
+
+    <!-- Delete Customer Confirmation Modal -->
+    <div id="delete-modal" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2><i class="fas fa-trash"></i> Delete Customer</h2>
+            <p>Are you sure you want to delete this customer?</p>
+            <form id="delete-form" class="account-form">
+                <input type="hidden" name="customer_id" id="delete_customer_id">
+                <div class="form-buttons">
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeDeleteCustomerForm()"><i class="fas fa-times"></i> Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.34/moment-timezone-with-data.min.js"></script>
     <script src="../js/customers.js"></script>
 </body>
 </html>

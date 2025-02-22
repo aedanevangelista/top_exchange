@@ -1,43 +1,261 @@
+/* =========================
+   General Page Styling 
+========================= */
 body {
+    font-family: Arial, sans-serif;
+    background-color: #f3f6fb;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+/* =========================
+   Header Section 
+========================= */
+.inventory-header {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #ddd;
 }
 
-/* Push main content */
-.main-content {
-    flex: 1;
-    margin-left: 250px; /* Same width as sidebar */
-    padding: 20px;
+.inventory-header h1 {
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-
-.main-content {
-    padding: 20px;
+/* Filter Section */
+.filter-section {
+    display: flex;
+    align-items: center;
 }
 
-h1 {
-    margin-bottom: 20px;
+.filter-section label {
+    margin-right: 10px;
+    font-weight: bold;
 }
 
-table {
+.filter-section select {
+    padding: 8px 12px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+}
+
+/* =========================
+   Table Section 
+========================= */
+.inventory-table-container {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.inventory-table {
     width: 100%;
     border-collapse: collapse;
+    font-size: 14px;
 }
 
-th, td {
-    border: 1px solid #ddd;
-    padding: 12px;
-    text-align: left;
-}
-
-th {
-    background-color: #222;
+.inventory-table th {
+    background-color: black;
     color: white;
+    font-weight: bold;
+    padding: 12px;
+    text-align: center;
+    border-bottom: 2px solid #ddd;
 }
 
-tr:nth-child(even) {
+.inventory-table td {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.inventory-table tr:hover {
     background-color: #f9f9f9;
 }
 
-tr:hover {
-    background-color: #ddd;
+/* No Products Text */
+.no-products {
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    color: #777;
+    padding: 20px;
+}
+
+/* =========================
+   Action Buttons 
+========================= */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.add-btn, .remove-btn, .edit-btn {
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: none;
+}
+
+/* Add Button */
+.add-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.add-btn:hover {
+    background-color: #45A049;
+}
+
+/* Remove Button */
+.remove-btn {
+    background-color: #f44336;
+    color: white;
+}
+
+.remove-btn:hover {
+    background-color: #e53935;
+}
+
+/* Edit Button */
+.edit-btn {
+    background-color: #2980b9;
+    color: white;
+}
+
+.edit-btn:hover {
+    background-color: #2471a3;
+}
+
+/* =========================
+   Adjust Stock Section 
+========================= */
+.adjust-stock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.adjust-stock input {
+    width: 50px;
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+/* =========================
+   Edit Stock Overlay 
+========================= */
+.overlay {
+    display: none;
+    position: fixed;
+    top: 0; 
+    left: 0;
+    width: 100vw; 
+    height: 100vh; 
+    background: rgba(0, 0, 0, 0.5); 
+    justify-content: center; 
+    align-items: center; 
+    z-index: 1000;
+}
+
+.overlay-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    width: 350px;
+    text-align: center;
+    animation: modalFadeIn 0.3s ease-in-out;
+}
+
+.overlay-content h2 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+    text-align: center;
+}
+
+#edit-stock-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#edit-stock-form label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #34495e;
+}
+
+#edit-stock-form input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+#edit-stock-form .form-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+#edit-stock-form .save-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 10px 20px;
+}
+
+#edit-stock-form .save-btn:hover {
+    background-color: #45A049;
+}
+
+#edit-stock-form .cancel-btn {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 10px 20px;
+}
+
+#edit-stock-form .cancel-btn:hover {
+    background-color: #e53935;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
 }
