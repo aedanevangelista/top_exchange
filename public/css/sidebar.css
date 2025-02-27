@@ -57,7 +57,7 @@ hr {
     color: white;
     font-size: 15px;
     font-weight: 400;
-    padding: 8px; /* Smaller padding */
+    padding: 10px 15px; /* Adjusted padding */
     width: 100%;
     text-align: left;
     cursor: pointer;
@@ -69,9 +69,49 @@ hr {
     background: #333;
 }
 
+/* No hover effect for specific menu item */
+.no-hover:hover {
+    background: none;
+    cursor: default;
+}
+
 .menu-item.active {
     background-color: #383838;
     font-weight: bold;
+}
+
+/* Submenu Styling */
+.submenu {
+    display: flex;
+    flex-direction: column;
+}
+
+.submenu-items {
+    display: flex;
+    flex-direction: column;
+    margin-left: 20px; /* Indentation */
+    margin-top: 5px;
+}
+
+.submenu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: none;
+    border: none;
+    color: #ddd; /* Lighter color for differentiation */
+    font-size: 14px; /* Smaller font size */
+    font-weight: 400;
+    padding: 5px 10px; /* Adjusted padding */
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s ease-in-out;
+    border-radius: 4px;
+}
+
+.submenu-item:hover {
+    background: #444;
 }
 
 /* ================================ */

@@ -36,12 +36,22 @@ $role = $_SESSION['role'] ?? ''; // Get user role from session
                 </a>
             <?php endif; ?>
 
-            <!-- Show 'Accounts' only to Admin -->
-            <?php if ($role === 'admin'): ?>
-                <a href="/top_exchange/public/pages/accounts.php" class="menu-item">
+            <!-- Accounts Menu with Submenus for Admin and Clients -->
+            <div class="submenu">
+                <span class="menu-item no-hover">
                     <i class="fas fa-user"></i> Accounts
-                </a>
-            <?php endif; ?>
+                </span>
+                <div class="submenu-items">
+                    <?php if ($role === 'admin'): ?>
+                        <a href="/top_exchange/public/pages/accounts.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Admin
+                        </a>
+                        <a href="/top_exchange/public/pages/accounts_clients.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Clients
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </div>
 
             <!-- Show 'Inventory' to Admin and Secretary -->
             <?php if (in_array($role, ['admin', 'secretary'])): ?>

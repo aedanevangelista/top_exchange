@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 18, 2025 at 08:22 AM
+-- Generation Time: Feb 27, 2025 at 05:53 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -45,8 +45,28 @@ INSERT INTO `accounts` (`id`, `username`, `password`, `created_at`, `role`) VALU
 (28, 'aed1', '23', '2025-02-16 08:53:52', 'admin'),
 (46, '1', '123', '2025-02-17 02:57:54', 'admin'),
 (47, '2', '123', '2025-02-17 02:57:59', 'secretary'),
-(48, '3', '123', '2025-02-17 02:58:03', 'accountant'),
-(49, 'adasd', 'asds', '2025-02-17 21:14:19', 'admin');
+(52, 'secretary', '123', '2025-02-23 00:10:59', 'secretary'),
+(53, 'accountant', '123', '2025-02-26 05:45:50', 'accountant');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `clients_accounts`
+--
+
+CREATE TABLE `clients_accounts` (
+  `id` int(11) NOT NULL,
+  `username` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `region` varchar(255) NOT NULL,
+  `city` varchar(255) NOT NULL,
+  `company_address` text NOT NULL,
+  `business_proof` varchar(255) DEFAULT NULL,
+  `status` enum('pending','accepted','declined') DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -67,12 +87,7 @@ CREATE TABLE `customers` (
 INSERT INTO `customers` (`customer_id`, `customer_name`, `created_at`) VALUES
 (1, 'Solaire Entertainment City', '2025-02-18 04:23:50'),
 (2, 'Tiger', '2025-02-18 04:23:50'),
-(3, 'City of Dreams', '2025-02-18 04:23:50'),
-(4, 'asdasd', '2025-02-17 21:28:04'),
-(5, 'aasd', '2025-02-17 21:29:12'),
-(6, 'add2', '2025-02-17 21:29:49'),
-(14, 'ss', '2025-02-17 23:29:56'),
-(17, 'sds', '2025-02-17 23:06:10');
+(3, 'City of Dreams', '2025-02-18 04:23:50');
 
 -- --------------------------------------------------------
 
@@ -112,18 +127,6 @@ CREATE TABLE `order_items` (
   `price` decimal(10,2) DEFAULT NULL,
   `unit_price` decimal(10,2) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `order_items`
---
-
-INSERT INTO `order_items` (`order_item_id`, `order_id`, `product_id`, `quantity`, `total_price`, `price`, `unit_price`) VALUES
-(21, 2, 1, 30, 8400.00, NULL, 280.00),
-(22, 2, 2, 15, 4875.00, NULL, 325.00),
-(23, 2, 3, 10, 2700.00, NULL, 270.00),
-(24, 2, 4, 10, 2350.00, NULL, 235.00),
-(25, 2, 5, 25, 6250.00, NULL, 250.00),
-(26, 2, 6, 10, 2050.00, NULL, 205.00);
 
 --
 -- Triggers `order_items`
@@ -201,7 +204,7 @@ INSERT INTO `products` (`product_id`, `category`, `item_description`, `packaging
 (28, 'Dimsum & Dumplings', 'Polonchay Dumpling (Min 6 Packs) (B)', '20pcs/pack', 470.00, 0),
 (29, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (A)', '12pcs/pack', 330.00, 0),
 (30, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (B)', '20pcs/pack', 530.00, 0),
-(31, 'Dimsum & Dumplings', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 0),
+(31, 'Dimsum & Dumplings', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 699),
 (32, 'Dimsum & Dumplings', 'Beancurd Roll (B)', '20pcs/pack', 500.00, 0),
 (33, 'Dimsum & Dumplings', 'Pork Gyoza Dumpling (A)', '20pcs/pack', 390.00, 0),
 (34, 'Dimsum & Dumplings', 'Shanghai Dumpling (A)', '20pcs/pack', 255.00, 0),
@@ -255,6 +258,12 @@ ALTER TABLE `accounts`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `clients_accounts`
+--
+ALTER TABLE `clients_accounts`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `customers`
 --
 ALTER TABLE `customers`
@@ -289,7 +298,13 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
+
+--
+-- AUTO_INCREMENT for table `clients_accounts`
+--
+ALTER TABLE `clients_accounts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `customers`

@@ -10,7 +10,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $username = trim($_POST['username']);
     $password = $_POST['password'];
-    $role = $_POST['role'];
+    $role = 'client'; // Fixed role for clients
     $created_at = date('Y-m-d H:i:s');
 
     $checkStmt = $conn->prepare("SELECT id FROM accounts WHERE username = ?");
@@ -44,7 +44,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $id = $_POST['id'];
     $username = trim($_POST['username']);
     $password = $_POST['password'];
-    $role = $_POST['role'];
+    $role = 'client'; // Fixed role for clients
 
     $checkStmt = $conn->prepare("SELECT id FROM accounts WHERE username = ? AND id != ?");
     $checkStmt->bind_param("si", $username, $id);
@@ -71,7 +71,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 }
 
 // Fetch accounts for display
-$sql = "SELECT id, username, role, created_at FROM accounts ORDER BY id ASC";
+$sql = "SELECT id, username, role, created_at FROM accounts WHERE role = 'client' ORDER BY id ASC";
 $result = $conn->query($sql);
 ?>
 
@@ -80,7 +80,7 @@ $result = $conn->query($sql);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account Management</title>
+    <title>Client Accounts</title>
     <link rel="stylesheet" href="/top_exchange/public/css/accounts.css">
     <link rel="stylesheet" href="/top_exchange/public/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -90,7 +90,7 @@ $result = $conn->query($sql);
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="accounts-header">
-            <h1>Account Management</h1>
+            <h1>Client Accounts</h1>
             <button onclick="openAddAccountForm()" class="add-account-btn">
                 <i class="fas fa-user-plus"></i> Add New Account
             </button>
@@ -101,7 +101,6 @@ $result = $conn->query($sql);
                     <tr>
                         <th>ID</th>
                         <th>Username</th>
-                        <th>Role</th>
                         <th>Account Age</th>
                         <th>Actions</th>
                     </tr>
@@ -125,12 +124,6 @@ $result = $conn->query($sql);
                             <tr>
                                 <td><?= htmlspecialchars($row['id']) ?></td>
                                 <td><?= htmlspecialchars($row['username']) ?></td>
-                                <td>
-                                    <?php 
-                                    $role = ucfirst($row['role']);
-                                    echo "<span class='role-label role-$row[role]'>$role</span>"; 
-                                    ?>
-                                </td>
                                 <td><?= $account_age ?></td>
                                 <td class="action-buttons">
                                     <button class="edit-btn" onclick="openEditAccountForm(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username']) ?>', '<?= $row['role'] ?>')">
@@ -163,13 +156,7 @@ $result = $conn->query($sql);
                 <input type="text" id="username" name="username" autocomplete="username" required>
                 <label for="password">Password:</label>
                 <input type="text" id="password" name="password" autocomplete="new-password" required>
-                <label for="role">Role:</label>
-                <select id="role" name="role" autocomplete="role" required>
-                    <option value="admin">Admin</option>
-                    <option value="client">Client</option>
-                    <option value="secretary">Secretary</option>
-                    <option value="accountant">Accountant</option>
-                </select>
+                <input type="hidden" name="role" value="client">
                 <div class="form-buttons">
                     <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
                     <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
@@ -192,13 +179,7 @@ $result = $conn->query($sql);
                 <input type="text" id="edit-username" name="username" autocomplete="username" required>
                 <label for="edit-password">Password:</label>
                 <input type="text" id="edit-password" name="password" autocomplete="new-password" required>
-                <label for="edit-role">Role:</label>
-                <select id="edit-role" name="role" autocomplete="role" required>
-                    <option value="admin">Admin</option>
-                    <option value="client">Client</option>
-                    <option value="secretary">Secretary</option>
-                    <option value="accountant">Accountant</option>
-                </select>
+                <input type="hidden" name="role" value="client">
                 <div class="form-buttons">
                     <button type="submit" class="save-btn"><i class="fas fa-save"></i> Update</button>
                     <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
