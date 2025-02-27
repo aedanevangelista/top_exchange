@@ -15,18 +15,18 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function fetchInventory() {
-    fetch("api/get_inventory.php") 
+    fetch("../pages/api/get_inventory.php") // Adjust path as needed
         .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             return response.json();
         })
         .then(data => {
             const tableBody = document.getElementById("inventory-table");
-            tableBody.innerHTML = ""; 
+            tableBody.innerHTML = "";
 
             data.forEach(product => {
+                const price = parseFloat(product.price) || 0; // Ensure price is a number
+
                 const row = document.createElement("tr");
                 row.setAttribute("data-category", product.category);
                 row.innerHTML = `
@@ -34,7 +34,7 @@ function fetchInventory() {
                     <td>${product.category}</td>
                     <td>${product.item_description}</td>
                     <td>${product.packaging}</td>
-                    <td>₱${product.price.toFixed(2)}</td>
+                    <td>₱${price.toFixed(2)}</td>
                     <td id="stock-${product.product_id}">${product.stock_quantity}</td>
                     <td class="adjust-stock">
                         <button class="add-btn" onclick="updateStock(${product.product_id}, 'add')">Add</button>
@@ -56,25 +56,23 @@ function fetchInventory() {
 function updateStock(productId, action) {
     const amount = document.getElementById(`adjust-${productId}`).value;
 
-    fetch("api/update_stock.php", {
+    fetch("../pages/api/update_stock.php", { // Adjust path as needed
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ product_id: productId, action: action, amount: amount })
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        toastr.success(data.message, {timeOut: 3000, closeButton: true, positionClass: 'toast-bottom-right'});
-        fetchInventory();
-    })
-    .catch(error => {
-        toastr.error("Error updating stock", {timeOut: 3000, closeButton: true, positionClass: 'toast-bottom-right'});
-        console.error("Error updating stock:", error);
-    });
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            toastr.success(data.message, { timeOut: 3000, closeButton: true, positionClass: 'toast-bottom-right' });
+            fetchInventory();
+        })
+        .catch(error => {
+            toastr.error("Error updating stock", { timeOut: 3000, closeButton: true, positionClass: 'toast-bottom-right' });
+            console.error("Error updating stock:", error);
+        });
 }
 
 function editStock(productId) {
@@ -89,26 +87,24 @@ function updateStockDirectly() {
     const productId = document.getElementById('edit_product_id').value;
     const stockQuantity = document.getElementById('edit_stock_quantity').value;
 
-    fetch("api/update_stock_direct.php", {
+    fetch("../pages/api/update_stock_direct.php", { // Adjust path as needed
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ product_id: productId, stock_quantity: stockQuantity })
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        toastr.success(data.message, {timeOut: 3000, closeButton: true, positionClass: 'toast-bottom-right'});
-        fetchInventory();
-        closeModal();
-    })
-    .catch(error => {
-        toastr.error("Error updating stock", {timeOut: 3000, closeButton: true, positionClass: 'toast-bottom-right'});
-        console.error("Error updating stock:", error);
-    });
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            toastr.success(data.message, { timeOut: 3000, closeButton: true, positionClass: 'toast-bottom-right' });
+            fetchInventory();
+            closeModal();
+        })
+        .catch(error => {
+            toastr.error("Error updating stock", { timeOut: 3000, closeButton: true, positionClass: 'toast-bottom-right' });
+            console.error("Error updating stock:", error);
+        });
 }
 
 function closeModal() {
