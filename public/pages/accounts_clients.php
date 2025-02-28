@@ -47,7 +47,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
         $file_size = $_FILES['business_proof']['size'];
 
         if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-            $uploadDir = realpath(__DIR__ . '/../../../uploads') . '/';
+            $upload_dir = realpath(__DIR__ . '/../../../uploads') . '/';
             $business_proof = $upload_dir . basename($_FILES['business_proof']['name']);
             if (!move_uploaded_file($_FILES['business_proof']['tmp_name'], $business_proof)) {
                 echo json_encode(['success' => false, 'message' => 'Failed to upload file.']);
