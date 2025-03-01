@@ -141,7 +141,7 @@ function openEditAccountForm(id, username, email, phone, region, city, company_a
         businessProofContainer.appendChild(img);
     });
 
-    document.getElementById('editAccountOverlay').style.display = 'block';
+    document.getElementById('editAccountOverlay').style.display = 'flex';
 }
 
 function closeEditAccountForm() {

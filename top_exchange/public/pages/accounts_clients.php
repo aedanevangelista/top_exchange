@@ -301,9 +301,23 @@ function truncate($text, $max = 15) {
                                 </td>
                                 <td class="<?= 'status-' . strtolower($row['status'] ?? 'pending') ?>"><?= htmlspecialchars($row['status'] ?? 'Pending') ?></td>
                                 <td class="action-buttons">
-                                <button class="edit-btn" onclick="openEditAccountForm(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username'], ENT_QUOTES) ?>', '<?= htmlspecialchars($row['email'], ENT_QUOTES) ?>', '<?= htmlspecialchars($row['phone'], ENT_QUOTES) ?>', '<?= htmlspecialchars($row['region'], ENT_QUOTES) ?>', '<?= htmlspecialchars($row['city'], ENT_QUOTES) ?>', '<?= htmlspecialchars($row['company_address'], ENT_QUOTES) ?>', '<?= htmlspecialchars(json_encode($row['business_proof']), ENT_QUOTES) ?>')">
+                                <?php
+                                    $business_proof_json = htmlspecialchars(json_encode($row['business_proof']), ENT_QUOTES);
+                                ?>
+                                <button class="edit-btn"
+                                    onclick='openEditAccountForm(
+                                        <?= $row["id"] ?>,
+                                        <?= json_encode($row["username"]) ?>,
+                                        <?= json_encode($row["email"]) ?>,
+                                        <?= json_encode($row["phone"]) ?>,
+                                        <?= json_encode($row["region"]) ?>,
+                                        <?= json_encode($row["city"]) ?>,
+                                        <?= json_encode($row["company_address"]) ?>,
+                                        <?= $business_proof_json ?>
+                                    )'>
                                     <i class="fas fa-edit"></i> Edit
                                 </button>
+
                                     <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username']) ?>', '<?= htmlspecialchars($row['email']) ?>')">
                                         <i class="fas fa-exchange-alt"></i> Status
                                     </button>
