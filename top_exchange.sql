@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 27, 2025 at 05:53 PM
+-- Generation Time: Mar 02, 2025 at 12:20 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -56,17 +56,26 @@ INSERT INTO `accounts` (`id`, `username`, `password`, `created_at`, `role`) VALU
 
 CREATE TABLE `clients_accounts` (
   `id` int(11) NOT NULL,
-  `username` varchar(255) NOT NULL,
+  `username` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `email` varchar(255) NOT NULL,
-  `phone` varchar(20) DEFAULT NULL,
-  `region` varchar(255) NOT NULL,
-  `city` varchar(255) NOT NULL,
-  `company_address` text NOT NULL,
-  `business_proof` varchar(255) DEFAULT NULL,
-  `status` enum('pending','accepted','declined') DEFAULT 'pending',
+  `email` varchar(100) NOT NULL,
+  `phone` varchar(20) NOT NULL,
+  `region` varchar(50) DEFAULT NULL,
+  `city` varchar(50) DEFAULT NULL,
+  `company_address` text DEFAULT NULL,
+  `business_proof` text DEFAULT NULL,
+  `status` enum('Pending','Active','Rejected','Inactive') NOT NULL DEFAULT 'Pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `clients_accounts`
+--
+
+INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company_address`, `business_proof`, `status`, `created_at`) VALUES
+(14, 'asdasd', '$2y$10$HRQPj/GhcW/yhIKG9gwrpOlFlhMVbKYGvX4Hh0und7IA/KaPrxYN2', 'aedanevangelista.freelance@gmail.com', '+639760268643', 'asdasd', 'Quezon City', '22c. Sta. Catalina\r\nMaharlika', '[\"\\/top_exchange\\/uploads\\/asdasd\\/5.png\"]', 'Inactive', '2025-03-01 17:09:11'),
+(15, 'asdasdaa', '$2y$10$/8tq4CNc4ztPmfA2ddMaIuvWpLAAhCe/Z6i1Th3ncwIYYSIlpAZ86', 'aedanevangelista.frasdasdeelance@gmail.com', '+639760268643', 'asdasdsad', 'Quezon City', '22c. Sta. Catalina\r\nMaharlika', '[\"\\/top_exchange\\/uploads\\/asdasdaa\\/4.png\"]', 'Active', '2025-03-01 19:04:42'),
+(16, 'asdasdaaa', '$2y$10$QkvJTl2ygPcEAOpauI6wpuGFNt5zA2IIm4aiPsYsyyLq7xZow4toS', 'aasdas@gmail.com', '1231', 'asdasd', 'asdasd', 'asdasdasd', '[\"\\/top_exchange\\/uploads\\/asdasdaaa\\/4.png\"]', 'Active', '2025-03-01 19:12:22');
 
 -- --------------------------------------------------------
 
@@ -304,7 +313,7 @@ ALTER TABLE `accounts`
 -- AUTO_INCREMENT for table `clients_accounts`
 --
 ALTER TABLE `clients_accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `customers`
