@@ -2,7 +2,7 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole(['admin']); // Only admins can access
+checkRole('Accounts Clients'); // Ensure the user has access to the Accounts Clients page
 
 // Disable error reporting to avoid breaking JSON response
 error_reporting(0);

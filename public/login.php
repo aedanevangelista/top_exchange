@@ -7,7 +7,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
 
-    $stmt = $conn->prepare("SELECT id, username, password, role FROM accounts WHERE username = ?");
+    // Prepare SQL statement
+    $stmt = $conn->prepare("SELECT account_id, username, password, role_id FROM accounts WHERE username = ?");
+    if ($stmt === false) {
+        die('Prepare failed: ' . htmlspecialchars($conn->error));
+    }
+
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -17,9 +22,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         if ($password === $user['password']) {
             // Store session variables
-            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['account_id'] = $user['account_id'];
             $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = $user['role'];
+            $_SESSION['role_id'] = $user['role_id'];
 
             // Redirect to pages/dashboard.php
             header("Location: http://localhost/top_exchange/public/pages/dashboard.php");

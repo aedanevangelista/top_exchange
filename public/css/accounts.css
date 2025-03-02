@@ -102,7 +102,7 @@ body {
     gap: 10px;
 }
 
-.edit-btn, .delete-btn {
+.edit-btn, .archive-btn, .activate-btn {
     padding: 6px 14px;
     font-size: 13px;
     font-weight: 600;
@@ -125,14 +125,24 @@ body {
     background-color: #2471a3;
 }
 
-/* Delete Button */
-.delete-btn {
+/* Archive Button */
+.archive-btn {
     background-color: #e74c3c;
     color: white;
 }
 
-.delete-btn:hover {
+.archive-btn:hover {
     background-color: #c0392b;
+}
+
+/* Activate Button */
+.activate-btn {
+    background-color: #28a745;
+    color: white;
+}
+
+.activate-btn:hover {
+    background-color: #218838;
 }
 
 .role-label {

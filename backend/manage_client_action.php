@@ -2,7 +2,7 @@
 session_start();
 include "db_connection.php";
 include "check_role.php";
-checkRole(['admin']); // Only admins can access
+checkRole('manage_client_action.php'); // Check access for current page
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $id = $_POST['id'];

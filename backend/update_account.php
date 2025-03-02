@@ -2,7 +2,7 @@
 session_start();
 include "db_connection.php";
 include "check_role.php";
-checkRole(['admin']); // Only admins can update accounts
+checkRole('update_account.php'); // Check access for current page
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
     header('Content-Type: application/json');
