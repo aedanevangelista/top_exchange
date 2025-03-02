@@ -2,7 +2,7 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Customers'); // Ensure the user has access to the Customers page
+checkRole(['admin', 'secretary']); // Only admins and secretaries can access
 
 function handleAjaxResponse($success, $message = '', $reload = false) {
     echo json_encode(['success' => $success, 'message' => $message, 'reload' => $reload]);

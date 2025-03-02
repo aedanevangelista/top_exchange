@@ -1,8 +1,7 @@
 <?php
 session_start();
-include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Dashboard'); // Ensure the user has access to the Dashboard page
+checkRole(['admin', 'secretary', 'accountant']); // Allow access to all roles
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -10,7 +9,6 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">

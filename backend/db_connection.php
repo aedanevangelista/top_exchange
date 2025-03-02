@@ -1,8 +1,8 @@
 <?php
 $servername = "localhost";
-$username = "root"; // Your DB username
-$password = ""; // Your DB password
-$dbname = "top_exchange"; // Your DB name
+$username = "root"; // Default for XAMPP
+$password = ""; // Default for XAMPP
+$dbname = "top_exchange"; // Your database name
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);

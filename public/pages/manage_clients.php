@@ -2,7 +2,7 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('manage_clients.php'); // Check access for current page
+checkRole(['admin']); // Only admins can access
 
 $sql = "SELECT * FROM clients WHERE status = 'pending' ORDER BY created_at ASC";
 $result = $conn->query($sql);

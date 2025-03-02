@@ -49,9 +49,6 @@ $role = $_SESSION['role'] ?? ''; // Get user role from session
                         <a href="/top_exchange/public/pages/accounts_clients.php" class="submenu-item">
                             <i class="fas fa-arrow-right"></i> Clients
                         </a>
-                        <a href="/top_exchange/public/pages/user_roles.php" class="submenu-item">
-                            <i class="fas fa-arrow-right"></i> User Roles
-                        </a>
                     <?php endif; ?>
                 </div>
             </div>
