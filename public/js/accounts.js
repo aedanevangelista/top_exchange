@@ -43,46 +43,43 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Open Add Account Form Overlay
     window.openAddAccountForm = function() {
-        document.getElementById("accountOverlay").style.display = "flex";
+        document.getElementById("addAccountOverlay").style.display = "flex";
         document.getElementById("addAccountError").innerText = ""; // Clear error
     }
 
     // Close Add Account Form Overlay
     window.closeAddAccountForm = function() {
-        document.getElementById("accountOverlay").style.display = "none";
-        document.getElementById("accountForm").reset();
+        document.getElementById("addAccountOverlay").style.display = "none";
+        document.getElementById("addAccountForm").reset();
         document.getElementById("addAccountError").innerText = "";
     }
 
     // Submit Add Account Form with AJAX
-    const addAccountForm = document.getElementById("accountForm");
-    if (addAccountForm) {
-        addAccountForm.addEventListener("submit", function(event) {
-            event.preventDefault();
-            var formData = new FormData(this);
-            formData.append("ajax", true);
+    document.getElementById("addAccountForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        var formData = new FormData(this);
+        formData.append("ajax", true);
 
-            fetch(this.action, {
-                method: "POST",
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    closeAddAccountForm();
-                    showCustomToast("add", "Adding account", 5000, () => {
-                        window.location.reload();
-                    });
-                } else {
-                    showErrorPrompt(data.message || "Username already exists.");
-                }
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                showErrorPrompt("An unexpected error occurred.");
-            });
+        fetch(this.action, {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeAddAccountForm();
+                showCustomToast("add", "Adding account", 5000, () => {
+                    window.location.reload();
+                });
+            } else {
+                showErrorPrompt(data.message || "Username already exists.");
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            showErrorPrompt("An unexpected error occurred.");
         });
-    }
+    });
 
     // ----------------------------
     // ✏️ EDIT ACCOUNT LOGIC
@@ -91,17 +88,16 @@ document.addEventListener("DOMContentLoaded", function() {
     let editAccountId = null;
 
     // Open Edit Account Form Overlay
-    window.openEditAccountForm = function(accountId, username, role_id) {
+    window.openEditAccountForm = function(accountId, username, role) {
         editAccountId = accountId;
-        document.getElementById("accountOverlay").style.display = "flex";
+        document.getElementById("editAccountOverlay").style.display = "flex";
 
         // Pre-fill form fields with correct IDs
-        document.getElementById("accountId").value = accountId;
-        document.getElementById("username").value = username;
-        document.getElementById("role_id").value = role_id;
+        document.getElementById("edit-username").value = username;
+        document.getElementById("edit-role").value = role;
         document.getElementById("editAccountError").innerText = "";
 
-        const editForm = document.getElementById("accountForm");
+        const editForm = document.getElementById("editAccountForm");
         if (editForm) {
             editForm.addEventListener("submit", submitEditAccountForm);
         }
@@ -109,12 +105,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Close Edit Account Form Overlay
     window.closeEditAccountForm = function() {
-        document.getElementById("accountOverlay").style.display = "none";
-        document.getElementById("accountForm").reset();
+        document.getElementById("editAccountOverlay").style.display = "none";
+        document.getElementById("editAccountForm").reset();
         document.getElementById("editAccountError").innerText = "";
         editAccountId = null;
 
-        const editForm = document.getElementById("accountForm");
+        const editForm = document.getElementById("editAccountForm");
         if (editForm) {
             editForm.removeEventListener("submit", submitEditAccountForm);
         }
@@ -137,7 +133,7 @@ document.addEventListener("DOMContentLoaded", function() {
             console.log("Response data:", data); // Debugging line
             if (data.success) {
                 closeEditAccountForm();
-                showCustomToast("edit", `Editing account ${document.getElementById("username").value}`, 5000, () => {
+                showCustomToast("edit", `Editing account ${document.getElementById("edit-username").value}`, 5000, () => {
                     window.location.reload();
                 });
             } else {
@@ -221,8 +217,10 @@ document.addEventListener("DOMContentLoaded", function() {
     // ----------------------------
 
     window.onclick = function(event) {
-        if (event.target === document.getElementById("accountOverlay")) {
+        if (event.target === document.getElementById("addAccountOverlay")) {
             closeAddAccountForm();
+        }
+        if (event.target === document.getElementById("editAccountOverlay")) {
             closeEditAccountForm();
         }
         if (event.target === document.getElementById("deleteModal")) {

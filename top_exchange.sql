@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 02, 2025 at 07:22 PM
+-- Generation Time: Mar 02, 2025 at 12:20 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -28,18 +28,25 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `accounts` (
-  `account_id` int(11) NOT NULL,
+  `id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `role_id` int(11) NOT NULL
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `role` enum('admin','secretary','accountant') NOT NULL DEFAULT 'accountant'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `accounts`
 --
 
-INSERT INTO `accounts` (`account_id`, `username`, `password`, `role_id`) VALUES
-(1, 'admin', '123', 1);
+INSERT INTO `accounts` (`id`, `username`, `password`, `created_at`, `role`) VALUES
+(1, 'admin', '123', '2025-02-09 15:13:45', 'admin'),
+(27, 'Ryan', '123', '2025-02-16 08:53:47', 'secretary'),
+(28, 'aed1', '23', '2025-02-16 08:53:52', 'admin'),
+(46, '1', '123', '2025-02-17 02:57:54', 'admin'),
+(47, '2', '123', '2025-02-17 02:57:59', 'secretary'),
+(52, 'secretary', '123', '2025-02-23 00:10:59', 'secretary'),
+(53, 'accountant', '123', '2025-02-26 05:45:50', 'accountant');
 
 -- --------------------------------------------------------
 
@@ -159,32 +166,6 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
--- Table structure for table `pages`
---
-
-CREATE TABLE `pages` (
-  `page_id` int(11) NOT NULL,
-  `page_name` varchar(255) NOT NULL,
-  `file_name` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `pages`
---
-
-INSERT INTO `pages` (`page_id`, `page_name`, `file_name`) VALUES
-(1, 'Dashboard', 'dashboard.php'),
-(2, 'Sales', 'sales.php'),
-(3, 'Forecast', 'forecast.php'),
-(4, 'Accounts', 'accounts.php'),
-(5, 'Accounts Clients', 'accounts_clients.php'),
-(6, 'User Roles', 'user_roles.php'),
-(7, 'Inventory', 'inventory.php'),
-(8, 'Customers', 'customers.php');
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `products`
 --
 
@@ -275,75 +256,6 @@ INSERT INTO `products` (`product_id`, `category`, `item_description`, `packaging
 (71, 'Noodles & Wrappers', 'Spring Roll Wrapper', '25pcs/pack', 90.00, 0),
 (72, 'Noodles & Wrappers', 'Gyoza Wrapper (Minimum 10 Packs)', '250g/pack', 70.00, 0);
 
--- --------------------------------------------------------
-
---
--- Table structure for table `roles`
---
-
-CREATE TABLE `roles` (
-  `role_id` int(11) NOT NULL,
-  `role_name` varchar(50) NOT NULL,
-  `status` enum('active','inactive') DEFAULT 'active'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `roles`
---
-
-INSERT INTO `roles` (`role_id`, `role_name`, `status`) VALUES
-(1, 'Admin', 'active'),
-(2, 'secretary', 'active'),
-(3, 'accountant', 'active'),
-(4, 'manager', 'active'),
-(6, 'aedan', 'active');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `role_permissions`
---
-
-CREATE TABLE `role_permissions` (
-  `role_id` int(11) NOT NULL,
-  `page_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `role_permissions`
---
-
-INSERT INTO `role_permissions` (`role_id`, `page_id`) VALUES
-(1, 1),
-(1, 2),
-(1, 3),
-(1, 4),
-(1, 5),
-(1, 6),
-(1, 7),
-(1, 8),
-(2, 1),
-(2, 2),
-(2, 3),
-(2, 7),
-(2, 8),
-(3, 1),
-(3, 2),
-(4, 1),
-(4, 2),
-(4, 3),
-(4, 4),
-(4, 5),
-(4, 7),
-(4, 8),
-(6, 1),
-(6, 2),
-(6, 3),
-(6, 5),
-(6, 6),
-(6, 7),
-(6, 8);
-
 --
 -- Indexes for dumped tables
 --
@@ -352,9 +264,7 @@ INSERT INTO `role_permissions` (`role_id`, `page_id`) VALUES
 -- Indexes for table `accounts`
 --
 ALTER TABLE `accounts`
-  ADD PRIMARY KEY (`account_id`),
-  ADD UNIQUE KEY `username` (`username`),
-  ADD KEY `role_id` (`role_id`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `clients_accounts`
@@ -384,32 +294,10 @@ ALTER TABLE `order_items`
   ADD KEY `product_id` (`product_id`);
 
 --
--- Indexes for table `pages`
---
-ALTER TABLE `pages`
-  ADD PRIMARY KEY (`page_id`),
-  ADD UNIQUE KEY `page_name` (`page_name`),
-  ADD UNIQUE KEY `file_name` (`file_name`);
-
---
 -- Indexes for table `products`
 --
 ALTER TABLE `products`
   ADD PRIMARY KEY (`product_id`);
-
---
--- Indexes for table `roles`
---
-ALTER TABLE `roles`
-  ADD PRIMARY KEY (`role_id`),
-  ADD UNIQUE KEY `role_name` (`role_name`);
-
---
--- Indexes for table `role_permissions`
---
-ALTER TABLE `role_permissions`
-  ADD PRIMARY KEY (`role_id`,`page_id`),
-  ADD KEY `page_id` (`page_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -419,7 +307,7 @@ ALTER TABLE `role_permissions`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
 
 --
 -- AUTO_INCREMENT for table `clients_accounts`
@@ -446,32 +334,14 @@ ALTER TABLE `order_items`
   MODIFY `order_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
--- AUTO_INCREMENT for table `pages`
---
-ALTER TABLE `pages`
-  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
-
---
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
   MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
 
 --
--- AUTO_INCREMENT for table `roles`
---
-ALTER TABLE `roles`
-  MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
-
---
 -- Constraints for dumped tables
 --
-
---
--- Constraints for table `accounts`
---
-ALTER TABLE `accounts`
-  ADD CONSTRAINT `accounts_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`role_id`);
 
 --
 -- Constraints for table `order_items`
@@ -479,13 +349,6 @@ ALTER TABLE `accounts`
 ALTER TABLE `order_items`
   ADD CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `role_permissions`
---
-ALTER TABLE `role_permissions`
-  ADD CONSTRAINT `role_permissions_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`role_id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `role_permissions_ibfk_2` FOREIGN KEY (`page_id`) REFERENCES `pages` (`page_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
