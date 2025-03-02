@@ -233,3 +233,20 @@
 .form-buttons {
     margin: auto;
 }
+
+.filter-section {
+    display: flex;
+    align-items: center;
+}
+
+.filter-section label {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.filter-section select {
+    padding: 8px 12px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+}

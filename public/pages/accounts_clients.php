@@ -224,8 +224,8 @@ function truncate($text, $max = 15) {
     <div class="main-content">
         <div class="accounts-header">
             <h1>Client Accounts</h1>
-            <div class="filter-container">
-                <label for="statusFilter">Filter by Status: </label>
+            <div class="filter-section">
+                <label for="statusFilter">Filter by Status:</label>
                 <select id="statusFilter" onchange="filterByStatus()">
                     <option value="">All</option>
                     <option value="Pending" <?= $status_filter == 'Pending' ? 'selected' : '' ?>>Pending</option>
