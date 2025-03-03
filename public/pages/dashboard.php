@@ -1,7 +1,8 @@
 <?php
 session_start();
+include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole(['admin', 'secretary', 'accountant']); // Allow access to all roles
+checkRole('Dashboard'); // Ensure the user has access to the Dashboard page
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {

@@ -2,7 +2,7 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole(['admin']); // Only admins can access
+checkRole('Accounts'); // Ensure the user has access to the Accounts page
 
 // Handle form submission (Add Account)
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
