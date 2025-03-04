@@ -2,7 +2,7 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Dashboard'); // Ensure the user has access to the Dashboard page
+checkRole('Dashboard');
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {

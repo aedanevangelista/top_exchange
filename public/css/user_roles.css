@@ -196,10 +196,11 @@ body {
 
 .checkbox-container {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column; /* Align checkboxes vertically */
+    gap: 10px; /* Add spacing between checkboxes */
+    align-items: flex-start; /* Align checkboxes to the left */
+    margin-top:16px;
 }
-
 .checkbox-container input[type="checkbox"] {
     width: 16px;
     height: 16px;
@@ -244,4 +245,34 @@ body {
 
 .cancel-btn:hover {
     background-color: #000000;
+}
+
+.status-active {
+    color: green;
+    font-weight: bold;
+}
+
+.status-inactive {
+    color: red;
+    font-weight: bold;
+}
+
+/* Activate Button */
+.activate-btn {
+    background-color: #28a745; /* Green */
+    color: white;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 20px;
+    text-decoration: none;
+    border: none;
+    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.activate-btn:hover {
+    background-color: #218838;
 }
