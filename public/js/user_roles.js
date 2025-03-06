@@ -45,3 +45,38 @@ function showErrorMessage(message) {
     }
     errorDiv.textContent = message;
 }
+
+function openAddRoleForm() {
+    document.getElementById("roleFormTitle").innerHTML = '<i class="fas fa-user-plus"></i> Add Role';
+    document.getElementById("actionType").value = "add";
+    document.getElementById("roleId").value = "";
+    document.getElementById("roleName").value = "";
+    document.getElementById("roleError").style.display = "none";
+    document.getElementById("roleOverlay").style.display = "block";
+}
+
+function openEditRoleForm(roleId, roleName, pages) {
+    document.getElementById("roleFormTitle").innerHTML = '<i class="fas fa-edit"></i> Edit Role';
+    document.getElementById("actionType").value = "edit";
+    document.getElementById("roleId").value = roleId;
+    document.getElementById("roleName").value = roleName;
+    document.getElementById("roleError").style.display = "none"; // Hide error on opening
+
+    document.querySelectorAll("input[name='page_ids[]']").forEach(checkbox => {
+        checkbox.checked = false;
+    });
+
+    if (pages) {
+        let pageArray = pages.split(", ");
+        document.querySelectorAll("input[name='page_ids[]']").forEach(checkbox => {
+            if (pageArray.includes(checkbox.value)) {
+                checkbox.checked = true;
+            }
+        });
+    }
+    document.getElementById("roleOverlay").style.display = "block";
+}
+
+function closeRoleForm() {
+    document.getElementById("roleOverlay").style.display = "none";
+}

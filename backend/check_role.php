@@ -3,7 +3,7 @@
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
-include "db_connection.php"; // Include database connection
+include_once "db_connection.php"; // Include database connection
 
 function checkRole($pageName) {
     global $conn;
@@ -23,6 +23,3 @@ function checkRole($pageName) {
         exit();
     }
 }
-
-
-?>

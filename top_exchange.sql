@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 02, 2025 at 12:20 PM
+-- Generation Time: Mar 06, 2025 at 03:12 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -32,7 +32,7 @@ CREATE TABLE `accounts` (
   `username` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `role` enum('admin','secretary','accountant') NOT NULL DEFAULT 'accountant'
+  `role` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -40,13 +40,11 @@ CREATE TABLE `accounts` (
 --
 
 INSERT INTO `accounts` (`id`, `username`, `password`, `created_at`, `role`) VALUES
-(1, 'admin', '123', '2025-02-09 15:13:45', 'admin'),
-(27, 'Ryan', '123', '2025-02-16 08:53:47', 'secretary'),
-(28, 'aed1', '23', '2025-02-16 08:53:52', 'admin'),
-(46, '1', '123', '2025-02-17 02:57:54', 'admin'),
-(47, '2', '123', '2025-02-17 02:57:59', 'secretary'),
-(52, 'secretary', '123', '2025-02-23 00:10:59', 'secretary'),
-(53, 'accountant', '123', '2025-02-26 05:45:50', 'accountant');
+(56, 'admin', '123', '2025-03-05 22:58:17', 'Admin'),
+(57, 'Secretary', '123', '2025-03-05 23:17:38', 'Secretary'),
+(58, 'aedan', '123', '2025-03-05 23:23:25', 'Admin'),
+(60, 'Manager', '123', '2025-03-05 23:27:49', 'Manager'),
+(61, 'Accountant', '123', '2025-03-05 23:27:55', 'Accountant');
 
 -- --------------------------------------------------------
 
@@ -73,9 +71,8 @@ CREATE TABLE `clients_accounts` (
 --
 
 INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company_address`, `business_proof`, `status`, `created_at`) VALUES
-(14, 'asdasd', '$2y$10$HRQPj/GhcW/yhIKG9gwrpOlFlhMVbKYGvX4Hh0und7IA/KaPrxYN2', 'aedanevangelista.freelance@gmail.com', '+639760268643', 'asdasd', 'Quezon City', '22c. Sta. Catalina\r\nMaharlika', '[\"\\/top_exchange\\/uploads\\/asdasd\\/5.png\"]', 'Inactive', '2025-03-01 17:09:11'),
-(15, 'asdasdaa', '$2y$10$/8tq4CNc4ztPmfA2ddMaIuvWpLAAhCe/Z6i1Th3ncwIYYSIlpAZ86', 'aedanevangelista.frasdasdeelance@gmail.com', '+639760268643', 'asdasdsad', 'Quezon City', '22c. Sta. Catalina\r\nMaharlika', '[\"\\/top_exchange\\/uploads\\/asdasdaa\\/4.png\"]', 'Active', '2025-03-01 19:04:42'),
-(16, 'asdasdaaa', '$2y$10$QkvJTl2ygPcEAOpauI6wpuGFNt5zA2IIm4aiPsYsyyLq7xZow4toS', 'aasdas@gmail.com', '1231', 'asdasd', 'asdasd', 'asdasdasd', '[\"\\/top_exchange\\/uploads\\/asdasdaaa\\/4.png\"]', 'Active', '2025-03-01 19:12:22');
+(16, 'asdasdaaa', '$2y$10$QkvJTl2ygPcEAOpauI6wpuGFNt5zA2IIm4aiPsYsyyLq7xZow4toS', 'aasdas@gmail.com', '1231', 'asdasd', 'asdasd', 'asdasdasd', '[\"\\/top_exchange\\/uploads\\/asdasdaaa\\/4.png\"]', 'Active', '2025-03-01 19:12:22'),
+(17, 'admin', '$2y$10$Hh9CakUrlrjClJ9HKBb8OuqO3GTuldjIp88X6/L/yte82douvI1qK', 'aasd@gmail.com', '123', 'asd', 'asd', 'asdsad', '[\"\\/top_exchange\\/uploads\\/admin\\/POST 3.png\"]', 'Active', '2025-03-06 06:16:16');
 
 -- --------------------------------------------------------
 
@@ -162,6 +159,30 @@ CREATE TRIGGER `before_insert_order_items` BEFORE INSERT ON `order_items` FOR EA
 END
 $$
 DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pages`
+--
+
+CREATE TABLE `pages` (
+  `page_id` int(11) NOT NULL,
+  `page_name` varchar(50) NOT NULL,
+  `file_path` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `pages`
+--
+
+INSERT INTO `pages` (`page_id`, `page_name`, `file_path`) VALUES
+(1, 'Accounts - Clients', 'accounts_clients.php'),
+(2, 'Accounts - Admin', 'accounts.php'),
+(3, 'Customers', 'customers.php'),
+(4, 'Dashboard', 'dashboard.php'),
+(5, 'Inventory', 'inventory.php'),
+(6, 'User Roles', 'user_roles.php');
 
 -- --------------------------------------------------------
 
@@ -256,6 +277,29 @@ INSERT INTO `products` (`product_id`, `category`, `item_description`, `packaging
 (71, 'Noodles & Wrappers', 'Spring Roll Wrapper', '25pcs/pack', 90.00, 0),
 (72, 'Noodles & Wrappers', 'Gyoza Wrapper (Minimum 10 Packs)', '250g/pack', 70.00, 0);
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `roles`
+--
+
+CREATE TABLE `roles` (
+  `role_id` int(11) NOT NULL,
+  `role_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` enum('active','inactive') DEFAULT 'active',
+  `pages` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `roles`
+--
+
+INSERT INTO `roles` (`role_id`, `role_name`, `status`, `pages`) VALUES
+(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory'),
+(2, 'Manager', 'active', ''),
+(3, 'Secretary', 'active', ''),
+(4, 'Accountant', 'active', '');
+
 --
 -- Indexes for dumped tables
 --
@@ -264,7 +308,8 @@ INSERT INTO `products` (`product_id`, `category`, `item_description`, `packaging
 -- Indexes for table `accounts`
 --
 ALTER TABLE `accounts`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_accounts_roles` (`role`);
 
 --
 -- Indexes for table `clients_accounts`
@@ -294,10 +339,25 @@ ALTER TABLE `order_items`
   ADD KEY `product_id` (`product_id`);
 
 --
+-- Indexes for table `pages`
+--
+ALTER TABLE `pages`
+  ADD PRIMARY KEY (`page_id`),
+  ADD UNIQUE KEY `page_name` (`page_name`);
+
+--
 -- Indexes for table `products`
 --
 ALTER TABLE `products`
   ADD PRIMARY KEY (`product_id`);
+
+--
+-- Indexes for table `roles`
+--
+ALTER TABLE `roles`
+  ADD PRIMARY KEY (`role_id`),
+  ADD UNIQUE KEY `role_name` (`role_name`),
+  ADD UNIQUE KEY `unique_role` (`role_name`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -307,13 +367,13 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
 -- AUTO_INCREMENT for table `clients_accounts`
 --
 ALTER TABLE `clients_accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `customers`
@@ -334,14 +394,32 @@ ALTER TABLE `order_items`
   MODIFY `order_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
+-- AUTO_INCREMENT for table `pages`
+--
+ALTER TABLE `pages`
+  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
   MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
 
 --
+-- AUTO_INCREMENT for table `roles`
+--
+ALTER TABLE `roles`
+  MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+
+--
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `accounts`
+--
+ALTER TABLE `accounts`
+  ADD CONSTRAINT `fk_accounts_roles` FOREIGN KEY (`role`) REFERENCES `roles` (`role_name`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `order_items`

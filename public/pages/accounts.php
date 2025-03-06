@@ -83,7 +83,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 }
 
 // Fetch accounts for display
-$sql = "SELECT id, username, role, created_at FROM accounts ORDER BY id ASC";
+$sql = "SELECT id, username, role, created_at FROM accounts ORDER BY FIELD(role, 'Admin') DESC, role ASC, username ASC";
 $result = $conn->query($sql);
 ?>
 
@@ -111,7 +111,6 @@ $result = $conn->query($sql);
             <table class="accounts-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
                         <th>Username</th>
                         <th>Role</th>
                         <th>Account Age</th>
@@ -135,7 +134,6 @@ $result = $conn->query($sql);
                             }
                         ?>
                             <tr>
-                                <td><?= htmlspecialchars($row['id']) ?></td>
                                 <td><?= htmlspecialchars($row['username']) ?></td>
                                 <td>
                                     <?php 
@@ -169,7 +167,7 @@ $result = $conn->query($sql);
         <div class="overlay-content">
             <h2><i class="fas fa-user-plus"></i> Add New Account</h2>
             <div id="addAccountError" class="error-message"></div>
-            <form id="addAccountForm" method="POST" class="account-form">
+            <form id="addAccountForm" method="POST" class="account-form" action="">
                 <input type="hidden" name="formType" value="add">
                 <label for="username">Username:</label>
                 <input type="text" id="username" name="username" autocomplete="username" required>
@@ -196,9 +194,9 @@ $result = $conn->query($sql);
         <div class="overlay-content">
             <h2><i class="fas fa-edit"></i> Edit Account</h2>
             <div id="editAccountError" class="error-message"></div>
-            <form id="editAccountForm" method="POST" class="account-form">
+            <form id="editAccountForm" method="POST" class="account-form" action="">
                 <input type="hidden" name="formType" value="edit">
-                <input type="hidden" id="edit-id" name="id">
+                <input type="hidden" id="id" name="id"> <!-- Hidden field for account ID -->
                 <label for="edit-username">Username:</label>
                 <input type="text" id="edit-username" name="username" autocomplete="username" required>
                 <label for="edit-password">Password:</label>

@@ -50,7 +50,10 @@ document.addEventListener("DOMContentLoaded", function() {
     // Close Add Account Form Overlay
     window.closeAddAccountForm = function() {
         document.getElementById("addAccountOverlay").style.display = "none";
-        document.getElementById("addAccountForm").reset();
+        const addAccountForm = document.getElementById("addAccountForm");
+        if (addAccountForm) {
+            addAccountForm.reset();
+        }
         document.getElementById("addAccountError").innerText = "";
     }
 
@@ -66,15 +69,21 @@ document.addEventListener("DOMContentLoaded", function() {
                 method: "POST",
                 body: formData
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    closeAddAccountForm();
-                    showCustomToast("add", "Adding account", 5000, () => {
-                        window.location.reload();
-                    });
-                } else {
-                    showErrorPrompt(data.message || "Username already exists.");
+            .then(response => response.text()) // Change to text to log the response
+            .then(text => {
+                try {
+                    const data = JSON.parse(text);
+                    if (data.success) {
+                        closeAddAccountForm();
+                        showCustomToast("add", "Adding account", 5000, () => {
+                            window.location.reload();
+                        });
+                    } else {
+                        showErrorPrompt(data.message || "Username already exists.");
+                    }
+                } catch (error) {
+                    console.error("Error parsing JSON:", error, text);
+                    showErrorPrompt("An unexpected error occurred.");
                 }
             })
             .catch(error => {
@@ -91,64 +100,61 @@ document.addEventListener("DOMContentLoaded", function() {
     let editAccountId = null;
 
     // Open Edit Account Form Overlay
-    function openEditAccountForm(id, username, role) {
-        $('#edit-id').val(id);
-        $('#edit-username').val(username);
-        $('#edit-role').val(role);
-        $('#editAccountOverlay').show();
+    window.openEditAccountForm = function(id, username, role) {
+        const editId = document.getElementById('id'); // Ensure this matches the hidden field name
+        const editUsername = document.getElementById('edit-username');
+        const editRole = document.getElementById('edit-role');
+
+        if (editId && editUsername && editRole) {
+            editId.value = id; // Set the account ID
+            editUsername.value = username;
+            editRole.value = role;
+            document.getElementById('editAccountOverlay').style.display = 'flex';
+        } else {
+            console.error("Edit elements not found in the DOM.");
+        }
     }
     
-    function closeEditAccountForm() {
-        $('#editAccountOverlay').hide();
+    window.closeEditAccountForm = function() {
+        document.getElementById("editAccountOverlay").style.display = "none";
+        const editAccountForm = document.getElementById("editAccountForm");
+        if (editAccountForm) {
+            editAccountForm.reset();
+        }
     }
     
-    $('#editAccountForm').on('submit', function (e) {
+    document.getElementById('editAccountForm').addEventListener('submit', function (e) {
         e.preventDefault();
     
-        var formData = $(this).serialize();
-        $.post('/path/to/your/php/file', formData, function (response) {
-            if (response.success) {
-                toastr.success('Account updated successfully!');
-                if (response.reload) {
-                    location.reload();
-                }
-            } else {
-                toastr.error(response.message || 'Failed to update account.');
-            }
-        }, 'json').fail(function (xhr, status, error) {
-            toastr.error('An error occurred: ' + error);
-        });
-    });
+        const formData = new FormData(this);
+        formData.append("ajax", true);
 
-    // Submit Edit Account Form with AJAX
-    function submitEditAccountForm(event) {
-        event.preventDefault();
-
-        const formData = new FormData(event.target);
-        formData.append('account_id', editAccountId);  // Correct key
-        formData.append('ajax', 'true');    
-
-        fetch("/top_exchange/backend/update_account.php", {
+        fetch(this.action, {
             method: "POST",
             body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            console.log("Response data:", data); // Debugging line
-            if (data.success) {
-                closeEditAccountForm();
-                showCustomToast("edit", `Editing account ${document.getElementById("edit-username").value}`, 5000, () => {
-                    window.location.reload();
-                });
-            } else {
-                showErrorPrompt(data.message || "An unexpected error occurred.", true);
+        .then(response => response.text()) // Change to text to log the response
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    closeEditAccountForm();
+                    showCustomToast("edit", "Updating account", 5000, () => {
+                        window.location.reload();
+                    });
+                } else {
+                    showErrorPrompt(data.message || 'Failed to update account.', true);
+                }
+            } catch (error) {
+                console.error("Error parsing JSON:", error, text);
+                showErrorPrompt("An unexpected error occurred.", true);
             }
         })
         .catch(error => {
             console.error("Error:", error);
-            showErrorPrompt("An unexpected error occurred.", true);
+            showErrorPrompt('An unexpected error occurred.', true);
         });
-    }
+    });
 
     // ----------------------------
     // 🗑️ DELETE ACCOUNT LOGIC
@@ -231,110 +237,4 @@ document.addEventListener("DOMContentLoaded", function() {
             closeDeleteModal();
         }
     };
-
-    // ----------------------------
-    // 📋 ROLE MANAGEMENT LOGIC
-    // ----------------------------
-
-    window.openAddRoleForm = function() {
-        document.getElementById("addRoleForm").reset();
-        document.getElementById("addRoleOverlay").style.display = "flex";
-    }
-
-    window.closeAddRoleForm = function() {
-        document.getElementById("addRoleOverlay").style.display = "none";
-    }
-
-    window.openEditRoleForm = function(role_id) {
-        document.getElementById("editRoleForm").reset();
-        document.getElementById("editRoleId").value = role_id;
-        $.ajax({
-            url: '/top_exchange/backend/get_role_permissions.php',
-            method: 'GET',
-            data: { role_id: role_id },
-            success: function(data) {
-                const roleData = JSON.parse(data);
-                $('#editRoleName').val(roleData.role_name);
-                $('input[type="checkbox"]').prop('checked', false);
-                roleData.pages.forEach(function(page) {
-                    $('#edit_page_' + page).prop('checked', true);
-                });
-                document.getElementById('editRoleOverlay').style.display = 'flex';
-            },
-            error: function(xhr, status, error) {
-                console.error("Error fetching role permissions:", status, error);
-                showErrorPrompt("An error occurred while fetching role permissions.");
-            }
-        });
-    }
-
-    window.closeEditRoleForm = function() {
-        document.getElementById("editRoleOverlay").style.display = "none";
-    }
-
-    // Submit Add Role Form with AJAX
-    const addRoleForm = document.getElementById("addRoleForm");
-    if (addRoleForm) {
-        addRoleForm.addEventListener("submit", function(event) {
-            event.preventDefault();
-            var formData = new FormData(this);
-
-            fetch("/top_exchange/backend/update_role.php", {
-                method: "POST",
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    closeAddRoleForm();
-                    showCustomToast("add", "Adding role", 5000, () => {
-                        window.location.reload();
-                    });
-                } else {
-                    showErrorPrompt(data.message || "An unexpected error occurred.");
-                }
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                showErrorPrompt("An unexpected error occurred.");
-            });
-        });
-    }
-
-    // Submit Edit Role Form with AJAX
-    const editRoleForm = document.getElementById("editRoleForm");
-    if (editRoleForm) {
-        editRoleForm.addEventListener("submit", function(event) {
-            event.preventDefault();
-            var formData = new FormData(this);
-
-            fetch("/top_exchange/backend/update_role.php", {
-                method: "POST",
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    closeEditRoleForm();
-                    showCustomToast("edit", "Editing role", 5000, () => {
-                        window.location.reload();
-                    });
-                } else {
-                    showErrorPrompt(data.message || "An unexpected error occurred.");
-                }
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                showErrorPrompt("An unexpected error occurred.");
-            });
-        });
-    }
-
-    var roleEditButtons = document.querySelectorAll(".edit-btn");
-    roleEditButtons.forEach(function(btn) {
-        btn.addEventListener("click", function() {
-            var roleId = btn.getAttribute("data-role-id");
-            openEditRoleForm(roleId);
-        });
-    });
 });

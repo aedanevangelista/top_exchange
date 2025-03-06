@@ -35,6 +35,7 @@ if (isset($_GET['error'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+<script src="../js/user_roles.js"></script>
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="accounts-header">
@@ -123,41 +124,6 @@ if (isset($_GET['error'])) {
         </div>
     </div>
 
-    <script>
-        function openAddRoleForm() {
-            document.getElementById("roleFormTitle").innerHTML = '<i class="fas fa-user-plus"></i> Add Role';
-            document.getElementById("actionType").value = "add";
-            document.getElementById("roleId").value = "";
-            document.getElementById("roleName").value = "";
-            document.getElementById("roleError").style.display = "none";
-            document.getElementById("roleOverlay").style.display = "block";
-        }
 
-        function openEditRoleForm(roleId, roleName, pages) {
-            document.getElementById("roleFormTitle").innerHTML = '<i class="fas fa-edit"></i> Edit Role';
-            document.getElementById("actionType").value = "edit";
-            document.getElementById("roleId").value = roleId;
-            document.getElementById("roleName").value = roleName;
-            document.getElementById("roleError").style.display = "none"; // Hide error on opening
-
-            document.querySelectorAll("input[name='page_ids[]']").forEach(checkbox => {
-                checkbox.checked = false;
-            });
-
-            if (pages) {
-                let pageArray = pages.split(", ");
-                document.querySelectorAll("input[name='page_ids[]']").forEach(checkbox => {
-                    if (pageArray.includes(checkbox.value)) {
-                        checkbox.checked = true;
-                    }
-                });
-            }
-            document.getElementById("roleOverlay").style.display = "block";
-        }
-
-        function closeRoleForm() {
-            document.getElementById("roleOverlay").style.display = "none";
-        }
-    </script>
 </body>
 </html>
