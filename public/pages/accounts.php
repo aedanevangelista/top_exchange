@@ -4,6 +4,22 @@ include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
 checkRole('Accounts - Admin'); // Ensure the user has access to the Accounts page
 
+// Fetch roles from the database
+$roles = [];
+$roleQuery = "SELECT role_name FROM roles WHERE status = 'active'";
+$result = $conn->query($roleQuery);
+if ($result && $result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $roles[] = $row['role_name'];
+    }
+}
+
+// Function to return JSON response
+function returnJsonResponse($success, $reload, $message = '') {
+    echo json_encode(['success' => $success, 'reload' => $reload, 'message' => $message]);
+    exit;
+}
+
 // Handle form submission (Add Account)
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
     header('Content-Type: application/json');
@@ -19,9 +35,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $checkStmt->store_result();
 
     if ($checkStmt->num_rows > 0) {
-        echo json_encode(['success' => false, 'reload' => false, 'message' => 'Username already exists.']);
-        $checkStmt->close();
-        exit;
+        returnJsonResponse(false, false, 'Username already exists.');
     }
     $checkStmt->close();
 
@@ -29,9 +43,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $stmt->bind_param("ssss", $username, $password, $role, $created_at);
 
     if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'reload' => true]);
+        returnJsonResponse(true, true);
     } else {
-        echo json_encode(['success' => false, 'reload' => false]);
+        returnJsonResponse(false, false);
     }
     $stmt->close();
     exit;
@@ -52,9 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $checkStmt->store_result();
 
     if ($checkStmt->num_rows > 0) {
-        echo json_encode(['success' => false, 'reload' => false, 'message' => 'Username already exists.']);
-        $checkStmt->close();
-        exit;
+        returnJsonResponse(false, false, 'Username already exists.');
     }
     $checkStmt->close();
 
@@ -62,9 +74,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $stmt->bind_param("sssi", $username, $password, $role, $id);
 
     if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'reload' => true]);
+        returnJsonResponse(true, true);
     } else {
-        echo json_encode(['success' => false, 'reload' => false]);
+        returnJsonResponse(false, false);
     }
     $stmt->close();
     exit;
@@ -165,10 +177,9 @@ $result = $conn->query($sql);
                 <input type="text" id="password" name="password" autocomplete="new-password" required>
                 <label for="role">Role:</label>
                 <select id="role" name="role" autocomplete="role" required>
-                    <option value="admin">Admin</option>
-                    <option value="client">Client</option>
-                    <option value="secretary">Secretary</option>
-                    <option value="accountant">Accountant</option>
+                    <?php foreach ($roles as $role): ?>
+                        <option value="<?= $role ?>"><?= $role ?></option>
+                    <?php endforeach; ?>
                 </select>
                 <div class="form-buttons">
                     <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
@@ -194,10 +205,9 @@ $result = $conn->query($sql);
                 <input type="text" id="edit-password" name="password" autocomplete="new-password" required>
                 <label for="edit-role">Role:</label>
                 <select id="edit-role" name="role" autocomplete="role" required>
-                    <option value="admin">Admin</option>
-                    <option value="client">Client</option>
-                    <option value="secretary">Secretary</option>
-                    <option value="accountant">Accountant</option>
+                    <?php foreach ($roles as $role): ?>
+                        <option value="<?= $role ?>"><?= $role ?></option>
+                    <?php endforeach; ?>
                 </select>
                 <div class="form-buttons">
                     <button type="submit" class="save-btn"><i class="fas fa-save"></i> Update</button>

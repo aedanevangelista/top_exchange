@@ -91,33 +91,34 @@ document.addEventListener("DOMContentLoaded", function() {
     let editAccountId = null;
 
     // Open Edit Account Form Overlay
-    window.openEditAccountForm = function(accountId, username, role) {
-        editAccountId = accountId;
-        document.getElementById("editAccountOverlay").style.display = "flex";
-
-        // Pre-fill form fields with correct IDs
-        document.getElementById("edit-username").value = username;
-        document.getElementById("edit-role").value = role;
-        document.getElementById("editAccountError").innerText = "";
-
-        const editForm = document.getElementById("editAccountForm");
-        if (editForm) {
-            editForm.addEventListener("submit", submitEditAccountForm);
-        }
+    function openEditAccountForm(id, username, role) {
+        $('#edit-id').val(id);
+        $('#edit-username').val(username);
+        $('#edit-role').val(role);
+        $('#editAccountOverlay').show();
     }
-
-    // Close Edit Account Form Overlay
-    window.closeEditAccountForm = function() {
-        document.getElementById("editAccountOverlay").style.display = "none";
-        document.getElementById("editAccountForm").reset();
-        document.getElementById("editAccountError").innerText = "";
-        editAccountId = null;
-
-        const editForm = document.getElementById("editAccountForm");
-        if (editForm) {
-            editForm.removeEventListener("submit", submitEditAccountForm);
-        }
+    
+    function closeEditAccountForm() {
+        $('#editAccountOverlay').hide();
     }
+    
+    $('#editAccountForm').on('submit', function (e) {
+        e.preventDefault();
+    
+        var formData = $(this).serialize();
+        $.post('/path/to/your/php/file', formData, function (response) {
+            if (response.success) {
+                toastr.success('Account updated successfully!');
+                if (response.reload) {
+                    location.reload();
+                }
+            } else {
+                toastr.error(response.message || 'Failed to update account.');
+            }
+        }, 'json').fail(function (xhr, status, error) {
+            toastr.error('An error occurred: ' + error);
+        });
+    });
 
     // Submit Edit Account Form with AJAX
     function submitEditAccountForm(event) {
