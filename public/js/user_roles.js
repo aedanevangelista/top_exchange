@@ -1,15 +1,12 @@
 function saveRolePermissions(event) {
     event.preventDefault();
-
     const formData = new FormData(event.target);
     const roleName = formData.get('role_name').trim().toLowerCase();
 
-    // Fetch existing roles to check for duplicates
     fetch('/top_exchange/backend/get_roles_and_pages.php')
         .then(response => response.json())
         .then(data => {
             const existingRoles = data.roles.map(role => role.role_name.toLowerCase());
-
             if (existingRoles.includes(roleName)) {
                 showErrorMessage('Role name already exists. Please choose a different name.');
             } else {
@@ -29,8 +26,8 @@ function submitRoleForm(formData) {
             showErrorMessage(data.message);
         } else {
             alert(data.message);
-            closeAddRoleModal();
-            location.reload(); // Refresh to update roles
+            hideRoleForm();
+            location.reload();
         }
     });
 }
@@ -46,26 +43,16 @@ function showErrorMessage(message) {
     errorDiv.textContent = message;
 }
 
-function openAddRoleForm() {
-    document.getElementById("roleFormTitle").innerHTML = '<i class="fas fa-user-plus"></i> Add Role';
-    document.getElementById("actionType").value = "add";
-    document.getElementById("roleId").value = "";
-    document.getElementById("roleName").value = "";
-    document.getElementById("roleError").style.display = "none";
-    document.getElementById("roleOverlay").style.display = "block";
-}
-
-function openEditRoleForm(roleId, roleName, pages) {
-    document.getElementById("roleFormTitle").innerHTML = '<i class="fas fa-edit"></i> Edit Role';
-    document.getElementById("actionType").value = "edit";
+function showRoleForm(roleId = '', roleName = '', pages = '') {
+    document.getElementById("roleFormTitle").innerHTML = roleId ? '<i class="fas fa-edit"></i> Edit Role' : '<i class="fas fa-user-plus"></i> Add Role';
+    document.getElementById("actionType").value = roleId ? 'edit' : 'add';
     document.getElementById("roleId").value = roleId;
     document.getElementById("roleName").value = roleName;
-    document.getElementById("roleError").style.display = "none"; // Hide error on opening
-
+    document.getElementById("roleError").style.display = "none";
+    
     document.querySelectorAll("input[name='page_ids[]']").forEach(checkbox => {
         checkbox.checked = false;
     });
-
     if (pages) {
         let pageArray = pages.split(", ");
         document.querySelectorAll("input[name='page_ids[]']").forEach(checkbox => {
@@ -77,6 +64,6 @@ function openEditRoleForm(roleId, roleName, pages) {
     document.getElementById("roleOverlay").style.display = "block";
 }
 
-function closeRoleForm() {
+function hideRoleForm() {
     document.getElementById("roleOverlay").style.display = "none";
 }
