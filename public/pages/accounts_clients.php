@@ -115,8 +115,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
         mkdir($user_upload_dir, 0777, true);
     }
 
-    $existing_business_proof = json_decode($_POST['existing_business_proof'], true) ?? [];
-
+    // Collect new files
     if (isset($_FILES['business_proof'])) {
         if (count($_FILES['business_proof']['name']) > 3) {
             echo json_encode(['success' => false, 'message' => 'Maximum of 3 photos allowed.']);
@@ -145,7 +144,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
         }
     }
 
-    $business_proof = array_merge($existing_business_proof, $business_proof);
+    // Delete old files that are not part of the new upload
+    $existing_business_proof = json_decode($_POST['existing_business_proof'], true) ?? [];
+    $existing_files = array_diff(scandir($user_upload_dir), array('.', '..'));
+    foreach ($existing_files as $existing_file) {
+        $existing_file_path = $user_upload_dir . $existing_file;
+        if (!in_array('/top_exchange/uploads/' . $username . '/' . $existing_file, array_merge($existing_business_proof, $business_proof))) {
+            if (file_exists($existing_file_path)) {
+                unlink($existing_file_path);
+            }
+        }
+    }
+
     $business_proof_json = json_encode($business_proof);
 
     $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company_address = ?, business_proof = ? WHERE id = ?");
