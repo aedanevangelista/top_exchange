@@ -35,6 +35,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $phone = $_POST['phone'] ?? null;
     $region = $_POST['region'];
     $city = $_POST['city'];
+    $company = $_POST['company'] ?? null; // Add company field
     $company_address = $_POST['company_address'];
     $business_proof = [];
 
@@ -78,8 +79,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $business_proof_json = json_encode($business_proof);
 
-    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
-    $stmt->bind_param("ssssssss", $username, $password, $email, $phone, $region, $city, $company_address, $business_proof_json);
+    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
+    $stmt->bind_param("sssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
@@ -102,6 +103,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $phone = $_POST['phone'] ?? null;
     $region = $_POST['region'];
     $city = $_POST['city'];
+    $company = $_POST['company'] ?? null; // Add company field
     $company_address = $_POST['company_address'];
     $business_proof = [];
 
@@ -158,8 +160,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $business_proof_json = json_encode($business_proof);
 
-    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company_address = ?, business_proof = ? WHERE id = ?");
-    $stmt->bind_param("ssssssssi", $username, $password, $email, $phone, $region, $city, $company_address, $business_proof_json, $id);
+    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, business_proof = ? WHERE id = ?");
+    $stmt->bind_param("sssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json, $id);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
@@ -194,7 +196,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 $status_filter = $_GET['status'] ?? '';
 
 // Fetch accounts for display
-$sql = "SELECT id, username, email, phone, region, city, company_address, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
+$sql = "SELECT id, username, email, phone, region, city, company, company_address, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
 if (!empty($status_filter)) {
     $sql .= " AND status = ?";
 }
@@ -257,6 +259,7 @@ function truncate($text, $max = 15) {
                         <th>Phone</th>
                         <th>Region</th>
                         <th>City</th>
+                        <th>Company</th> <!-- Add this line -->
                         <th>Company Address</th>
                         <th>Business Proof</th>
                         <th>Status</th>
@@ -272,6 +275,7 @@ function truncate($text, $max = 15) {
                                 <td><?= htmlspecialchars(truncate($row['phone'] ?? 'N/A')) ?></td>
                                 <td><?= htmlspecialchars(truncate($row['region'] ?? 'N/A')) ?></td>
                                 <td><?= htmlspecialchars(truncate($row['city'] ?? 'N/A')) ?></td>
+                                <td><?= htmlspecialchars(truncate($row['company'] ?? 'N/A')) ?></td> <!-- Add this line -->
                                 <td><?= htmlspecialchars(truncate($row['company_address'] ?? 'N/A')) ?></td>
                                 <td class="photo-album">
                                     <?php
@@ -290,27 +294,27 @@ function truncate($text, $max = 15) {
                                 ?>
                                 <button class="edit-btn"
                                     onclick='openEditAccountForm(
-                                        <?= $row["id"] ?>,
+                                        <?= json_encode($row["id"]) ?>,
                                         <?= json_encode($row["username"]) ?>,
                                         <?= json_encode($row["email"]) ?>,
                                         <?= json_encode($row["phone"]) ?>,
                                         <?= json_encode($row["region"]) ?>,
                                         <?= json_encode($row["city"]) ?>,
+                                        <?= json_encode($row["company"]) ?>,
                                         <?= json_encode($row["company_address"]) ?>,
                                         <?= $business_proof_json ?>
                                     )'>
                                     <i class="fas fa-edit"></i> Edit
                                 </button>
-
-                                    <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username']) ?>', '<?= htmlspecialchars($row['email']) ?>')">
-                                        <i class="fas fa-exchange-alt"></i> Status
-                                    </button>
+                                <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username']) ?>', '<?= htmlspecialchars($row['email']) ?>')">
+                                    <i class="fas fa-exchange-alt"></i> Status
+                                </button>
                                 </td>
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="no-accounts">No accounts found.</td>
+                            <td colspan="10" class="no-accounts">No accounts found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -334,11 +338,13 @@ function truncate($text, $max = 15) {
                 <label for="phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
                 <input type="text" id="phone" name="phone" placeholder="e.g., +1234567890">
                 <label for="region">Region: <span class="required">*</span></label>
-                <input type="text" id="region" name="region" required placeholder="e.g., North America">
+                <input type="text" id="region" name="region" required placeholder="e.g., Metro Manila">
                 <label for="city">City: <span class="required">*</span></label>
-                <input type="text" id="city" name="city" required placeholder="e.g., New York">
+                <input type="text" id="city" name="city" required placeholder="e.g., Quezon City">
+                <label for="company">Company: <span class="optional">(optional)</span></label>
+                <input type="text" id="company" name="company" placeholder="e.g., Top Exchange Food Corp">
                 <label for="company_address">Company Address: <span class="required">*</span></label>
-                <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
+                <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
                 <label for="business_proof">Business Proof: <span class="required">*</span></label>
                 <input type="file" id="business_proof" name="business_proof[]" required accept="image/jpeg, image/png" multiple>
                 <div class="form-buttons">
@@ -373,6 +379,8 @@ function truncate($text, $max = 15) {
             <input type="text" id="edit-region" name="region" required placeholder="e.g., North America">
             <label for="edit-city">City: <span class="required">*</span></label>
             <input type="text" id="edit-city" name="city" required placeholder="e.g., New York">
+            <label for="edit-company">Company: <span class="optional">(optional)</span></label>
+            <input type="text" id="edit-company" name="company" placeholder="e.g., ABC Corp">
             <label for="edit-company_address">Company Address: <span class="required">*</span></label>
             <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
             <div id="edit-business-proof-container"></div>
