@@ -1,16 +1,16 @@
 <?php
 include "db_connection.php";
 
-$sql = "SELECT product_id, item_description, packaging, price FROM products";
+$sql = "SELECT DISTINCT category FROM products";
 $result = $conn->query($sql);
 
-$products = [];
+$categories = [];
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
-        $products[] = $row;
+        $categories[] = $row['category'];
     }
 }
 
 header('Content-Type: application/json');
-echo json_encode($products);
+echo json_encode($categories);
 ?>

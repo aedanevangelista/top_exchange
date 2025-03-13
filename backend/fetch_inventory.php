@@ -1,7 +1,7 @@
 <?php
 include "db_connection.php";
 
-$sql = "SELECT product_id, item_description, packaging, price FROM products";
+$sql = "SELECT product_id, category, item_description, packaging, price FROM products";
 $result = $conn->query($sql);
 
 $products = [];
