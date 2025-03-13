@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 06, 2025 at 03:12 PM
+-- Generation Time: Mar 13, 2025 at 05:44 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -44,7 +44,8 @@ INSERT INTO `accounts` (`id`, `username`, `password`, `created_at`, `role`) VALU
 (57, 'Secretary', '123', '2025-03-05 23:17:38', 'Secretary'),
 (58, 'aedan', '123', '2025-03-05 23:23:25', 'Admin'),
 (60, 'Manager', '123', '2025-03-05 23:27:49', 'Manager'),
-(61, 'Accountant', '123', '2025-03-05 23:27:55', 'Accountant');
+(61, 'Accountant', '123', '2025-03-05 23:27:55', 'Accountant'),
+(62, 'Ryan', '123', '2025-03-09 07:14:07', 'Admin');
 
 -- --------------------------------------------------------
 
@@ -54,15 +55,16 @@ INSERT INTO `accounts` (`id`, `username`, `password`, `created_at`, `role`) VALU
 
 CREATE TABLE `clients_accounts` (
   `id` int(11) NOT NULL,
-  `username` varchar(100) NOT NULL,
+  `username` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `phone` varchar(20) NOT NULL,
-  `region` varchar(50) DEFAULT NULL,
-  `city` varchar(50) DEFAULT NULL,
-  `company_address` text DEFAULT NULL,
+  `email` varchar(255) NOT NULL,
+  `phone` varchar(50) DEFAULT NULL,
+  `region` varchar(100) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `company` varchar(255) DEFAULT NULL,
+  `company_address` varchar(255) DEFAULT NULL,
   `business_proof` text DEFAULT NULL,
-  `status` enum('Pending','Active','Rejected','Inactive') NOT NULL DEFAULT 'Pending',
+  `status` varchar(50) DEFAULT 'Active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -70,9 +72,10 @@ CREATE TABLE `clients_accounts` (
 -- Dumping data for table `clients_accounts`
 --
 
-INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company_address`, `business_proof`, `status`, `created_at`) VALUES
-(16, 'asdasdaaa', '$2y$10$QkvJTl2ygPcEAOpauI6wpuGFNt5zA2IIm4aiPsYsyyLq7xZow4toS', 'aasdas@gmail.com', '1231', 'asdasd', 'asdasd', 'asdasdasd', '[\"\\/top_exchange\\/uploads\\/asdasdaaa\\/4.png\"]', 'Active', '2025-03-01 19:12:22'),
-(17, 'admin', '$2y$10$Hh9CakUrlrjClJ9HKBb8OuqO3GTuldjIp88X6/L/yte82douvI1qK', 'aasd@gmail.com', '123', 'asd', 'asd', 'asdsad', '[\"\\/top_exchange\\/uploads\\/admin\\/POST 3.png\"]', 'Active', '2025-03-06 06:16:16');
+INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company`, `company_address`, `business_proof`, `status`, `created_at`) VALUES
+(1, 'aedan', '$2y$10$wd5.aXYnKfiwMI9qgVL3gOpaJvVGAwgRhQqPdqc0mLWzKwwxUaqCW', '123@gmail.com', '123', '123', '123', 'company aedan', '123', '[]', 'Active', '2025-03-07 09:58:07'),
+(2, 'asdasd', '$2y$10$dojkOKe2Z7y.NwwuAiFmh.E4TYS1yKf.Z1fnUeKk5jqVTm4dN2Hu6', 'asd@gmail.com', '123', 'asd', 'asd', 'sds', 'asdas', '[\"\\/top_exchange\\/uploads\\/asdasd\\/4.png\"]', 'Active', '2025-03-07 10:06:55'),
+(3, 'Jeff Santonia', '$2y$10$dwjDK/6QbkEF.qBuozhjneWerFL6jY4qyZ8hchngxdbNZ3k/u80vm', 'jeffsantonia@gmail.com', '1236969420', 'Munoz', 'Quezon City', 'Jeff Company', 'Jeff City', '[\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/3.png\",\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/4.png\"]', 'Pending', '2025-03-09 14:12:20');
 
 -- --------------------------------------------------------
 
@@ -102,63 +105,15 @@ INSERT INTO `customers` (`customer_id`, `customer_name`, `created_at`) VALUES
 --
 
 CREATE TABLE `orders` (
-  `order_id` int(11) NOT NULL,
-  `customer_id` int(11) NOT NULL,
-  `order_date` datetime DEFAULT current_timestamp(),
-  `delivery_date` date DEFAULT NULL,
-  `order_status` varchar(50) DEFAULT 'Pending',
-  `status` varchar(50) DEFAULT NULL,
-  `total_amount` decimal(10,2) DEFAULT NULL
+  `id` int(11) NOT NULL,
+  `po_number` varchar(255) NOT NULL,
+  `username` varchar(255) NOT NULL,
+  `order_date` date NOT NULL,
+  `delivery_date` date NOT NULL,
+  `orders` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`orders`)),
+  `total_amount` decimal(10,2) NOT NULL,
+  `status` enum('Pending','Rejected','Approved') NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `orders`
---
-
-INSERT INTO `orders` (`order_id`, `customer_id`, `order_date`, `delivery_date`, `order_status`, `status`, `total_amount`) VALUES
-(2, 1, '2024-08-20 00:00:00', '2024-08-23', 'Pending', 'Pending', NULL);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `order_items`
---
-
-CREATE TABLE `order_items` (
-  `order_item_id` int(11) NOT NULL,
-  `order_id` int(11) NOT NULL,
-  `product_id` int(11) NOT NULL,
-  `quantity` int(11) NOT NULL,
-  `total_price` decimal(10,2) DEFAULT NULL,
-  `price` decimal(10,2) DEFAULT NULL,
-  `unit_price` decimal(10,2) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Triggers `order_items`
---
-DELIMITER $$
-CREATE TRIGGER `before_insert_order_items` BEFORE INSERT ON `order_items` FOR EACH ROW BEGIN
-    DECLARE available_stock INT;
-
-    -- Get the current stock quantity
-    SELECT stock_quantity INTO available_stock 
-    FROM products 
-    WHERE product_id = NEW.product_id;
-
-    -- Check if there's enough stock
-    IF available_stock < NEW.quantity THEN
-        SIGNAL SQLSTATE '45000' 
-        SET MESSAGE_TEXT = 'Not enough stock available';
-    ELSE
-        -- Deduct the ordered quantity from stock
-        UPDATE products 
-        SET stock_quantity = stock_quantity - NEW.quantity
-        WHERE product_id = NEW.product_id;
-    END IF;
-END
-$$
-DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -182,7 +137,8 @@ INSERT INTO `pages` (`page_id`, `page_name`, `file_path`) VALUES
 (3, 'Customers', 'customers.php'),
 (4, 'Dashboard', 'dashboard.php'),
 (5, 'Inventory', 'inventory.php'),
-(6, 'User Roles', 'user_roles.php');
+(6, 'User Roles', 'user_roles.php'),
+(7, 'Orders', 'orders.php');
 
 -- --------------------------------------------------------
 
@@ -295,10 +251,11 @@ CREATE TABLE `roles` (
 --
 
 INSERT INTO `roles` (`role_id`, `role_name`, `status`, `pages`) VALUES
-(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory'),
-(2, 'Manager', 'active', ''),
+(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory, Orders'),
+(2, 'Manager', 'active', 'Dashboard, Inventory'),
 (3, 'Secretary', 'active', ''),
-(4, 'Accountant', 'active', '');
+(4, 'Accountant', 'active', ''),
+(36, 'aed', 'active', 'Accounts - Clients, Dashboard');
 
 --
 -- Indexes for dumped tables
@@ -327,16 +284,8 @@ ALTER TABLE `customers`
 -- Indexes for table `orders`
 --
 ALTER TABLE `orders`
-  ADD PRIMARY KEY (`order_id`),
-  ADD KEY `fk_orders_customers` (`customer_id`);
-
---
--- Indexes for table `order_items`
---
-ALTER TABLE `order_items`
-  ADD PRIMARY KEY (`order_item_id`),
-  ADD KEY `order_id` (`order_id`),
-  ADD KEY `product_id` (`product_id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `po_number` (`po_number`);
 
 --
 -- Indexes for table `pages`
@@ -367,13 +316,13 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=63;
 
 --
 -- AUTO_INCREMENT for table `clients_accounts`
 --
 ALTER TABLE `clients_accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `customers`
@@ -385,19 +334,13 @@ ALTER TABLE `customers`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
---
--- AUTO_INCREMENT for table `order_items`
---
-ALTER TABLE `order_items`
-  MODIFY `order_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `pages`
 --
 ALTER TABLE `pages`
-  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -409,7 +352,7 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- Constraints for dumped tables
@@ -420,13 +363,6 @@ ALTER TABLE `roles`
 --
 ALTER TABLE `accounts`
   ADD CONSTRAINT `fk_accounts_roles` FOREIGN KEY (`role`) REFERENCES `roles` (`role_name`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `order_items`
---
-ALTER TABLE `order_items`
-  ADD CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

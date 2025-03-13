@@ -72,8 +72,8 @@ if ($result && $result->num_rows > 0) {
                                 <td><?= htmlspecialchars($order['username']) ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
-                                <td><?= htmlspecialchars($order['orders']) ?></td>
-                                <td><?= htmlspecialchars($order['total_amount']) ?></td>
+                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">Orders</button></td>
+                                <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td><?= htmlspecialchars($order['status']) ?></td>
                                 <td class="action-buttons">
                                     <button class="edit-btn" onclick="openEditOrderForm('<?= htmlspecialchars($order['po_number']) ?>')">
@@ -99,10 +99,10 @@ if ($result && $result->num_rows > 0) {
     <div id="addOrderOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-plus"></i> Add New Order</h2>
-            <form id="addOrderForm" method="POST" class="order-form" action="">
+            <form id="addOrderForm" method="POST" class="order-form" action="/top_exchange/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required>
+                    <select id="username" name="username" required onchange="generatePONumber()">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>"><?= htmlspecialchars($client) ?></option>
@@ -111,13 +111,38 @@ if ($result && $result->num_rows > 0) {
                     <label for="order_date">Order Date:</label>
                     <input type="text" id="order_date" name="order_date" readonly>
                     <label for="delivery_date">Delivery Date:</label>
-                    <input type="text" id="delivery_date" name="delivery_date" required>
-                    <button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()">
-                        <i class="fas fa-box-open"></i> Select Products
-                    </button>
+                    <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
+                    <div class="centered-button">
+                        <button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()">
+                            <i class="fas fa-box-open"></i> Select Products
+                        </button>
+                    </div>
+                    <div class="order-summary">
+                        <h3>Order Summary</h3>
+                        <table class="summary-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Product</th>
+                                    <th>Packaging</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summaryBody">
+                                <!-- Summary will be populated here -->
+                            </tbody>
+                        </table>
+                        <div class="summary-total">
+                            Total: <span class="summary-total-amount">PHP 0.00</span>
+                        </div>
+                    </div>
+                    <input type="hidden" name="po_number" id="po_number">
+                    <input type="hidden" name="orders" id="orders">
+                    <input type="hidden" name="total_amount" id="total_amount">
                 </div>
                 <div class="form-buttons">
-                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
@@ -129,7 +154,12 @@ if ($result && $result->num_rows > 0) {
     <!-- Inventory Overlay for Selecting Products -->
     <div id="inventoryOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
-            <h2><i class="fas fa-box-open"></i> Select Products</h2>
+            <div class="overlay-header">
+                <h2 class="overlay-title"><i class="fas fa-box-open"></i> Select Products</h2>
+                <button class="cart-btn" onclick="openCartModal()">
+                    <i class="fas fa-shopping-cart"></i> View Cart
+                </button>
+            </div>
             <input type="text" id="inventorySearch" placeholder="Search products...">
             <select id="inventoryFilter">
                 <option value="all">All Categories</option>
@@ -144,6 +174,7 @@ if ($result && $result->num_rows > 0) {
                             <th>Packaging</th>
                             <th>Price</th>
                             <th>Quantity</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody class="inventory">
@@ -151,28 +182,75 @@ if ($result && $result->num_rows > 0) {
                     </tbody>
                 </table>
             </div>
-            <div class="form-buttons">
-                <button type="button" class="done-btn" onclick="closeInventoryOverlay()">
-                    <i class="fas fa-check"></i> Done
-                </button>
+            <div class="form-buttons" style="margin-top: 20px;">
                 <button type="button" class="cancel-btn" onclick="closeInventoryOverlay()">
                     <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="done-btn" onclick="closeInventoryOverlay()">
+                    <i class="fas fa-check"></i> Done
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Overlay Modal for Delete Confirmation -->
-    <div id="deleteModal" class="overlay" style="display: none;">
+    <!-- Cart Modal for Viewing Selected Products -->
+    <div id="cartModal" class="overlay" style="display: none;">
         <div class="overlay-content">
-            <h2><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h2>
-            <p id="deleteMessage"></p>
-            <div class="modal-buttons">
-                <button class="confirm-btn" onclick="confirmDeletion()">
-                    <i class="fas fa-trash"></i> Delete
+            <h2><i class="fas fa-shopping-cart"></i> Selected Products</h2>
+            <div class="cart-table-container">
+                <table class="cart-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Product</th>
+                            <th>Packaging</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody class="cart">
+                        <!-- Selected products list will be populated here -->
+                    </tbody>
+                </table>
+                <div class="no-products" style="display: none;">No products in the cart.</div>
+            </div>
+            <div class="cart-total" style="text-align: right; margin-bottom: 20px;">
+                Total: <span class="total-amount">PHP 0.00</span>
+            </div>
+            <div class="form-buttons" style="margin-top: 20px;">
+                <button type="button" class="back-btn" onclick="closeCartModal()">
+                    <i class="fas fa-arrow-left"></i> Back
                 </button>
-                <button class="cancel-btn" onclick="closeDeleteModal()">
-                    <i class="fas fa-times"></i> Cancel
+                <button type="button" class="save-cart-btn" onclick="saveCartChanges()">
+                    <i class="fas fa-save"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div id="orderDetailsModal" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2><i class="fas fa-box-open"></i> Order Details</h2>
+            <div class="order-details-container">
+                <table class="order-details-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Product</th>
+                            <th>Packaging</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderDetailsBody">
+                        <!-- Order details will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="form-buttons" style="margin-top: 20px;">
+                <button type="button" class="back-btn" onclick="closeOrderDetailsModal()">
+                    <i class="fas fa-arrow-left"></i> Back
                 </button>
             </div>
         </div>
