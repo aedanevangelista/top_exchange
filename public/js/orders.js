@@ -1,6 +1,7 @@
-$(document).ready(function() {
-    let selectedProducts = [];
+// Define a global selectedProducts variable to be accessible from all functions
+let selectedProducts = [];
 
+$(document).ready(function() {
     // Function to open the Add Order Form overlay
     function openAddOrderForm() {
         $('#addOrderOverlay').show();
@@ -231,6 +232,37 @@ $(document).ready(function() {
         }
     }
 
+    // Add form submission handling
+    $('#addOrderForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Make sure we have products selected
+        if (selectedProducts.length === 0) {
+            alert('Please select at least one product before submitting the order.');
+            return false;
+        }
+        
+        // Prepare the order data
+        prepareOrderData();
+        
+        // Submit the form with AJAX
+        $.post('/top_exchange/backend/add_order.php', $(this).serialize(), function(response) {
+            if (response.success) {
+                alert('Order submitted successfully!');
+                selectedProducts = [];
+                populateCart();
+                updateOrderSummary();
+                closeAddOrderForm();
+            } else {
+                alert('Failed to submit order: ' + (response.message || 'Unknown error'));
+            }
+        }, 'json')
+        .fail(function(xhr, status, error) {
+            console.error('Server response:', xhr.responseText);
+            alert('Error submitting order. Check the console for details.');
+        });
+    });
+
     // Bind functions to global scope
     window.openAddOrderForm = openAddOrderForm;
     window.closeAddOrderForm = closeAddOrderForm;
@@ -239,17 +271,33 @@ $(document).ready(function() {
     window.openCartModal = openCartModal;
     window.closeCartModal = closeCartModal;
     window.saveCartChanges = saveCartChanges;
-    window.prepareOrderData = prepareOrderData;
-    window.generatePONumber = generatePONumber;
     window.viewOrderDetails = viewOrderDetails;
     window.closeOrderDetailsModal = closeOrderDetailsModal;
+    window.generatePONumber = generatePONumber;
 });
 
-// Function to prepare order data for submission
+// Function to prepare order data for submission - Now has access to the global selectedProducts
 function prepareOrderData() {
-    const orderData = JSON.stringify(selectedProducts);
+    // Make sure selectedProducts is accessible
+    if (!selectedProducts || selectedProducts.length === 0) {
+        console.error("No products selected");
+        return;
+    }
+    
+    // Format products with the exact structure needed
+    const formattedProducts = selectedProducts.map(product => {
+        return [
+            product.category,
+            product.item_description,
+            product.packaging,
+            parseFloat(product.price).toFixed(2),
+            parseInt(product.quantity)
+        ];
+    });
+    
+    const orderData = JSON.stringify(formattedProducts);
     console.log("Order data being sent: ", orderData); // Log the JSON data for debugging
     $('#orders').val(orderData);
-    const totalAmount = selectedProducts.reduce((total, product) => total + product.price * product.quantity, 0);
+    const totalAmount = selectedProducts.reduce((total, product) => total + parseFloat(product.price) * parseInt(product.quantity), 0);
     $('#total_amount').val(totalAmount.toFixed(2));
 }
