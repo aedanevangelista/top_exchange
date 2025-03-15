@@ -1,0 +1,41 @@
+<?php
+session_start();
+include "db_connection.php";
+
+// Ensure the user is logged in for security
+if (!isset($_SESSION['user_id'])) {
+    echo json_encode(['success' => false, 'error' => 'Unauthorized access.']);
+    exit;
+}
+
+// Retrieve and sanitize form data
+$po_number = $_POST['po_number'] ?? '';
+$status = $_POST['status'] ?? '';
+
+// Allowed status values for added security
+$allowedStatuses = ['Pending', 'Processing', 'Completed', 'Cancelled'];
+if (!in_array($status, $allowedStatuses)) {
+    echo json_encode(['success' => false, 'error' => 'Invalid status value.']);
+    exit;
+}
+
+// Prepare the SQL statement to update the status
+$stmt = $conn->prepare("UPDATE orders SET status = ? WHERE po_number = ?");
+if ($stmt === false) {
+    echo json_encode(['success' => false, 'error' => htmlspecialchars($conn->error)]);
+    exit;
+}
+
+// Bind parameters (s = string)
+$stmt->bind_param("ss", $status, $po_number);
+
+// Execute the statement
+if ($stmt->execute()) {
+    echo json_encode(['success' => true]);
+} else {
+    echo json_encode(['success' => false, 'error' => 'Database update failed.']);
+}
+
+// Close the statement
+$stmt->close();
+?>
