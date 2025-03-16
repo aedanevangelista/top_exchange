@@ -34,7 +34,8 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php endif; ?>
 
             <!-- Transactions Menu with Submenus -->
-            <?php if (in_array('Transactions', $allowedPages) || in_array('Orders', $allowedPages) || in_array('Forecast', $allowedPages) || in_array('Order History', $allowedPages)): ?>
+            <!-- Transactions Menu with Submenus -->
+            <?php if (in_array('Transactions', $allowedPages) || in_array('Orders', $allowedPages) || in_array('Forecast', $allowedPages) || in_array('Transaction History', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item no-hover">
                         <i class="fas fa-exchange-alt"></i> Transactions
@@ -45,14 +46,14 @@ $allowedPages = array_map('trim', explode(',', $pages));
                                 <i class="fas fa-arrow-right"></i> Orders
                             </a>
                         <?php endif; ?>
+                        <?php if (in_array('Transaction History', $allowedPages)): ?>
+                            <a href="/top_exchange/public/pages/transaction_history.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> Transaction History
+                            </a>
+                        <?php endif; ?>
                         <?php if (in_array('Forecast', $allowedPages)): ?>
                             <a href="/top_exchange/public/pages/forecast.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Forecast
-                            </a>
-                        <?php endif; ?>
-                        <?php if (in_array('Order History', $allowedPages)): ?>
-                            <a href="/top_exchange/public/pages/order_history.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Order History
                             </a>
                         <?php endif; ?>
                     </div>

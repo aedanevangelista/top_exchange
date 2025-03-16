@@ -17,10 +17,22 @@ while ($stmt->fetch()) {
 }
 $stmt->close();
 
+// Handle status filter
+$status_filter = $_GET['status'] ?? '';
+
 // Fetch orders for display in the table
 $orders = []; // Initialize $orders as an empty array
 $sql = "SELECT po_number, username, order_date, delivery_date, orders, total_amount, status FROM orders WHERE status != 'Completed'";
-$result = $conn->query($sql);
+if (!empty($status_filter)) {
+    $sql .= " AND status = ?";
+}
+$sql .= " ORDER BY order_date DESC";
+$stmt = $conn->prepare($sql);
+if (!empty($status_filter)) {
+    $stmt->bind_param("s", $status_filter);
+}
+$stmt->execute();
+$result = $stmt->get_result();
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $orders[] = $row;
@@ -45,6 +57,15 @@ if ($result && $result->num_rows > 0) {
     <div class="main-content">
         <div class="orders-header">
             <h1>Orders Management</h1>
+            <div class="filter-section">
+                <label for="statusFilter">Filter by Status:</label>
+                <select id="statusFilter" onchange="filterByStatus()">
+                    <option value="">All</option>
+                    <option value="Active" <?= $status_filter == 'Active' ? 'selected' : '' ?>>Active</option>
+                    <option value="Pending" <?= $status_filter == 'Pending' ? 'selected' : '' ?>>Pending</option>
+                    <option value="Rejected" <?= $status_filter == 'Rejected' ? 'selected' : '' ?>>Rejected</option>
+                </select>
+            </div>
             <button onclick="openAddOrderForm()" class="add-order-btn">
                 <i class="fas fa-plus"></i> Add New Order
             </button>
@@ -71,7 +92,7 @@ if ($result && $result->num_rows > 0) {
                                 <td><?= htmlspecialchars($order['username']) ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
-                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">Orders</button></td>
+                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">View Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
                                     <?php

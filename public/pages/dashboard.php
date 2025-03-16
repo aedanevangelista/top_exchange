@@ -9,6 +9,50 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: http://localhost/top_exchange/public/login.php");
     exit();
 }
+
+// Function to get available years from orders
+function getAvailableYears($conn) {
+    $years = array();
+    $sql = "SELECT DISTINCT YEAR(order_date) as year FROM orders ORDER BY year DESC";
+    $result = $conn->query($sql);
+    
+    if ($result && $result->num_rows > 0) {
+        while($row = $result->fetch_assoc()) {
+            $years[] = $row['year'];
+        }
+    }
+    return $years;
+}
+
+// Function to get client orders count for a specific year
+function getClientOrdersCount($conn, $year) {
+    $data = array();
+    $sql = "SELECT username, COUNT(*) as order_count 
+            FROM orders 
+            WHERE YEAR(order_date) = ? 
+            GROUP BY username";
+    
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $year);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result && $result->num_rows > 0) {
+        while($row = $result->fetch_assoc()) {
+            $data[] = array(
+                'username' => $row['username'],
+                'count' => $row['order_count']
+            );
+        }
+    }
+    return $data;
+}
+
+// Get current year if not specified
+$selectedYear = $_GET['year'] ?? date('Y');
+$availableYears = getAvailableYears($conn);
+$clientOrders = getClientOrdersCount($conn, $selectedYear);
+
 ?>
 
 <!DOCTYPE html>
@@ -38,13 +82,12 @@ if (!isset($_SESSION['user_id'])) {
             <div class="top-section">
                 <!-- CLIENT ORDERS -->
                 <div class="client-orders-container">
-                    <h3>CLIENT ORDERS</h3>
-                    <select id="client-orders-filter">
-                        <option value="month">Monthly</option>
-                        <option value="year">Yearly</option>
-                    </select>
-                    <div class="client-orders">
-                        <canvas id="clientOrdersChart"></canvas>
+                    <div class="chart-header">
+                        <h3>CLIENT ORDERS</h3>
+                        <select id="year-select" class="year-select"></select>
+                    </div>
+                    <div class="client-orders" style="height: 300px; position: relative;">
+                        <canvas id="clientOrdersChart" style="width: 100%; height: 100%;"></canvas>
                     </div>
                 </div>
 

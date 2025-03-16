@@ -1,3 +1,16 @@
+function filterByStatus() {
+    const status = document.getElementById('statusFilter').value;
+    const currentUrl = new URL(window.location.href);
+    
+    if (status) {
+        currentUrl.searchParams.set('status', status);
+    } else {
+        currentUrl.searchParams.delete('status');
+    }
+    
+    window.location.href = currentUrl.toString();
+}
+
 // Global variable for selected products
 let selectedProducts = [];
 
@@ -323,6 +336,7 @@ $(document).ready(function() {
             }
         });
     });
+    
 
     // Category filter change handler
     $('#inventoryFilter').on('change', function() {

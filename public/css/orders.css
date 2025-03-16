@@ -15,7 +15,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     padding-bottom: 20px;
     border-bottom: 1px solid #ddd;
 }
@@ -893,4 +893,56 @@ body {
 
 .remove-from-cart:hover {
     background-color: #D50000;
+}
+
+
+.filter-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-section label {
+    font-weight: bold;
+}
+
+.filter-section select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background-color: white;
+    cursor: pointer;
+}
+
+.filter-section select:focus {
+    outline: none;
+    border-color: #4a90e2;
+}
+
+#statusFilter {
+    border-radius: 80px;
+}
+
+.search-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 20px;
+}
+
+.search-section input {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    width: 200px;
+}
+
+.search-section input:focus {
+    outline: none;
+    border-color: #4a90e2;
+}
+
+.status-completed {
+    background-color: #28a745;
+    color: white;
 }

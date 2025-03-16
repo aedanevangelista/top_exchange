@@ -227,3 +227,27 @@ body {
     }
 }
 
+.client-orders-container {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.client-orders {
+    min-height: 300px;
+    position: relative;
+}
+
+canvas#clientOrdersChart {
+    width: 100% !important;
+    height: 100% !important;
+}
