@@ -73,14 +73,30 @@ if ($result && $result->num_rows > 0) {
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
-                                <td><?= htmlspecialchars($order['status']) ?></td>
+                                <td>
+                                    <?php
+                                    $statusClass = '';
+                                    switch($order['status']) {
+                                        case 'Pending':
+                                            $statusClass = 'status-pending';
+                                            break;
+                                        case 'Active':
+                                            $statusClass = 'status-active';
+                                            break;
+                                        case 'Rejected':
+                                            $statusClass = 'status-rejected';
+                                            break;
+                                        case 'Completed':
+                                            $statusClass = 'status-completed';
+                                            break;
+                                    }
+                                    ?>
+                                    <span class="status-badge <?= $statusClass ?>"><?= htmlspecialchars($order['status']) ?></span>
+                                </td>
                                 <td class="action-buttons">
-                                    <button class="edit-btn" onclick="openEditOrderForm('<?= htmlspecialchars($order['po_number']) ?>')">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </button>
-                                    <button class="delete-btn" onclick="openDeleteModal('<?= htmlspecialchars($order['po_number']) ?>')">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
+                                    <i class="fas fa-exchange-alt"></i> Status
+                                </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -141,10 +157,11 @@ if ($result && $result->num_rows > 0) {
                     <input type="hidden" name="total_amount" id="total_amount">
                 </div>
                 <div class="form-buttons">
-                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
+
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
+                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
                 </div>
             </form>
         </div>
@@ -155,7 +172,7 @@ if ($result && $result->num_rows > 0) {
         <div class="overlay-content">
             <div class="overlay-header">
                 <h2 class="overlay-title"><i class="fas fa-box-open"></i> Select Products</h2>
-                <button class="cart-btn" onclick="openCartModal()">
+                <button class="cart-btn" onclick="window.openCartModal()">
                     <i class="fas fa-shopping-cart"></i> View Cart
                 </button>
             </div>
@@ -226,6 +243,31 @@ if ($result && $result->num_rows > 0) {
             </div>
         </div>
     </div>
+    <div id="statusModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h2>Change Status</h2>
+        <p id="statusMessage"></p>
+        <div class="status-buttons">
+            <button onclick="changeStatus('Active')" class="modal-status-btn active">
+                <i class="fas fa-check"></i> Active
+            </button>
+            <button onclick="changeStatus('Rejected')" class="modal-status-btn reject">
+                <i class="fas fa-ban"></i> Reject
+            </button>
+            <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
+                <i class="fas fa-clock"></i> Pending
+            </button>
+            <button onclick="changeStatus('Completed')" class="modal-status-btn complete">
+                <i class="fas fa-check-circle"></i> Complete
+            </button>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeStatusModal()" class="modal-cancel-btn">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+    </div>
+</div>
 
     <!-- Order Details Modal -->
     <div id="orderDetailsModal" class="overlay" style="display: none;">

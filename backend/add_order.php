@@ -1,88 +1,57 @@
 <?php
-include 'db_connection.php'; // Ensure this includes your database connection logic
+include 'db_connection.php';
 
-header('Content-Type: application/json'); // Always return JSON
+header('Content-Type: application/json'); // Ensure JSON response
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    // Collect form data
-    $username = isset($_POST['username']) ? $_POST['username'] : '';
-    $order_date = isset($_POST['order_date']) ? $_POST['order_date'] : '';
-    $delivery_date = isset($_POST['delivery_date']) ? $_POST['delivery_date'] : '';
-    $po_number = isset($_POST['po_number']) ? $_POST['po_number'] : '';
-    $orders_json = isset($_POST['orders']) ? $_POST['orders'] : '';
-    $total_amount = isset($_POST['total_amount']) ? floatval($_POST['total_amount']) : 0;
-    
-    // Basic validation
-    if (empty($username) || empty($order_date) || empty($delivery_date) || empty($po_number) || empty($orders_json)) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Missing required fields'
-        ]);
-        exit;
-    }
-    
-    // Validate JSON data
-    $orders = json_decode($orders_json, true);
-    if ($orders === null && json_last_error() !== JSON_ERROR_NONE) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Invalid JSON data: ' . json_last_error_msg() . ' - ' . htmlspecialchars($orders_json)
-        ]);
-        exit;
-    }
-    
-    // Set default status
-    $status = "Pending";
-    
-    // Determine the correct column name
-    $orderColumnName = 'products_ordered'; // Change this if your column is named differently
-    
-    // Check if the column exists
-    $result = $conn->query("SHOW COLUMNS FROM orders LIKE '$orderColumnName'");
-    if ($result->num_rows == 0) {
-        $orderColumnName = 'orders'; // Fallback to the original column name
-        
-        // Double check if this column exists
-        $result = $conn->query("SHOW COLUMNS FROM orders LIKE '$orderColumnName'");
-        if ($result->num_rows == 0) {
-            echo json_encode([
-                'success' => false,
-                'message' => 'Database error: Neither products_ordered nor orders column exists in the orders table'
-            ]);
-            exit;
-        }
-    }
-    
-    // Insert into orders table
     try {
-        $query = "INSERT INTO orders (po_number, username, order_date, delivery_date, $orderColumnName, total_amount, status) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?)";
-                 
-        $insertOrder = $conn->prepare($query);
-        
-        if (!$insertOrder) {
-            throw new Exception("Prepare failed: " . $conn->error);
+        // Get POST data
+        $username = $_POST['username'];
+        $order_date = $_POST['order_date'];
+        $delivery_date = $_POST['delivery_date'];
+        $po_number = $_POST['po_number'];
+        $orders = $_POST['orders']; // Keep as JSON string
+        $total_amount = $_POST['total_amount'];
+
+        // Validate that orders is valid JSON
+        $decoded_orders = json_decode($orders, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Invalid order data format');
         }
-        
-        $insertOrder->bind_param("ssssdss", $po_number, $username, $order_date, $delivery_date, $orders_json, $total_amount, $status);
-        
+
+        // Insert into orders table
+        $insertOrder = $conn->prepare("
+            INSERT INTO orders (username, order_date, delivery_date, po_number, orders, total_amount, status) 
+            VALUES (?, ?, ?, ?, ?, ?, 'Pending')
+        ");
+
+        if ($insertOrder === false) {
+            throw new Exception('Failed to prepare statement: ' . $conn->error);
+        }
+
+        $insertOrder->bind_param("sssssd", $username, $order_date, $delivery_date, $po_number, $orders, $total_amount);
+
         if ($insertOrder->execute()) {
             echo json_encode([
                 'success' => true,
-                'message' => 'Order successfully added!'
+                'message' => 'Order successfully added!',
+                'order_id' => $conn->insert_id
             ]);
         } else {
-            throw new Exception("Execute failed: " . $insertOrder->error);
+            throw new Exception('Failed to execute statement: ' . $insertOrder->error);
         }
-        
+
+        $insertOrder->close();
+
     } catch (Exception $e) {
+        http_response_code(500);
         echo json_encode([
             'success' => false,
-            'message' => 'Database error: ' . $e->getMessage()
+            'message' => $e->getMessage()
         ]);
     }
-    
 } else {
+    http_response_code(405);
     echo json_encode([
         'success' => false,
         'message' => 'Invalid request method'

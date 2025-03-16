@@ -1,303 +1,347 @@
-// Define a global selectedProducts variable to be accessible from all functions
+// Global variable for selected products
 let selectedProducts = [];
 
-$(document).ready(function() {
-    // Function to open the Add Order Form overlay
-    function openAddOrderForm() {
-        $('#addOrderOverlay').show();
-        $('#order_date').val(new Date().toLocaleDateString('en-CA')); // YYYY-MM-DD format
-    }
+// Global function for fetching inventory
+function fetchInventory() {
+    $.getJSON('/top_exchange/backend/fetch_inventory.php', function(data) {
+        const inventory = $('.inventory');
+        inventory.empty();
 
-    // Function to close the Add Order Form overlay
-    function closeAddOrderForm() {
-        $('#addOrderOverlay').hide();
-    }
+        data.forEach(product => {
+            const price = parseFloat(product.price);
+            const productElement = `
+                <tr>
+                    <td>${product.category}</td>
+                    <td>${product.item_description}</td>
+                    <td>${product.packaging}</td>
+                    <td>PHP ${price.toFixed(2)}</td>
+                    <td>
+                        <input type="number" 
+                            class="product-quantity" 
+                            min="1" 
+                            max="${product.stock_quantity}"
+                            data-product-id="${product.product_id}"
+                            data-category="${product.category}"
+                            data-description="${product.item_description}"
+                            data-packaging="${product.packaging}"
+                            data-price="${price}">
+                    </td>
+                    <td>
+                        <button class="add-to-cart-btn">Add</button>
+                    </td>
+                </tr>
+            `;
+            inventory.append(productElement);
+        });
+    });
+}
 
-    // Function to open the Inventory Overlay
-    function openInventoryOverlay() {
-        $('#inventoryOverlay').show();
-        fetchCategories();
-        fetchInventory();
-    }
+// Global function for updating order summary
+function updateOrderSummary() {
+    const summaryBody = $('#summaryBody');
+    summaryBody.empty();
+    let total = 0;
 
-    // Function to close the Inventory Overlay
-    function closeInventoryOverlay() {
-        $('#inventoryOverlay').hide();
-    }
+    selectedProducts.forEach(product => {
+        const subtotal = product.price * product.quantity;
+        total += subtotal;
+        
+        const row = `
+            <tr>
+                <td>${product.category}</td>
+                <td>${product.item_description}</td>
+                <td>${product.packaging}</td>
+                <td>PHP ${product.price.toFixed(2)}</td>
+                <td>${product.quantity}</td>
+            </tr>
+        `;
+        summaryBody.append(row);
+    });
 
-    // Function to open the Cart Modal
-    function openCartModal() {
-        $('#cartModal').show();
-        populateCart();
-    }
+    $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`);
+}
 
-    // Function to close the Cart Modal
-    function closeCartModal() {
-        $('#cartModal').hide();
+// Global function for populating cart
+function populateCart() {
+    const cartBody = $('.cart');
+    cartBody.empty();
+    
+    if (selectedProducts.length === 0) {
+        $('.no-products').show();
+        $('.cart-table').hide();
+    } else {
+        $('.no-products').hide();
+        $('.cart-table').show();
+        
+        let total = 0;
+        selectedProducts.forEach((product, index) => {
+            const subtotal = product.price * product.quantity;
+            total += subtotal;
+            
+            const row = `
+                <tr>
+                    <td>${product.category}</td>
+                    <td>${product.item_description}</td>
+                    <td>${product.packaging}</td>
+                    <td>PHP ${product.price.toFixed(2)}</td>
+                    <td>
+                        <input type="number" 
+                            class="cart-quantity" 
+                            value="${product.quantity}" 
+                            min="1" 
+                            data-index="${index}">
+                        <button class="remove-from-cart" data-index="${index}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            cartBody.append(row);
+        });
+        
+        $('.total-amount').text(`PHP ${total.toFixed(2)}`);
     }
+}
 
-    // Function to open the Order Details Modal
-    function viewOrderDetails(orders) {
+// Global functions for modal operations
+window.openCartModal = function() {
+    $('#cartModal').show();
+    populateCart();
+};
+
+window.closeCartModal = function() {
+    $('#cartModal').hide();
+};
+
+window.saveCartChanges = function() {
+    $('.cart-quantity').each(function() {
+        const index = $(this).data('index');
+        const newQuantity = parseInt($(this).val(), 10);
+        if (newQuantity > 0) {
+            selectedProducts[index].quantity = newQuantity;
+        }
+    });
+    
+    updateOrderSummary();
+    closeCartModal();
+};
+
+window.generatePONumber = function() {
+    const username = $('#username').val();
+    if (username) {
+        $.ajax({
+            url: '/top_exchange/backend/get_next_po_number.php',
+            type: 'POST',
+            data: { username: username },
+            success: function(response) {
+                $('#po_number').val(response.po_number);
+            }
+        });
+    }
+};
+
+window.prepareOrderData = function() {
+    const orderData = JSON.stringify(selectedProducts);
+    $('#orders').val(orderData);
+    const totalAmount = selectedProducts.reduce((total, product) => 
+        total + (product.price * product.quantity), 0);
+    $('#total_amount').val(totalAmount.toFixed(2));
+};
+
+window.viewOrderDetails = function(orders) {
+    try {
         const orderDetails = JSON.parse(orders);
         const orderDetailsBody = $('#orderDetailsBody');
         orderDetailsBody.empty();
+        
         orderDetails.forEach(product => {
-            const productElement = `
+            const row = `
                 <tr>
                     <td>${product.category}</td>
                     <td>${product.item_description}</td>
                     <td>${product.packaging}</td>
-                    <td>PHP ${product.price.toFixed(2)}</td>
+                    <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
                     <td>${product.quantity}</td>
                 </tr>
             `;
-            orderDetailsBody.append(productElement);
+            orderDetailsBody.append(row);
         });
+        
         $('#orderDetailsModal').show();
+    } catch (e) {
+        console.error('Error parsing order details:', e);
+        alert('Error displaying order details');
     }
+};
 
-    // Function to close the Order Details Modal
-    function closeOrderDetailsModal() {
-        $('#orderDetailsModal').hide();
-    }
+window.openAddOrderForm = function() {
+    $('#addOrderOverlay').show();
+};
 
-    // Fetch inventory and populate the inventory table
-    function fetchInventory() {
-        $.getJSON('/top_exchange/backend/fetch_inventory.php', function(data) {
-            const inventory = $('.inventory');
-            inventory.empty();
+window.closeAddOrderForm = function() {
+    $('#addOrderOverlay').hide();
+    selectedProducts = [];
+    updateOrderSummary();
+};
 
-            // Group products by category
-            const categories = {};
-            data.forEach(product => {
-                if (!categories[product.category]) {
-                    categories[product.category] = [];
-                }
-                categories[product.category].push(product);
-            });
+window.openInventoryOverlay = function() {
+    $('#inventoryOverlay').show();
+    fetchInventory();
+};
 
-            // Populate inventory with categories and products
-            for (const category in categories) {
-                categories[category].forEach(product => {
-                    const price = parseFloat(product.price); // Ensure price is a number
-                    const productElement = `
-                        <tr>
-                            <td>${product.category}</td>
-                            <td>${product.item_description}</td>
-                            <td>${product.packaging}</td>
-                            <td>PHP ${!isNaN(price) ? price.toFixed(2) : 'NaN'}</td>
-                            <td><input type="number" min="1" data-category="${product.category}" data-description="${product.item_description}" data-packaging="${product.packaging}" data-price="${price}" class="product-quantity" placeholder="Quantity" oninput="this.value = Math.abs(this.value)"></td>
-                            <td><button class="add-to-cart-btn">Add</button></td>
-                        </tr>
-                    `;
-                    inventory.append(productElement);
-                });
+window.closeInventoryOverlay = function() {
+    $('#inventoryOverlay').hide();
+};
+
+window.closeOrderDetailsModal = function() {
+    $('#orderDetailsModal').hide();
+};
+
+window.openStatusModal = function(poNumber, username) {
+    $('#statusMessage').text('Change order-status for ' + poNumber);
+    $('#statusModal').data('po_number', poNumber).show();
+};
+
+window.closeStatusModal = function() {
+    $('#statusModal').hide();
+};
+
+window.changeStatus = function(status) {
+    var poNumber = $('#statusModal').data('po_number');
+    $.ajax({
+        type: 'POST',
+        url: '/top_exchange/backend/update_order_status.php',
+        data: { 
+            po_number: poNumber, 
+            status: status
+        },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                location.reload();
+            } else {
+                alert('Failed to change status: ' + (response.error || 'Unknown error'));
             }
-        });
-    }
-
-    // Fetch categories and populate the dropdown
-    function fetchCategories() {
-        $.getJSON('/top_exchange/backend/fetch_categories.php', function(data) {
-            const categoryFilter = $('#inventoryFilter');
-            categoryFilter.empty();
-            categoryFilter.append('<option value="all">All Categories</option>');
-            data.forEach(category => {
-                categoryFilter.append(`<option value="${category}">${category}</option>`);
-            });
-        });
-    }
-
-    // Populate the cart with selected products
-    function populateCart() {
-        const cart = $('.cart');
-        cart.empty();
-        let totalAmount = 0;
-        if (selectedProducts.length > 0) {
-            selectedProducts.forEach(product => {
-                const productElement = `
-                    <tr>
-                        <td>${product.category}</td>
-                        <td>${product.item_description}</td>
-                        <td>${product.packaging}</td>
-                        <td>PHP ${product.price.toFixed(2)}</td>
-                        <td><input type="number" min="1" value="${product.quantity}" class="cart-quantity" oninput="this.value = Math.abs(this.value)"></td>
-                    </tr>
-                `;
-                cart.append(productElement);
-                totalAmount += product.price * product.quantity;
-            });
-            $('.no-products').hide();
-        } else {
-            $('.no-products').show();
-        }
-        $('.total-amount').text(`PHP ${totalAmount.toFixed(2)}`);
-    }
-
-    // Update order summary
-    function updateOrderSummary() {
-        const summaryBody = $('#summaryBody');
-        summaryBody.empty();
-        let totalAmount = 0;
-        selectedProducts.forEach(product => {
-            const productElement = `
-                <tr>
-                    <td>${product.category}</td>
-                    <td>${product.item_description}</td>
-                    <td>${product.packaging}</td>
-                    <td>PHP ${product.price.toFixed(2)}</td>
-                    <td>${product.quantity}</td>
-                </tr>
-            `;
-            summaryBody.append(productElement);
-            totalAmount += product.price * product.quantity;
-        });
-        $('.summary-total-amount').text(`PHP ${totalAmount.toFixed(2)}`);
-    }
-
-    // Filter and search functionality
-    $('#inventorySearch').on('input', function() {
-        const searchTerm = $(this).val().toLowerCase();
-        $('.inventory tr').each(function() {
-            const itemDescription = $(this).find('td:eq(1)').text().toLowerCase();
-            $(this).toggle(itemDescription.includes(searchTerm));
-        });
-    });
-
-    $('#inventoryFilter').change(function() {
-        const selectedCategory = $(this).val();
-        if (selectedCategory === 'all') {
-            $('.inventory tr').show();
-        } else {
-            $('.inventory tr').hide();
-            $(`.inventory tr:contains(${selectedCategory})`).show();
+        },
+        error: function(xhr, status, error) {
+            console.error('Error:', error);
+            alert('Failed to change status. Please try again.');
         }
     });
+};
 
-    // Datepicker for delivery date with MWF restriction
+// Document ready function
+$(document).ready(function() {
+    // Initialize datepicker for delivery date
     $('#delivery_date').datepicker({
+        dateFormat: 'yy-mm-dd',
+        minDate: 0,
         beforeShowDay: function(date) {
             const day = date.getDay();
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Set time to midnight to compare only dates
-            return [(date > today && (day === 1 || day === 3 || day === 5)), ''];
-        },
-        minDate: 1,
-        dateFormat: 'yy-mm-dd', // YYYY-MM-DD format
-        onSelect: function(dateText, inst) {
-            $(this).val(dateText); // Ensure only date selection is allowed
+            return [day === 1 || day === 3 || day === 5];
         }
+    });
+
+    // Set current date for order_date
+    $('#order_date').val(new Date().toISOString().split('T')[0]);
+
+    // Initialize inventory search and filter
+    $('#inventorySearch').on('keyup', function() {
+        const searchText = $(this).val().toLowerCase();
+        $('.inventory tr').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
+        });
     });
 
     // Add product to cart
-    $('.inventory').on('click', '.add-to-cart-btn', function() {
+    $(document).on('click', '.add-to-cart-btn', function() {
         const row = $(this).closest('tr');
-        const category = row.find('.product-quantity').data('category');
-        const description = row.find('.product-quantity').data('description');
-        const packaging = row.find('.product-quantity').data('packaging');
-        const price = row.find('.product-quantity').data('price');
-        const quantity = parseInt(row.find('.product-quantity').val(), 10) || 0;
-
-        if (quantity > 0) {
-            const existingProduct = selectedProducts.find(product => product.item_description === description);
-            if (existingProduct) {
-                existingProduct.quantity += quantity;
-            } else {
-                selectedProducts.push({ category, item_description: description, packaging, price, quantity });
-            }
+        const quantityInput = row.find('.product-quantity');
+        const quantity = parseInt(quantityInput.val(), 10);
+        
+        if (!quantity || quantity < 1) {
+            alert('Please enter a valid quantity');
+            return;
         }
 
-        row.find('.product-quantity').val('');
-        populateCart();
+        const product = {
+            product_id: quantityInput.data('product-id'),
+            category: quantityInput.data('category'),
+            item_description: quantityInput.data('description'),
+            packaging: quantityInput.data('packaging'),
+            price: parseFloat(quantityInput.data('price')),
+            quantity: quantity
+        };
+
+        const existingProductIndex = selectedProducts.findIndex(p => 
+            p.product_id === product.product_id);
+
+        if (existingProductIndex !== -1) {
+            selectedProducts[existingProductIndex].quantity += quantity;
+        } else {
+            selectedProducts.push(product);
+        }
+
+        quantityInput.val('');
         updateOrderSummary();
     });
 
-    // Save changes in the cart
-    function saveCartChanges() {
-        selectedProducts.forEach((product, index) => {
-            product.quantity = parseInt($(`.cart tr:eq(${index}) .cart-quantity`).val(), 10) || 0;
-        });
-        closeCartModal();
-        openInventoryOverlay();
+    // Remove product from cart
+    $(document).on('click', '.remove-from-cart', function() {
+        const index = $(this).data('index');
+        selectedProducts.splice(index, 1);
         updateOrderSummary();
-    }
+        populateCart();
+    });
 
-    // Generate PO number
-    function generatePONumber() {
-        const username = $('#username').val();
-        if (username) {
-            $.post('/top_exchange/backend/generatePONumber.php', { username: username }, function(data) {
-                $('#po_number').val(data);
-            });
-        }
-    }
-
-    // Add form submission handling
+    // Form submission
     $('#addOrderForm').on('submit', function(e) {
         e.preventDefault();
         
-        // Make sure we have products selected
         if (selectedProducts.length === 0) {
-            alert('Please select at least one product before submitting the order.');
-            return false;
+            alert('Please add products to your order');
+            return;
         }
-        
-        // Prepare the order data
+
         prepareOrderData();
-        
-        // Submit the form with AJAX
-        $.post('/top_exchange/backend/add_order.php', $(this).serialize(), function(response) {
-            if (response.success) {
-                alert('Order submitted successfully!');
-                selectedProducts = [];
-                populateCart();
-                updateOrderSummary();
-                closeAddOrderForm();
-            } else {
-                alert('Failed to submit order: ' + (response.message || 'Unknown error'));
+
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert('Order submitted successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Error submitting order. Please try again.');
             }
-        }, 'json')
-        .fail(function(xhr, status, error) {
-            console.error('Server response:', xhr.responseText);
-            alert('Error submitting order. Check the console for details.');
         });
     });
 
-    // Bind functions to global scope
-    window.openAddOrderForm = openAddOrderForm;
-    window.closeAddOrderForm = closeAddOrderForm;
-    window.openInventoryOverlay = openInventoryOverlay;
-    window.closeInventoryOverlay = closeInventoryOverlay;
-    window.openCartModal = openCartModal;
-    window.closeCartModal = closeCartModal;
-    window.saveCartChanges = saveCartChanges;
-    window.viewOrderDetails = viewOrderDetails;
-    window.closeOrderDetailsModal = closeOrderDetailsModal;
-    window.generatePONumber = generatePONumber;
-});
-
-// Function to prepare order data for submission - Now has access to the global selectedProducts
-function prepareOrderData() {
-    // Make sure selectedProducts is accessible
-    if (!selectedProducts || selectedProducts.length === 0) {
-        console.error("No products selected");
-        return;
-    }
-    
-    // Format products with the exact structure needed
-    const formattedProducts = selectedProducts.map(product => {
-        return [
-            product.category,
-            product.item_description,
-            product.packaging,
-            parseFloat(product.price).toFixed(2),
-            parseInt(product.quantity)
-        ];
+    // Category filter change handler
+    $('#inventoryFilter').on('change', function() {
+        const category = $(this).val();
+        if (category === 'all') {
+            $('.inventory tr').show();
+        } else {
+            $('.inventory tr').hide();
+            $(`.inventory tr:contains('${category}')`).show();
+        }
     });
-    
-    const orderData = JSON.stringify(formattedProducts);
-    console.log("Order data being sent: ", orderData); // Log the JSON data for debugging
-    $('#orders').val(orderData);
-    const totalAmount = selectedProducts.reduce((total, product) => total + parseFloat(product.price) * parseInt(product.quantity), 0);
-    $('#total_amount').val(totalAmount.toFixed(2));
-}
+
+    // Fetch categories for filter
+    $.getJSON('/top_exchange/backend/fetch_categories.php', function(categories) {
+        const filter = $('#inventoryFilter');
+        filter.empty();
+        filter.append('<option value="all">All Categories</option>');
+        categories.forEach(category => {
+            filter.append(`<option value="${category}">${category}</option>`);
+        });
+    });
+});

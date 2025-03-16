@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 13, 2025 at 05:44 PM
+-- Generation Time: Mar 16, 2025 at 01:02 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -112,8 +112,19 @@ CREATE TABLE `orders` (
   `delivery_date` date NOT NULL,
   `orders` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`orders`)),
   `total_amount` decimal(10,2) NOT NULL,
-  `status` enum('Pending','Rejected','Approved') NOT NULL
+  `status` enum('Pending','Active','Rejected','Completed') NOT NULL DEFAULT 'Pending'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `orders`
+--
+
+INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_date`, `orders`, `total_amount`, `status`) VALUES
+(6, 'aedan-1', 'aedan', '2025-03-15', '2025-03-17', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed'),
+(7, 'aedan-2', 'aedan', '2025-03-15', '2025-03-19', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":50},{\"product_id\":5,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs/pack\",\"price\":250,\"quantity\":5}]', 15250.00, 'Completed'),
+(8, 'asdasd-1', 'asdasd', '2025-03-15', '2025-03-19', '[{\"product_id\":32,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Beancurd Roll (B)\",\"packaging\":\"20pcs/pack\",\"price\":500,\"quantity\":1000}]', 500000.00, 'Rejected'),
+(9, 'aedan-3', 'aedan', '2025-03-15', '2025-03-19', '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":12}]', 3900.00, 'Completed'),
+(10, 'aedan-4', 'aedan', '2025-03-15', '2025-03-19', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Pending');
 
 -- --------------------------------------------------------
 
@@ -334,7 +345,7 @@ ALTER TABLE `customers`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `pages`

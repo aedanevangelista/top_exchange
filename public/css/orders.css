@@ -186,8 +186,10 @@ body {
 
 /* Centered Button */
 .centered-button {
+    display: flex;
     text-align: center;
     margin-bottom: 20px;
+    justify-content: center;
 }
 
 /* Order Summary */
@@ -248,7 +250,7 @@ body {
 .save-btn, .cancel-btn, .done-btn, .back-btn, .save-cart-btn {
     padding: 10px 20px;
     font-size: 14px;
-    border-radius: 5px;
+    border-radius: 80px;
     cursor: pointer;
     text-align: center;
     border: none;
@@ -265,7 +267,8 @@ body {
 }
 
 .cancel-btn {
-    background-color: #3a3a3a;
+    background-color: gray;
+    border-radius: 80px;
 }
 
 .done-btn {
@@ -273,7 +276,7 @@ body {
 }
 
 .back-btn {
-    background-color: #e67e22;
+    background-color: gray;
 }
 
 .save-cart-btn {
@@ -285,7 +288,7 @@ body {
 }
 
 .cancel-btn:hover {
-    background-color: #000000;
+    background-color: #3a3a3a;
 }
 
 .done-btn:hover {
@@ -293,7 +296,7 @@ body {
 }
 
 .back-btn:hover {
-    background-color: #d35400;
+    background-color: #3a3a3a;
 }
 
 .save-cart-btn:hover {
@@ -307,7 +310,7 @@ body {
     padding: 10px 20px;
     font-size: 14px;
     border: none;
-    border-radius: 5px;
+    border-radius: 80px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -326,7 +329,7 @@ body {
     padding: 10px 20px;
     font-size: 14px;
     border: none;
-    border-radius: 5px;
+    border-radius: 80px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -383,7 +386,7 @@ body {
     padding: 5px 10px;
     font-size: 12px;
     border: none;
-    border-radius: 5px;
+    border-radius: 80px;
     cursor: pointer;
     transition: background-color 0.3s;
 }
@@ -570,4 +573,324 @@ body {
     font-size: 14px;
     margin-bottom: 10px;
     text-align: center;
+}
+
+/* Status Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    padding: 25px;
+    border-radius: 12px;
+    width: 400px;
+    text-align: center;
+    animation: modalFadeIn 0.3s ease-in-out;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Table Status Button */
+.table-status-btn {
+    background-color: #e53935;
+    color: white;
+    padding: 5px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 80px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s;
+}
+
+.table-status-btn:hover {
+    background-color: #d32f2f;
+}
+
+/* Orders Button */
+.orders-btn {
+    background-color: #424242;
+    color: white;
+    padding: 5px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 80px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s;
+}
+
+.orders-btn:hover {
+    background-color: #212121;
+}
+
+/* Modal Status Buttons */
+.status-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+
+.modal-status-btn {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 80px;
+    cursor: pointer;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s;
+}
+
+.modal-status-btn.active {
+    background-color: #DAA520;
+    color: white;
+}
+
+.modal-status-btn.active:hover {
+    background-color: #B8860B;
+}
+
+.modal-status-btn.reject {
+    background-color: #e53935;
+    color: white;
+}
+
+.modal-status-btn.reject:hover {
+    background-color: #d32f2f;
+}
+
+.modal-status-btn.pending {
+    background-color: #2471a3;
+    color: white;
+}
+
+.modal-status-btn.pending:hover {
+    background-color: #1a5276;
+}
+
+.modal-status-btn.complete {
+    background-color: #45A049;
+    color: white;
+}
+
+.modal-status-btn.complete:hover {
+    background-color: #357a38;
+}
+
+/* Modal Footer */
+.modal-footer {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.modal-cancel-btn {
+    padding: 5px 10px;
+    background-color: gray;
+    color: white;
+    border: none;
+    border-radius: 80px;
+    cursor: pointer;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s;
+}
+
+.modal-cancel-btn:hover {
+    background-color: #3a3a3a;
+}
+
+#statusMessage {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.status-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+
+/* Add this to your CSS */
+.status-btn {
+    background-color: #FF1744;
+    color: white;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: none;
+}
+
+.status-btn:hover {
+    background-color: #D50000;
+}
+
+.status-btn.active {
+    background-color: #DAA520; /* Darker yellow */
+    color: white;
+}
+
+.status-btn.active:hover {
+    background-color: #B8860B; /* Even darker yellow on hover */
+}
+
+.status-btn.reject {
+    background-color: #FF1744; /* Matching accounts_clients red */
+    color: white;
+}
+
+.status-btn.reject:hover {
+    background-color: #D50000; /* Darker red on hover */
+}
+
+.status-btn.pending {
+    background-color: #2471a3;
+    color: white;
+}
+
+.status-btn.pending:hover {
+    background-color: #1a5276; /* Darker blue on hover */
+}
+
+.status-btn.complete {
+    background-color: #45A049;
+    color: white;
+}
+
+.status-btn.complete:hover {
+    background-color: #357a38; /* Darker green on hover */
+}
+
+/* Icons for status buttons */
+.status-btn i {
+    font-size: 16px;
+}
+
+/* Orders Button in Table */
+.view-orders-btn {
+    background-color: #424242;
+    color: white;
+    padding: 5px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 80px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s;
+}
+
+.view-orders-btn:hover {
+    background-color: #212121;
+}
+
+/* Order Details Container Styles */
+.order-details-container {
+    margin-top: 20px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden; /* Ensures the border-radius works with the table */
+}
+
+.order-details-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.order-details-table th {
+    background-color: black;
+    color: white;
+    font-weight: bold;
+    padding: 12px;
+    text-align: center;
+    border-bottom: 2px solid #ddd;
+}
+
+.order-details-table td {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.order-details-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+.order-details-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Status Badge Styles */
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 80px;
+    font-weight: 600;
+    color: white;
+    display: inline-block;
+}
+
+.status-pending {
+    color: #2471a3;
+    font-weight: 600;
+}
+
+.status-active {
+    color: #DAA520;
+    font-weight: 600;
+}
+
+.status-rejected {
+    color: #e53935;
+    font-weight: 600;
+}
+
+.status-completed {
+    color: #45A049;
+    font-weight: 600;
+}
+
+.remove-from-cart {
+    color: white;
+    border: none;
+    background-color: #e53935;
+    padding: 6px 10px;
+    border-radius: 80px
+}
+
+.remove-from-cart:hover {
+    background-color: #D50000;
 }
