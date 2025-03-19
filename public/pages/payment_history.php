@@ -49,6 +49,25 @@ if ($result && $result->num_rows > 0) {
             color: white;
             border-color: #4CAF50;
         }
+
+        /* Status Text Styling */
+        .status-active {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .status-inactive {
+            color: gray;
+            font-weight: 600;
+        }
+        
+        .far.fa-money-bill-alt {
+            margin-right: 5px;
+        }
+
+        .view-button, .status-toggle {
+            border-radius: 80px;
+        }
     </style>
 </head>
 <body>
@@ -75,10 +94,14 @@ if ($result && $result->num_rows > 0) {
                     <?php foreach ($users as $user): ?>
                         <tr>
                             <td><?= htmlspecialchars($user['username']) ?></td>
-                            <td><?= htmlspecialchars($user['status']) ?></td>
+                            <td>
+                                <span class="status-<?= strtolower($user['status']) ?>">
+                                    <?= htmlspecialchars($user['status']) ?>
+                                </span>
+                            </td>
                             <td>
                                 <button class="view-button" onclick="viewPaymentHistory('<?= htmlspecialchars($user['username']) ?>')">
-                                    View Payments
+                                    <i class="far fa-money-bill-alt"></i>View Payments
                                 </button>
                             </td>
                         </tr>
@@ -238,11 +261,6 @@ if ($result && $result->num_rows > 0) {
         $('#yearTabs').html(tabsHtml);
     }
     
-    function refreshPaymentData() {
-        // Force refresh of all data
-        fetchAvailableYears(currentUsername, true);
-    }
-    
     function loadYearData(year, refreshData = false) {
         // Update active tab
         $('.year-tab').removeClass('active');
@@ -287,6 +305,7 @@ if ($result && $result->num_rows > 0) {
                             <td>${month}</td>
                             <td>
                                 <button class="view-button" onclick="viewMonthlyOrders('${currentUsername}', ${index + 1}, '${month}', ${year})">
+                                <i class="fas fa-clipboard-list"></i>
                                     View Orders List
                                 </button>
                             </td>
@@ -295,6 +314,8 @@ if ($result && $result->num_rows > 0) {
                             <td>
                                 <button class="status-toggle ${monthData.payment_status === 'Paid' ? 'status-paid' : 'status-unpaid'}"
                                         onclick="togglePaymentStatus('${currentUsername}', ${index + 1}, this, '${monthData.payment_status}', ${year})">
+
+                                        <i class="fas fa-exchange-alt"></i>
                                     Change Status
                                 </button>
                             </td>

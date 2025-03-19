@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to load years and populate dropdown
     function loadYears() {
-        fetch('/top_exchange/backend/get_available_years.php')
+        fetch('/top_exchange/backend/get_available_years_dashboard.php')
             .then(response => response.json())
             .then(years => {
                 const yearSelect = document.getElementById('year-select');
@@ -179,7 +179,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to populate year dropdowns
     function populateYearDropdowns() {
-        fetch('/top_exchange/backend/get_available_years.php')
+        fetch('/top_exchange/backend/get_available_years_dashboard.php')
             .then(response => response.json())
             .then(years => {
                 if (years.length > 0) {
