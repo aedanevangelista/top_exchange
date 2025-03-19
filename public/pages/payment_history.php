@@ -136,14 +136,14 @@ function viewPaymentHistory(username) {
         data: { username: username, year: currentYear },
         dataType: 'json',
         success: function(response) {
-            let payments = [];
-            try {
-                // If response is already parsed JSON (due to dataType: 'json')
-                payments = response.data || response;
-            } catch (e) {
-                console.error('Error processing payments:', e);
-                payments = [];
+            if (!response.success) {
+                $('#monthlyPaymentsBody').html(
+                    `<tr><td colspan="5" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
+                );
+                return;
             }
+
+            const payments = response.data || [];
             
             months.forEach((month, index) => {
                 const monthData = payments.find(p => p.month === index + 1) || {
@@ -182,7 +182,6 @@ function viewPaymentHistory(username) {
         }
     });
 }
-
 function viewMonthlyOrders(username, month, monthName) {
     $('#modalMonth').text(monthName);
     
