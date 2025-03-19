@@ -2,7 +2,7 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Transaction History'); // Ensure the user has access to the Transaction History page
+checkRole('Order History'); // Updated from 'Transaction History'
 
 // Fetch completed orders for display
 $orders = []; // Initialize $orders as an empty array

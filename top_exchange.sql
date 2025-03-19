@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 19, 2025 at 06:21 AM
+-- Generation Time: Mar 19, 2025 at 05:36 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -101,6 +101,23 @@ INSERT INTO `customers` (`customer_id`, `customer_name`, `created_at`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `monthly_payments`
+--
+
+CREATE TABLE `monthly_payments` (
+  `id` int(11) NOT NULL,
+  `username` varchar(255) NOT NULL,
+  `month` int(2) NOT NULL,
+  `year` int(4) NOT NULL,
+  `total_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `payment_status` enum('Paid','Unpaid') NOT NULL DEFAULT 'Unpaid',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `orders`
 --
 
@@ -153,7 +170,8 @@ INSERT INTO `pages` (`page_id`, `page_name`, `file_path`) VALUES
 (5, 'Inventory', 'inventory.php'),
 (6, 'User Roles', 'user_roles.php'),
 (7, 'Orders', 'orders.php'),
-(8, 'Transaction History', 'transaction_history.php');
+(8, 'Order History', 'order_history.php'),
+(9, 'Payment History', 'payment_history.php');
 
 -- --------------------------------------------------------
 
@@ -266,8 +284,8 @@ CREATE TABLE `roles` (
 --
 
 INSERT INTO `roles` (`role_id`, `role_name`, `status`, `pages`) VALUES
-(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory, Orders, Transaction History'),
-(2, 'Manager', 'active', 'Dashboard, Inventory, Transaction History'),
+(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory, Orders, Order History, Payment History'),
+(2, 'Manager', 'active', 'Dashboard, Inventory, Order History'),
 (3, 'Secretary', 'active', ''),
 (4, 'Accountant', 'active', ''),
 (36, 'aed', 'active', 'Accounts - Clients, Dashboard');
@@ -294,6 +312,14 @@ ALTER TABLE `clients_accounts`
 --
 ALTER TABLE `customers`
   ADD PRIMARY KEY (`customer_id`);
+
+--
+-- Indexes for table `monthly_payments`
+--
+ALTER TABLE `monthly_payments`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_month_user` (`username`,`month`,`year`),
+  ADD KEY `idx_username_year` (`username`,`year`);
 
 --
 -- Indexes for table `orders`
@@ -346,6 +372,12 @@ ALTER TABLE `customers`
   MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
+-- AUTO_INCREMENT for table `monthly_payments`
+--
+ALTER TABLE `monthly_payments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
@@ -355,7 +387,7 @@ ALTER TABLE `orders`
 -- AUTO_INCREMENT for table `pages`
 --
 ALTER TABLE `pages`
-  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `products`

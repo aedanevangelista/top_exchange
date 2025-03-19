@@ -1,14 +1,37 @@
 <?php
-$servername = "localhost";
-$username = "root"; // Default for XAMPP
-$password = ""; // Default for XAMPP
-$dbname = "top_exchange"; // Your database name
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
 
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
+try {
+    $servername = "localhost";
+    $username = "root";
+    $password = "";
+    $dbname = "top_exchange";
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+    $conn = new mysqli($servername, $username, $password, $dbname);
+
+    // Check connection
+    if ($conn->connect_error) {
+        throw new Exception("Connection failed: " . $conn->connect_error);
+    }
+
+    // Set charset
+    if (!$conn->set_charset("utf8mb4")) {
+        throw new Exception("Error setting charset: " . $conn->error);
+    }
+
+} catch (Exception $e) {
+    error_log($e->getMessage());
+    
+    // Only return JSON response for AJAX requests
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+        strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Database connection error']);
+        exit;
+    } else {
+        // For regular page loads, show error message
+        die("Database connection failed. Please try again later.");
+    }
 }
 ?>
