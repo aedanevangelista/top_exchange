@@ -1,0 +1,6 @@
+[19-Mar-2025 17:55:49 Europe/Berlin] Script execution started
+[19-Mar-2025 17:55:49 Europe/Berlin] Current directory: C:\xampp\htdocs\top_exchange\backend
+[19-Mar-2025 17:55:49 Europe/Berlin] Looking for db_connection.php at path: C:\xampp\htdocs\top_exchange\backend/../db_connection.php
+[19-Mar-2025 17:55:49 Europe/Berlin] db_connection.php not found at specified path
+[19-Mar-2025 17:55:49 Europe/Berlin] Error caught: Database connection file not found
+[19-Mar-2025 17:55:49 Europe/Berlin] Stack trace: #0 {main}

@@ -116,227 +116,234 @@ if ($result && $result->num_rows > 0) {
     </div>
 
     <script>
-       const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-];
+        // Define months array at the top level of your script
+        const months = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
 
-function viewPaymentHistory(username) {
-    $('#modalUsername').text(username);
-    const currentYear = new Date().getFullYear();
-    let monthlyPaymentsHtml = '';
-
-    // Show loading state
-    $('#monthlyPaymentsBody').html('<tr><td colspan="5">Loading...</td></tr>');
-    $('#monthlyPaymentsModal').show();
-
-    $.ajax({
-        url: '../../backend/get_monthly_payments.php',
-        method: 'GET',
-        data: { username: username, year: currentYear },
-        dataType: 'json',
-        success: function(response) {
-            if (!response.success) {
-                $('#monthlyPaymentsBody').html(
-                    `<tr><td colspan="5" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
-                );
-                return;
-            }
-
-            const payments = response.data || [];
+        function viewPaymentHistory(username) {
+            $('#modalUsername').text(username);
+            const currentYear = new Date().getFullYear();
             
-            months.forEach((month, index) => {
-                const monthData = payments.find(p => p.month === index + 1) || {
-                    total_amount: 0,
-                    payment_status: 'Unpaid'
-                };
-                
-                monthlyPaymentsHtml += `
-                    <tr>
-                        <td>${month}</td>
-                        <td>
-                            <button class="view-button" onclick="viewMonthlyOrders('${username}', ${index + 1}, '${month}')">
-                                View Orders List
-                            </button>
-                        </td>
-                        <td>PHP ${numberFormat(monthData.total_amount)}</td>
-                        <td>${monthData.payment_status}</td>
-                        <td>
-                            <button class="status-toggle ${monthData.payment_status === 'Paid' ? 'status-paid' : 'status-unpaid'}"
-                                    onclick="togglePaymentStatus('${username}', ${index + 1}, this)">
-                                ${monthData.payment_status}
-                            </button>
-                        </td>
-                    </tr>
-                `;
+            // Show loading state
+            $('#monthlyPaymentsBody').html('<tr><td colspan="5">Loading...</td></tr>');
+            $('#monthlyPaymentsModal').show();
+            
+            console.log('Fetching payments for:', username, currentYear);
+
+            $.ajax({
+                url: '../../backend/get_monthly_payments.php',
+                method: 'GET',
+                data: { username: username, year: currentYear },
+                dataType: 'json',
+                success: function(response) {
+                    let monthlyPaymentsHtml = '';
+                    
+                    if (!response.success) {
+                        $('#monthlyPaymentsBody').html(
+                            `<tr><td colspan="5" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
+                        );
+                        return;
+                    }
+
+                    const payments = response.data || [];
+                    
+                    // Use the months array defined at the top of the script
+                    months.forEach((month, index) => {
+                        const monthData = payments.find(p => p.month === index + 1) || {
+                            total_amount: 0,
+                            payment_status: 'Unpaid'
+                        };
+                        
+                        monthlyPaymentsHtml += `
+                            <tr>
+                                <td>${month}</td>
+                                <td>
+                                    <button class="view-button" onclick="viewMonthlyOrders('${username}', ${index + 1}, '${month}')">
+                                        View Orders List
+                                    </button>
+                                </td>
+                                <td>PHP ${numberFormat(monthData.total_amount)}</td>
+                                <td>${monthData.payment_status}</td>
+                                <td>
+                                    <button class="status-toggle ${monthData.payment_status === 'Paid' ? 'status-paid' : 'status-unpaid'}"
+                                            onclick="togglePaymentStatus('${username}', ${index + 1}, this)">
+                                        ${monthData.payment_status}
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+
+                    $('#monthlyPaymentsBody').html(monthlyPaymentsHtml);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Ajax Error:', error);
+                    console.error('Response:', xhr.responseText);
+                    console.error('Status:', status);
+                    $('#monthlyPaymentsBody').html(
+                        '<tr><td colspan="5" style="color: red;">Error loading payment history. Please try again.</td></tr>'
+                    );
+                }
             });
-
-            $('#monthlyPaymentsBody').html(monthlyPaymentsHtml);
-        },
-        error: function(xhr, status, error) {
-            console.error('Ajax Error:', error);
-            console.error('Response:', xhr.responseText);
-            $('#monthlyPaymentsBody').html(
-                '<tr><td colspan="5" style="color: red;">Error loading payment history. Please try again.</td></tr>'
-            );
         }
-    });
-}
-function viewMonthlyOrders(username, month, monthName) {
-    $('#modalMonth').text(monthName);
-    
-    $.ajax({
-        url: '../../backend/get_monthly_orders.php',
-        method: 'GET',
-        data: { 
-            username: username, 
-            month: month,
-            year: new Date().getFullYear()
-        },
-        dataType: 'json',
-        success: function(response) {
-            let orders = [];
-            try {
-                orders = response.data || response;
-            } catch (e) {
-                console.error('Error processing orders:', e);
-                orders = [];
-            }
 
-            let ordersHtml = '';
-            if (orders && orders.length > 0) {
-                orders.forEach(order => {
-                    ordersHtml += `
+        function viewMonthlyOrders(username, month, monthName) {
+            $('#modalMonth').text(monthName);
+            
+            $.ajax({
+                url: '../../backend/get_monthly_orders.php',
+                method: 'GET',
+                data: { 
+                    username: username, 
+                    month: month,
+                    year: new Date().getFullYear()
+                },
+                dataType: 'json',
+                success: function(response) {
+                    let orders = [];
+                    try {
+                        orders = response.data || response;
+                    } catch (e) {
+                        console.error('Error processing orders:', e);
+                        orders = [];
+                    }
+
+                    let ordersHtml = '';
+                    if (orders && orders.length > 0) {
+                        orders.forEach(order => {
+                            ordersHtml += `
+                                <tr>
+                                    <td>${order.po_number}</td>
+                                    <td>${order.order_date}</td>
+                                    <td>${order.delivery_date}</td>
+                                    <td>
+                                        <button class="view-button" onclick="viewOrderDetails('${order.orders}', '${order.po_number}', '${username}')">
+                                            View Orders
+                                        </button>
+                                    </td>
+                                    <td>PHP ${numberFormat(order.total_amount)}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        ordersHtml = '<tr><td colspan="5">No orders found for this month</td></tr>';
+                    }
+
+                    $('#monthlyOrdersBody').html(ordersHtml);
+                    $('#monthlyOrdersModal').show();
+                },
+                error: function(xhr, status, error) {
+                    console.error('Ajax Error:', error);
+                    $('#monthlyOrdersBody').html(
+                        '<tr><td colspan="5" style="color: red;">Error loading orders. Please try again.</td></tr>'
+                    );
+                }
+            });
+        }
+
+        function viewOrderDetails(orders, poNumber, username) {
+            try {
+                const ordersList = JSON.parse(orders);
+                let orderDetailsHtml = `
+                    <div id="orderDetailsHeader">
+                        <p><strong>PO Number:</strong> ${poNumber}</p>
+                        <p><strong>Username:</strong> ${username}</p>
+                    </div>
+                    <table class="orders-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Item Description</th>
+                                <th>Packaging</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                ordersList.forEach(item => {
+                    orderDetailsHtml += `
                         <tr>
-                            <td>${order.po_number}</td>
-                            <td>${order.order_date}</td>
-                            <td>${order.delivery_date}</td>
-                            <td>
-                                <button class="view-button" onclick="viewOrderDetails('${order.orders}', '${order.po_number}', '${username}')">
-                                    View Orders
-                                </button>
-                            </td>
-                            <td>PHP ${numberFormat(order.total_amount)}</td>
+                            <td>${item.category}</td>
+                            <td>${item.item_description}</td>
+                            <td>${item.packaging}</td>
+                            <td>PHP ${numberFormat(item.price)}</td>
+                            <td>${item.quantity}</td>
+                            <td>PHP ${numberFormat(item.price * item.quantity)}</td>
                         </tr>
                     `;
                 });
-            } else {
-                ordersHtml = '<tr><td colspan="5">No orders found for this month</td></tr>';
+
+                orderDetailsHtml += '</tbody></table>';
+                $('#orderDetailsContent').html(orderDetailsHtml);
+                $('#orderDetailsModal').show();
+            } catch (e) {
+                console.error('Error parsing orders JSON:', e);
+                alert('Error displaying order details. Please try again.');
             }
-
-            $('#monthlyOrdersBody').html(ordersHtml);
-            $('#monthlyOrdersModal').show();
-        },
-        error: function(xhr, status, error) {
-            console.error('Ajax Error:', error);
-            $('#monthlyOrdersBody').html(
-                '<tr><td colspan="5" style="color: red;">Error loading orders. Please try again.</td></tr>'
-            );
         }
-    });
-}
 
-function viewOrderDetails(orders, poNumber, username) {
-    try {
-        const ordersList = JSON.parse(orders);
-        let orderDetailsHtml = `
-            <div id="orderDetailsHeader">
-                <p><strong>PO Number:</strong> ${poNumber}</p>
-                <p><strong>Username:</strong> ${username}</p>
-            </div>
-            <table class="orders-table">
-                <thead>
-                    <tr>
-                        <th>Category</th>
-                        <th>Item Description</th>
-                        <th>Packaging</th>
-                        <th>Price</th>
-                        <th>Quantity</th>
-                        <th>Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
+        function togglePaymentStatus(username, month, button) {
+            const currentStatus = button.textContent.trim();
+            const newStatus = currentStatus === 'Paid' ? 'Unpaid' : 'Paid';
 
-        ordersList.forEach(item => {
-            orderDetailsHtml += `
-                <tr>
-                    <td>${item.category}</td>
-                    <td>${item.item_description}</td>
-                    <td>${item.packaging}</td>
-                    <td>PHP ${numberFormat(item.price)}</td>
-                    <td>${item.quantity}</td>
-                    <td>PHP ${numberFormat(item.price * item.quantity)}</td>
-                </tr>
-            `;
+            $.ajax({
+                url: '../../backend/update_payment_status.php',
+                method: 'POST',
+                data: {
+                    username: username,
+                    month: month,
+                    year: new Date().getFullYear(),
+                    status: newStatus
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        button.textContent = newStatus;
+                        button.className = `status-toggle status-${newStatus.toLowerCase()}`;
+                    } else {
+                        alert('Error updating payment status. Please try again.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Ajax Error:', error);
+                    alert('Error updating payment status. Please try again.');
+                }
+            });
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function numberFormat(number) {
+            return parseFloat(number).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            const searchText = this.value.toLowerCase();
+            const rows = document.querySelectorAll('.orders-table tbody tr');
+            
+            rows.forEach(row => {
+                const username = row.cells[0].textContent.toLowerCase();
+                row.style.display = username.includes(searchText) ? '' : 'none';
+            });
         });
-
-        orderDetailsHtml += '</tbody></table>';
-        $('#orderDetailsContent').html(orderDetailsHtml);
-        $('#orderDetailsModal').show();
-    } catch (e) {
-        console.error('Error parsing orders JSON:', e);
-        alert('Error displaying order details. Please try again.');
-    }
-}
-
-function togglePaymentStatus(username, month, button) {
-    const currentStatus = button.textContent.trim();
-    const newStatus = currentStatus === 'Paid' ? 'Unpaid' : 'Paid';
-
-    $.ajax({
-        url: '../../backend/update_payment_status.php',
-        method: 'POST',
-        data: {
-            username: username,
-            month: month,
-            year: new Date().getFullYear(),
-            status: newStatus
-        },
-        dataType: 'json',
-        success: function(response) {
-            if (response.success) {
-                button.textContent = newStatus;
-                button.className = `status-toggle status-${newStatus.toLowerCase()}`;
-            } else {
-                alert('Error updating payment status. Please try again.');
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error('Ajax Error:', error);
-            alert('Error updating payment status. Please try again.');
-        }
-    });
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-function numberFormat(number) {
-    return parseFloat(number).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-}
-
-// Close modal when clicking outside
-window.onclick = function(event) {
-    if (event.target.className === 'modal') {
-        event.target.style.display = 'none';
-    }
-}
-
-// Search functionality
-document.getElementById('searchInput').addEventListener('keyup', function() {
-    const searchText = this.value.toLowerCase();
-    const rows = document.querySelectorAll('.orders-table tbody tr');
-    
-    rows.forEach(row => {
-        const username = row.cells[0].textContent.toLowerCase();
-        row.style.display = username.includes(searchText) ? '' : 'none';
-    });
-});
     </script>
 </body>
 </html>
