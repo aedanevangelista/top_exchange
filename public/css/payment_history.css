@@ -36,15 +36,15 @@
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    background-color: #007bff;
+    color: white;
     transition: background-color 0.3s;
 }
 
-.status-paid {
-    background-color: #28a745;
-    color: white;
+.payment-status-unpaid {
+    color: #e53935;
 }
 
-.status-unpaid {
-    background-color: #dc3545;
-    color: white;
+.payment-status-paid {
+    color: #45A049;
 }

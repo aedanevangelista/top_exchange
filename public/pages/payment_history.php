@@ -165,11 +165,11 @@ if ($result && $result->num_rows > 0) {
                                     </button>
                                 </td>
                                 <td>PHP ${numberFormat(monthData.total_amount)}</td>
-                                <td>${monthData.payment_status}</td>
+                                <td class="payment-status-${monthData.payment_status.toLowerCase()}">${monthData.payment_status}</td>
                                 <td>
                                     <button class="status-toggle ${monthData.payment_status === 'Paid' ? 'status-paid' : 'status-unpaid'}"
-                                            onclick="togglePaymentStatus('${username}', ${index + 1}, this)">
-                                        ${monthData.payment_status}
+                                            onclick="togglePaymentStatus('${username}', ${index + 1}, this, '${monthData.payment_status}')">
+                                        Change Status
                                     </button>
                                 </td>
                             </tr>
@@ -287,8 +287,7 @@ if ($result && $result->num_rows > 0) {
             }
         }
 
-        function togglePaymentStatus(username, month, button) {
-            const currentStatus = button.textContent.trim();
+        function togglePaymentStatus(username, month, button, currentStatus) {
             const newStatus = currentStatus === 'Paid' ? 'Unpaid' : 'Paid';
 
             $.ajax({
@@ -303,8 +302,15 @@ if ($result && $result->num_rows > 0) {
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        button.textContent = newStatus;
+                        // Update the button class
                         button.className = `status-toggle status-${newStatus.toLowerCase()}`;
+                        
+                        // Update the status text in the previous column
+                        const statusCell = button.parentElement.previousElementSibling;
+                        statusCell.innerHTML = `<span class="status-text-${newStatus.toLowerCase()}">${newStatus}</span>`;
+                        
+                        // Update the button's stored status
+                        $(button).attr('onclick', `togglePaymentStatus('${username}', ${month}, this, '${newStatus}')`);
                     } else {
                         alert('Error updating payment status. Please try again.');
                     }
