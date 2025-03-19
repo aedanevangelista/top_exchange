@@ -41,10 +41,74 @@
     transition: background-color 0.3s;
 }
 
+.payment-status-paid {
+    color: #45A049;
+}
+
 .payment-status-unpaid {
     color: #e53935;
 }
 
-.payment-status-paid {
-    color: #45A049;
+/* Modal Header Styling */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+}
+
+/* Table Spacing */
+.orders-table {
+    margin-top: 20px;
+}
+
+/* Year Tabs Styling */
+.year-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+
+.year-tab {
+    padding: 8px 16px;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.year-tab:hover {
+    background-color: #e0e0e0;
+}
+
+.year-tab.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
 }
