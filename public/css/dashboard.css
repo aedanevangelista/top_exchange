@@ -8,8 +8,11 @@
     font-family: Arial, sans-serif;
 }
 
-body {
-    background-color: #f4f7f9;
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
 }
 
 /* ================================ */
@@ -37,7 +40,7 @@ body {
     background-color: #f4f7f9;
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: 16px;
     align-items: center; /* Center all sections horizontally */
 }
 
@@ -93,6 +96,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    height: 100%;
     gap: 16px;
 }
 
@@ -160,16 +164,25 @@ body {
 /* Sales per Department Section */
 /* ================================ */
 .sales-department-container {
+    flex: 1;
+    width: 70%;
+    min-height: 400px; /* Set minimum height */
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+
+.sales-department-chart {
+    height: calc(100% - 60px); /* Subtract header height */
     width: 100%;
-    max-width: 900px;
-    background-color: white;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
+    position: relative;
+}
+
+/* If you want the chart to be even bigger */
+.dashboard-left {
+    min-height: 600px; /* Adjust this value as needed */
 }
 
 /* Chart Area */
@@ -186,6 +199,18 @@ body {
 #sales-per-department-filter,
 #packs-sold-year,
 #packs-sold-compare-year {
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.year-select{
     padding: 8px 14px;
     font-size: 14px;
     font-weight: bold;
@@ -240,6 +265,7 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    gap: 4px;
 }
 
 .client-orders {
@@ -251,3 +277,4 @@ canvas#clientOrdersChart {
     width: 100% !important;
     height: 100% !important;
 }
+

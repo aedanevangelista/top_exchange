@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 16, 2025 at 01:02 PM
+-- Generation Time: Mar 19, 2025 at 06:21 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -122,9 +122,12 @@ CREATE TABLE `orders` (
 INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_date`, `orders`, `total_amount`, `status`) VALUES
 (6, 'aedan-1', 'aedan', '2025-03-15', '2025-03-17', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed'),
 (7, 'aedan-2', 'aedan', '2025-03-15', '2025-03-19', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":50},{\"product_id\":5,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs/pack\",\"price\":250,\"quantity\":5}]', 15250.00, 'Completed'),
-(8, 'asdasd-1', 'asdasd', '2025-03-15', '2025-03-19', '[{\"product_id\":32,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Beancurd Roll (B)\",\"packaging\":\"20pcs/pack\",\"price\":500,\"quantity\":1000}]', 500000.00, 'Rejected'),
+(8, 'asdasd-1', 'asdasd', '2024-03-15', '2024-03-19', '[{\"product_id\":32,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Beancurd Roll (B)\",\"packaging\":\"20pcs/pack\",\"price\":500,\"quantity\":1000}]', 500000.00, 'Completed'),
 (9, 'aedan-3', 'aedan', '2025-03-15', '2025-03-19', '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":12}]', 3900.00, 'Completed'),
-(10, 'aedan-4', 'aedan', '2025-03-15', '2025-03-19', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Pending');
+(10, 'aedan-4', 'aedan', '2025-03-15', '2025-03-19', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Pending'),
+(11, 'asdasd-2', 'asdasd', '2025-03-16', '2025-03-19', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":1}]', 280.00, 'Pending'),
+(12, 'asdasd-3', 'asdasd', '2025-03-16', '2025-03-19', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed'),
+(13, 'aedan-5', 'aedan', '2025-03-16', '2025-03-19', '[{\"product_id\":16,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Regular Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":180,\"quantity\":100}]', 18000.00, 'Completed');
 
 -- --------------------------------------------------------
 
@@ -149,7 +152,8 @@ INSERT INTO `pages` (`page_id`, `page_name`, `file_path`) VALUES
 (4, 'Dashboard', 'dashboard.php'),
 (5, 'Inventory', 'inventory.php'),
 (6, 'User Roles', 'user_roles.php'),
-(7, 'Orders', 'orders.php');
+(7, 'Orders', 'orders.php'),
+(8, 'Transaction History', 'transaction_history.php');
 
 -- --------------------------------------------------------
 
@@ -262,8 +266,8 @@ CREATE TABLE `roles` (
 --
 
 INSERT INTO `roles` (`role_id`, `role_name`, `status`, `pages`) VALUES
-(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory, Orders'),
-(2, 'Manager', 'active', 'Dashboard, Inventory'),
+(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory, Orders, Transaction History'),
+(2, 'Manager', 'active', 'Dashboard, Inventory, Transaction History'),
 (3, 'Secretary', 'active', ''),
 (4, 'Accountant', 'active', ''),
 (36, 'aed', 'active', 'Accounts - Clients, Dashboard');
@@ -345,13 +349,13 @@ ALTER TABLE `customers`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `pages`
 --
 ALTER TABLE `pages`
-  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `products`

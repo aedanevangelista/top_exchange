@@ -84,34 +84,33 @@ $clientOrders = getClientOrdersCount($conn, $selectedYear);
                 <div class="client-orders-container">
                     <div class="chart-header">
                         <h3>CLIENT ORDERS</h3>
-                        <select id="year-select" class="year-select"></select>
+                        <select id="year-select" class="year-select">
+                            <!-- Years will be populated by JavaScript -->
+                        </select>
                     </div>
                     <div class="client-orders" style="height: 300px; position: relative;">
-                        <canvas id="clientOrdersChart" style="width: 100%; height: 100%;"></canvas>
+                        <canvas id="clientOrdersChart"></canvas>
                     </div>
                 </div>
 
-                <!-- PACKS SOLD SINCE -->
+                <!-- ORDERS SOLD SECTION -->
                 <div class="packs-sold-container">
                     <!-- Header with Year Dropdown -->
                     <div class="packs-sold-header">
-                        <span>Packs sold since</span>
+                        <span>Orders sold in</span>
                         <select id="packs-sold-year" class="packs-sold-dropdown">
-                            <option value="2025">2025</option>
-                            <option value="2024">2024</option>
-                            <option value="2023">2023</option>
+                            <!-- Years will be populated from orders table -->
                         </select>
                     </div>
 
-                    <!-- Packs Count -->
-                    <div class="packs-sold-count" id="packs-sold-count">4000 Packs</div>
+                    <!-- Orders Count -->
+                    <div class="packs-sold-count" id="packs-sold-count">0 Orders</div>
 
                     <!-- Comparison with Previous Year Dropdown -->
                     <div class="packs-comparison-row">
-                        <span id="packs-sold-percentage" class="packs-comparison">+10% since</span>
+                        <span id="packs-sold-percentage" class="packs-comparison">0% since</span>
                         <select id="packs-sold-compare-year" class="packs-sold-dropdown">
-                            <option value="2024">2024</option>
-                            <option value="2023">2023</option>
+                            <!-- Years will be populated from orders table -->
                         </select>
                     </div>
                 </div>
@@ -120,13 +119,10 @@ $clientOrders = getClientOrdersCount($conn, $selectedYear);
 
             <!-- SALES PER DEPARTMENT -->
             <div class="sales-department-container">
-                <h3>SALES PER DEPARTMENT</h3>
-                <select id="sales-per-department-filter">
-                    <option value="week" selected>This Week</option>
-                    <option value="month">This Month</option>
-                    <option value="year">This Year</option>
-                </select>
-                <div class="chart-container">
+                <div class="chart-header">
+                    <h3>SALES PER DEPARTMENT</h3>
+                </div>
+                <div class="sales-department-chart">
                     <canvas id="salesPerDepartmentChart"></canvas>
                 </div>
             </div>
