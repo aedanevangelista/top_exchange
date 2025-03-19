@@ -34,8 +34,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php endif; ?>
 
             <!-- Transactions Menu with Submenus -->
-            <!-- Transactions Menu with Submenus -->
-            <?php if (in_array('Transactions', $allowedPages) || in_array('Orders', $allowedPages) || in_array('Forecast', $allowedPages) || in_array('Transaction History', $allowedPages)): ?>
+            <?php if (in_array('Transactions', $allowedPages) || in_array('Orders', $allowedPages) || in_array('Forecast', $allowedPages) || in_array('Transaction History', $allowedPages) || in_array('Payment History', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item no-hover">
                         <i class="fas fa-exchange-alt"></i> Transactions
@@ -49,6 +48,11 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <?php if (in_array('Transaction History', $allowedPages)): ?>
                             <a href="/top_exchange/public/pages/transaction_history.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Transaction History
+                            </a>
+                        <?php endif; ?>
+                        <?php if (in_array('Payment History', $allowedPages)): ?>
+                            <a href="/top_exchange/public/pages/payment_history.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> Payment History
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Forecast', $allowedPages)): ?>
