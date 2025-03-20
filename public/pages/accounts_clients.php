@@ -307,10 +307,10 @@ function truncate($text, $max = 15) {
                                         <?= json_encode($row["company_address"]) ?>,
                                         <?= $business_proof_json ?>
                                     )'>
-                                    <i class="fas fa-edit"></i> Edit
+                                    <i class="fas fa-edit"></i> Edit Account
                                 </button>
                                 <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username']) ?>', '<?= htmlspecialchars($row['email']) ?>')">
-                                    <i class="fas fa-exchange-alt"></i> Status
+                                    <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 </td>
                             </tr>

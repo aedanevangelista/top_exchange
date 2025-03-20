@@ -91,7 +91,7 @@
 }
 
 .status-active {
-    color: #45A049;
+    color: #DAA520;
     font-weight: 600;
 }
 
@@ -138,12 +138,12 @@
 }
 
 .approve-btn {
-    background-color: #45A049;
+    background-color: #DAA520;
     color: white;
 }
 
 .approve-btn:hover {
-    background-color: #388E3C;
+    background-color: #B8860B;
 }
 
 .pending-btn {

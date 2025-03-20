@@ -38,10 +38,12 @@ $(document).ready(function() {
         formData.append('ajax', true);
         formData.append('formType', formType);
 
-        // Store username for toast notification if it's an add operation
+        // Store username for toast notification
         let username = '';
         if (formType === 'add') {
             username = $('#username').val();
+        } else if (formType === 'edit') {
+            username = $('#edit-username').val();
         }
 
         $.ajax({
@@ -53,17 +55,17 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    // Show success toast notification for adding a new account
+                    // Show success toast notification for adding or editing an account
                     if (formType === 'add') {
-                        showToast(`${username} has been added in the Accounts (Clients).`, 'success');
-                        
-                        // Wait a moment for the toast to be visible before reloading
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1500);
-                    } else {
-                        location.reload();
+                        showToast(`${username} has been sucessfully added in the Accounts (Clients).`, 'success');
+                    } else if (formType === 'edit') {
+                        showToast(`${username} has been successfully edited.`, 'success');
                     }
+                    
+                    // Wait a moment for the toast to be visible before reloading
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
                 } else {
                     toastr.error(response.message || 'Failed to process request.');
                 }
