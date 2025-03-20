@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 19, 2025 at 05:36 PM
+-- Generation Time: Mar 19, 2025 at 07:37 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -74,8 +74,8 @@ CREATE TABLE `clients_accounts` (
 
 INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company`, `company_address`, `business_proof`, `status`, `created_at`) VALUES
 (1, 'aedan', '$2y$10$wd5.aXYnKfiwMI9qgVL3gOpaJvVGAwgRhQqPdqc0mLWzKwwxUaqCW', '123@gmail.com', '123', '123', '123', 'company aedan', '123', '[]', 'Active', '2025-03-07 09:58:07'),
-(2, 'asdasd', '$2y$10$dojkOKe2Z7y.NwwuAiFmh.E4TYS1yKf.Z1fnUeKk5jqVTm4dN2Hu6', 'asd@gmail.com', '123', 'asd', 'asd', 'sds', 'asdas', '[\"\\/top_exchange\\/uploads\\/asdasd\\/4.png\"]', 'Active', '2025-03-07 10:06:55'),
-(3, 'Jeff Santonia', '$2y$10$dwjDK/6QbkEF.qBuozhjneWerFL6jY4qyZ8hchngxdbNZ3k/u80vm', 'jeffsantonia@gmail.com', '1236969420', 'Munoz', 'Quezon City', 'Jeff Company', 'Jeff City', '[\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/3.png\",\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/4.png\"]', 'Pending', '2025-03-09 14:12:20');
+(2, 'asdasd', '$2y$10$dojkOKe2Z7y.NwwuAiFmh.E4TYS1yKf.Z1fnUeKk5jqVTm4dN2Hu6', 'asd@gmail.com', '123', 'asd', 'asd', 'sds', 'asdas', '[\"\\/top_exchange\\/uploads\\/asdasd\\/4.png\"]', 'Inactive', '2025-03-07 10:06:55'),
+(3, 'Jeff Santonia', '$2y$10$dwjDK/6QbkEF.qBuozhjneWerFL6jY4qyZ8hchngxdbNZ3k/u80vm', 'jeffsantonia@gmail.com', '1236969420', 'Munoz', 'Quezon City', 'Jeff Company', 'Jeff City', '[\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/3.png\",\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/4.png\"]', 'Active', '2025-03-09 14:12:20');
 
 -- --------------------------------------------------------
 
@@ -107,13 +107,67 @@ INSERT INTO `customers` (`customer_id`, `customer_name`, `created_at`) VALUES
 CREATE TABLE `monthly_payments` (
   `id` int(11) NOT NULL,
   `username` varchar(255) NOT NULL,
-  `month` int(2) NOT NULL,
-  `year` int(4) NOT NULL,
+  `month` int(11) NOT NULL,
+  `year` int(11) NOT NULL,
   `total_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
   `payment_status` enum('Paid','Unpaid') NOT NULL DEFAULT 'Unpaid',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `monthly_payments`
+--
+
+INSERT INTO `monthly_payments` (`id`, `username`, `month`, `year`, `total_amount`, `payment_status`, `created_at`, `updated_at`) VALUES
+(1, 'aedan', 1, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 18:22:57'),
+(2, 'aedan', 2, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 18:34:25'),
+(3, 'aedan', 3, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 18:36:52'),
+(4, 'aedan', 4, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 18:34:57'),
+(5, 'aedan', 5, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 16:59:07'),
+(6, 'aedan', 6, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 16:59:07'),
+(7, 'aedan', 7, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 16:59:07'),
+(8, 'aedan', 8, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 16:59:07'),
+(9, 'aedan', 9, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 16:59:07'),
+(10, 'aedan', 10, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 16:59:07'),
+(11, 'aedan', 11, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 16:59:07'),
+(12, 'aedan', 12, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 16:59:07'),
+(13, 'asdasd', 1, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-19 17:13:14'),
+(14, 'asdasd', 2, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-19 17:13:14'),
+(15, 'asdasd', 3, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-19 18:36:53'),
+(16, 'asdasd', 4, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-19 17:13:14'),
+(17, 'asdasd', 5, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-19 17:13:14'),
+(18, 'asdasd', 6, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-19 17:13:14'),
+(19, 'asdasd', 7, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-19 17:13:14'),
+(20, 'asdasd', 8, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-19 17:13:14'),
+(21, 'asdasd', 9, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-19 17:13:14'),
+(22, 'asdasd', 10, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-19 17:13:14'),
+(23, 'asdasd', 11, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-19 17:13:14'),
+(24, 'asdasd', 12, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-19 17:13:14'),
+(25, 'asdasd', 1, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-19 17:49:56'),
+(26, 'asdasd', 2, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-19 17:49:56'),
+(27, 'asdasd', 3, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-19 18:36:55'),
+(28, 'asdasd', 4, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-19 17:49:56'),
+(29, 'asdasd', 5, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-19 17:49:56'),
+(30, 'asdasd', 6, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-19 17:49:56'),
+(31, 'asdasd', 7, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-19 17:49:56'),
+(32, 'asdasd', 8, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-19 17:49:56'),
+(33, 'asdasd', 9, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-19 17:49:56'),
+(34, 'asdasd', 10, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-19 17:49:56'),
+(35, 'asdasd', 11, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-19 17:49:56'),
+(36, 'asdasd', 12, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-19 17:49:56'),
+(145, 'Jeff Santonia', 1, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-19 18:05:51'),
+(146, 'Jeff Santonia', 2, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-19 18:05:51'),
+(147, 'Jeff Santonia', 3, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-19 18:36:56'),
+(148, 'Jeff Santonia', 4, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-19 18:05:51'),
+(149, 'Jeff Santonia', 5, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-19 18:05:51'),
+(150, 'Jeff Santonia', 6, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-19 18:05:51'),
+(151, 'Jeff Santonia', 7, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-19 18:05:51'),
+(152, 'Jeff Santonia', 8, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-19 18:05:51'),
+(153, 'Jeff Santonia', 9, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-19 18:05:51'),
+(154, 'Jeff Santonia', 10, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-19 18:05:51'),
+(155, 'Jeff Santonia', 11, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-19 18:05:51'),
+(156, 'Jeff Santonia', 12, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-19 18:05:51');
 
 -- --------------------------------------------------------
 
@@ -131,20 +185,6 @@ CREATE TABLE `orders` (
   `total_amount` decimal(10,2) NOT NULL,
   `status` enum('Pending','Active','Rejected','Completed') NOT NULL DEFAULT 'Pending'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `orders`
---
-
-INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_date`, `orders`, `total_amount`, `status`) VALUES
-(6, 'aedan-1', 'aedan', '2025-03-15', '2025-03-17', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed'),
-(7, 'aedan-2', 'aedan', '2025-03-15', '2025-03-19', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":50},{\"product_id\":5,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs/pack\",\"price\":250,\"quantity\":5}]', 15250.00, 'Completed'),
-(8, 'asdasd-1', 'asdasd', '2024-03-15', '2024-03-19', '[{\"product_id\":32,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Beancurd Roll (B)\",\"packaging\":\"20pcs/pack\",\"price\":500,\"quantity\":1000}]', 500000.00, 'Completed'),
-(9, 'aedan-3', 'aedan', '2025-03-15', '2025-03-19', '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":12}]', 3900.00, 'Completed'),
-(10, 'aedan-4', 'aedan', '2025-03-15', '2025-03-19', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Pending'),
-(11, 'asdasd-2', 'asdasd', '2025-03-16', '2025-03-19', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":1}]', 280.00, 'Pending'),
-(12, 'asdasd-3', 'asdasd', '2025-03-16', '2025-03-19', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed'),
-(13, 'aedan-5', 'aedan', '2025-03-16', '2025-03-19', '[{\"product_id\":16,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Regular Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":180,\"quantity\":100}]', 18000.00, 'Completed');
 
 -- --------------------------------------------------------
 
@@ -318,8 +358,7 @@ ALTER TABLE `customers`
 --
 ALTER TABLE `monthly_payments`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_month_user` (`username`,`month`,`year`),
-  ADD KEY `idx_username_year` (`username`,`year`);
+  ADD UNIQUE KEY `unique_user_month_year` (`username`,`month`,`year`);
 
 --
 -- Indexes for table `orders`
@@ -375,13 +414,13 @@ ALTER TABLE `customers`
 -- AUTO_INCREMENT for table `monthly_payments`
 --
 ALTER TABLE `monthly_payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=745;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `pages`

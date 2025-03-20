@@ -230,9 +230,12 @@ function truncate($text, $max = 15) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" href="/top_exchange/public/css/accounts_clients.css">
+    <link rel="stylesheet" href="/top_exchange/public/css/toast.css">
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
+    <!-- Add toast container at the same position as in orders.php -->
+    <div id="toast-container" class="toast-container"></div>
     <div class="main-content">
         <div class="accounts-header">
             <h1>Client Accounts</h1>
@@ -348,10 +351,10 @@ function truncate($text, $max = 15) {
                 <label for="business_proof">Business Proof: <span class="required">*</span></label>
                 <input type="file" id="business_proof" name="business_proof[]" required accept="image/jpeg, image/png" multiple>
                 <div class="form-buttons">
-                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
                     <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
+                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
                 </div>
             </form>
         </div>
@@ -387,10 +390,10 @@ function truncate($text, $max = 15) {
             <label for="edit-business_proof">Business Proof: <span class="optional">(optional)</span></label>
             <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple>
             <div class="form-buttons">
-                <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
                 <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
                     <i class="fas fa-times"></i> Cancel
                 </button>
+                <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
             </div>
         </form>
     </div>
@@ -449,6 +452,8 @@ function truncate($text, $max = 15) {
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="/top_exchange/public/js/toast.js"></script> <!-- Add this line -->
     <script src="/top_exchange/public/js/accounts_clients.js"></script>
+    
 </body>
 </html>

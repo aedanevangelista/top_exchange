@@ -68,6 +68,17 @@ if ($result && $result->num_rows > 0) {
         .view-button, .status-toggle {
             border-radius: 80px;
         }
+
+        .status-toggle.disabled {
+            background-color: lightgray !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .payment-status-disabled {
+            color: lightgray;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -252,12 +263,6 @@ if ($result && $result->num_rows > 0) {
             tabsHtml += `<div class="year-tab ${activeClass}" onclick="loadYearData(${year}, true)">${year}</div>`;
         });
         
-        // Add refresh button
-        tabsHtml += `<div class="year-tab" style="background-color: #2196F3; color: white;" 
-                         onclick="refreshPaymentData()">
-                         <i class="fas fa-sync-alt"></i> Refresh
-                     </div>`;
-        
         $('#yearTabs').html(tabsHtml);
     }
     
@@ -280,7 +285,7 @@ if ($result && $result->num_rows > 0) {
             method: 'GET',
             data: { username: currentUsername, year: year },
             dataType: 'json',
-            cache: false, // Prevent caching
+            cache: false,
             success: function(response) {
                 let monthlyPaymentsHtml = '';
                 
@@ -293,29 +298,47 @@ if ($result && $result->num_rows > 0) {
 
                 const payments = response.data || [];
                 
+                // Current date for comparison (using March 19, 2025 as fixed date)
+                const currentDate = new Date('2025-03-19');
+                const currentYear = currentDate.getFullYear();
+                const currentMonth = currentDate.getMonth(); // 0-based index
+
                 // Use the months array defined at the top of the script
                 months.forEach((month, index) => {
                     const monthData = payments.find(p => p.month === index + 1) || {
                         total_amount: 0,
                         payment_status: 'Unpaid'
                     };
+
+                    // Check if the month is in the future
+                    const isDisabled = (year > currentYear) || 
+                                     (year === currentYear && index > currentMonth);
+                    
+                    const statusClass = isDisabled ? 'payment-status-disabled' : 
+                                      `payment-status-${monthData.payment_status.toLowerCase()}`;
+                    
+                    const buttonClass = isDisabled ? 'status-toggle disabled' : 
+                                      `status-toggle ${monthData.payment_status === 'Paid' ? 'status-paid' : 'status-unpaid'}`;
+                    
+                    const statusText = isDisabled ? 'Pending' : monthData.payment_status;
                     
                     monthlyPaymentsHtml += `
                         <tr>
                             <td>${month}</td>
                             <td>
                                 <button class="view-button" onclick="viewMonthlyOrders('${currentUsername}', ${index + 1}, '${month}', ${year})">
-                                <i class="fas fa-clipboard-list"></i>
+                                    <i class="fas fa-clipboard-list"></i>
                                     View Orders List
                                 </button>
                             </td>
                             <td>PHP ${numberFormat(monthData.total_amount)}</td>
-                            <td class="payment-status-${monthData.payment_status.toLowerCase()}">${monthData.payment_status}</td>
+                            <td class="${statusClass}">${statusText}</td>
                             <td>
-                                <button class="status-toggle ${monthData.payment_status === 'Paid' ? 'status-paid' : 'status-unpaid'}"
-                                        onclick="togglePaymentStatus('${currentUsername}', ${index + 1}, this, '${monthData.payment_status}', ${year})">
-
-                                        <i class="fas fa-exchange-alt"></i>
+                                <button class="${buttonClass}"
+                                        ${isDisabled ? 'disabled' : ''}
+                                        onclick="${isDisabled ? '' : `togglePaymentStatus('${currentUsername}', ${index + 1}, this, '${monthData.payment_status}', ${year})`}"
+                                        title="${isDisabled ? 'Cannot change status for future months' : 'Click to change status'}">
+                                    <i class="fas fa-exchange-alt"></i>
                                     Change Status
                                 </button>
                             </td>
@@ -351,7 +374,7 @@ if ($result && $result->num_rows > 0) {
                 year: year
             },
             dataType: 'json',
-            cache: false, // Prevent caching
+            cache: false,
             success: function(response) {
                 let orders = [];
                 try {
@@ -441,6 +464,16 @@ if ($result && $result->num_rows > 0) {
     }
 
     function togglePaymentStatus(username, month, button, currentStatus, year) {
+        // Check against fixed date (March 19, 2025)
+        const currentDate = new Date('2025-03-19');
+        const currentYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth(); // 0-based index
+
+        if (year > currentYear || (year === currentYear && month - 1 > currentMonth)) {
+            alert('Cannot change payment status for future months');
+            return;
+        }
+
         const newStatus = currentStatus === 'Paid' ? 'Unpaid' : 'Paid';
 
         $.ajax({

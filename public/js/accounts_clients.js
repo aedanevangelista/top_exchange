@@ -38,6 +38,12 @@ $(document).ready(function() {
         formData.append('ajax', true);
         formData.append('formType', formType);
 
+        // Store username for toast notification if it's an add operation
+        let username = '';
+        if (formType === 'add') {
+            username = $('#username').val();
+        }
+
         $.ajax({
             type: 'POST',
             url: '/top_exchange/public/pages/accounts_clients.php',
@@ -45,7 +51,23 @@ $(document).ready(function() {
             processData: false,
             contentType: false,
             dataType: 'json',
-            success: handleAjaxResponse,
+            success: function(response) {
+                if (response.success) {
+                    // Show success toast notification for adding a new account
+                    if (formType === 'add') {
+                        showToast(`${username} has been added in the Accounts (Clients).`, 'success');
+                        
+                        // Wait a moment for the toast to be visible before reloading
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        location.reload();
+                    }
+                } else {
+                    toastr.error(response.message || 'Failed to process request.');
+                }
+            },
             error: handleAjaxError,
             complete: function(jqXHR) {
                 console.log("Raw server response:", jqXHR.responseText);
@@ -89,6 +111,8 @@ $(document).ready(function() {
 function openStatusModal(id, username, email) {
     $('#statusMessage').text('Change status for ' + username + ' (' + email + ')');
     $('#statusModal').data('id', id).show();
+    $('#statusModal').data('username', username).show();
+    $('#statusModal').data('email', email).show();
 }
 
 function closeStatusModal() {
@@ -97,6 +121,9 @@ function closeStatusModal() {
 
 function changeStatus(status) {
     var id = $('#statusModal').data('id');
+    var username = $('#statusModal').data('username');
+    var email = $('#statusModal').data('email');
+    
     $.ajax({
         type: 'POST',
         url: '/top_exchange/public/pages/accounts_clients.php',
@@ -104,7 +131,24 @@ function changeStatus(status) {
         dataType: 'json',
         success: function(response) {
             if (response.success) {
-                location.reload();
+                // Convert status to lowercase for consistency in toast types
+                // and handle variations like "Completed"/"Complete" and "Rejected"/"Reject"
+                let toastType = status.toLowerCase();
+                
+                // Standardize status names for CSS classes
+                if (toastType === 'completed') {
+                    toastType = 'complete';
+                } else if (toastType === 'rejected') {
+                    toastType = 'reject';
+                }
+                
+                // Show toast notification for status change
+                showToast(`Changed status for ${username} (${email}) to ${status}.`, toastType);
+                
+                // Wait a moment for the toast to be visible before reloading
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
             } else {
                 toastr.error('Failed to change status.');
             }
@@ -154,4 +198,60 @@ function openEditAccountForm(id, username, email, phone, region, city, company, 
 
 function closeEditAccountForm() {
     $('#editAccountOverlay').hide();
+}
+
+// Make sure the showToast function is available globally
+// This assumes the function is already defined in another file that's included
+if (typeof showToast !== 'function') {
+    // Fallback implementation if the function doesn't exist
+    function showToast(message, type = 'success') {
+        const toastContainer = document.getElementById('toast-container') || 
+            (() => { 
+                const container = document.createElement('div'); 
+                container.id = 'toast-container'; 
+                document.body.appendChild(container); 
+                return container;
+            })();
+        
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        const icon = document.createElement('i');
+        
+        // Set appropriate icon based on type
+        if (type === 'success') {
+            icon.className = 'fas fa-check-circle';
+        } else if (type === 'error' || type === 'remove') {
+            icon.className = 'fas fa-times-circle';
+        } else if (type === 'info') {
+            icon.className = 'fas fa-info-circle';
+        } else if (type === 'active') {
+            icon.className = 'fas fa-check';
+        } else if (type === 'pending') {
+            icon.className = 'fas fa-clock';
+        } else if (type === 'reject') {
+            icon.className = 'fas fa-ban';
+        } else if (type === 'complete') {
+            icon.className = 'fas fa-check-circle';
+        }
+        
+        const text = document.createElement('span');
+        text.textContent = message;
+        
+        toast.appendChild(icon);
+        toast.appendChild(text);
+        toastContainer.appendChild(toast);
+        
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => {
+                toastContainer.removeChild(toast);
+            }, 300);
+        }, 3000);
+        
+        return toast;
+    }
+    
+    window.showToast = showToast;
 }

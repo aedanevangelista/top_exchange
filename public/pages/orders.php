@@ -47,6 +47,7 @@ if ($result && $result->num_rows > 0) {
     <title>Orders Management</title>
     <link rel="stylesheet" href="/top_exchange/public/css/orders.css">
     <link rel="stylesheet" href="/top_exchange/public/css/sidebar.css">
+    <link rel="stylesheet" href="/top_exchange/public/css/toast.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -92,7 +93,9 @@ if ($result && $result->num_rows > 0) {
                                 <td><?= htmlspecialchars($order['username']) ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
-                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">View Orders</button></td>
+                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
+                                <i class="fas fa-clipboard-list"></i>    
+                                View Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
                                     <?php
@@ -116,7 +119,7 @@ if ($result && $result->num_rows > 0) {
                                 </td>
                                 <td class="action-buttons">
                                 <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
-                                    <i class="fas fa-exchange-alt"></i> Status
+                                    <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 </td>
                             </tr>
@@ -130,6 +133,9 @@ if ($result && $result->num_rows > 0) {
             </table>
         </div>
     </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
 
     <!-- Overlay Form for Adding New Order -->
     <div id="addOrderOverlay" class="overlay" style="display: none;">

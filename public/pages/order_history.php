@@ -81,7 +81,8 @@ if ($result && $result->num_rows > 0) {
                                 <td>
                                     <button class="view-orders-btn" 
                                             onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
-                                        View Orders
+                                        <i class="fas fa-clipboard-list"></i>
+                                            View Orders
                                     </button>
                                 </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>

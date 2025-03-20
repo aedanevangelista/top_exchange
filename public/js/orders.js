@@ -14,6 +14,50 @@ function filterByStatus() {
 // Global variable for selected products
 let selectedProducts = [];
 
+// Toast notification function
+function showToast(message, type = 'success') {
+    const toastContainer = document.getElementById('toast-container');
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icon = document.createElement('i');
+    
+    // Set appropriate icon based on type
+    if (type === 'success') {
+        icon.className = 'fas fa-check-circle';
+    } else if (type === 'error' || type === 'remove') {
+        icon.className = 'fas fa-times-circle';
+    } else if (type === 'info') {
+        icon.className = 'fas fa-info-circle';
+    } else if (type === 'active') {
+        icon.className = 'fas fa-check';
+    } else if (type === 'pending') {
+        icon.className = 'fas fa-clock';
+    } else if (type === 'reject') {
+        icon.className = 'fas fa-ban';
+    } else if (type === 'complete') {
+        icon.className = 'fas fa-check-circle';
+    }
+    
+    const text = document.createElement('span');
+    text.textContent = message;
+    
+    toast.appendChild(icon);
+    toast.appendChild(text);
+    toastContainer.appendChild(toast);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            toastContainer.removeChild(toast);
+        }, 300);
+    }, 3000);
+    
+    return toast;
+}
+
 // Global function for fetching inventory
 function fetchInventory() {
     $.getJSON('/top_exchange/backend/fetch_inventory.php', function(data) {
@@ -49,6 +93,21 @@ function fetchInventory() {
     });
 }
 
+// Calculate cart total
+function calculateCartTotal() {
+    let total = 0;
+    selectedProducts.forEach(product => {
+        total += product.price * product.quantity;
+    });
+    return total;
+}
+
+// Update cart total display
+function updateCartTotal() {
+    const total = calculateCartTotal();
+    $('.total-amount').text(`PHP ${total.toFixed(2)}`);
+}
+
 // Global function for updating order summary
 function updateOrderSummary() {
     const summaryBody = $('#summaryBody');
@@ -82,6 +141,7 @@ function populateCart() {
     if (selectedProducts.length === 0) {
         $('.no-products').show();
         $('.cart-table').hide();
+        $('.total-amount').text(`PHP 0.00`);
     } else {
         $('.no-products').hide();
         $('.cart-table').show();
@@ -103,7 +163,7 @@ function populateCart() {
                             value="${product.quantity}" 
                             min="1" 
                             data-index="${index}">
-                        <button class="remove-from-cart" data-index="${index}">
+                        <button class="remove-from-cart" data-index="${index}" data-product="${product.item_description}" data-quantity="${product.quantity}">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -156,8 +216,7 @@ window.generatePONumber = function() {
 window.prepareOrderData = function() {
     const orderData = JSON.stringify(selectedProducts);
     $('#orders').val(orderData);
-    const totalAmount = selectedProducts.reduce((total, product) => 
-        total + (product.price * product.quantity), 0);
+    const totalAmount = calculateCartTotal();
     $('#total_amount').val(totalAmount.toFixed(2));
 };
 
@@ -231,7 +290,23 @@ window.changeStatus = function(status) {
         dataType: 'json',
         success: function(response) {
             if (response.success) {
-                location.reload();
+                // Convert status to lowercase for consistency in toast types
+                // and handle variations like "Completed"/"Complete" and "Rejected"/"Reject"
+                let toastType = status.toLowerCase();
+                
+                // Standardize status names for CSS classes
+                if (toastType === 'completed') {
+                    toastType = 'complete';
+                } else if (toastType === 'rejected') {
+                    toastType = 'reject';
+                }
+                
+                showToast(`Changed status for ${poNumber} to ${status}.`, toastType);
+                
+                // Wait a moment for the toast to be visible before reloading
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
             } else {
                 alert('Failed to change status: ' + (response.error || 'Unknown error'));
             }
@@ -295,6 +370,9 @@ $(document).ready(function() {
             selectedProducts.push(product);
         }
 
+        // Show toast notification immediately with updated text
+        showToast(`${product.item_description} with a quantity of ${quantity} has been added`, 'success');
+
         quantityInput.val('');
         updateOrderSummary();
     });
@@ -302,9 +380,29 @@ $(document).ready(function() {
     // Remove product from cart
     $(document).on('click', '.remove-from-cart', function() {
         const index = $(this).data('index');
+        const productName = $(this).data('product');
+        const quantity = $(this).data('quantity');
+        
+        // Show red toast notification for removal
+        showToast(`${productName} with a quantity of ${quantity} has been removed`, 'remove');
+        
         selectedProducts.splice(index, 1);
+        
+        // Update both the order summary and cart displays
         updateOrderSummary();
+        updateCartTotal();
         populateCart();
+    });
+
+    // Handle quantity change in cart
+    $(document).on('change', '.cart-quantity', function() {
+        const index = $(this).data('index');
+        const newQuantity = parseInt($(this).val(), 10);
+        
+        if (newQuantity > 0) {
+            selectedProducts[index].quantity = newQuantity;
+            updateCartTotal();
+        }
     });
 
     // Form submission
@@ -317,6 +415,14 @@ $(document).ready(function() {
         }
 
         prepareOrderData();
+        
+        // Show a toast notification when saving the order
+        const poNumber = $('#po_number').val();
+        const username = $('#username').val();
+        
+        if (poNumber && username) {
+            showToast(`The order: ${poNumber} has been created for ${username}.`, 'success');
+        }
 
         $.ajax({
             url: $(this).attr('action'),
@@ -325,8 +431,10 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    alert('Order submitted successfully!');
-                    location.reload();
+                    // Wait a moment for the toast to be visible before reloading
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
                 } else {
                     alert('Error: ' + response.message);
                 }
@@ -337,7 +445,6 @@ $(document).ready(function() {
         });
     });
     
-
     // Category filter change handler
     $('#inventoryFilter').on('change', function() {
         const category = $(this).val();

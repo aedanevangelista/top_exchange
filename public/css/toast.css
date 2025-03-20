@@ -1,0 +1,76 @@
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+}
+
+.toast {
+  min-width: 300px;
+  padding: 15px 20px;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideIn 0.3s ease-in-out;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.toast.success {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.toast.remove, .toast.error {
+  background-color: #F44336;
+  color: white;
+}
+
+.toast.info {
+  background-color: #2196F3;
+  color: white;
+}
+
+/* Status-specific toast colors as specified */
+.toast.pending {
+  background-color: #2471a3; /* Blue for pending */
+  color: white;
+}
+
+.toast.active {
+  background-color: #DAA520; /* Gold for active */
+  color: white;
+}
+
+.toast.complete, .toast.completed {
+  background-color: #45A049; /* Green for complete */
+  color: white;
+}
+
+.toast.reject, .toast.rejected {
+  background-color: #e53935; /* Red for reject */
+  color: white;
+}
+
+.toast i {
+  font-size: 20px;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toast.moving-up {
+  transform: translateY(-100%);
+}

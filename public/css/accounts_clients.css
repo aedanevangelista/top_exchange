@@ -92,18 +92,22 @@
 
 .status-active {
     color: #45A049;
+    font-weight: 600;
 }
 
 .status-pending {
     color: #2471a3;
+    font-weight: 600;
 }
 
 .status-rejected {
     color: #e53935;
+    font-weight: 600;
 }
 
 .status-inactive {
     color: lightgray;
+    font-weight: 600;
 }
 
 .action-buttons button, .modal-buttons button {
