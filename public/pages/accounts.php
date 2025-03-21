@@ -27,6 +27,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $username = trim($_POST['username']);
     $password = $_POST['password'];
     $role = $_POST['role'];
+    $status = 'Active'; // Default status for new accounts
     $created_at = date('Y-m-d H:i:s');
 
     $checkStmt = $conn->prepare("SELECT id FROM accounts WHERE username = ?");
@@ -39,8 +40,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     }
     $checkStmt->close();
 
-    $stmt = $conn->prepare("INSERT INTO accounts (username, password, role, created_at) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("ssss", $username, $password, $role, $created_at);
+    $stmt = $conn->prepare("INSERT INTO accounts (username, password, role, status, created_at) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssss", $username, $password, $role, $status, $created_at);
 
     if ($stmt->execute()) {
         returnJsonResponse(true, true);
@@ -82,9 +83,43 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     exit;
 }
 
+// Handle status change
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'status') {
+    header('Content-Type: application/json');
+
+    $id = $_POST['id'];
+    $status = $_POST['status'];
+    $stmt = $conn->prepare("UPDATE accounts SET status = ? WHERE id = ?");
+    $stmt->bind_param("si", $status, $id);
+
+    if ($stmt->execute()) {
+        returnJsonResponse(true, true);
+    } else {
+        returnJsonResponse(false, false, 'Failed to change status.');
+    }
+
+    $stmt->close();
+    exit;
+}
+
+// Handle status filter
+$status_filter = $_GET['status'] ?? '';
+
 // Fetch accounts for display
-$sql = "SELECT id, username, role, created_at FROM accounts ORDER BY FIELD(role, 'Admin') DESC, role ASC, username ASC";
-$result = $conn->query($sql);
+$sql = "SELECT id, username, role, status, created_at FROM accounts";
+if (!empty($status_filter)) {
+    $sql .= " WHERE status = ?";
+}
+$sql .= " ORDER BY FIELD(status, 'Active', 'Reject', 'Archived'), FIELD(role, 'Admin') DESC, role ASC, username ASC";
+
+if (!empty($status_filter)) {
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $status_filter);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    $result = $conn->query($sql);
+}
 ?>
 
 <!DOCTYPE html>
@@ -96,13 +131,24 @@ $result = $conn->query($sql);
     <link rel="stylesheet" href="/top_exchange/public/css/accounts.css">
     <link rel="stylesheet" href="/top_exchange/public/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"> <!-- Add this line -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="/top_exchange/public/css/toast.css">
 </head>
 <body>
+    <div id="toast-container"></div>
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="accounts-header">
             <h1>Account Management</h1>
+            <div class="filter-section">
+                <label for="statusFilter">Filter by Status:</label>
+                <select id="statusFilter" onchange="filterByStatus()">
+                    <option value="">All</option>
+                    <option value="Active" <?= $status_filter == 'Active' ? 'selected' : '' ?>>Active</option>
+                    <option value="Reject" <?= $status_filter == 'Reject' ? 'selected' : '' ?>>Reject</option>
+                    <option value="Archived" <?= $status_filter == 'Archived' ? 'selected' : '' ?>>Archived</option>
+                </select>
+            </div>
             <button onclick="openAddAccountForm()" class="add-account-btn">
                 <i class="fas fa-user-plus"></i> Add New Account
             </button>
@@ -114,6 +160,7 @@ $result = $conn->query($sql);
                         <th>Username</th>
                         <th>Role</th>
                         <th>Account Age</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -142,12 +189,15 @@ $result = $conn->query($sql);
                                     ?>
                                 </td>
                                 <td><?= $account_age ?></td>
+                                <td class="<?= 'status-' . strtolower($row['status'] ?? 'active') ?>">
+                                    <?= htmlspecialchars($row['status'] ?? 'Active') ?>
+                                </td>
                                 <td class="action-buttons">
-                                    <button class="edit-btn" onclick="openEditAccountForm(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username']) ?>', '<?= $row['role'] ?>')">
+                                    <button class="edit-btn" onclick="openEditAccountForm(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username']) ?>', '', '<?= $row['role'] ?>')">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <button class="delete-btn" onclick="openDeleteModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username']) ?>')">
-                                        <i class="fas fa-trash"></i> Delete
+                                    <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username']) ?>')">
+                                        <i class="fas fa-exchange-alt"></i> Change Status
                                     </button>
                                 </td>
                             </tr>
@@ -180,10 +230,11 @@ $result = $conn->query($sql);
                     <?php endforeach; ?>
                 </select>
                 <div class="form-buttons">
-                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
                     <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
+                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+
                 </div>
             </form>
         </div>
@@ -196,7 +247,7 @@ $result = $conn->query($sql);
             <div id="editAccountError" class="error-message"></div>
             <form id="editAccountForm" method="POST" class="account-form" action="">
                 <input type="hidden" name="formType" value="edit">
-                <input type="hidden" id="id" name="id"> <!-- Hidden field for account ID -->
+                <input type="hidden" id="edit-id" name="id"> <!-- Hidden field for account ID -->
                 <label for="edit-username">Username:</label>
                 <input type="text" id="edit-username" name="username" autocomplete="username" required>
                 <label for="edit-password">Password:</label>
@@ -208,25 +259,34 @@ $result = $conn->query($sql);
                     <?php endforeach; ?>
                 </select>
                 <div class="form-buttons">
-                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Update</button>
                     <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
+                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Update</button>
+
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Overlay Modal for Delete Confirmation -->
-    <div id="deleteModal" class="overlay" style="display: none;">
+    <!-- Overlay Modal for Status Change -->
+    <div id="statusModal" class="overlay" style="display: none;">
         <div class="overlay-content">
-            <h2><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h2>
-            <p id="deleteMessage"></p>
+            <h2>Change Status</h2>
+            <p id="statusMessage"></p>
             <div class="modal-buttons">
-                <button class="confirm-btn" onclick="confirmDeletion()">
-                    <i class="fas fa-trash"></i> Delete
+                <button class="approve-btn" onclick="changeStatus('Active')">
+                    <i class="fas fa-check"></i> Active
                 </button>
-                <button class="cancel-btn" onclick="closeDeleteModal()">
+                <button class="reject-btn" onclick="changeStatus('Reject')">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+                <button class="archive-btn" onclick="changeStatus('Archived')">
+                    <i class="fas fa-archive"></i> Archive
+                </button>
+            </div>
+            <div class="modal-buttons single-button">
+                <button class="cancel-btn" onclick="closeStatusModal()">
                     <i class="fas fa-times"></i> Cancel
                 </button>
             </div>
@@ -234,7 +294,8 @@ $result = $conn->query($sql);
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script> <!-- Add jQuery -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script> <!-- Add this line -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="/top_exchange/public/js/toast.js"></script>
     <script src="/top_exchange/public/js/accounts.js"></script>
 </body>
 </html>

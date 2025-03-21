@@ -106,7 +106,7 @@
 }
 
 .status-inactive {
-    color: lightgray;
+    color: gray;
     font-weight: 600;
 }
 
@@ -120,12 +120,12 @@
 }
 
 .edit-btn {
-    background-color: #007bff;
+    background-color: #2980b9;
     color: white;
 }
 
 .edit-btn:hover {
-    background-color: #0056b3;
+    background-color: #2471a3;
 }
 
 .status-btn, .reject-btn {
@@ -156,16 +156,16 @@
 }
 
 .inactive-btn {
-    background-color: lightgray;
+    background-color: #888;
     color: white;
 }
 
 .inactive-btn:hover {
-    background-color: gray;
+    background-color: #666;
 }
 
 .cancel-btn {
-    background-color: gray;
+    background-color: #555;
     color: white;
     border-radius: 80px;
     display: block;

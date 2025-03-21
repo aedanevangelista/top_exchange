@@ -8,6 +8,7 @@ body {
     box-sizing: border-box;
 }
 
+
 /* =========================
    Header Section 
 ========================= */
@@ -452,4 +453,199 @@ body {
         opacity: 1;
         transform: translateX(0);
     }
+}
+
+/* Add these styles to the existing accounts.css file */
+
+/* Status indicator styles */
+.status-active {
+    color: #FFC107;
+    font-weight: bold;
+}
+
+.status-reject {
+    color: #F44336;
+    font-weight: bold;
+}
+
+.status-archived {
+    color: #9E9E9E;
+    font-weight: bold;
+}
+
+/* Filter section styling */
+.filter-section {
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+}
+
+.filter-section label {
+    margin-right: 10px;
+}
+
+/* Modal Styling */
+.modal-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.modal-buttons button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: background-color 0.3s;
+    margin: 0 5px;
+}
+
+.modal-buttons button i {
+    margin-right: 8px;
+}
+
+/* Add these styles to the existing accounts.css file */
+
+/* Status indicator styles */
+.status-active {
+    color: #DAA520;
+    font-weight: bold;
+}
+
+.status-reject {
+    color: #F44336;
+    font-weight: bold;
+}
+
+.status-archived {
+    color: #9E9E9E;
+    font-weight: bold;
+}
+
+/* Status change button styling to match accounts_clients.php */
+.status-btn {
+    background-color: #F44336;
+    color: white;
+    border: none;
+    padding: 3px 12px;
+    border-radius: 80px; /* Updated to 80px */
+    cursor: pointer;
+    margin-left: 5px;
+    transition: background-color 0.3s;
+    font-size: 14px;
+}
+
+.status-btn i {
+    margin-right: 5px;
+}
+
+.status-btn:hover {
+    background-color: #d32f2f;
+}
+
+/* Filter section styling */
+.filter-section {
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+}
+
+.filter-section label {
+    margin-right: 10px;
+}
+
+/* Modal Styling */
+.modal-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.modal-buttons button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 80px; /* Updated to 80px */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: background-color 0.3s;
+    margin: 0 5px;
+}
+
+.modal-buttons button i {
+    margin-right: 8px;
+}
+
+/* Status modal button styles to match accounts_clients.php */
+.approve-btn {
+    background-color: #FFC107;
+    color: white;
+}
+
+.approve-btn:hover {
+    background-color: #B8860B;
+}
+
+.reject-btn {
+    background-color: #F44336;
+    color: white;
+}
+
+.reject-btn:hover {
+    background-color: #d32f2f;
+}
+
+.archive-btn {
+    background-color: #9E9E9E;
+    color: white;
+}
+
+.archive-btn:hover {
+    background-color: #7d7d7d;
+}
+
+.cancel-btn {
+    background-color: #607D8B;
+    color: white;
+    border-radius: 80px;
+}
+
+.cancel-btn:hover {
+    background-color: #455A64;
+}
+
+/* For single button row */
+.modal-buttons.single-button {
+    justify-content: center;
+    margin-top: 10px;
+}
+
+/* Style for status modal */
+#statusModal .overlay-content {
+    max-width: 400px;
+    padding: 25px;
+}
+
+#statusModal h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+#statusMessage {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 16px;
+}
+
+/* Make sure the add-account-btn and edit-btn also have 80px border-radius */
+.edit-btn, .delete-btn, .save-btn {
+    border-radius: 80px;
+    padding: 0px 10px;
 }

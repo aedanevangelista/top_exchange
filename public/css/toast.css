@@ -1,76 +1,77 @@
-.toast-container {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 10px;
+/* Toast container */
+#toast-container {
+    position: fixed;
+    bottom: 30px;          /* Position at the bottom */
+    right: 30px;           /* Position at the right */
+    z-index: 9999;         /* Ensure it appears above other elements */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* Align to the right */
+    max-width: 350px;      /* Maximum width of toasts */
+    pointer-events: none;  /* Allow clicks to pass through */
 }
 
+/* Individual toast */
 .toast {
-  min-width: 300px;
-  padding: 15px 20px;
-  border-radius: 4px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  animation: slideIn 0.3s ease-in-out;
-  transition: transform 0.3s ease, opacity 0.3s ease;
+    margin-top: 10px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    max-width: 100%;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    color: white;
+    pointer-events: auto;  /* Make the toast itself clickable */
 }
 
+/* Toast icon */
+.toast i {
+    margin-right: 10px;
+    font-size: 1.2em;
+}
+
+/* Toast types */
 .toast.success {
-  background-color: #4CAF50;
-  color: white;
+    background-color: #4CAF50;
 }
 
-.toast.remove, .toast.error {
-  background-color: #F44336;
-  color: white;
+.toast.error {
+    background-color: #F44336;
 }
 
 .toast.info {
-  background-color: #2196F3;
-  color: white;
+    background-color: #2196F3;
 }
 
-/* Status-specific toast colors as specified */
-.toast.pending {
-  background-color: #2471a3; /* Blue for pending */
-  color: white;
+.toast.warning {
+    background-color: #FF9800;
 }
 
+/* Status-specific toast colors */
 .toast.active {
-  background-color: #DAA520; /* Gold for active */
-  color: white;
+    background-color: #FFC107;
 }
 
-.toast.complete, .toast.completed {
-  background-color: #45A049; /* Green for complete */
-  color: white;
+.toast.pending {
+    background-color: #2196F3;
 }
 
-.toast.reject, .toast.rejected {
-  background-color: #e53935; /* Red for reject */
-  color: white;
+.toast.reject {
+    background-color: #F44336; 
 }
 
-.toast i {
-  font-size: 20px;
+.toast.complete {
+    background-color: #4CAF50;
 }
 
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+.toast.remove {
+    background-color: #777; /* Changed from #F44336 to #777 */
 }
 
-.toast.moving-up {
-  transform: translateY(-100%);
+/* Fade out animation */
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
