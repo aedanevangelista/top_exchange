@@ -9,7 +9,13 @@ document.addEventListener("DOMContentLoaded", function () {
     // Close modal when clicking outside of it
     document.getElementById('editStockModal').addEventListener('click', function (e) {
         if (e.target === this) {
-            closeModal();
+            closeEditModal();
+        }
+    });
+    
+    document.getElementById('addProductModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeAddProductModal();
         }
     });
 });
@@ -29,8 +35,12 @@ function fetchInventory() {
 
                 const row = document.createElement("tr");
                 row.setAttribute("data-category", product.category);
+                row.setAttribute("data-product-id", product.product_id);
+                row.setAttribute("data-item-description", product.item_description);
+                row.setAttribute("data-packaging", product.packaging);
+                
                 row.innerHTML = `
-                    <td>${product.product_id}</td>
+                    <!-- Product ID column removed -->
                     <td>${product.category}</td>
                     <td>${product.item_description}</td>
                     <td>${product.packaging}</td>
@@ -47,6 +57,12 @@ function fetchInventory() {
                 `;
                 tableBody.appendChild(row);
             });
+            
+            // Apply current search and filter
+            if (document.getElementById('search-input').value.trim() !== '') {
+                searchProducts();
+            }
+            filterByCategory();
         })
         .catch(error => {
             console.error("Error fetching inventory:", error);
@@ -99,7 +115,7 @@ function updateStockDirectly() {
         .then(data => {
             toastr.success(data.message, { timeOut: 3000, closeButton: true, positionClass: 'toast-bottom-right' });
             fetchInventory();
-            closeModal();
+            closeEditModal();
         })
         .catch(error => {
             toastr.error("Error updating stock", { timeOut: 3000, closeButton: true, positionClass: 'toast-bottom-right' });
@@ -107,8 +123,19 @@ function updateStockDirectly() {
         });
 }
 
-function closeModal() {
+function closeEditModal() {
     document.getElementById('editStockModal').style.display = 'none';
+}
+
+function closeAddProductModal() {
+    document.getElementById('addProductModal').style.display = 'none';
+}
+
+function openAddProductForm() {
+    document.getElementById('addProductModal').style.display = 'flex';
+    document.getElementById('add-product-form').reset();
+    document.getElementById('addProductError').textContent = '';
+    document.getElementById('new-category-container').style.display = 'none';
 }
 
 function filterByCategory() {
@@ -117,6 +144,25 @@ function filterByCategory() {
 
     rows.forEach(row => {
         if (filterValue === 'all' || row.getAttribute('data-category') === filterValue) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function searchProducts() {
+    const searchValue = document.getElementById('search-input').value.toLowerCase();
+    const rows = document.querySelectorAll('#inventory-table tr');
+
+    rows.forEach(row => {
+        const itemDescription = (row.getAttribute('data-item-description') || '').toLowerCase();
+        const category = (row.getAttribute('data-category') || '').toLowerCase();
+        const packaging = (row.getAttribute('data-packaging') || '').toLowerCase();
+        
+        if (itemDescription.includes(searchValue) || 
+            category.includes(searchValue) || 
+            packaging.includes(searchValue)) {
             row.style.display = '';
         } else {
             row.style.display = 'none';

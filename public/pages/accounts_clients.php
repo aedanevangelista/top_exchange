@@ -202,8 +202,8 @@ if (!empty($status_filter)) {
 }
 $sql .= " ORDER BY 
     CASE 
-        WHEN status = 'Active' THEN 1
-        WHEN status = 'Pending' THEN 2
+        WHEN status = 'Pending' THEN 1
+        WHEN status = 'Active' THEN 2
         WHEN status = 'Rejected' THEN 3
         WHEN status = 'Inactive' THEN 4
     END, created_at ASC";
