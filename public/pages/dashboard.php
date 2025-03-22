@@ -76,7 +76,7 @@ $clientOrders = getClientOrdersCount($conn, $selectedYear);
         <div class="main-content">
             <div class="overview-container">
                 <h2>Dashboard</h2>
-                <button class="input-po-btn">Input P.O</button>
+                <!-- Input P.O button has been removed -->
             </div>
 
             <div class="top-section">

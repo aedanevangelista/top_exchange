@@ -57,7 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
         foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
             if ($_FILES['business_proof']['error'][$key] == 0) {
                 $allowed_types = ['image/jpeg', 'image/png'];
-                $max_size = 50 * 1024 * 1024; // 50MB
+                $max_size = 20 * 1024 * 1024; // 20MB
                 $file_type = $_FILES['business_proof']['type'][$key];
                 $file_size = $_FILES['business_proof']['size'][$key];
 
@@ -70,7 +70,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
                         exit;
                     }
                 } else {
-                    echo json_encode(['success' => false, 'message' => 'Invalid file type or size.']);
+                    echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
                     exit;
                 }
             }
@@ -112,21 +112,57 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
         exit;
     }
 
+    // Get the old username from the database (in case it's being changed)
+    $old_username = '';
+    $stmt = $conn->prepare("SELECT username FROM clients_accounts WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($row = $result->fetch_assoc()) {
+        $old_username = $row['username'];
+    }
+    $stmt->close();
+
+    // Create user directory if it doesn't exist
     $user_upload_dir = __DIR__ . '/../../uploads/' . $username . '/';
     if (!file_exists($user_upload_dir)) {
         mkdir($user_upload_dir, 0777, true);
     }
 
-    // Collect new files
-    if (isset($_FILES['business_proof'])) {
+    // Process the existing and new business proof files
+    $existing_business_proof = json_decode($_POST['existing_business_proof'], true) ?? [];
+    $old_upload_dir = __DIR__ . '/../../uploads/' . $old_username . '/';
+
+    // Check if new files are being uploaded
+    if (isset($_FILES['business_proof']) && !empty($_FILES['business_proof']['name'][0])) {
+        // New files are being uploaded, so we'll replace the existing ones
+        // Clear the business_proof array as we're replacing all images
+        $business_proof = [];
+
+        // If username was changed, we need to create the new directory
+        if ($old_username !== $username && !file_exists($user_upload_dir)) {
+            mkdir($user_upload_dir, 0777, true);
+        }
+
+        // Delete all existing files in the user's directory if we're uploading new ones
+        if (file_exists($old_upload_dir)) {
+            $old_files = array_diff(scandir($old_upload_dir), array('.', '..'));
+            foreach ($old_files as $file) {
+                @unlink($old_upload_dir . $file);
+            }
+        }
+
+        // Check if we're not exceeding the limit of 3 photos
         if (count($_FILES['business_proof']['name']) > 3) {
             echo json_encode(['success' => false, 'message' => 'Maximum of 3 photos allowed.']);
             exit;
         }
+
+        // Handle the new uploads
         foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
             if ($_FILES['business_proof']['error'][$key] == 0) {
                 $allowed_types = ['image/jpeg', 'image/png'];
-                $max_size = 50 * 1024 * 1024; // 50MB
+                $max_size = 20 * 1024 * 1024; // 20MB
                 $file_type = $_FILES['business_proof']['type'][$key];
                 $file_size = $_FILES['business_proof']['size'][$key];
 
@@ -139,25 +175,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
                         exit;
                     }
                 } else {
-                    echo json_encode(['success' => false, 'message' => 'Invalid file type or size.']);
+                    echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
                     exit;
                 }
             }
         }
-    }
+    } else {
+        // No new files uploaded, keep existing ones and handle username change if needed
+        if ($old_username !== $username) {
+            // Username changed, need to move files
+            foreach ($existing_business_proof as $index => $old_path) {
+                $old_file = basename($old_path);
+                $old_file_path = $old_upload_dir . $old_file;
+                $new_file_path = $user_upload_dir . $old_file;
+                $new_path = '/top_exchange/uploads/' . $username . '/' . $old_file;
 
-    // Delete old files that are not part of the new upload
-    $existing_business_proof = json_decode($_POST['existing_business_proof'], true) ?? [];
-    $existing_files = array_diff(scandir($user_upload_dir), array('.', '..'));
-    foreach ($existing_files as $existing_file) {
-        $existing_file_path = $user_upload_dir . $existing_file;
-        if (!in_array('/top_exchange/uploads/' . $username . '/' . $existing_file, array_merge($existing_business_proof, $business_proof))) {
-            if (file_exists($existing_file_path)) {
-                unlink($existing_file_path);
+                if (file_exists($old_file_path) && copy($old_file_path, $new_file_path)) {
+                    $business_proof[] = $new_path;
+                    @unlink($old_file_path); // Delete the old file after copying
+                }
             }
+            
+            // Remove old directory if empty
+            if (file_exists($old_upload_dir) && count(array_diff(scandir($old_upload_dir), array('.', '..'))) == 0) {
+                @rmdir($old_upload_dir);
+            }
+        } else {
+            // Username didn't change, keep existing files
+            $business_proof = $existing_business_proof;
         }
     }
 
+    // Update the database
     $business_proof_json = json_encode($business_proof);
 
     $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, business_proof = ? WHERE id = ?");
@@ -348,8 +397,8 @@ function truncate($text, $max = 15) {
                 <input type="text" id="company" name="company" placeholder="e.g., Top Exchange Food Corp">
                 <label for="company_address">Company Address: <span class="required">*</span></label>
                 <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
-                <label for="business_proof">Business Proof: <span class="required">*</span></label>
-                <input type="file" id="business_proof" name="business_proof[]" required accept="image/jpeg, image/png" multiple>
+                <label for="business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
+                <input type="file" id="business_proof" name="business_proof[]" required accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
                 <div class="form-buttons">
                     <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
                         <i class="fas fa-times"></i> Cancel
@@ -361,43 +410,42 @@ function truncate($text, $max = 15) {
     </div>
 
     <!-- Overlay Form for Editing Account -->
-<!-- Overlay Form for Editing Account -->
-<div id="editAccountOverlay" class="overlay" style="display: none;">
-    <div class="overlay-content">
-        <h2><i class="fas fa-edit"></i> Edit Account</h2>
-        <div id="editAccountError" class="error-message"></div>
-        <form id="editAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
-            <input type="hidden" name="formType" value="edit">
-            <input type="hidden" id="edit-id" name="id">
-            <input type="hidden" id="existing-business-proof" name="existing_business_proof">
-            <label for="edit-username">Username: <span class="required">*</span></label>
-            <input type="text" id="edit-username" name="username" autocomplete="username" required placeholder="e.g., johndoe">
-            <label for="edit-password">Password: <span class="required">*</span></label>
-            <input type="password" id="edit-password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
-            <label for="edit-email">Email: <span class="required">*</span></label>
-            <input type="email" id="edit-email" name="email" required placeholder="e.g., johndoe@example.com">
-            <label for="edit-phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
-            <input type="text" id="edit-phone" name="phone" placeholder="e.g., +1234567890">
-            <label for="edit-region">Region: <span class="required">*</span></label>
-            <input type="text" id="edit-region" name="region" required placeholder="e.g., North America">
-            <label for="edit-city">City: <span class="required">*</span></label>
-            <input type="text" id="edit-city" name="city" required placeholder="e.g., New York">
-            <label for="edit-company">Company: <span class="optional">(optional)</span></label>
-            <input type="text" id="edit-company" name="company" placeholder="e.g., ABC Corp">
-            <label for="edit-company_address">Company Address: <span class="required">*</span></label>
-            <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
-            <div id="edit-business-proof-container"></div>
-            <label for="edit-business_proof">Business Proof: <span class="optional">(optional)</span></label>
-            <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple>
-            <div class="form-buttons">
-                <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-                <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
-            </div>
-        </form>
+    <div id="editAccountOverlay" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2><i class="fas fa-edit"></i> Edit Account</h2>
+            <div id="editAccountError" class="error-message"></div>
+            <form id="editAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
+                <input type="hidden" name="formType" value="edit">
+                <input type="hidden" id="edit-id" name="id">
+                <input type="hidden" id="existing-business-proof" name="existing_business_proof">
+                <label for="edit-username">Username: <span class="required">*</span></label>
+                <input type="text" id="edit-username" name="username" autocomplete="username" required placeholder="e.g., johndoe">
+                <label for="edit-password">Password: <span class="required">*</span></label>
+                <input type="password" id="edit-password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
+                <label for="edit-email">Email: <span class="required">*</span></label>
+                <input type="email" id="edit-email" name="email" required placeholder="e.g., johndoe@example.com">
+                <label for="edit-phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
+                <input type="text" id="edit-phone" name="phone" placeholder="e.g., +1234567890">
+                <label for="edit-region">Region: <span class="required">*</span></label>
+                <input type="text" id="edit-region" name="region" required placeholder="e.g., North America">
+                <label for="edit-city">City: <span class="required">*</span></label>
+                <input type="text" id="edit-city" name="city" required placeholder="e.g., New York">
+                <label for="edit-company">Company: <span class="optional">(optional)</span></label>
+                <input type="text" id="edit-company" name="company" placeholder="e.g., ABC Corp">
+                <label for="edit-company_address">Company Address: <span class="required">*</span></label>
+                <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
+                <div id="edit-business-proof-container"></div>
+                <label for="edit-business_proof">Business Proof: <span class="optional">(optional)</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
+                <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
+                <div class="form-buttons">
+                    <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 
     <!-- Overlay Modal for Status Change -->
     <div id="statusModal" class="overlay" style="display: none;">
@@ -426,34 +474,40 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-
     <!-- The Modal -->
-        <div id="myModal" class="modal">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <img class="modal-content" id="img01">
-            <div id="caption"></div>
-        </div>
+    <div id="myModal" class="modal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="img01">
+        <div id="caption"></div>
+    </div>
 
-        <script>
-        function openModal(imgElement) {
-            var modal = document.getElementById("myModal");
-            var modalImg = document.getElementById("img01");
-            var captionText = document.getElementById("caption");
-            modal.style.display = "block";
-            modalImg.src = imgElement.src;
-            captionText.innerHTML = imgElement.alt;
-        }
+    <script>
+    function openModal(imgElement) {
+        var modal = document.getElementById("myModal");
+        var modalImg = document.getElementById("img01");
+        var captionText = document.getElementById("caption");
+        modal.style.display = "block";
+        modalImg.src = imgElement.src;
+        captionText.innerHTML = imgElement.alt;
+    }
 
-        function closeModal() {
-            var modal = document.getElementById("myModal");
-            modal.style.display = "none";
-        }
-        </script>
+    function closeModal() {
+        var modal = document.getElementById("myModal");
+        modal.style.display = "none";
+    }
+    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/top_exchange/public/js/toast.js"></script> <!-- Add this line -->
     <script src="/top_exchange/public/js/accounts_clients.js"></script>
     
+    <style>
+    .file-info {
+        font-size: 0.9em;
+        color: #666;
+        font-style: italic;
+    }
+    </style>
 </body>
 </html>

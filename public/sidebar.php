@@ -32,9 +32,15 @@ $allowedPages = array_map('trim', explode(',', $pages));
                     <i class="fas fa-home"></i> Dashboard
                 </a>
             <?php endif; ?>
+            
+            <?php if (in_array('Forecast', $allowedPages)): ?>
+                <a href="/top_exchange/public/pages/forecast.php" class="menu-item">
+                    <i class="fas fa-chart-line"></i> Forecast
+                </a>
+            <?php endif; ?>
 
             <!-- Transactions Menu with Submenus -->
-            <?php if (in_array('Transactions', $allowedPages) || in_array('Orders', $allowedPages) || in_array('Forecast', $allowedPages) || in_array('Order History', $allowedPages)): ?>
+            <?php if (in_array('Transactions', $allowedPages) || in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item no-hover">
                         <i class="fas fa-exchange-alt"></i> Transactions
@@ -55,11 +61,6 @@ $allowedPages = array_map('trim', explode(',', $pages));
                             </a>
                         <?php endif; ?>
                         <?php endif; ?>
-                        <?php if (in_array('Forecast', $allowedPages)): ?>
-                            <a href="/top_exchange/public/pages/forecast.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Forecast
-                            </a>
-                        <?php endif; ?>
                     </div>
                 </div>
             <?php endif; ?>
@@ -67,11 +68,6 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php if (in_array('Sales Data', $allowedPages)): ?>
                 <a href="/top_exchange/public/pages/sales.php" class="menu-item">
                     <i class="fas fa-chart-bar"></i> Sales Data
-                </a>
-            <?php endif; ?>
-            <?php if (in_array('Forecast', $allowedPages)): ?>
-                <a href="/top_exchange/public/pages/forecast.php" class="menu-item">
-                    <i class="fas fa-chart-line"></i> Forecast
                 </a>
             <?php endif; ?>
         </div>

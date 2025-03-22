@@ -65,7 +65,7 @@ if ($result && $result->num_rows > 0) {
             margin-right: 5px;
         }
 
-        .view-button, .status-toggle {
+        .view-button, .status-toggle, .update-payment-btn {
             border-radius: 80px;
         }
 
@@ -79,32 +79,161 @@ if ($result && $result->num_rows > 0) {
             color: lightgray;
             font-style: italic;
         }
-
-        /* Search Container Styling (copied from inventory.css) */
-        .search-container {
-            display: flex;
-            align-items: center;
+        
+        .payment-status-paid {
+            color: #28a745;
+            font-weight: 600;
         }
-
-        .search-container input {
-            padding: 8px 12px;
-            border-radius: 20px 0 0 20px;
-            border: 1px solid #ddd;
-            font-size: 14px;
-            width: 220px;
+        
+        .payment-status-partial {
+            color: #ffc107;
+            font-weight: 600;
         }
-
-        .search-container .search-btn {
+        
+        .payment-status-unpaid {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        .status-toggle.status-paid {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .status-toggle.status-partial {
+            background-color: #ffc107;
+            color: white;
+        }
+        
+        .status-toggle.status-unpaid {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .update-payment-btn {
             background-color: #2980b9;
             color: white;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 600;
             border: none;
-            border-radius: 0 20px 20px 0;
-            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .update-payment-btn:hover {
+            background-color: #2471a3;
+        }
+        
+        .payment-form {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        
+        .payment-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .payment-form input, .payment-form select, .payment-form textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .payment-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .save-btn, .cancel-btn {
+            padding: 8px 16px;
+            border-radius: 80px;
+            border: none;
+            font-weight: 600;
             cursor: pointer;
         }
-
-        .search-container .search-btn:hover {
-            background-color: #2471a3;
+        
+        .save-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .cancel-btn {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .proof-image {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .payment-history-section {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .payment-history-section h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .payment-history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .payment-history-table th, .payment-history-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+        
+        .payment-history-table th {
+            background-color: #f3f3f3;
+            font-weight: bold;
+        }
+        
+        .balance-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .total-amount {
+            font-size: 1.1em;
+        }
+        
+        .amount-paid {
+            color: #28a745;
+        }
+        
+        .remaining-balance {
+            color: #dc3545;
+        }
+        
+        #proofPreview {
+            display: none;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -113,10 +242,8 @@ if ($result && $result->num_rows > 0) {
     <div class="main-content">
         <div class="orders-header">
             <h1>Payment History</h1>
-            <!-- Updated search section to match inventory.php design -->
-            <div class="search-container">
+            <div class="search-section">
                 <input type="text" id="searchInput" placeholder="Search by username...">
-                <button class="search-btn"><i class="fas fa-search"></i></button>
             </div>
         </div>
 
@@ -167,6 +294,8 @@ if ($result && $result->num_rows > 0) {
                             <th>Month</th>
                             <th>Orders</th>
                             <th>Total Amount</th>
+                            <th>Amount Paid</th>
+                            <th>Balance</th>
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
@@ -206,6 +335,77 @@ if ($result && $result->num_rows > 0) {
                 <div id="orderDetailsContent"></div>
             </div>
         </div>
+        
+        <!-- Update Payment Modal -->
+        <div id="updatePaymentModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('updatePaymentModal')">&times;</span>
+                <h2>Update Payment - <span id="paymentModalMonth"></span></h2>
+                
+                <div class="balance-info">
+                    <div>
+                        <div class="total-amount">Total Amount: <span id="totalAmountValue">PHP 0.00</span></div>
+                        <div class="amount-paid">Amount Paid: <span id="amountPaidValue">PHP 0.00</span></div>
+                    </div>
+                    <div class="remaining-balance">Remaining Balance: <span id="balanceValue">PHP 0.00</span></div>
+                </div>
+                
+                <form id="paymentUpdateForm" enctype="multipart/form-data" class="payment-form">
+                    <input type="hidden" id="payment_username" name="username">
+                    <input type="hidden" id="payment_month" name="month">
+                    <input type="hidden" id="payment_year" name="year">
+                    <input type="hidden" id="payment_total_amount" name="total_amount">
+                    
+                    <div class="form-group">
+                        <label for="payment_amount">Payment Amount (PHP)</label>
+                        <input type="number" id="payment_amount" name="payment_amount" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="payment_status">Payment Status</label>
+                        <select id="payment_status" name="payment_status" required>
+                            <option value="Unpaid">Unpaid</option>
+                            <option value="Partial">Partial Payment</option>
+                            <option value="Paid">Fully Paid</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="payment_proof">Proof of Payment (Image/PDF)</label>
+                        <input type="file" id="payment_proof" name="payment_proof" accept="image/*, application/pdf">
+                        <div id="proofPreview"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="payment_notes">Notes</label>
+                        <textarea id="payment_notes" name="payment_notes" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="payment-actions">
+                        <button type="button" class="cancel-btn" onclick="closeModal('updatePaymentModal')">Cancel</button>
+                        <button type="submit" class="save-btn">Save Payment</button>
+                    </div>
+                </form>
+                
+                <div class="payment-history-section" id="paymentHistorySection" style="display: none;">
+                    <h3>Previous Payments</h3>
+                    <table class="payment-history-table" id="paymentHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Proof</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentHistoryBody">
+                            <!-- Payment history will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 <script>
     // Define months array at the top level of your script
@@ -233,7 +433,7 @@ if ($result && $result->num_rows > 0) {
     function fetchAvailableYears(username, refreshData = false) {
         // Show loading state
         $('#yearTabs').html('<div>Loading years...</div>');
-        $('#monthlyPaymentsBody').html('<tr><td colspan="5">Please select a year...</td></tr>');
+        $('#monthlyPaymentsBody').html('<tr><td colspan="7">Please select a year...</td></tr>');
         $('#monthlyPaymentsModal').show();
         
         // Add cache-busting parameter to prevent browser caching
@@ -302,7 +502,7 @@ if ($result && $result->num_rows > 0) {
         currentYear = year;
         
         // Show loading state
-        $('#monthlyPaymentsBody').html('<tr><td colspan="5">Loading...</td></tr>');
+        $('#monthlyPaymentsBody').html('<tr><td colspan="7">Loading...</td></tr>');
         
         console.log('Fetching payments for:', currentUsername, year);
 
@@ -320,7 +520,7 @@ if ($result && $result->num_rows > 0) {
                 
                 if (!response.success) {
                     $('#monthlyPaymentsBody').html(
-                        `<tr><td colspan="5" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
+                        `<tr><td colspan="7" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
                     );
                     return;
                 }
@@ -328,7 +528,7 @@ if ($result && $result->num_rows > 0) {
                 const payments = response.data || [];
                 
                 // Current date for comparison (using March 19, 2025 as fixed date)
-                const currentDate = new Date('2025-03-19');
+                const currentDate = new Date('2025-03-22');
                 const currentYear = currentDate.getFullYear();
                 const currentMonth = currentDate.getMonth(); // 0-based index
 
@@ -336,20 +536,40 @@ if ($result && $result->num_rows > 0) {
                 months.forEach((month, index) => {
                     const monthData = payments.find(p => p.month === index + 1) || {
                         total_amount: 0,
-                        payment_status: 'Unpaid'
+                        payment_status: 'Unpaid',
+                        amount_paid: 0,
+                        balance: 0
                     };
 
                     // Check if the month is in the future
                     const isDisabled = (year > currentYear) || 
                                      (year === currentYear && index > currentMonth);
                     
-                    const statusClass = isDisabled ? 'payment-status-disabled' : 
-                                      `payment-status-${monthData.payment_status.toLowerCase()}`;
+                    // Determine status class based on payment status
+                    let statusClass;
+                    if (isDisabled) {
+                        statusClass = 'payment-status-disabled';
+                    } else {
+                        switch(monthData.payment_status) {
+                            case 'Paid':
+                                statusClass = 'payment-status-paid';
+                                break;
+                            case 'Partial':
+                                statusClass = 'payment-status-partial';
+                                break;
+                            default:
+                                statusClass = 'payment-status-unpaid';
+                        }
+                    }
                     
-                    const buttonClass = isDisabled ? 'status-toggle disabled' : 
-                                      `status-toggle ${monthData.payment_status === 'Paid' ? 'status-paid' : 'status-unpaid'}`;
+                    const buttonClass = isDisabled ? 'update-payment-btn disabled' : 'update-payment-btn';
                     
                     const statusText = isDisabled ? 'Pending' : monthData.payment_status;
+                    
+                    // Calculate balance
+                    const totalAmount = parseFloat(monthData.total_amount) || 0;
+                    const amountPaid = parseFloat(monthData.amount_paid) || 0;
+                    const balance = totalAmount - amountPaid;
                     
                     monthlyPaymentsHtml += `
                         <tr>
@@ -360,15 +580,17 @@ if ($result && $result->num_rows > 0) {
                                     View Orders List
                                 </button>
                             </td>
-                            <td>PHP ${numberFormat(monthData.total_amount)}</td>
+                            <td>PHP ${numberFormat(totalAmount)}</td>
+                            <td>PHP ${numberFormat(amountPaid)}</td>
+                            <td>PHP ${numberFormat(balance)}</td>
                             <td class="${statusClass}">${statusText}</td>
                             <td>
                                 <button class="${buttonClass}"
                                         ${isDisabled ? 'disabled' : ''}
-                                        onclick="${isDisabled ? '' : `togglePaymentStatus('${currentUsername}', ${index + 1}, this, '${monthData.payment_status}', ${year})`}"
-                                        title="${isDisabled ? 'Cannot change status for future months' : 'Click to change status'}">
-                                    <i class="fas fa-exchange-alt"></i>
-                                    Change Status
+                                        onclick="${isDisabled ? '' : `openUpdatePayment('${currentUsername}', ${index + 1}, '${month}', ${year}, ${totalAmount}, ${amountPaid})`}"
+                                        title="${isDisabled ? 'Cannot update payment for future months' : 'Update payment information'}">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    Update Payment
                                 </button>
                             </td>
                         </tr>
@@ -382,7 +604,7 @@ if ($result && $result->num_rows > 0) {
                 console.error('Response:', xhr.responseText);
                 console.error('Status:', status);
                 $('#monthlyPaymentsBody').html(
-                    '<tr><td colspan="5" style="color: red;">Error loading payment history. Please try again.</td></tr>'
+                    '<tr><td colspan="7" style="color: red;">Error loading payment history. Please try again.</td></tr>'
                 );
             }
         });
@@ -492,51 +714,169 @@ if ($result && $result->num_rows > 0) {
         }
     }
 
-    function togglePaymentStatus(username, month, button, currentStatus, year) {
-        // Check against fixed date (March 19, 2025)
-        const currentDate = new Date('2025-03-19');
-        const currentYear = currentDate.getFullYear();
-        const currentMonth = currentDate.getMonth(); // 0-based index
-
-        if (year > currentYear || (year === currentYear && month - 1 > currentMonth)) {
-            alert('Cannot change payment status for future months');
-            return;
+    function openUpdatePayment(username, month, monthName, year, totalAmount, amountPaid) {
+        // Set modal title
+        $('#paymentModalMonth').text(`${monthName} ${year}`);
+        
+        // Set form values
+        $('#payment_username').val(username);
+        $('#payment_month').val(month);
+        $('#payment_year').val(year);
+        $('#payment_total_amount').val(totalAmount);
+        
+        // Set current values in the display
+        $('#totalAmountValue').text(`PHP ${numberFormat(totalAmount)}`);
+        $('#amountPaidValue').text(`PHP ${numberFormat(amountPaid)}`);
+        $('#balanceValue').text(`PHP ${numberFormat(totalAmount - amountPaid)}`);
+        
+        // Set default value for payment amount input
+        const balance = totalAmount - amountPaid;
+        $('#payment_amount').val(balance.toFixed(2));
+        $('#payment_amount').attr('max', balance.toFixed(2));
+        
+        // Set default status based on payment amount
+        if (amountPaid >= totalAmount) {
+            $('#payment_status').val('Paid');
+        } else if (amountPaid > 0) {
+            $('#payment_status').val('Partial');
+        } else {
+            $('#payment_status').val('Unpaid');
         }
-
-        const newStatus = currentStatus === 'Paid' ? 'Unpaid' : 'Paid';
-
+        
+        // Clear previous proof preview
+        $('#proofPreview').empty().hide();
+        $('#payment_notes').val('');
+        
+        // Fetch payment history for this month/year
+        fetchPaymentHistory(username, month, year);
+        
+        // Show the modal
+        $('#updatePaymentModal').show();
+    }
+    
+    function fetchPaymentHistory(username, month, year) {
         $.ajax({
-            url: '../../backend/update_payment_status.php',
-            method: 'POST',
+            url: '../../backend/get_payment_history.php',
+            method: 'GET',
             data: {
                 username: username,
                 month: month,
-                year: year,
-                status: newStatus
+                year: year
             },
             dataType: 'json',
             success: function(response) {
-                if (response.success) {
-                    // Update the button class
-                    button.className = `status-toggle status-${newStatus.toLowerCase()}`;
+                if (response.success && response.data && response.data.length > 0) {
+                    let historyHtml = '';
                     
-                    // Update the status text in the previous column
-                    const statusCell = button.parentElement.previousElementSibling;
-                    statusCell.className = `payment-status-${newStatus.toLowerCase()}`;
-                    statusCell.textContent = newStatus;
+                    response.data.forEach(payment => {
+                        let proofLink = '';
+                        if (payment.proof_of_payment) {
+                            proofLink = `<a href="../../uploads/payment_proofs/${payment.proof_of_payment}" target="_blank">View Proof</a>`;
+                        } else {
+                            proofLink = 'N/A';
+                        }
+                        
+                        historyHtml += `
+                            <tr>
+                                <td>${payment.payment_date}</td>
+                                <td>PHP ${numberFormat(payment.amount_paid)}</td>
+                                <td class="payment-status-${payment.payment_status.toLowerCase()}">${payment.payment_status}</td>
+                                <td>${proofLink}</td>
+                                <td>${payment.payment_notes || 'N/A'}</td>
+                            </tr>
+                        `;
+                    });
                     
-                    // Update the button's stored status
-                    $(button).attr('onclick', `togglePaymentStatus('${username}', ${month}, this, '${newStatus}', ${year})`);
+                    $('#paymentHistoryBody').html(historyHtml);
+                    $('#paymentHistorySection').show();
                 } else {
-                    alert('Error updating payment status. Please try again.');
+                    $('#paymentHistorySection').hide();
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Ajax Error:', error);
-                alert('Error updating payment status. Please try again.');
+                console.error('Error fetching payment history:', error);
+                $('#paymentHistorySection').hide();
             }
         });
     }
+    
+    // Preview uploaded proof of payment
+    $('#payment_proof').on('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                let preview = '';
+                
+                if (file.type.startsWith('image/')) {
+                    preview = `<img src="${e.target.result}" alt="Proof Preview" class="proof-image">`;
+                } else if (file.type === 'application/pdf') {
+                    preview = `<div class="pdf-preview">PDF File: ${file.name}</div>`;
+                }
+                
+                $('#proofPreview').html(preview).show();
+            }
+            
+            reader.readAsDataURL(file);
+        } else {
+            $('#proofPreview').empty().hide();
+        }
+    });
+    
+    // Handle payment form submission
+    $('#paymentUpdateForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        $.ajax({
+            url: '../../backend/update_payment.php',
+            method: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert('Payment updated successfully!');
+                    
+                    // Close the modal
+                    closeModal('updatePaymentModal');
+                    
+                    // Refresh the data
+                    loadYearData(currentYear, true);
+                } else {
+                    alert('Error: ' + (response.message || 'Failed to update payment.'));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error submitting payment update:', error);
+                alert('Failed to update payment. Please try again.');
+            }
+        });
+    });
+    
+    // Update remaining balance based on payment amount input
+    $('#payment_amount').on('input', function() {
+        const totalAmount = parseFloat($('#payment_total_amount').val()) || 0;
+        const currentPaid = parseFloat($('#amountPaidValue').text().replace('PHP ', '').replace(',', '')) || 0;
+        const newPayment = parseFloat($(this).val()) || 0;
+        
+        const newTotal = currentPaid + newPayment;
+        const newBalance = totalAmount - newTotal;
+        
+        $('#balanceValue').text(`PHP ${numberFormat(newBalance < 0 ? 0 : newBalance)}`);
+        
+        // Update status based on the new balance
+        if (newTotal >= totalAmount) {
+            $('#payment_status').val('Paid');
+        } else if (newTotal > 0) {
+            $('#payment_status').val('Partial');
+        } else {
+            $('#payment_status').val('Unpaid');
+        }
+    });
 
     function closeModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
