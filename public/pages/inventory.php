@@ -117,10 +117,10 @@ $result = $conn->query($sql);
                     <label for="edit_stock_quantity">Stock Quantity:</label>
                     <input type="number" id="edit_stock_quantity" name="stock_quantity" required>
                     <div class="form-buttons">
-                        <button type="submit" class="save-btn"><i class="fas fa-save"></i> Update</button>
                         <button type="button" class="cancel-btn" onclick="closeEditModal()">
                             <i class="fas fa-times"></i> Cancel
                         </button>
+                        <button type="submit" class="save-btn"><i class="fas fa-save"></i> Update</button>
                     </div>
                 </form>
             </div>
@@ -163,10 +163,11 @@ $result = $conn->query($sql);
                     <input type="number" id="price" name="price" step="0.01" min="0" required placeholder="0.00">
                     
                     <div class="form-buttons">
-                        <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
                         <button type="button" class="cancel-btn" onclick="closeAddProductModal()">
                             <i class="fas fa-times"></i> Cancel
                         </button>
+                        <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+
                     </div>
                 </form>
             </div>

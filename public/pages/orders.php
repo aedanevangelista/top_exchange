@@ -26,7 +26,17 @@ $sql = "SELECT po_number, username, order_date, delivery_date, orders, total_amo
 if (!empty($status_filter)) {
     $sql .= " AND status = ?";
 }
-$sql .= " ORDER BY order_date DESC";
+
+// Modified ORDER BY clause to prioritize status (Active, Pending, Rejected) and then delivery_date (ascending)
+$sql .= " ORDER BY 
+          CASE 
+              WHEN status = 'Active' THEN 1 
+              WHEN status = 'Pending' THEN 2 
+              WHEN status = 'Rejected' THEN 3 
+              ELSE 4 
+          END, 
+          delivery_date ASC";
+
 $stmt = $conn->prepare($sql);
 if (!empty($status_filter)) {
     $stmt->bind_param("s", $status_filter);

@@ -46,6 +46,33 @@ if ($result && $result->num_rows > 0) {
         .overlay-content h2 {
             margin-bottom: 10px;
         }
+        
+        /* Search Container Styling (copied from inventory.css) */
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-container input {
+            padding: 8px 12px;
+            border-radius: 20px 0 0 20px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            width: 220px;
+        }
+
+        .search-container .search-btn {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 0 20px 20px 0;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .search-container .search-btn:hover {
+            background-color: #2471a3;
+        }
     </style>
 </head>
 <body>
@@ -53,8 +80,10 @@ if ($result && $result->num_rows > 0) {
     <div class="main-content">
         <div class="orders-header">
             <h1>Transaction History</h1>
-            <div class="search-section">
+            <!-- Updated search section to match inventory.php design -->
+            <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Search by PO Number, Username, or Order Date...">
+                <button class="search-btn"><i class="fas fa-search"></i></button>
             </div>
         </div>
         <div class="orders-table-container">
@@ -173,6 +202,22 @@ if ($result && $result->num_rows > 0) {
             let searchText = $(this).val().toLowerCase().trim();
             console.log("Searching for:", searchText); // Debug line
 
+            $(".orders-table tbody tr").each(function() {
+                let row = $(this);
+                let text = row.text().toLowerCase();
+                
+                if (text.includes(searchText)) {
+                    row.show();
+                } else {
+                    row.hide();
+                }
+            });
+        });
+        
+        // Handle search button click (same functionality as typing)
+        $(".search-btn").on("click", function() {
+            let searchText = $("#searchInput").val().toLowerCase().trim();
+            
             $(".orders-table tbody tr").each(function() {
                 let row = $(this);
                 let text = row.text().toLowerCase();

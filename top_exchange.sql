@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 19, 2025 at 07:37 PM
+-- Generation Time: Mar 22, 2025 at 07:25 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -32,20 +32,23 @@ CREATE TABLE `accounts` (
   `username` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `role` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL
+  `role` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` varchar(20) DEFAULT 'Active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `accounts`
 --
 
-INSERT INTO `accounts` (`id`, `username`, `password`, `created_at`, `role`) VALUES
-(56, 'admin', '123', '2025-03-05 22:58:17', 'Admin'),
-(57, 'Secretary', '123', '2025-03-05 23:17:38', 'Secretary'),
-(58, 'aedan', '123', '2025-03-05 23:23:25', 'Admin'),
-(60, 'Manager', '123', '2025-03-05 23:27:49', 'Manager'),
-(61, 'Accountant', '123', '2025-03-05 23:27:55', 'Accountant'),
-(62, 'Ryan', '123', '2025-03-09 07:14:07', 'Admin');
+INSERT INTO `accounts` (`id`, `username`, `password`, `created_at`, `role`, `status`) VALUES
+(56, 'admin', '123', '2025-03-05 22:58:17', 'Admin', 'Active'),
+(57, 'Secretary', '123', '2025-03-05 23:17:38', 'Secretary', 'Active'),
+(58, 'aedan', '123', '2025-03-05 23:23:25', 'Admin', 'Active'),
+(60, 'Manager', '123', '2025-03-05 23:27:49', 'Manager', 'Archived'),
+(61, 'Accountant', '123', '2025-03-05 23:27:55', 'Accountant', 'Archived'),
+(62, 'Ryan', '123', '2025-03-09 07:14:07', 'Admin', 'Archived'),
+(66, 'asd', '123', '2025-03-20 10:20:01', 'Admin', 'Active'),
+(67, 'asds', '123', '2025-03-20 22:33:16', 'Admin', 'Active');
 
 -- --------------------------------------------------------
 
@@ -73,9 +76,12 @@ CREATE TABLE `clients_accounts` (
 --
 
 INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company`, `company_address`, `business_proof`, `status`, `created_at`) VALUES
-(1, 'aedan', '$2y$10$wd5.aXYnKfiwMI9qgVL3gOpaJvVGAwgRhQqPdqc0mLWzKwwxUaqCW', '123@gmail.com', '123', '123', '123', 'company aedan', '123', '[]', 'Active', '2025-03-07 09:58:07'),
-(2, 'asdasd', '$2y$10$dojkOKe2Z7y.NwwuAiFmh.E4TYS1yKf.Z1fnUeKk5jqVTm4dN2Hu6', 'asd@gmail.com', '123', 'asd', 'asd', 'sds', 'asdas', '[\"\\/top_exchange\\/uploads\\/asdasd\\/4.png\"]', 'Inactive', '2025-03-07 10:06:55'),
-(3, 'Jeff Santonia', '$2y$10$dwjDK/6QbkEF.qBuozhjneWerFL6jY4qyZ8hchngxdbNZ3k/u80vm', 'jeffsantonia@gmail.com', '1236969420', 'Munoz', 'Quezon City', 'Jeff Company', 'Jeff City', '[\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/3.png\",\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/4.png\"]', 'Active', '2025-03-09 14:12:20');
+(1, 'aedan', '$2y$10$7/zp6DLomjy19Q4hMcU3S.cxz6e/h2eVmpHDNsPpG/eo87epMAs12', '123@gmail.com', '123', '123', '123', 'company aedan', '123', '[]', 'Active', '2025-03-07 09:58:07'),
+(2, 'asdasd', '$2y$10$dojkOKe2Z7y.NwwuAiFmh.E4TYS1yKf.Z1fnUeKk5jqVTm4dN2Hu6', 'asd@gmail.com', '123', 'asd', 'asd', 'sds', 'asdas', '[\"\\/top_exchange\\/uploads\\/asdasd\\/4.png\"]', 'Active', '2025-03-07 10:06:55'),
+(3, 'Jeff Santonia', '$2y$10$dwjDK/6QbkEF.qBuozhjneWerFL6jY4qyZ8hchngxdbNZ3k/u80vm', 'jeffsantonia@gmail.com', '1236969420', 'Munoz', 'Quezon City', 'Jeff Company', 'Jeff City', '[\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/3.png\",\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/4.png\"]', 'Inactive', '2025-03-09 14:12:20'),
+(4, 'joe', '$2y$10$0kM1rjCbnDXkL4/.BSrvEuVCSMjLN/ICY5KeSmzJ0wQ0aPQEsyQwe', 'joemama@gmail.com', '123123123', 'Metro Manila', 'QC', 'Joe Mama Corp', 'Joe mama address', '[\"\\/top_exchange\\/uploads\\/joe\\/audience2.png\"]', 'Inactive', '2025-03-20 16:08:02'),
+(5, 'asdas', '$2y$10$VkHI738QyX3HdbYtKjzFZeh0G1JKSqCPvLRAY2UAe3t3N8K9akYDy', 'asdsas@g.com', 'asdasdasd', 'asdasas', 'dasasd', 'asdas', 'asdasdas', '[\"\\/top_exchange\\/uploads\\/asdas\\/youtube.png\"]', 'Inactive', '2025-03-20 16:09:21'),
+(6, 'sdfsdf', '$2y$10$ih6oNCRNeXWjd2UuR9wtM.f1mcUu6QrF1q34yRo6x10kRsyiiqXVi', 'asdas@gmail.com', '12312', '1231231', '123123', '12312312', '312312', '[]', 'Pending', '2025-03-20 16:11:19');
 
 -- --------------------------------------------------------
 
@@ -122,7 +128,7 @@ CREATE TABLE `monthly_payments` (
 INSERT INTO `monthly_payments` (`id`, `username`, `month`, `year`, `total_amount`, `payment_status`, `created_at`, `updated_at`) VALUES
 (1, 'aedan', 1, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 18:22:57'),
 (2, 'aedan', 2, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 18:34:25'),
-(3, 'aedan', 3, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 18:36:52'),
+(3, 'aedan', 3, 2025, 1625.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-20 15:38:12'),
 (4, 'aedan', 4, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 18:34:57'),
 (5, 'aedan', 5, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 16:59:07'),
 (6, 'aedan', 6, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-19 16:59:07'),
@@ -185,6 +191,23 @@ CREATE TABLE `orders` (
   `total_amount` decimal(10,2) NOT NULL,
   `status` enum('Pending','Active','Rejected','Completed') NOT NULL DEFAULT 'Pending'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `orders`
+--
+
+INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_date`, `orders`, `total_amount`, `status`) VALUES
+(17, 'aedan-1', 'aedan', '2025-03-20', '2025-03-21', '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 1625.00, 'Completed'),
+(18, 'Jeff Santonia-1', 'Jeff Santonia', '2025-03-20', '2025-03-21', '[{\"product_id\":6,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Small)\",\"packaging\":\"15pcs/pack\",\"price\":205,\"quantity\":10}]', 2050.00, 'Completed'),
+(19, 'aedan-2', 'aedan', '2025-03-20', '2025-03-21', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed'),
+(20, 'aedan-3', 'aedan', '2025-03-20', '2025-03-21', '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":10}]', 3250.00, 'Completed'),
+(21, 'aedan-4', 'aedan', '2025-03-20', '2025-03-21', '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":12}]', 3900.00, 'Completed'),
+(22, 'aedan-5', 'aedan', '2025-03-20', '2025-03-21', '[{\"product_id\":5,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs/pack\",\"price\":250,\"quantity\":2}]', 500.00, 'Completed'),
+(23, 'Jeff Santonia-2', 'Jeff Santonia', '2025-03-20', '2025-03-21', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":4}]', 1120.00, 'Completed'),
+(24, 'Jeff Santonia-3', 'Jeff Santonia', '2025-03-20', '2025-03-21', '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 1625.00, 'Completed'),
+(25, 'aedan-6', 'aedan', '2025-03-20', '2025-03-21', '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 1625.00, 'Pending'),
+(26, 'aedan-7', 'aedan', '2025-03-21', '2025-03-28', '[{\"product_id\":73,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"shumai\",\"packaging\":123,\"price\":123,\"quantity\":5}]', 615.00, 'Active'),
+(27, 'asdasd-1', 'asdasd', '2025-03-21', '2025-03-24', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Active');
 
 -- --------------------------------------------------------
 
@@ -263,7 +286,7 @@ INSERT INTO `products` (`product_id`, `category`, `item_description`, `packaging
 (28, 'Dimsum & Dumplings', 'Polonchay Dumpling (Min 6 Packs) (B)', '20pcs/pack', 470.00, 0),
 (29, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (A)', '12pcs/pack', 330.00, 0),
 (30, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (B)', '20pcs/pack', 530.00, 0),
-(31, 'Dimsum & Dumplings', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 699),
+(31, 'Dimsum & Dumplings', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 691),
 (32, 'Dimsum & Dumplings', 'Beancurd Roll (B)', '20pcs/pack', 500.00, 0),
 (33, 'Dimsum & Dumplings', 'Pork Gyoza Dumpling (A)', '20pcs/pack', 390.00, 0),
 (34, 'Dimsum & Dumplings', 'Shanghai Dumpling (A)', '20pcs/pack', 255.00, 0),
@@ -304,7 +327,8 @@ INSERT INTO `products` (`product_id`, `category`, `item_description`, `packaging
 (69, 'Noodles & Wrappers', 'Wanton Wrapper (Yellow/White)', '250g/pack', 70.00, 0),
 (70, 'Noodles & Wrappers', 'Beancurd Wrapper', '1kg/pack', 1600.00, 0),
 (71, 'Noodles & Wrappers', 'Spring Roll Wrapper', '25pcs/pack', 90.00, 0),
-(72, 'Noodles & Wrappers', 'Gyoza Wrapper (Minimum 10 Packs)', '250g/pack', 70.00, 0);
+(72, 'Noodles & Wrappers', 'Gyoza Wrapper (Minimum 10 Packs)', '250g/pack', 70.00, 0),
+(73, 'Dimsum & Dumplings', 'shumai', '123', 123.00, 0);
 
 -- --------------------------------------------------------
 
@@ -325,10 +349,10 @@ CREATE TABLE `roles` (
 
 INSERT INTO `roles` (`role_id`, `role_name`, `status`, `pages`) VALUES
 (1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory, Orders, Order History, Payment History'),
-(2, 'Manager', 'active', 'Dashboard, Inventory, Order History'),
-(3, 'Secretary', 'active', ''),
-(4, 'Accountant', 'active', ''),
-(36, 'aed', 'active', 'Accounts - Clients, Dashboard');
+(2, 'Manager', 'active', 'Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History'),
+(3, 'Secretary', 'active', 'Customers, Dashboard, Inventory, Order History, Orders, Payment History'),
+(4, 'Accountant', 'active', 'Dashboard, Order History, Orders, Payment History'),
+(36, 'aed', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, User Roles');
 
 --
 -- Indexes for dumped tables
@@ -396,31 +420,31 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=63;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
 
 --
 -- AUTO_INCREMENT for table `clients_accounts`
 --
 ALTER TABLE `clients_accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `monthly_payments`
 --
 ALTER TABLE `monthly_payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=745;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=769;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `pages`
@@ -432,7 +456,7 @@ ALTER TABLE `pages`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=74;
 
 --
 -- AUTO_INCREMENT for table `roles`
