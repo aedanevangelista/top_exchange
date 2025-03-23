@@ -1,156 +1,175 @@
 <?php
+// Basic error handling and debugging
 header('Content-Type: application/json');
-session_start();
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
+ini_set('display_errors', 1);
+
+// Start a buffer to capture any errors
+ob_start();
 
 try {
-    // Check user authentication
-    if (!isset($_SESSION['user_id'])) {
-        throw new Exception("Authentication required");
-    }
-
-    // Include the database connection
+    // Log the request to help with debugging
+    $logFile = __DIR__ . '/payment_debug.log';
+    file_put_contents($logFile, date('Y-m-d H:i:s') . ' - Request received' . PHP_EOL, FILE_APPEND);
+    file_put_contents($logFile, json_encode($_POST) . PHP_EOL, FILE_APPEND);
+    file_put_contents($logFile, json_encode($_FILES) . PHP_EOL, FILE_APPEND);
+    
+    // Include database connection
     require_once "db_connection.php";
     
-    // Validate required fields
-    $requiredFields = ['username', 'month', 'year', 'payment_status', 'payment_amount', 'total_amount'];
-    foreach ($requiredFields as $field) {
-        if (!isset($_POST[$field]) || $_POST[$field] === '') {
-            throw new Exception("Missing required field: $field");
-        }
+    // Session management - optional for this simplified version
+    session_start();
+    
+    // Get basic parameters
+    $username = $_POST['username'] ?? '';
+    $month = isset($_POST['month']) ? (int)$_POST['month'] : 0;
+    $year = isset($_POST['year']) ? (int)$_POST['year'] : 0;
+    $paymentAmount = isset($_POST['payment_amount']) ? (float)$_POST['payment_amount'] : 0;
+    $totalAmount = isset($_POST['total_amount']) ? (float)$_POST['total_amount'] : 0;
+    $currentBalance = isset($_POST['current_balance']) ? (float)$_POST['current_balance'] : 0;
+    $remainingBalance = isset($_POST['remaining_balance']) ? (float)$_POST['remaining_balance'] : 0;
+    
+    // Validate basic requirements
+    if (empty($username) || $month <= 0 || $year <= 0 || $paymentAmount <= 0) {
+        throw new Exception("Missing or invalid required fields");
     }
     
-    // Sanitize inputs
-    $username = $_POST['username'];
-    $month = (int)$_POST['month'];
-    $year = (int)$_POST['year'];
-    $paymentStatus = $_POST['payment_status'];
-    $paymentAmount = (float)$_POST['payment_amount'];
-    $totalAmount = (float)$_POST['total_amount'];
-    $notes = isset($_POST['payment_notes']) ? $_POST['payment_notes'] : '';
+    // Calculate new values
+    $newRemainingBalance = max(0, $remainingBalance - $paymentAmount);
+    $newBalance = $currentBalance - $paymentAmount;
     
-    // Validate status
-    if (!in_array($paymentStatus, ['Paid', 'Partial', 'Unpaid'])) {
-        throw new Exception("Invalid payment status");
-    }
-    
-    // Validate payment amount
-    if ($paymentAmount < 0) {
-        throw new Exception("Payment amount cannot be negative");
-    }
-    
-    // Get current payment info
-    $sql = "SELECT * FROM monthly_payments WHERE username = ? AND month = ? AND year = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sii", $username, $month, $year);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        $currentPayment = $result->fetch_assoc();
-        $amountPaid = (float)$currentPayment['amount_paid'] + $paymentAmount;
-    } else {
-        $amountPaid = $paymentAmount;
-    }
-    
-    // Calculate remaining balance
-    $balance = $totalAmount - $amountPaid;
-    if ($balance < 0) $balance = 0;
-    
-    // Handle proof of payment file upload if provided
+    // Handle file upload 
     $proofFilename = null;
-    if (isset($_FILES['payment_proof']) && $_FILES['payment_proof']['error'] !== UPLOAD_ERR_NO_FILE) {
-        $uploadDir = "../uploads/payment_proofs/";
+    if (isset($_FILES['payment_proof']) && $_FILES['payment_proof']['error'] === UPLOAD_ERR_OK && $_FILES['payment_proof']['size'] > 0) {
+        $uploadDir = dirname(__DIR__) . "/uploads/payments/";
         
         // Create directory if it doesn't exist
         if (!is_dir($uploadDir)) {
-            if (!mkdir($uploadDir, 0755, true)) {
-                throw new Exception("Failed to create upload directory");
-            }
+            mkdir($uploadDir, 0755, true);
         }
         
-        $fileInfo = pathinfo($_FILES['payment_proof']['name']);
-        $extension = strtolower($fileInfo['extension']);
-        
-        // Check file type
-        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
-        if (!in_array($extension, $allowedExtensions)) {
-            throw new Exception("Invalid file type. Only images and PDFs are allowed.");
-        }
-        
-        // Generate unique filename
-        $proofFilename = $username . '_' . $year . '_' . $month . '_' . time() . '.' . $extension;
-        $targetFile = $uploadDir . $proofFilename;
+        // Generate a unique filename
+        $extension = pathinfo($_FILES['payment_proof']['name'], PATHINFO_EXTENSION);
+        $proofFilename = 'payment_' . time() . '_' . mt_rand(1000, 9999) . '.' . $extension;
+        $uploadPath = $uploadDir . $proofFilename;
         
         // Move the uploaded file
-        if (!move_uploaded_file($_FILES['payment_proof']['tmp_name'], $targetFile)) {
-            throw new Exception("Failed to upload proof of payment");
+        if (!move_uploaded_file($_FILES['payment_proof']['tmp_name'], $uploadPath)) {
+            $uploadError = error_get_last();
+            file_put_contents($logFile, "Upload failed: " . json_encode($uploadError) . PHP_EOL, FILE_APPEND);
+            throw new Exception("Failed to upload file");
         }
     }
     
-    // Update or insert payment record
-    if ($result->num_rows > 0) {
+    // Simplified database operations - no transactions for now
+    // First, check if the record exists
+    $checkSql = "SELECT COUNT(*) FROM monthly_payments WHERE username = ? AND month = ? AND year = ?";
+    $checkStmt = $conn->prepare($checkSql);
+    
+    if (!$checkStmt) {
+        throw new Exception("Database prepare error: " . $conn->error);
+    }
+    
+    $checkStmt->bind_param("sii", $username, $month, $year);
+    $checkStmt->execute();
+    $checkStmt->bind_result($count);
+    $checkStmt->fetch();
+    $checkStmt->close();
+    
+    if ($count > 0) {
         // Update existing record
-        $sql = "UPDATE monthly_payments SET 
-                payment_status = ?, 
-                amount_paid = ?, 
-                balance = ?, 
-                payment_date = NOW(), 
-                payment_notes = ?";
+        $updateSql = "UPDATE monthly_payments SET 
+                     payment_status = 'Paid', 
+                     remaining_balance = ?, 
+                     updated_at = NOW()";
         
-        // Add proof file if uploaded
+        // Only update proof if we have a new one
         if ($proofFilename) {
-            $sql .= ", proof_of_payment = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sddss", $paymentStatus, $amountPaid, $balance, $notes, $proofFilename);
-        } else {
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sdds", $paymentStatus, $amountPaid, $balance, $notes);
+            $updateSql .= ", proof_of_payment = ?";
         }
         
-        $sql .= " WHERE username = ? AND month = ? AND year = ?";
-        $stmt->bind_param("sii", $username, $month, $year);
+        $updateSql .= " WHERE username = ? AND month = ? AND year = ?";
+        
+        $updateStmt = $conn->prepare($updateSql);
+        
+        if (!$updateStmt) {
+            throw new Exception("Database prepare error: " . $conn->error);
+        }
+        
+        if ($proofFilename) {
+            $updateStmt->bind_param("dssii", $newRemainingBalance, $proofFilename, $username, $month, $year);
+        } else {
+            $updateStmt->bind_param("dsii", $newRemainingBalance, $username, $month, $year);
+        }
+        
+        if (!$updateStmt->execute()) {
+            throw new Exception("Failed to update payment: " . $updateStmt->error);
+        }
     } else {
-        // Insert new record
-        $sql = "INSERT INTO monthly_payments 
-                (username, month, year, payment_status, total_amount, amount_paid, balance, payment_date, payment_notes";
+        // Create new record
+        $insertSql = "INSERT INTO monthly_payments 
+                      (username, month, year, payment_status, total_amount, remaining_balance, proof_of_payment, created_at, updated_at) 
+                      VALUES (?, ?, ?, 'Paid', ?, ?, ?, NOW(), NOW())";
         
-        // Add proof file column if uploaded
-        if ($proofFilename) {
-            $sql .= ", proof_of_payment";
+        $insertStmt = $conn->prepare($insertSql);
+        
+        if (!$insertStmt) {
+            throw new Exception("Database prepare error: " . $conn->error);
         }
         
-        $sql .= ") VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?";
+        $insertStmt->bind_param("siidds", $username, $month, $year, $totalAmount, $newRemainingBalance, $proofFilename);
         
-        // Add proof file value if uploaded
-        if ($proofFilename) {
-            $sql .= ", ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("siiiddds", $username, $month, $year, $paymentStatus, $totalAmount, $amountPaid, $balance, $notes, $proofFilename);
-        } else {
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("siiddds", $username, $month, $year, $paymentStatus, $totalAmount, $amountPaid, $balance, $notes);
+        if (!$insertStmt->execute()) {
+            throw new Exception("Failed to insert payment: " . $insertStmt->error);
         }
-        
-        $sql .= ")";
     }
     
-    // Execute the query
-    if ($stmt->execute()) {
-        echo json_encode([
-            'success' => true,
-            'message' => 'Payment updated successfully'
-        ]);
-    } else {
-        throw new Exception("Database error: " . $stmt->error);
+    // Update client account balance
+    $balanceSql = "UPDATE clients_accounts SET balance = ? WHERE username = ?";
+    $balanceStmt = $conn->prepare($balanceSql);
+    
+    if (!$balanceStmt) {
+        throw new Exception("Database prepare error: " . $conn->error);
     }
+    
+    $balanceStmt->bind_param("ds", $newBalance, $username);
+    
+    if (!$balanceStmt->execute()) {
+        throw new Exception("Failed to update balance: " . $balanceStmt->error);
+    }
+    
+    // Success response
+    echo json_encode([
+        'success' => true,
+        'message' => 'Payment updated successfully',
+        'balance' => $newBalance,
+        'remaining' => $newRemainingBalance
+    ]);
     
 } catch (Exception $e) {
-    http_response_code(500);
+    // Log the error
+    $errorMsg = date('Y-m-d H:i:s') . ' - Error: ' . $e->getMessage() . ' in ' . $e->getFile() . ' on line ' . $e->getLine() . PHP_EOL;
+    file_put_contents(__DIR__ . '/payment_error.log', $errorMsg, FILE_APPEND);
+    
+    // Return error response
     echo json_encode([
         'success' => false,
-        'message' => $e->getMessage()
+        'message' => $e->getMessage(),
+        'debug_info' => [
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]
     ]);
+    
+    // If we uploaded a file but encountered an error, clean it up
+    if (isset($proofFilename) && isset($uploadPath) && file_exists($uploadPath)) {
+        unlink($uploadPath);
+    }
+}
+
+// Capture any errors that may have occurred
+$errors = ob_get_clean();
+if (!empty($errors)) {
+    file_put_contents(__DIR__ . '/php_errors.log', date('Y-m-d H:i:s') . ' - ' . $errors . PHP_EOL, FILE_APPEND);
 }
 ?>

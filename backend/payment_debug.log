@@ -1,0 +1,3 @@
+2025-03-23 08:00:53 - Request received
+{"username":"Jeff Santonia","month":"3","year":"2025","total_amount":"4795","current_balance":"50000","remaining_balance":"4795","payment_amount":"4795.00","payment_notes":"","payment_status":"Paid"}
+{"payment_proof":{"name":"audience2.png","type":"image\/png","tmp_name":"C:\\xampp\\tmp\\phpCCC8.tmp","error":0,"size":18453}}

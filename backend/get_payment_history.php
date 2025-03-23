@@ -5,11 +5,6 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
 try {
-    // Check user authentication
-    if (!isset($_SESSION['user_id'])) {
-        throw new Exception("Authentication required");
-    }
-
     // Include database connection
     require_once "db_connection.php";
     
@@ -24,10 +19,10 @@ try {
     $year = (int)$_GET['year'];
     
     // Query to get payment history
-    $sql = "SELECT mp.payment_date, mp.amount_paid, mp.payment_status, mp.proof_of_payment, mp.payment_notes 
-            FROM monthly_payments mp
-            WHERE mp.username = ? AND mp.month = ? AND mp.year = ?
-            ORDER BY mp.payment_date DESC";
+    $sql = "SELECT payment_date, amount_paid, payment_status, proof_of_payment, payment_notes 
+            FROM monthly_payments 
+            WHERE username = ? AND month = ? AND year = ?
+            ORDER BY payment_date DESC";
     
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("sii", $username, $month, $year);
