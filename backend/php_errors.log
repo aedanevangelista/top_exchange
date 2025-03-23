@@ -1,1 +1,0 @@
-2025-03-23 08:00:53 - {"success":false,"message":"Database prepare error: Unknown column 'remaining_balance' in 'field list'","debug_info":{"file":"C:\\xampp\\htdocs\\top_exchange\\backend\\update_payment.php","line":96}}
