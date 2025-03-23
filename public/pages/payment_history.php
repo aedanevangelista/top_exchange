@@ -1551,55 +1551,61 @@ $currentDate = date('Y-m-d H:i:s');
         }
     });
     
-    // Handle payment form submission
-    $('#paymentUpdateForm').on('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        formData.append('payment_status', 'Paid');
-        
-        // Get payment amount for toast notification
-        const paymentAmount = parseFloat($('#payment_amount').val()) || 0;
-        
-        // Show loading message
-        $('#proofPreview').html('<div>Saving payment information...</div>').show();
-        $('.save-btn').prop('disabled', true).text('Processing...');
-        
-        $.ajax({
-            url: '../../backend/update_payment.php',
-            method: 'POST',
-            data: formData,
-            contentType: false,
-            processData: false,
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    // Show success toast with payment amount
-                    showToast(`Payment of PHP ${numberFormat(paymentAmount)} recorded successfully!`, 'success');
-                    
-                    // Close the modal
-                    closeModal('updatePaymentModal');
-                    
-                    // Update the user's balance in the display
-                    userBalance = response.balance;
-                    updateBalanceDisplay(userBalance);
-                    
-                    // Refresh the data
-                    loadYearData(currentYear, true);
-                } else {
-                    // Show error toast
-                    showToast('Error: ' + (response.message || 'Failed to update payment.'), 'error');
-                    $('.save-btn').prop('disabled', false).text('Save Payment');
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error submitting payment update:', error);
-                showToast('Failed to update payment. Please try again.', 'error');
-                $('.save-btn').prop('disabled', false).text('Save Payment');
+// Handle payment form submission
+$('#paymentUpdateForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    formData.append('payment_status', 'Paid');
+    
+    // Get payment amount for toast notification
+    const paymentAmount = parseFloat($('#payment_amount').val()) || 0;
+    
+    // Show loading message
+    $('#proofPreview').html('<div>Saving payment information...</div>').show();
+    const saveButton = $('.save-btn');
+    saveButton.prop('disabled', true).text('Processing...');
+    
+    $.ajax({
+        url: '../../backend/update_payment.php',
+        method: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                // Show success toast with payment amount
+                showToast(`Payment of PHP ${numberFormat(paymentAmount)} recorded successfully!`, 'success');
+                
+                // Close the modal
+                closeModal('updatePaymentModal');
+                
+                // Update the user's balance in the display
+                userBalance = response.balance;
+                updateBalanceDisplay(userBalance);
+                
+                // Refresh the data
+                loadYearData(currentYear, true);
+            } else {
+                // Show error toast
+                showToast('Error: ' + (response.message || 'Failed to update payment.'), 'error');
+                saveButton.prop('disabled', false).text('Save Payment');
             }
-        });
+        },
+        error: function(xhr, status, error) {
+            console.error('Error submitting payment update:', error);
+            showToast('Failed to update payment. Please try again.', 'error');
+            saveButton.prop('disabled', false).text('Save Payment');
+        },
+        complete: function() {
+            // Always reset the button state regardless of success/error
+            setTimeout(function() {
+                saveButton.prop('disabled', false).text('Save Payment');
+            }, 500);
+        }
     });
-
+});
     function closeModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
     }

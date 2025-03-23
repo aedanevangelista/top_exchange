@@ -1,1 +1,182 @@
 2025-03-23 08:00:53 - Error: Database prepare error: Unknown column 'remaining_balance' in 'field list' in C:\xampp\htdocs\top_exchange\backend\update_payment.php on line 96
+
+
+2025-03-23 08:08:03 - PAYMENT UPDATE REQUEST
+POST DATA: {
+    "username": "Jeff Santonia",
+    "month": "3",
+    "year": "2025",
+    "total_amount": "4795",
+    "current_balance": "50000",
+    "remaining_balance": "4795",
+    "payment_amount": "4795.00",
+    "payment_notes": "",
+    "payment_status": "Paid"
+}
+FILES: {
+    "payment_proof": {
+        "name": "file copie.png",
+        "type": "image\/png",
+        "tmp_name": "C:\\xampp\\tmp\\php5F1C.tmp",
+        "error": 0,
+        "size": 14643
+    }
+}
+Connecting to database...
+Database connected successfully
+Basic fields extracted: username=Jeff Santonia, month=3, year=2025
+Check SQL: SELECT * FROM monthly_payments WHERE username = ? AND month = ? AND year = ?
+Check query executed
+Record exists: Yes
+Table structure: [
+    {
+        "Field": "id",
+        "Type": "int(11)",
+        "Null": "NO",
+        "Key": "PRI",
+        "Default": null,
+        "Extra": "auto_increment"
+    },
+    {
+        "Field": "username",
+        "Type": "varchar(255)",
+        "Null": "NO",
+        "Key": "MUL",
+        "Default": null,
+        "Extra": ""
+    },
+    {
+        "Field": "month",
+        "Type": "int(11)",
+        "Null": "NO",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+    },
+    {
+        "Field": "year",
+        "Type": "int(11)",
+        "Null": "NO",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+    },
+    {
+        "Field": "total_amount",
+        "Type": "decimal(10,2)",
+        "Null": "NO",
+        "Key": "",
+        "Default": "0.00",
+        "Extra": ""
+    },
+    {
+        "Field": "payment_status",
+        "Type": "enum('Paid','Unpaid')",
+        "Null": "NO",
+        "Key": "",
+        "Default": "Unpaid",
+        "Extra": ""
+    },
+    {
+        "Field": "created_at",
+        "Type": "timestamp",
+        "Null": "NO",
+        "Key": "",
+        "Default": "current_timestamp()",
+        "Extra": ""
+    },
+    {
+        "Field": "updated_at",
+        "Type": "timestamp",
+        "Null": "NO",
+        "Key": "",
+        "Default": "current_timestamp()",
+        "Extra": "on update current_timestamp()"
+    },
+    {
+        "Field": "proof_of_payment",
+        "Type": "varchar(255)",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+    },
+    {
+        "Field": "amount_paid",
+        "Type": "decimal(10,2)",
+        "Null": "YES",
+        "Key": "",
+        "Default": "0.00",
+        "Extra": ""
+    },
+    {
+        "Field": "balance",
+        "Type": "decimal(10,2)",
+        "Null": "YES",
+        "Key": "",
+        "Default": "0.00",
+        "Extra": ""
+    },
+    {
+        "Field": "payment_date",
+        "Type": "datetime",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+    },
+    {
+        "Field": "payment_notes",
+        "Type": "text",
+        "Null": "YES",
+        "Key": "",
+        "Default": null,
+        "Extra": ""
+    }
+]
+Existing payment record: {
+    "id": 147,
+    "username": "Jeff Santonia",
+    "month": 3,
+    "year": 2025,
+    "total_amount": "4795.00",
+    "payment_status": "Unpaid",
+    "created_at": "2025-03-20 02:05:51",
+    "updated_at": "2025-03-23 03:57:10",
+    "proof_of_payment": "Jeff Santonia\/March - 2025\/Jeff Santonia_3_2025(4).png",
+    "amount_paid": "9590.00",
+    "balance": "0.00",
+    "payment_date": "2025-03-23 03:57:10",
+    "payment_notes": null
+}
+Update SQL: UPDATE monthly_payments SET payment_status = 'Paid' WHERE username = ? AND month = ? AND year = ?
+Update successful
+Response sent successfully
+Script execution ended
+
+
+2025-03-23 08:11:53 - PAYMENT UPDATE REQUEST
+POST DATA: {
+    "username": "Jeff Santonia",
+    "month": "3",
+    "year": "2025",
+    "total_amount": "4795",
+    "current_balance": "50000",
+    "remaining_balance": "4795",
+    "payment_amount": "4795.00",
+    "payment_notes": "",
+    "payment_status": "Paid"
+}
+FILES: {
+    "payment_proof": {
+        "name": "file copie.png",
+        "type": "image\/png",
+        "tmp_name": "C:\\xampp\\tmp\\phpDE13.tmp",
+        "error": 0,
+        "size": 14643
+    }
+}
+Processing file upload
+Upload base directory: C:\xampp\htdocs\top_exchange/uploads/payments/
+Attempting to upload to: C:\xampp\htdocs\top_exchange/uploads/payments/Jeff Santonia_3_2025_67dfb43919c1a.png
+File uploaded successfully

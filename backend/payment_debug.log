@@ -1,3 +1,18 @@
 2025-03-23 08:00:53 - Request received
 {"username":"Jeff Santonia","month":"3","year":"2025","total_amount":"4795","current_balance":"50000","remaining_balance":"4795","payment_amount":"4795.00","payment_notes":"","payment_status":"Paid"}
 {"payment_proof":{"name":"audience2.png","type":"image\/png","tmp_name":"C:\\xampp\\tmp\\phpCCC8.tmp","error":0,"size":18453}}
+2025-03-23 08:03:26 - Update payment request
+POST: {"username":"Jeff Santonia","month":"3","year":"2025","total_amount":"4795","current_balance":"50000","remaining_balance":"4795","payment_amount":"4795.00","payment_notes":"","payment_status":"Paid"}
+FILES: {"payment_proof":{"name":"file copie.png","type":"image\/png","tmp_name":"C:\\xampp\\tmp\\php2177.tmp","error":0,"size":14643}}
+ERROR: Prepare statement failed: Unknown column 'remaining_balance' in 'field list' in C:\xampp\htdocs\top_exchange\backend\update_payment.php on line 130
+2025-03-23 08:03:31 - Update payment request
+POST: {"username":"Jeff Santonia","month":"3","year":"2025","total_amount":"4795","current_balance":"50000","remaining_balance":"4795","payment_amount":"4795.00","payment_notes":"","payment_status":"Paid"}
+FILES: {"payment_proof":{"name":"file copie.png","type":"image\/png","tmp_name":"C:\\xampp\\tmp\\php358C.tmp","error":0,"size":14643}}
+ERROR: Prepare statement failed: Unknown column 'remaining_balance' in 'field list' in C:\xampp\htdocs\top_exchange\backend\update_payment.php on line 130
+2025-03-23 08:03:34 - Update payment request
+POST: {"username":"Jeff Santonia","month":"3","year":"2025","total_amount":"4795","current_balance":"50000","remaining_balance":"4795","payment_amount":"4795.00","payment_notes":"","payment_status":"Paid"}
+FILES: {"payment_proof":{"name":"file copie.png","type":"image\/png","tmp_name":"C:\\xampp\\tmp\\php4397.tmp","error":0,"size":14643}}
+ERROR: Prepare statement failed: Unknown column 'remaining_balance' in 'field list' in C:\xampp\htdocs\top_exchange\backend\update_payment.php on line 130
+2025-03-23 08:06:05 - Update payment request
+POST: {"username":"Jeff Santonia","month":"3","year":"2025","total_amount":"4795","current_balance":"50000","remaining_balance":"4795","payment_amount":"4795.00","payment_notes":"","payment_status":"Paid"}
+FILES: {"payment_proof":{"name":"youtube.png","type":"image\/png","tmp_name":"C:\\xampp\\tmp\\php918F.tmp","error":0,"size":4440}}
