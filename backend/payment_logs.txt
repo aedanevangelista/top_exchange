@@ -1,0 +1,11 @@
+Payment Processing Started: 2025-03-24 19:11:08
+Data received: username=Jeff Santonia, month=3, year=2025, amount=4795
+Current balance: 40615.00
+Transaction started
+Balance updated. New balance: 35820
+External Payment Processing Started: 2025-03-24 19:11:15
+Data received: username=Jeff Santonia, month=3, year=2025, amount=4795
+File details: name=file copie.png, size=14643, ext=png
+Upload directory ready: ../../payments/Jeff Santonia/March - 2025/
+File uploaded successfully: ../../payments/Jeff Santonia/March - 2025/proof_67e1a043c1a5a.png
+Transaction started
