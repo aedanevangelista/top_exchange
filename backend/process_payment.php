@@ -30,12 +30,23 @@ if ($amount <= 0) {
     exit;
 }
 
+// Check if the month is in the future (using fixed date: March 24, 2025)
+$current_date = new DateTime('2025-03-24');
+$check_date = new DateTime("$year-$month-01");
+$last_day_of_month = clone $check_date;
+$last_day_of_month->modify('last day of this month');
+
+if ($check_date > $current_date) {
+    echo json_encode(['success' => false, 'message' => 'Cannot make payments for future months']);
+    exit;
+}
+
 // Handle file upload
 $proof = $_FILES['proof'];
-$allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+$allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
 
 if (!in_array($proof['type'], $allowed_types)) {
-    echo json_encode(['success' => false, 'message' => 'Invalid file type. Only JPEG, PNG, and GIF are allowed.']);
+    echo json_encode(['success' => false, 'message' => 'Invalid file type. Only JPEG, JPG, PNG, and GIF are allowed.']);
     exit;
 }
 
@@ -96,23 +107,65 @@ try {
         throw new Exception("User not found");
     }
     
-    // Update the monthly payment
-    $sql = "UPDATE monthly_payments SET 
-            payment_status = 'For Approval', 
-            proof_image = ?,
-            remaining_balance = GREATEST(0, remaining_balance - ?)
+    // Get existing payment data
+    $sql = "SELECT payment_status, total_amount, remaining_balance FROM monthly_payments 
             WHERE username = ? AND month = ? AND year = ?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sdsii", $file_name, $amount, $username, $month, $year);
+    $stmt->bind_param("sii", $username, $month, $year);
     $stmt->execute();
+    $result = $stmt->get_result();
     
-    // If no rows updated, create a new monthly payment record
-    if ($stmt->affected_rows === 0) {
+    $total_amount = 0;
+    $remaining_balance = 0;
+    $payment_exists = false;
+    
+    if ($row = $result->fetch_assoc()) {
+        $payment_exists = true;
+        $total_amount = $row['total_amount'];
+        $remaining_balance = $row['remaining_balance'] !== null ? $row['remaining_balance'] : $row['total_amount'];
+    } else {
+        // Get total from orders if no payment record exists
+        $sql = "SELECT SUM(total_amount) as total_amount 
+               FROM orders 
+               WHERE username = ? AND MONTH(delivery_date) = ? 
+               AND YEAR(delivery_date) = ? AND status = 'Completed'";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("sii", $username, $month, $year);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($row = $result->fetch_assoc()) {
+            $total_amount = $row['total_amount'] ?: 0;
+            $remaining_balance = $total_amount;
+        }
+    }
+    
+    // Calculate new remaining balance
+    $new_remaining_balance = max(0, $remaining_balance - $amount);
+    
+    // Set payment status based on remaining balance
+    $payment_status = 'For Approval';
+    if ($new_remaining_balance <= 0) {
+        $payment_status = 'For Approval'; // Still need admin approval even if fully paid
+    }
+    
+    // If payment record exists, update it
+    if ($payment_exists) {
+        $sql = "UPDATE monthly_payments SET 
+                payment_status = ?, 
+                proof_image = ?,
+                remaining_balance = ?
+                WHERE username = ? AND month = ? AND year = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssdsis", $payment_status, $file_name, $new_remaining_balance, $username, $month, $year);
+        $stmt->execute();
+    } else {
+        // If no payment record exists, create one
         $sql = "INSERT INTO monthly_payments 
                 (username, month, year, total_amount, payment_status, proof_image, remaining_balance) 
-                VALUES (?, ?, ?, ?, 'For Approval', ?, 0)";
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("siisd", $username, $month, $year, $amount, $file_name);
+        $stmt->bind_param("siidssd", $username, $month, $year, $total_amount, $payment_status, $file_name, $new_remaining_balance);
         $stmt->execute();
     }
     
@@ -127,7 +180,7 @@ try {
             (username, month, year, amount, notes, proof_image, created_by) 
             VALUES (?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $created_by = $_SESSION['username'];
+    $created_by = $_SESSION['username'] ?? 'system';
     $stmt->bind_param("siidsss", $username, $month, $year, $amount, $notes, $file_name, $created_by);
     $stmt->execute();
     

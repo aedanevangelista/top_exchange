@@ -26,6 +26,18 @@ if ($amount <= 0) {
 $conn->begin_transaction();
 
 try {
+    // Create balance_history table if it doesn't exist
+    $conn->query("
+        CREATE TABLE IF NOT EXISTS balance_history (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(255) NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            notes TEXT,
+            created_by VARCHAR(100),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    
     // Update client balance
     $sql = "UPDATE clients_accounts SET balance = balance + ? WHERE username = ?";
     $stmt = $conn->prepare($sql);
@@ -36,10 +48,10 @@ try {
         throw new Exception("User not found or no changes made");
     }
     
-    // Log the balance addition in a separate table if needed
+    // Log the balance addition in balance_history table
     $sql = "INSERT INTO balance_history (username, amount, notes, created_by) VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $created_by = $_SESSION['username'];
+    $created_by = $_SESSION['username'] ?? 'system';
     $stmt->bind_param("sdss", $username, $amount, $notes, $created_by);
     $stmt->execute();
     

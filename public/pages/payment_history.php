@@ -65,17 +65,17 @@ if ($result && $result->num_rows > 0) {
             margin-right: 5px;
         }
 
-        .view-button, .status-toggle, .pay-button {
+        .view-button, .status-toggle {
             border-radius: 80px;
         }
 
-        .status-toggle.disabled, .pay-button.disabled {
+        .view-button.disabled, .status-toggle.disabled {
             background-color: lightgray !important;
             cursor: not-allowed;
             opacity: 0.6;
         }
 
-        .payment-status-disabled {
+        .payment-status-disabled, .payment-status-pending {
             color: lightgray;
             font-style: italic;
         }
@@ -277,6 +277,10 @@ if ($result && $result->num_rows > 0) {
 
         .status-paid {
             background-color: #28a745;
+        }
+
+        .status-pending {
+            background-color: #6c757d;
         }
 
         /* Preview image */
@@ -523,6 +527,11 @@ if ($result && $result->num_rows > 0) {
     let availableYears = [];
     let currentYear = new Date().getFullYear();
     let currentUserBalance = 0;
+    
+    // Current date for comparison in UTC (as per the user's timestamp: 2025-03-24 05:53:26)
+    const currentDate = new Date('2025-03-24T05:53:26Z');
+    const currentYearValue = currentDate.getFullYear();
+    const currentMonthValue = currentDate.getMonth(); // 0-based index
 
     function viewPaymentHistory(username, balance) {
         $('#modalUsername').text(username);
@@ -632,14 +641,13 @@ if ($result && $result->num_rows > 0) {
             success: function(response) {
                 if (!response.success || !response.data || response.data.length === 0) {
                     // If no years found, default to current year
-                    currentYear = new Date().getFullYear();
+                    currentYear = currentYearValue;
                     availableYears = [currentYear];
                 } else {
                     availableYears = response.data;
                     // Ensure current year is included if it's not in the response
-                    const thisYear = new Date().getFullYear();
-                    if (!availableYears.includes(thisYear)) {
-                        availableYears.push(thisYear);
+                    if (!availableYears.includes(currentYearValue)) {
+                        availableYears.push(currentYearValue);
                     }
                 }
                 
@@ -653,7 +661,7 @@ if ($result && $result->num_rows > 0) {
             },
             error: function(xhr, status, error) {
                 console.error('Ajax Error:', error);
-                currentYear = new Date().getFullYear();
+                currentYear = currentYearValue;
                 availableYears = [currentYear, currentYear - 1]; // Default to current year and previous year
                 
                 // Generate year tabs
@@ -711,11 +719,6 @@ if ($result && $result->num_rows > 0) {
 
                 const payments = response.data || [];
                 
-                // Current date for comparison (using March 23, 2025 as fixed date)
-                const currentDate = new Date('2025-03-23');
-                const currentYear = currentDate.getFullYear();
-                const currentMonth = currentDate.getMonth(); // 0-based index
-
                 // Use the months array defined at the top of the script
                 months.forEach((month, index) => {
                     const monthData = payments.find(p => p.month === index + 1) || {
@@ -725,23 +728,36 @@ if ($result && $result->num_rows > 0) {
                         proof_image: null
                     };
 
-                    // Calculate remaining balance
-                    const remainingBalance = monthData.remaining_balance || monthData.total_amount;
+                    // Ensure remaining balance is set correctly
+                    let remainingBalance = parseFloat(monthData.remaining_balance);
+                    if (monthData.payment_status === 'Paid') {
+                        remainingBalance = 0;
+                    } else if (remainingBalance === 0 && parseFloat(monthData.total_amount) > 0) {
+                        // If remaining balance is 0 but payment isn't Paid and there's a total amount
+                        remainingBalance = parseFloat(monthData.total_amount);
+                    }
 
-                    // Check if the month is in the future
-                    const isDisabled = (year > currentYear) || 
-                                     (year === currentYear && index > currentMonth);
+                    // Check if the month is in the future or current month
+                    const isFutureMonth = (year > currentYearValue) || 
+                                     (year === currentYearValue && index > currentMonthValue);
                     
-                    const statusClass = isDisabled ? 'payment-status-disabled' : 
+                    // Determine the correct status to display
+                    let displayStatus = monthData.payment_status;
+                    if (isFutureMonth) {
+                        displayStatus = 'Pending';
+                    }
+                    
+                    const statusClass = isFutureMonth ? 'payment-status-pending' : 
                                       `payment-status-${monthData.payment_status.toLowerCase().replace(/\s+/g, '')}`;
                     
-                    const changeStatusButtonClass = isDisabled ? 'status-toggle disabled' : 
-                                                  'status-toggle';
+                    // Determine button status and classes
+                    const viewOrdersButtonDisabled = false; // Allow viewing orders even for future months
+                    const payButtonDisabled = isFutureMonth || monthData.payment_status === 'Paid' || parseFloat(monthData.total_amount) === 0;
+                    const statusButtonDisabled = isFutureMonth;
                     
-                    const payButtonClass = isDisabled ? 'pay-button disabled' :
-                                         (monthData.payment_status === 'Paid' ? 'pay-button disabled' : 'pay-button');
-                    
-                    const statusText = isDisabled ? 'Pending' : monthData.payment_status;
+                    const viewOrdersBtnClass = viewOrdersButtonDisabled ? 'view-button disabled' : 'view-button';
+                    const payBtnClass = payButtonDisabled ? 'view-button disabled' : 'view-button';
+                    const statusBtnClass = statusButtonDisabled ? 'status-toggle disabled' : 'status-toggle';
 
                     // Proof image
                     let proofHtml = 'No proof';
@@ -752,37 +768,38 @@ if ($result && $result->num_rows > 0) {
                                     alt="Payment Proof">`;
                     }
                     
+                    const tooltip = isFutureMonth ? 'Month has not ended yet' : 
+                                   (monthData.payment_status === 'Paid' ? 'Already paid' : 
+                                   (parseFloat(monthData.total_amount) === 0 ? 'No orders to pay' : 'Make payment'));
+                    
                     monthlyPaymentsHtml += `
                         <tr>
                             <td>${month}</td>
                             <td>
-                                <button class="view-button" onclick="viewMonthlyOrders('${currentUsername}', ${index + 1}, '${month}', ${year})">
+                                <button class="${viewOrdersBtnClass}" onclick="viewMonthlyOrders('${currentUsername}', ${index + 1}, '${month}', ${year})">
                                     <i class="fas fa-clipboard-list"></i>
-                                    View Orders List
+                                    View Orders
                                 </button>
                             </td>
                             <td>PHP ${numberFormat(monthData.total_amount)}</td>
                             <td>PHP ${numberFormat(remainingBalance)}</td>
                             <td>${proofHtml}</td>
-                            <td class="${statusClass}">${statusText}</td>
+                            <td class="${statusClass}">${displayStatus}</td>
                             <td>
-                                <div style="display: flex; gap: 5px;">
-                                    <button class="${payButtonClass}"
-                                            ${isDisabled || monthData.payment_status === 'Paid' ? 'disabled' : ''}
-                                            onclick="openPaymentModal('${currentUsername}', ${index + 1}, ${year}, ${remainingBalance})"
-                                            title="${isDisabled ? 'Cannot pay for future months' : 
-                                                  (monthData.payment_status === 'Paid' ? 'Already paid' : 'Make payment')}">
-                                        <i class="fas fa-credit-card"></i>
-                                        Pay
-                                    </button>
-                                    <button class="${changeStatusButtonClass}"
-                                            ${isDisabled ? 'disabled' : ''}
-                                            onclick="${isDisabled ? '' : `openChangeStatusModal('${currentUsername}', ${index + 1}, ${year}, '${monthData.payment_status}')`}"
-                                            title="${isDisabled ? 'Cannot change status for future months' : 'Click to change status'}">
-                                        <i class="fas fa-exchange-alt"></i>
-                                        Status
-                                    </button>
-                                </div>
+                                <button class="${payBtnClass}" 
+                                        ${payButtonDisabled ? 'disabled' : ''}
+                                        onclick="${payButtonDisabled ? '' : `openPaymentModal('${currentUsername}', ${index + 1}, ${year}, ${remainingBalance})`}"
+                                        title="${tooltip}">
+                                    <i class="fas fa-credit-card"></i>
+                                    Pay
+                                </button>
+                                <button class="${statusBtnClass}"
+                                        ${statusButtonDisabled ? 'disabled' : ''}
+                                        onclick="${statusButtonDisabled ? '' : `openChangeStatusModal('${currentUsername}', ${index + 1}, ${year}, '${monthData.payment_status}')`}"
+                                        title="${statusButtonDisabled ? 'Month has not ended yet' : 'Click to change status'}">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    Status
+                                </button>
                             </td>
                         </tr>
                     `;
@@ -843,6 +860,9 @@ if ($result && $result->num_rows > 0) {
         formData.append('notes', notes);
         formData.append('proof', fileInput.files[0]);
         
+        // Show loading indicator
+        $('#paymentModal .submit-btn').prop('disabled', true).text('Processing...');
+        
         $.ajax({
             url: '../../backend/process_payment.php',
             method: 'POST',
@@ -851,6 +871,9 @@ if ($result && $result->num_rows > 0) {
             contentType: false,
             processData: false,
             success: function(response) {
+                // Reset button
+                $('#paymentModal .submit-btn').prop('disabled', false).text('Submit Payment');
+                
                 if (response.success) {
                     // Update the user balance
                     currentUserBalance = parseFloat(response.new_balance);
@@ -880,8 +903,13 @@ if ($result && $result->num_rows > 0) {
                 }
             },
             error: function(xhr, status, error) {
+                // Reset button
+                $('#paymentModal .submit-btn').prop('disabled', false).text('Submit Payment');
+                
                 console.error('Ajax Error:', error);
-                alert('Error processing payment. Please try again.');
+                console.error('Status Code:', xhr.status);
+                console.error('Response Text:', xhr.responseText);
+                alert(`Error processing payment. Status: ${xhr.status}. Please check the server logs.`);
             }
         });
     }
@@ -921,6 +949,9 @@ if ($result && $result->num_rows > 0) {
             return;
         }
         
+        // Show loading indicator
+        $('#changeStatusModal .submit-btn').prop('disabled', true).text('Updating...');
+        
         $.ajax({
             url: '../../backend/update_payment_status.php',
             method: 'POST',
@@ -932,6 +963,9 @@ if ($result && $result->num_rows > 0) {
             },
             dataType: 'json',
             success: function(response) {
+                // Reset button
+                $('#changeStatusModal .submit-btn').prop('disabled', false).text('Update Status');
+                
                 if (response.success) {
                     // Reload the current year data
                     loadYearData(currentYear, true);
@@ -942,7 +976,12 @@ if ($result && $result->num_rows > 0) {
                 }
             },
             error: function(xhr, status, error) {
+                // Reset button
+                $('#changeStatusModal .submit-btn').prop('disabled', false).text('Update Status');
+                
                 console.error('Ajax Error:', error);
+                console.error('Status Code:', xhr.status);
+                console.error('Response Text:', xhr.responseText);
                 alert('Error updating status. Please try again.');
             }
         });
@@ -1078,7 +1117,7 @@ if ($result && $result->num_rows > 0) {
     }
 
     function numberFormat(number) {
-        return parseFloat(number).toLocaleString(undefined, {
+        return parseFloat(number || 0).toLocaleString(undefined, {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });

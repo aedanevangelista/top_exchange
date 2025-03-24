@@ -24,9 +24,17 @@ if ($month < 1 || $month > 12) {
 }
 
 // Validate status
-$allowed_statuses = ['Unpaid', 'For Approval', 'Paid'];
+$allowed_statuses = ['Unpaid', 'For Approval', 'Paid', 'Pending'];
 if (!in_array($status, $allowed_statuses)) {
     echo json_encode(['success' => false, 'message' => 'Invalid status']);
+    exit;
+}
+
+// Check if the month is in the future (using fixed date: March 24, 2025)
+$current_date = new DateTime('2025-03-24');
+$check_date = new DateTime("$year-$month-01");
+if ($check_date > $current_date && $month != $current_date->format('n')) {
+    echo json_encode(['success' => false, 'message' => 'Cannot update status for future months']);
     exit;
 }
 
@@ -56,10 +64,9 @@ try {
         }
     }
     
-    // Update balance if status changes to/from Paid
+    // Update based on the new status
     if ($status !== $current_status) {
-        // Only adjust balance if the status is changing to/from "Paid"
-        if ($status === 'Paid' && $current_status !== 'Paid') {
+        if ($status === 'Paid') {
             // If changing to Paid, make sure remaining_balance is 0
             $sql = "UPDATE monthly_payments 
                     SET payment_status = ?, remaining_balance = 0
@@ -67,18 +74,16 @@ try {
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssii", $status, $username, $month, $year);
             $stmt->execute();
-            
-        } else if ($status !== 'Paid' && $current_status === 'Paid') {
-            // If changing from Paid, restore the original total_amount as remaining_balance
+        } else if ($status === 'Unpaid' && ($current_status === 'Paid' || $current_status === 'For Approval')) {
+            // If changing from Paid/ForApproval to Unpaid, restore the original total_amount as remaining_balance
             $sql = "UPDATE monthly_payments 
                     SET payment_status = ?, remaining_balance = total_amount
                     WHERE username = ? AND month = ? AND year = ?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssii", $status, $username, $month, $year);
             $stmt->execute();
-            
         } else {
-            // Just update the status without changing the remaining_balance
+            // For other status changes, just update the status
             $sql = "UPDATE monthly_payments 
                     SET payment_status = ? 
                     WHERE username = ? AND month = ? AND year = ?";
@@ -90,11 +95,29 @@ try {
     
     // If no rows updated, create a new monthly payment record with the given status
     if ($stmt->affected_rows === 0) {
+        // First get total amount from completed orders for this month
+        $orders_sql = "SELECT SUM(total_amount) as total_amount 
+                      FROM orders 
+                      WHERE username = ? AND MONTH(delivery_date) = ? 
+                      AND YEAR(delivery_date) = ? AND status = 'Completed'";
+        $orders_stmt = $conn->prepare($orders_sql);
+        $orders_stmt->bind_param("sii", $username, $month, $year);
+        $orders_stmt->execute();
+        $orders_result = $orders_stmt->get_result();
+        $total_amount = 0;
+        
+        if ($orders_row = $orders_result->fetch_assoc()) {
+            $total_amount = $orders_row['total_amount'] ?: 0;
+        }
+        
+        // Set remaining_balance based on status
+        $remaining_balance = ($status === 'Paid') ? 0 : $total_amount;
+        
         $sql = "INSERT INTO monthly_payments 
                 (username, month, year, total_amount, payment_status, remaining_balance) 
-                VALUES (?, ?, ?, 0, ?, 0)";
+                VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("siis", $username, $month, $year, $status);
+        $stmt->bind_param("siissd", $username, $month, $year, $total_amount, $status, $remaining_balance);
         $stmt->execute();
     }
     
