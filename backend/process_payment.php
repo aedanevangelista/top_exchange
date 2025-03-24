@@ -77,6 +77,10 @@ $file_extension = pathinfo($proof['name'], PATHINFO_EXTENSION);
 $file_name = "payment_" . time() . "." . $file_extension;
 $file_path = "$dir_path/$file_name";
 
+// Check if notes column exists
+$check_notes_column = "SHOW COLUMNS FROM monthly_payments LIKE 'notes'";
+$notes_column_exists = $conn->query($check_notes_column)->num_rows > 0;
+
 // Begin transaction
 $conn->begin_transaction();
 
@@ -151,21 +155,41 @@ try {
     
     // If payment record exists, update it
     if ($payment_exists) {
-        $sql = "UPDATE monthly_payments SET 
-                payment_status = ?, 
-                proof_image = ?,
-                remaining_balance = ?
-                WHERE username = ? AND month = ? AND year = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssdsis", $payment_status, $file_name, $new_remaining_balance, $username, $month, $year);
+        // Check if notes column exists and include it in the update
+        if ($notes_column_exists) {
+            $sql = "UPDATE monthly_payments SET 
+                    payment_status = ?, 
+                    proof_image = ?,
+                    remaining_balance = ?,
+                    notes = ?
+                    WHERE username = ? AND month = ? AND year = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("ssdssis", $payment_status, $file_name, $new_remaining_balance, $notes, $username, $month, $year);
+        } else {
+            $sql = "UPDATE monthly_payments SET 
+                    payment_status = ?, 
+                    proof_image = ?,
+                    remaining_balance = ?
+                    WHERE username = ? AND month = ? AND year = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("ssdsii", $payment_status, $file_name, $new_remaining_balance, $username, $month, $year);
+        }
         $stmt->execute();
     } else {
         // If no payment record exists, create one
-        $sql = "INSERT INTO monthly_payments 
-                (username, month, year, total_amount, payment_status, proof_image, remaining_balance) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("siidssd", $username, $month, $year, $total_amount, $payment_status, $file_name, $new_remaining_balance);
+        if ($notes_column_exists) {
+            $sql = "INSERT INTO monthly_payments 
+                    (username, month, year, total_amount, payment_status, proof_image, remaining_balance, notes) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("siidssds", $username, $month, $year, $total_amount, $payment_status, $file_name, $new_remaining_balance, $notes);
+        } else {
+            $sql = "INSERT INTO monthly_payments 
+                    (username, month, year, total_amount, payment_status, proof_image, remaining_balance) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("siidssd", $username, $month, $year, $total_amount, $payment_status, $file_name, $new_remaining_balance);
+        }
         $stmt->execute();
     }
     
@@ -176,12 +200,21 @@ try {
     $stmt->execute();
     
     // Log the payment
-    $sql = "INSERT INTO payment_history 
-            (username, month, year, amount, notes, proof_image, created_by) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-    $created_by = $_SESSION['username'] ?? 'system';
-    $stmt->bind_param("siidsss", $username, $month, $year, $amount, $notes, $file_name, $created_by);
+    if ($notes_column_exists) {
+        $sql = "INSERT INTO payment_history 
+                (username, month, year, amount, notes, proof_image, created_by) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $created_by = $_SESSION['username'] ?? 'system';
+        $stmt->bind_param("siidsss", $username, $month, $year, $amount, $notes, $file_name, $created_by);
+    } else {
+        $sql = "INSERT INTO payment_history 
+                (username, month, year, amount, proof_image, created_by) 
+                VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $created_by = $_SESSION['username'] ?? 'system';
+        $stmt->bind_param("siidss", $username, $month, $year, $amount, $file_name, $created_by);
+    }
     $stmt->execute();
     
     // Get the new balance

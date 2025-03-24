@@ -398,6 +398,43 @@ if ($result && $result->num_rows > 0) {
             max-width: 180px;
             text-align: center;
         }
+        
+        /* Notes styling */
+        .payment-notes {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .payment-notes-tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+        
+        .payment-notes-tooltip .notes-tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: normal;
+        }
+        
+        .payment-notes-tooltip:hover .notes-tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
 
         /* Responsive styling */
         @media (max-width: 768px) {
@@ -500,6 +537,7 @@ if ($result && $result->num_rows > 0) {
                             <th>Total Amount</th>
                             <th>Remaining Balance</th>
                             <th>Proof</th>
+                            <th>Notes</th>
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
@@ -651,8 +689,8 @@ if ($result && $result->num_rows > 0) {
     let currentYear = new Date().getFullYear();
     let currentUserBalance = 0;
     
-    // Current date for comparison in UTC (as per the user's timestamp: 2025-03-24 06:13:38)
-    const currentDate = new Date('2025-03-24T06:13:38Z');
+    // Current date for comparison in UTC (as per the user's timestamp: 2025-03-24 11:07:35)
+    const currentDate = new Date('2025-03-24T11:07:35Z');
     const currentYearValue = currentDate.getFullYear();
     const currentMonthValue = currentDate.getMonth(); // 0-based index
 
@@ -749,7 +787,7 @@ if ($result && $result->num_rows > 0) {
     function fetchAvailableYears(username, refreshData = false) {
         // Show loading state
         $('#yearTabs').html('<div>Loading years...</div>');
-        $('#monthlyPaymentsBody').html('<tr><td colspan="7">Please select a year...</td></tr>');
+        $('#monthlyPaymentsBody').html('<tr><td colspan="8">Please select a year...</td></tr>');
         $('#monthlyPaymentsModal').show();
         
         // Add cache-busting parameter to prevent browser caching
@@ -758,7 +796,7 @@ if ($result && $result->num_rows > 0) {
         $.ajax({
             url: `../../backend/get_available_years.php?username=${username}${cacheBuster}`,
             method: 'GET',
-            data: { username: username },
+            // Removed duplicate data parameter
             dataType: 'json',
             cache: false, // Prevent caching
             success: function(response) {
@@ -817,7 +855,7 @@ if ($result && $result->num_rows > 0) {
         currentYear = year;
         
         // Show loading state
-        $('#monthlyPaymentsBody').html('<tr><td colspan="7">Loading...</td></tr>');
+        $('#monthlyPaymentsBody').html('<tr><td colspan="8">Loading...</td></tr>');
         
         console.log('Fetching payments for:', currentUsername, year);
 
@@ -827,7 +865,7 @@ if ($result && $result->num_rows > 0) {
         $.ajax({
             url: `../../backend/get_monthly_payments.php?username=${currentUsername}&year=${year}${cacheBuster}`,
             method: 'GET',
-            data: { username: currentUsername, year: year },
+            // Removed duplicate data parameter
             dataType: 'json',
             cache: false,
             success: function(response) {
@@ -835,7 +873,7 @@ if ($result && $result->num_rows > 0) {
                 
                 if (!response.success) {
                     $('#monthlyPaymentsBody').html(
-                        `<tr><td colspan="7" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
+                        `<tr><td colspan="8" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
                     );
                     return;
                 }
@@ -848,7 +886,8 @@ if ($result && $result->num_rows > 0) {
                         total_amount: 0,
                         payment_status: 'Unpaid',
                         remaining_balance: 0,
-                        proof_image: null
+                        proof_image: null,
+                        notes: ''
                     };
 
                     // Ensure remaining balance is set correctly
@@ -891,6 +930,21 @@ if ($result && $result->num_rows > 0) {
                                     alt="Payment Proof">`;
                     }
                     
+                    // Notes with tooltip for longer notes
+                    let notesHtml = 'None';
+                    if (monthData.notes && monthData.notes.trim() !== '') {
+                        const notesText = monthData.notes.trim();
+                        if (notesText.length > 25) {
+                            notesHtml = `
+                                <div class="payment-notes-tooltip">
+                                    <span class="payment-notes">${notesText.substring(0, 25)}...</span>
+                                    <span class="notes-tooltip-text">${notesText}</span>
+                                </div>`;
+                        } else {
+                            notesHtml = `<span class="payment-notes">${notesText}</span>`;
+                        }
+                    }
+                    
                     const tooltip = isFutureMonth ? 'Month has not ended yet' : 
                                    (monthData.payment_status === 'Paid' ? 'Already paid' : 
                                    (parseFloat(monthData.total_amount) === 0 ? 'No orders to pay' : 'Make payment'));
@@ -907,6 +961,7 @@ if ($result && $result->num_rows > 0) {
                             <td>PHP ${numberFormat(monthData.total_amount)}</td>
                             <td>PHP ${numberFormat(remainingBalance)}</td>
                             <td>${proofHtml}</td>
+                            <td>${notesHtml}</td>
                             <td class="${statusClass}">${displayStatus}</td>
                             <td>
                                 <div class="action-buttons">
@@ -937,7 +992,7 @@ if ($result && $result->num_rows > 0) {
                 console.error('Response:', xhr.responseText);
                 console.error('Status:', status);
                 $('#monthlyPaymentsBody').html(
-                    '<tr><td colspan="7" style="color: red;">Error loading payment history. Please try again.</td></tr>'
+                    '<tr><td colspan="8" style="color: red;">Error loading payment history. Please try again.</td></tr>'
                 );
             }
         });
@@ -1152,11 +1207,7 @@ if ($result && $result->num_rows > 0) {
         $.ajax({
             url: `../../backend/get_monthly_orders.php?username=${username}&month=${month}&year=${year}${cacheBuster}`,
             method: 'GET',
-            data: { 
-                username: username, 
-                month: month,
-                year: year
-            },
+            // Removed duplicate data parameter
             dataType: 'json',
             cache: false,
             success: function(response) {

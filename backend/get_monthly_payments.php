@@ -37,16 +37,33 @@ try {
         $monthly_order_totals[$row['order_month']] = $row['total_amount'];
     }
     
+    // Verify if monthly_payments table has notes column
+    $check_notes_column = "SHOW COLUMNS FROM monthly_payments LIKE 'notes'";
+    $notes_column_exists = $conn->query($check_notes_column)->num_rows > 0;
+    
     // Now get monthly payments data
-    $sql = "SELECT 
-                mp.month, 
-                mp.total_amount, 
-                mp.payment_status,
-                mp.remaining_balance,
-                mp.proof_image
-            FROM monthly_payments mp
-            WHERE mp.username = ? AND mp.year = ?
-            ORDER BY mp.month";
+    if ($notes_column_exists) {
+        $sql = "SELECT 
+                    mp.month, 
+                    mp.total_amount, 
+                    mp.payment_status,
+                    mp.remaining_balance,
+                    mp.proof_image,
+                    mp.notes
+                FROM monthly_payments mp
+                WHERE mp.username = ? AND mp.year = ?
+                ORDER BY mp.month";
+    } else {
+        $sql = "SELECT 
+                    mp.month, 
+                    mp.total_amount, 
+                    mp.payment_status,
+                    mp.remaining_balance,
+                    mp.proof_image
+                FROM monthly_payments mp
+                WHERE mp.username = ? AND mp.year = ?
+                ORDER BY mp.month";
+    }
     
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("si", $username, $year);
@@ -62,7 +79,8 @@ try {
             'total_amount' => isset($monthly_order_totals[$i]) ? $monthly_order_totals[$i] : 0,
             'payment_status' => 'Unpaid',
             'remaining_balance' => isset($monthly_order_totals[$i]) ? $monthly_order_totals[$i] : 0,
-            'proof_image' => null
+            'proof_image' => null,
+            'notes' => ''
         ];
         
         $payments[$i] = $payment_data;
@@ -114,6 +132,11 @@ try {
                 $update_paid_stmt = $conn->prepare($update_paid_sql);
                 $update_paid_stmt->bind_param("sii", $username, $month, $year);
                 $update_paid_stmt->execute();
+            }
+            
+            // Handle notes field if it doesn't exist in result
+            if (!isset($row['notes'])) {
+                $row['notes'] = '';
             }
             
             $payments[$month] = $row;
