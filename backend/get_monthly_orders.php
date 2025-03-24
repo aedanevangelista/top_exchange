@@ -30,6 +30,7 @@ try {
                 po_number,
                 order_date,
                 delivery_date,
+                delivery_address,
                 orders,
                 total_amount
             FROM orders 
@@ -50,6 +51,7 @@ try {
             'po_number' => $row['po_number'],
             'order_date' => $row['order_date'],
             'delivery_date' => $row['delivery_date'],
+            'delivery_address' => $row['delivery_address'],
             'orders' => $row['orders'],
             'total_amount' => floatval($row['total_amount'])
         ];

@@ -435,6 +435,19 @@ if ($result && $result->num_rows > 0) {
             visibility: visible;
             opacity: 1;
         }
+        
+        /* Delivery Address styling */
+        .delivery-address {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .delivery-address:hover {
+            white-space: normal;
+            overflow: visible;
+        }
 
         /* Responsive styling */
         @media (max-width: 768px) {
@@ -559,6 +572,7 @@ if ($result && $result->num_rows > 0) {
                             <th>PO Number</th>
                             <th>Order Date</th>
                             <th>Delivery Date</th>
+                            <th>Delivery Address</th>
                             <th>Orders</th>
                             <th>Total Amount</th>
                         </tr>
@@ -689,8 +703,8 @@ if ($result && $result->num_rows > 0) {
     let currentYear = new Date().getFullYear();
     let currentUserBalance = 0;
     
-    // Current date for comparison in UTC (as per the user's timestamp: 2025-03-24 11:07:35)
-    const currentDate = new Date('2025-03-24T11:07:35Z');
+    // Current date for comparison in UTC (as per the user's timestamp: 2025-03-24 17:35:50)
+    const currentDate = new Date('2025-03-24T17:35:50Z');
     const currentYearValue = currentDate.getFullYear();
     const currentMonthValue = currentDate.getMonth(); // 0-based index
 
@@ -1222,13 +1236,17 @@ if ($result && $result->num_rows > 0) {
                 let ordersHtml = '';
                 if (orders && orders.length > 0) {
                     orders.forEach(order => {
+                        // Handle delivery address with proper escaping and default value
+                        const deliveryAddress = order.delivery_address ? escapeHtml(order.delivery_address) : 'Not specified';
+                        
                         ordersHtml += `
                             <tr>
                                 <td>${order.po_number}</td>
                                 <td>${order.order_date}</td>
                                 <td>${order.delivery_date}</td>
+                                <td class="delivery-address">${deliveryAddress}</td>
                                 <td>
-                                    <button class="view-button" onclick="viewOrderDetails(${JSON.stringify(order.orders).replace(/"/g, '&quot;')}, '${order.po_number}', '${username}')">
+                                    <button class="view-button" onclick="viewOrderDetails(${JSON.stringify(order.orders).replace(/"/g, '&quot;')}, '${order.po_number}', '${username}', '${deliveryAddress}')">
                                         View Orders
                                     </button>
                                 </td>
@@ -1237,7 +1255,7 @@ if ($result && $result->num_rows > 0) {
                         `;
                     });
                 } else {
-                    ordersHtml = '<tr><td colspan="5">No orders found for this month</td></tr>';
+                    ordersHtml = '<tr><td colspan="6">No orders found for this month</td></tr>';
                 }
 
                 $('#monthlyOrdersBody').html(ordersHtml);
@@ -1246,13 +1264,13 @@ if ($result && $result->num_rows > 0) {
             error: function(xhr, status, error) {
                 console.error('Ajax Error:', error);
                 $('#monthlyOrdersBody').html(
-                    '<tr><td colspan="5" style="color: red;">Error loading orders. Please try again.</td></tr>'
+                    '<tr><td colspan="6" style="color: red;">Error loading orders. Please try again.</td></tr>'
                 );
             }
         });
     }
 
-    function viewOrderDetails(orders, poNumber, username) {
+    function viewOrderDetails(orders, poNumber, username, deliveryAddress = '') {
         try {
             // If orders is a string, parse it, otherwise use it as is
             const ordersList = typeof orders === 'string' ? JSON.parse(orders) : orders;
@@ -1261,6 +1279,7 @@ if ($result && $result->num_rows > 0) {
                 <div id="orderDetailsHeader">
                     <p><strong>PO Number:</strong> ${poNumber}</p>
                     <p><strong>Username:</strong> ${username}</p>
+                    <p><strong>Delivery Address:</strong> ${deliveryAddress || 'Not specified'}</p>
                 </div>
                 <table class="orders-table">
                     <thead>
@@ -1307,6 +1326,13 @@ if ($result && $result->num_rows > 0) {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
+    }
+    
+    // Helper function to escape HTML special characters
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     // Close modal when clicking outside

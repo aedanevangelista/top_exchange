@@ -6,14 +6,16 @@ checkRole('Orders'); // Ensure the user has access to the Orders page
 
 // Fetch active clients for the dropdown
 $clients = [];
-$stmt = $conn->prepare("SELECT username FROM clients_accounts WHERE status = 'active'");
+$clients_with_company_address = []; // Array to store clients with their company addresses
+$stmt = $conn->prepare("SELECT username, company_address FROM clients_accounts WHERE status = 'active'");
 if ($stmt === false) {
     die('Prepare failed: ' . htmlspecialchars($conn->error));
 }
 $stmt->execute();
-$stmt->bind_result($username);
+$stmt->bind_result($username, $company_address);
 while ($stmt->fetch()) {
     $clients[] = $username;
+    $clients_with_company_address[$username] = $company_address;
 }
 $stmt->close();
 
@@ -22,7 +24,7 @@ $status_filter = $_GET['status'] ?? '';
 
 // Fetch orders for display in the table
 $orders = []; // Initialize $orders as an empty array
-$sql = "SELECT po_number, username, order_date, delivery_date, orders, total_amount, status FROM orders WHERE status != 'Completed'";
+$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status FROM orders WHERE status != 'Completed'";
 if (!empty($status_filter)) {
     $sql .= " AND status = ?";
 }
@@ -89,6 +91,7 @@ if ($result && $result->num_rows > 0) {
                         <th>Username</th>
                         <th>Order Date</th>
                         <th>Delivery Date</th>
+                        <th>Delivery Address</th>
                         <th>Orders</th>
                         <th>Total Amount</th>
                         <th>Status</th>
@@ -103,6 +106,7 @@ if ($result && $result->num_rows > 0) {
                                 <td><?= htmlspecialchars($order['username']) ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
+                                <td><?= htmlspecialchars($order['delivery_address']) ?></td>
                                 <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
                                 <i class="fas fa-clipboard-list"></i>    
                                 View Orders</button></td>
@@ -136,7 +140,7 @@ if ($result && $result->num_rows > 0) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="no-orders">No orders found.</td>
+                            <td colspan="9" class="no-orders">No orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -157,13 +161,31 @@ if ($result && $result->num_rows > 0) {
                     <select id="username" name="username" required onchange="generatePONumber()">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
-                            <option value="<?= htmlspecialchars($client) ?>"><?= htmlspecialchars($client) ?></option>
+                            <option value="<?= htmlspecialchars($client) ?>" data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"><?= htmlspecialchars($client) ?></option>
                         <?php endforeach; ?>
                     </select>
                     <label for="order_date">Order Date:</label>
                     <input type="text" id="order_date" name="order_date" readonly>
                     <label for="delivery_date">Delivery Date:</label>
                     <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
+                    
+                    <!-- New Delivery Address selection -->
+                    <label for="delivery_address_type">Delivery Address:</label>
+                    <select id="delivery_address_type" name="delivery_address_type" onchange="toggleDeliveryAddress()">
+                        <option value="company">Company Address</option>
+                        <option value="custom">Custom Address</option>
+                    </select>
+                    
+                    <div id="company_address_container">
+                        <input type="text" id="company_address" name="company_address" readonly placeholder="Company address will appear here">
+                    </div>
+                    
+                    <div id="custom_address_container" style="display: none;">
+                        <textarea id="custom_address" name="custom_address" rows="3" placeholder="Enter delivery address"></textarea>
+                    </div>
+                    
+                    <input type="hidden" name="delivery_address" id="delivery_address">
+                    
                     <div class="centered-button">
                         <button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()">
                             <i class="fas fa-box-open"></i> Select Products

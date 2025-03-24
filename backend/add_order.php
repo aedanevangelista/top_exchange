@@ -9,6 +9,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $username = $_POST['username'];
         $order_date = $_POST['order_date'];
         $delivery_date = $_POST['delivery_date'];
+        $delivery_address = $_POST['delivery_address']; // New field for delivery address
         $po_number = $_POST['po_number'];
         $orders = $_POST['orders']; // Keep as JSON string
         $total_amount = $_POST['total_amount'];
@@ -19,17 +20,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Invalid order data format');
         }
 
-        // Insert into orders table
+        // Insert into orders table (now including delivery_address)
         $insertOrder = $conn->prepare("
-            INSERT INTO orders (username, order_date, delivery_date, po_number, orders, total_amount, status) 
-            VALUES (?, ?, ?, ?, ?, ?, 'Pending')
+            INSERT INTO orders (username, order_date, delivery_date, delivery_address, po_number, orders, total_amount, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')
         ");
 
         if ($insertOrder === false) {
             throw new Exception('Failed to prepare statement: ' . $conn->error);
         }
 
-        $insertOrder->bind_param("sssssd", $username, $order_date, $delivery_date, $po_number, $orders, $total_amount);
+        $insertOrder->bind_param("ssssssd", $username, $order_date, $delivery_date, $delivery_address, $po_number, $orders, $total_amount);
 
         if ($insertOrder->execute()) {
             echo json_encode([

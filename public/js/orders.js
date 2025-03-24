@@ -176,6 +176,26 @@ function populateCart() {
     }
 }
 
+// Function to toggle delivery address fields
+window.toggleDeliveryAddress = function() {
+    const addressType = $('#delivery_address_type').val();
+    if (addressType === 'company') {
+        $('#company_address_container').show();
+        $('#custom_address_container').hide();
+        
+        // Update hidden delivery address field with company address
+        const companyAddress = $('#company_address').val();
+        $('#delivery_address').val(companyAddress);
+    } else {
+        $('#company_address_container').hide();
+        $('#custom_address_container').show();
+        
+        // Update hidden delivery address field with custom address
+        const customAddress = $('#custom_address').val();
+        $('#delivery_address').val(customAddress);
+    }
+};
+
 // Global functions for modal operations
 window.openCartModal = function() {
     $('#cartModal').show();
@@ -208,12 +228,30 @@ window.generatePONumber = function() {
             data: { username: username },
             success: function(response) {
                 $('#po_number').val(response.po_number);
+                
+                // Update the company address field with the selected user's company address
+                const selectedOption = $('#username option:selected');
+                const companyAddress = selectedOption.data('company-address');
+                $('#company_address').val(companyAddress || 'No company address available');
+                
+                // If company address is selected, update the delivery address field
+                if ($('#delivery_address_type').val() === 'company') {
+                    $('#delivery_address').val(companyAddress || 'No company address available');
+                }
             }
         });
     }
 };
 
 window.prepareOrderData = function() {
+    // Update delivery address based on the selected type
+    const addressType = $('#delivery_address_type').val();
+    if (addressType === 'company') {
+        $('#delivery_address').val($('#company_address').val());
+    } else {
+        $('#delivery_address').val($('#custom_address').val());
+    }
+    
     const orderData = JSON.stringify(selectedProducts);
     $('#orders').val(orderData);
     const totalAmount = calculateCartTotal();
@@ -333,6 +371,18 @@ $(document).ready(function() {
     // Set current date for order_date
     $('#order_date').val(new Date().toISOString().split('T')[0]);
 
+    // Initialize delivery address type change handler
+    $('#delivery_address_type').change(function() {
+        toggleDeliveryAddress();
+    });
+
+    // Initialize custom address input change handler
+    $('#custom_address').on('input', function() {
+        if ($('#delivery_address_type').val() === 'custom') {
+            $('#delivery_address').val($(this).val());
+        }
+    });
+
     // Initialize inventory search and filter
     $('#inventorySearch').on('keyup', function() {
         const searchText = $(this).val().toLowerCase();
@@ -415,6 +465,13 @@ $(document).ready(function() {
         }
 
         prepareOrderData();
+        
+        // Validate delivery address
+        const deliveryAddress = $('#delivery_address').val();
+        if (!deliveryAddress || deliveryAddress.trim() === '') {
+            alert('Please provide a delivery address');
+            return;
+        }
         
         // Show a toast notification when saving the order
         const poNumber = $('#po_number').val();

@@ -6,7 +6,7 @@ checkRole('Order History'); // Updated from 'Transaction History'
 
 // Fetch completed orders for display
 $orders = []; // Initialize $orders as an empty array
-$sql = "SELECT po_number, username, order_date, delivery_date, orders, total_amount, status 
+$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status 
         FROM orders 
         WHERE status = 'Completed'
         ORDER BY order_date DESC";
@@ -94,6 +94,7 @@ if ($result && $result->num_rows > 0) {
                         <th>Username</th>
                         <th>Order Date</th>
                         <th>Delivery Date</th>
+                        <th>Delivery Address</th>
                         <th>Orders</th>
                         <th>Total Amount</th>
                         <th>Status</th>
@@ -107,9 +108,10 @@ if ($result && $result->num_rows > 0) {
                                 <td><?= htmlspecialchars($order['username']) ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
+                                <td><?= htmlspecialchars($order['delivery_address']) ?></td>
                                 <td>
                                     <button class="view-orders-btn" 
-                                            onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
+                                            onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>')">
                                         <i class="fas fa-clipboard-list"></i>
                                             View Orders
                                     </button>
@@ -120,7 +122,7 @@ if ($result && $result->num_rows > 0) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="7" class="no-orders">No completed transactions found.</td>
+                            <td colspan="8" class="no-orders">No completed transactions found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -133,6 +135,7 @@ if ($result && $result->num_rows > 0) {
         <div class="overlay-content">
             <h2><i class="fas fa-box-open"></i> Order Details</h2>
             <h3 id="orderDetailsHeader" style="margin-bottom: 20px; color: #666;"></h3>
+            <div id="orderDeliveryAddress" style="margin-bottom: 20px; color: #666;"></div>
             <div class="order-details-container">
                 <table class="order-details-table">
                     <thead>
@@ -159,14 +162,18 @@ if ($result && $result->num_rows > 0) {
 
     <script>
     // Define viewOrderDetails in global scope
-    function viewOrderDetails(orders, poNumber, username) {
+    function viewOrderDetails(orders, poNumber, username, deliveryAddress) {
     try {
         const orderDetails = JSON.parse(orders);
         const orderDetailsBody = $('#orderDetailsBody');
         const orderDetailsHeader = $('#orderDetailsHeader');
+        const orderDeliveryAddress = $('#orderDeliveryAddress');
         
         // Set the header with PO number and username
         orderDetailsHeader.html(`Transaction Details for PO: <strong>${poNumber}</strong> | Customer: <strong>${username}</strong>`);
+        
+        // Set the delivery address
+        orderDeliveryAddress.html(`Delivery Address: <strong>${deliveryAddress || 'Not specified'}</strong>`);
         
         orderDetailsBody.empty();
         

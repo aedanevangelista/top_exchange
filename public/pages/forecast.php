@@ -337,6 +337,19 @@ $navigation = getMonthNavigation($month, $year);
                 margin: 10% auto;
             }
         }
+        
+        /* Address styling */
+        .delivery-address {
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .delivery-address:hover {
+            white-space: normal;
+            overflow: visible;
+        }
     </style>
 </head>
 <body>
@@ -459,6 +472,7 @@ $navigation = getMonthNavigation($month, $year);
                             <th>PO Number</th>
                             <th>Username</th>
                             <th>Order Date</th>
+                            <th>Delivery Address</th>
                             <th>Orders</th>
                             <th>Total Amount</th>
                         </tr>
@@ -476,6 +490,10 @@ $navigation = getMonthNavigation($month, $year);
         <div class="modal-content">
             <span class="close-btn" onclick="closeOrderDetailsModal()">&times;</span>
             <h2 class="modal-date-header">Order Details</h2>
+            <div id="orderDetailsHeader" style="margin-bottom: 20px; text-align: center;">
+                <p id="orderPoNumber"></p>
+                <p id="orderDeliveryAddress"></p>
+            </div>
             <div class="orders-table-container">
                 <table class="orders-table">
                     <thead>
@@ -520,19 +538,22 @@ $navigation = getMonthNavigation($month, $year);
                     ordersTableBody.innerHTML = '';
                     
                     if (data.length === 0) {
-                        ordersTableBody.innerHTML = '<tr><td colspan="5">No orders for this date.</td></tr>';
+                        ordersTableBody.innerHTML = '<tr><td colspan="6">No orders for this date.</td></tr>';
                         return;
                     }
                     
                     data.forEach(order => {
                         const row = document.createElement('tr');
                         const orderJSON = JSON.stringify(order.orders).replace(/"/g, '&quot;');
+                        const poNumber = order.po_number;
+                        const deliveryAddress = order.delivery_address || 'Not specified';
                         
                         row.innerHTML = `
                             <td>${order.po_number}</td>
                             <td>${order.username}</td>
                             <td>${order.order_date}</td>
-                            <td><button class="view-orders-btn" onclick='viewOrderDetails(${orderJSON})'>
+                            <td class="delivery-address">${deliveryAddress}</td>
+                            <td><button class="view-orders-btn" onclick='viewOrderDetails(${orderJSON}, "${poNumber}", "${deliveryAddress}")'>
                                 <i class="fas fa-clipboard-list"></i> View Orders</button></td>
                             <td>PHP ${parseFloat(order.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         `;
@@ -541,10 +562,45 @@ $navigation = getMonthNavigation($month, $year);
                 })
                 .catch(error => {
                     console.error('Error fetching orders:', error);
-                    ordersTableBody.innerHTML = '<tr><td colspan="5">Error fetching orders.</td></tr>';
+                    ordersTableBody.innerHTML = '<tr><td colspan="6">Error fetching orders.</td></tr>';
                 });
             
             modal.style.display = 'block';
+        }
+        
+        // Function to view order details
+        function viewOrderDetails(orders, poNumber, deliveryAddress) {
+            try {
+                const orderDetailsBody = document.getElementById('orderDetailsBody');
+                const orderPoNumber = document.getElementById('orderPoNumber');
+                const orderDeliveryAddress = document.getElementById('orderDeliveryAddress');
+                const orderDetailsModal = document.getElementById('orderDetailsModal');
+                
+                // Set order information
+                orderPoNumber.textContent = `PO Number: ${poNumber}`;
+                orderDeliveryAddress.textContent = `Delivery Address: ${deliveryAddress || 'Not specified'}`;
+                
+                orderDetailsBody.innerHTML = '';
+                
+                orders.forEach(product => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${product.category}</td>
+                        <td>${product.item_description}</td>
+                        <td>${product.packaging}</td>
+                        <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
+                        <td>${product.quantity}</td>
+                    `;
+                    orderDetailsBody.appendChild(row);
+                });
+                
+                orderDetailsModal.style.display = 'block';
+                
+            } catch (e) {
+                console.error('Error parsing order details:', e);
+                alert('Error displaying order details');
+            }
         }
         
         // Function to close the orders modal

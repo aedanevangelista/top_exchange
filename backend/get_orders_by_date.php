@@ -20,7 +20,7 @@ if (!$date || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
 
 // Fetch orders for the specified date with Active status
 $orders = [];
-$sql = "SELECT po_number, username, order_date, delivery_date, orders, total_amount 
+$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount 
         FROM orders 
         WHERE delivery_date = ? AND status = 'Active'
         ORDER BY order_date DESC";
@@ -37,6 +37,7 @@ if ($result && $result->num_rows > 0) {
             'username' => $row['username'],
             'order_date' => $row['order_date'],
             'delivery_date' => $row['delivery_date'],
+            'delivery_address' => $row['delivery_address'],
             'orders' => $row['orders'],
             'total_amount' => $row['total_amount']
         ];
