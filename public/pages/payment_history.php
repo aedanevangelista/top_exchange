@@ -67,6 +67,8 @@ if ($result && $result->num_rows > 0) {
 
         .view-button, .status-toggle {
             border-radius: 80px;
+            margin: 0 2px;
+            min-width: 85px;
         }
 
         .view-button.disabled, .status-toggle.disabled {
@@ -117,6 +119,7 @@ if ($result && $result->num_rows > 0) {
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
+            padding-right: 20px;
         }
 
         .add-balance-btn {
@@ -238,33 +241,47 @@ if ($result && $result->num_rows > 0) {
 
         /* Status Modal */
         #changeStatusModal .modal-content {
-            max-width: 400px;
+            max-width: 450px;
+            padding: 25px;
+        }
+
+        .status-options {
+            margin: 20px 0;
         }
 
         .status-option {
             display: flex;
             align-items: center;
-            padding: 10px;
+            padding: 15px;
             border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
             cursor: pointer;
+            transition: all 0.3s ease;
         }
 
         .status-option:hover {
             background-color: #f9f9f9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
         .status-option.selected {
             background-color: #e6f7ff;
             border-color: #1890ff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
         .status-option .status-icon {
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
-            margin-right: 10px;
+            margin-right: 15px;
+        }
+
+        .status-option span {
+            font-size: 16px;
+            font-weight: 500;
         }
 
         .status-unpaid {
@@ -294,6 +311,110 @@ if ($result && $result->num_rows > 0) {
             max-height: 200px;
             border: 1px solid #ddd;
             border-radius: 4px;
+        }
+
+        /* Improved Modal Styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 80%;
+            max-width: 900px;
+            animation: modalFade 0.3s ease;
+        }
+
+        /* Make monthly payments modal wider */
+        #monthlyPaymentsModal .modal-content {
+            width: 75%;
+            max-width: 1200px;
+        }
+
+        @keyframes modalFade {
+            from {opacity: 0; transform: translateY(-20px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+            z-index: 10;
+        }
+
+        .close:hover {
+            color: #f44336;
+        }
+
+        /* User balance display */
+        .user-balance-info {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .balance-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        /* Action buttons spacing - Only for monthly payments table */
+        #monthlyPaymentsBody .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+        
+        /* Table cell styling only for monthly payments table */
+        #monthlyPaymentsModal .orders-table th:last-child,
+        #monthlyPaymentsModal .orders-table td:last-child {
+            width: 180px;
+            min-width: 180px;
+            max-width: 180px;
+            text-align: center;
+        }
+
+        /* Responsive styling */
+        @media (max-width: 768px) {
+            .modal-content {
+                margin: 10% auto;
+                width: 95%;
+                padding: 15px;
+            }
+            
+            .modal-header-with-balance {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .balance-display {
+                margin-top: 10px;
+            }
         }
     </style>
 </head>
@@ -444,13 +565,15 @@ if ($result && $result->num_rows > 0) {
             <div class="modal-content">
                 <span class="close" onclick="closeModal('paymentModal')">&times;</span>
                 <h2>Make Payment</h2>
+                
+                <div class="user-balance-info">
+                    <span class="balance-label">Available Balance:</span>
+                    <span id="availableBalance" class="total-balance-positive">PHP 0.00</span>
+                </div>
+                
                 <div class="input-group">
                     <label for="amountToPay">Amount to Pay (PHP)</label>
                     <input type="number" id="amountToPay" min="1" step="0.01" readonly>
-                </div>
-                <div class="input-group">
-                    <label for="availableBalance">Available Balance (PHP)</label>
-                    <input type="text" id="availableBalance" readonly>
                 </div>
                 <div class="input-group">
                     <label for="paymentProof">Payment Proof</label>
@@ -528,8 +651,8 @@ if ($result && $result->num_rows > 0) {
     let currentYear = new Date().getFullYear();
     let currentUserBalance = 0;
     
-    // Current date for comparison in UTC (as per the user's timestamp: 2025-03-24 05:53:26)
-    const currentDate = new Date('2025-03-24T05:53:26Z');
+    // Current date for comparison in UTC (as per the user's timestamp: 2025-03-24 06:13:38)
+    const currentDate = new Date('2025-03-24T06:13:38Z');
     const currentYearValue = currentDate.getFullYear();
     const currentMonthValue = currentDate.getMonth(); // 0-based index
 
@@ -786,20 +909,22 @@ if ($result && $result->num_rows > 0) {
                             <td>${proofHtml}</td>
                             <td class="${statusClass}">${displayStatus}</td>
                             <td>
-                                <button class="${payBtnClass}" 
-                                        ${payButtonDisabled ? 'disabled' : ''}
-                                        onclick="${payButtonDisabled ? '' : `openPaymentModal('${currentUsername}', ${index + 1}, ${year}, ${remainingBalance})`}"
-                                        title="${tooltip}">
-                                    <i class="fas fa-credit-card"></i>
-                                    Pay
-                                </button>
-                                <button class="${statusBtnClass}"
-                                        ${statusButtonDisabled ? 'disabled' : ''}
-                                        onclick="${statusButtonDisabled ? '' : `openChangeStatusModal('${currentUsername}', ${index + 1}, ${year}, '${monthData.payment_status}')`}"
-                                        title="${statusButtonDisabled ? 'Month has not ended yet' : 'Click to change status'}">
-                                    <i class="fas fa-exchange-alt"></i>
-                                    Status
-                                </button>
+                                <div class="action-buttons">
+                                    <button class="${payBtnClass}" 
+                                            ${payButtonDisabled ? 'disabled' : ''}
+                                            onclick="${payButtonDisabled ? '' : `openPaymentModal('${currentUsername}', ${index + 1}, ${year}, ${remainingBalance})`}"
+                                            title="${tooltip}">
+                                        <i class="fas fa-credit-card"></i>
+                                        Pay
+                                    </button>
+                                    <button class="${statusBtnClass}"
+                                            ${statusButtonDisabled ? 'disabled' : ''}
+                                            onclick="${statusButtonDisabled ? '' : `openChangeStatusModal('${currentUsername}', ${index + 1}, ${year}, '${monthData.payment_status}')`}"
+                                            title="${statusButtonDisabled ? 'Month has not ended yet' : 'Click to change status'}">
+                                        <i class="fas fa-exchange-alt"></i>
+                                        Status
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `;
@@ -821,7 +946,17 @@ if ($result && $result->num_rows > 0) {
     function openPaymentModal(username, month, year, remainingBalance) {
         // Set the values in the payment modal
         $('#amountToPay').val(remainingBalance);
-        $('#availableBalance').val(`PHP ${numberFormat(currentUserBalance)}`);
+        $('#availableBalance').text(`PHP ${numberFormat(currentUserBalance)}`);
+        
+        // Set appropriate color for available balance
+        if (currentUserBalance > 0) {
+            $('#availableBalance').attr('class', 'total-balance-positive');
+        } else if (currentUserBalance < 0) {
+            $('#availableBalance').attr('class', 'total-balance-negative');
+        } else {
+            $('#availableBalance').attr('class', 'total-balance-zero');
+        }
+        
         $('#paymentNotes').val('');
         $('#paymentMonth').val(month);
         $('#paymentYear').val(year);
