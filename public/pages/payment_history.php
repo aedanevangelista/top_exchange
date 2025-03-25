@@ -97,17 +97,6 @@ if ($result && $result->num_rows > 0) {
             font-weight: 600;
         }
 
-        /* Payment Method Styling */
-        .payment-method-internal {
-            color: #007bff;
-            font-weight: 600;
-        }
-
-        .payment-method-external {
-            color: #6610f2;
-            font-weight: 600;
-        }
-
         /* Total Balance Styling */
         .total-balance-positive {
             color: #28a745;
@@ -223,44 +212,6 @@ if ($result && $result->num_rows > 0) {
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-        }
-
-        .payment-method-section {
-            margin-bottom: 20px;
-        }
-
-        .payment-method-toggle {
-            display: flex;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 15px;
-        }
-
-        .payment-method-option {
-            flex: 1;
-            text-align: center;
-            padding: 10px;
-            cursor: pointer;
-            background-color: #f8f8f8;
-            transition: all 0.3s ease;
-        }
-
-        .payment-method-option.active {
-            background-color: #4CAF50;
-            color: white;
-        }
-
-        .payment-method-content {
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            display: none;
-        }
-
-        .payment-method-content.active {
-            display: block;
         }
 
         .button-group {
@@ -599,7 +550,6 @@ if ($result && $result->num_rows > 0) {
                             <th>Total Amount</th>
                             <th>Remaining Balance</th>
                             <th>Proof</th>
-                            <th>Payment Method</th>
                             <th>Notes</th>
                             <th>Status</th>
                             <th>Action</th>
@@ -673,54 +623,28 @@ if ($result && $result->num_rows > 0) {
                     <span id="availableBalance" class="total-balance-positive">PHP 0.00</span>
                 </div>
                 
-                <div class="payment-method-section">
-                    <label>Select Payment Method:</label>
-                    <div class="payment-method-toggle">
-                        <div class="payment-method-option active" id="internalPaymentOption" onclick="selectPaymentMethod('internal')">
-                            Internal Payment
-                        </div>
-                        <div class="payment-method-option" id="externalPaymentOption" onclick="selectPaymentMethod('external')">
-                            External Payment
-                        </div>
-                    </div>
-                    
-                    <div class="payment-method-content active" id="internalPaymentContent">
-                        <p>Use your available balance to make this payment.</p>
-                        <div class="input-group">
-                            <label for="amountToPay">Amount to Pay (PHP)</label>
-                            <input type="number" id="amountToPay" min="1" step="0.01" readonly>
-                        </div>
-                    </div>
-                    
-                    <div class="payment-method-content" id="externalPaymentContent">
-                        <p>Pay using bank transfer or other external payment method.</p>
-                        <div class="input-group">
-                            <label for="externalAmountToPay">Amount to Pay (PHP)</label>
-                            <input type="number" id="externalAmountToPay" min="1" step="0.01" readonly>
-                        </div>
-                        <div class="input-group">
-                            <label for="paymentProof">Payment Proof</label>
-                            <input type="file" id="paymentProof" accept="image/*" onchange="previewImage(this)">
-                            <small>Upload proof of payment (image file)</small>
-                        </div>
-                        <div class="preview-container" id="imagePreview">
-                            <img id="previewImg" src="#" alt="Preview">
-                        </div>
-                    </div>
+                <div class="input-group">
+                    <label for="amountToPay">Amount to Pay (PHP)</label>
+                    <input type="number" id="amountToPay" min="1" step="0.01" readonly>
                 </div>
-                
+                <div class="input-group">
+                    <label for="paymentProof">Payment Proof</label>
+                    <input type="file" id="paymentProof" accept="image/*" onchange="previewImage(this)">
+                    <small>Upload proof of payment (image file)</small>
+                </div>
+                <div class="preview-container" id="imagePreview">
+                    <img id="previewImg" src="#" alt="Preview">
+                </div>
                 <div class="input-group">
                     <label for="paymentNotes">Notes (Optional)</label>
                     <input type="text" id="paymentNotes" placeholder="Enter notes">
                 </div>
-                
                 <div class="button-group">
                     <button class="cancel-btn" onclick="closeModal('paymentModal')">Cancel</button>
                     <button class="submit-btn" onclick="submitPayment()">Submit Payment</button>
                 </div>
                 <input type="hidden" id="paymentMonth">
                 <input type="hidden" id="paymentYear">
-                <input type="hidden" id="paymentMethod" value="internal">
             </div>
         </div>
 
@@ -779,8 +703,8 @@ if ($result && $result->num_rows > 0) {
     let currentYear = new Date().getFullYear();
     let currentUserBalance = 0;
     
-    // Current date for comparison in UTC - updated as requested
-    const currentDate = new Date('2025-03-24 17:58:50');
+    // Current date for comparison in UTC (as per the user's timestamp: 2025-03-24 17:35:50)
+    const currentDate = new Date('2025-03-24T17:35:50Z');
     const currentYearValue = currentDate.getFullYear();
     const currentMonthValue = currentDate.getMonth(); // 0-based index
 
@@ -877,7 +801,7 @@ if ($result && $result->num_rows > 0) {
     function fetchAvailableYears(username, refreshData = false) {
         // Show loading state
         $('#yearTabs').html('<div>Loading years...</div>');
-        $('#monthlyPaymentsBody').html('<tr><td colspan="9">Please select a year...</td></tr>');
+        $('#monthlyPaymentsBody').html('<tr><td colspan="8">Please select a year...</td></tr>');
         $('#monthlyPaymentsModal').show();
         
         // Add cache-busting parameter to prevent browser caching
@@ -886,6 +810,7 @@ if ($result && $result->num_rows > 0) {
         $.ajax({
             url: `../../backend/get_available_years.php?username=${username}${cacheBuster}`,
             method: 'GET',
+            // Removed duplicate data parameter
             dataType: 'json',
             cache: false, // Prevent caching
             success: function(response) {
@@ -944,7 +869,7 @@ if ($result && $result->num_rows > 0) {
         currentYear = year;
         
         // Show loading state
-        $('#monthlyPaymentsBody').html('<tr><td colspan="9">Loading...</td></tr>');
+        $('#monthlyPaymentsBody').html('<tr><td colspan="8">Loading...</td></tr>');
         
         console.log('Fetching payments for:', currentUsername, year);
 
@@ -954,6 +879,7 @@ if ($result && $result->num_rows > 0) {
         $.ajax({
             url: `../../backend/get_monthly_payments.php?username=${currentUsername}&year=${year}${cacheBuster}`,
             method: 'GET',
+            // Removed duplicate data parameter
             dataType: 'json',
             cache: false,
             success: function(response) {
@@ -961,7 +887,7 @@ if ($result && $result->num_rows > 0) {
                 
                 if (!response.success) {
                     $('#monthlyPaymentsBody').html(
-                        `<tr><td colspan="9" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
+                        `<tr><td colspan="8" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
                     );
                     return;
                 }
@@ -973,7 +899,6 @@ if ($result && $result->num_rows > 0) {
                     const monthData = payments.find(p => p.month === index + 1) || {
                         total_amount: 0,
                         payment_status: 'Unpaid',
-                        payment_method: '',
                         remaining_balance: 0,
                         proof_image: null,
                         notes: ''
@@ -1009,15 +934,6 @@ if ($result && $result->num_rows > 0) {
                     const viewOrdersBtnClass = viewOrdersButtonDisabled ? 'view-button disabled' : 'view-button';
                     const payBtnClass = payButtonDisabled ? 'view-button disabled' : 'view-button';
                     const statusBtnClass = statusButtonDisabled ? 'status-toggle disabled' : 'status-toggle';
-
-                    // Payment method display
-                    let paymentMethodHtml = 'None';
-                    let paymentMethod = monthData.payment_method || '';
-                    
-                    if (paymentMethod) {
-                        const methodClass = `payment-method-${paymentMethod.toLowerCase()}`;
-                        paymentMethodHtml = `<span class="${methodClass}">${paymentMethod}</span>`;
-                    }
 
                     // Proof image
                     let proofHtml = 'No proof';
@@ -1059,7 +975,6 @@ if ($result && $result->num_rows > 0) {
                             <td>PHP ${numberFormat(monthData.total_amount)}</td>
                             <td>PHP ${numberFormat(remainingBalance)}</td>
                             <td>${proofHtml}</td>
-                            <td>${paymentMethodHtml}</td>
                             <td>${notesHtml}</td>
                             <td class="${statusClass}">${displayStatus}</td>
                             <td>
@@ -1091,34 +1006,15 @@ if ($result && $result->num_rows > 0) {
                 console.error('Response:', xhr.responseText);
                 console.error('Status:', status);
                 $('#monthlyPaymentsBody').html(
-                    '<tr><td colspan="9" style="color: red;">Error loading payment history. Please try again.</td></tr>'
+                    '<tr><td colspan="8" style="color: red;">Error loading payment history. Please try again.</td></tr>'
                 );
             }
         });
     }
 
-    function selectPaymentMethod(method) {
-        // Update the hidden input
-        $('#paymentMethod').val(method);
-        
-        // Update UI
-        if (method === 'internal') {
-            $('#internalPaymentOption').addClass('active');
-            $('#externalPaymentOption').removeClass('active');
-            $('#internalPaymentContent').addClass('active');
-            $('#externalPaymentContent').removeClass('active');
-        } else {
-            $('#internalPaymentOption').removeClass('active');
-            $('#externalPaymentOption').addClass('active');
-            $('#internalPaymentContent').removeClass('active');
-            $('#externalPaymentContent').addClass('active');
-        }
-    }
-
     function openPaymentModal(username, month, year, remainingBalance) {
         // Set the values in the payment modal
         $('#amountToPay').val(remainingBalance);
-        $('#externalAmountToPay').val(remainingBalance);
         $('#availableBalance').text(`PHP ${numberFormat(currentUserBalance)}`);
         
         // Set appropriate color for available balance
@@ -1129,9 +1025,6 @@ if ($result && $result->num_rows > 0) {
         } else {
             $('#availableBalance').attr('class', 'total-balance-zero');
         }
-        
-        // Reset payment method to internal by default
-        selectPaymentMethod('internal');
         
         $('#paymentNotes').val('');
         $('#paymentMonth').val(month);
@@ -1148,93 +1041,20 @@ if ($result && $result->num_rows > 0) {
     function submitPayment() {
         const month = $('#paymentMonth').val();
         const year = $('#paymentYear').val();
-        const paymentMethod = $('#paymentMethod').val();
+        const amount = parseFloat($('#amountToPay').val());
         const notes = $('#paymentNotes').val();
         
-        // Different validation and submission based on the payment method
-        if (paymentMethod === 'internal') {
-            const amount = parseFloat($('#amountToPay').val());
-            
-            if (amount > currentUserBalance) {
-                alert('Insufficient balance. Please add more funds to your account or use external payment.');
-                return;
-            }
-            
-            submitInternalPayment(month, year, amount, notes);
-        } else {
-            // External payment requires proof
-            const amount = parseFloat($('#externalAmountToPay').val());
-            const fileInput = document.getElementById('paymentProof');
-            
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert('Please upload proof of payment for external payment');
-                return;
-            }
-            
-            submitExternalPayment(month, year, amount, notes, fileInput.files[0]);
+        if (amount > currentUserBalance) {
+            alert('Insufficient balance. Please add more funds to your account.');
+            return;
         }
-    }
-    
-    function submitInternalPayment(month, year, amount, notes) {
-        // Show loading indicator
-        $('#paymentModal .submit-btn').prop('disabled', true).text('Processing...');
         
-        $.ajax({
-            url: '../../backend/process_internal_payment.php',
-            method: 'POST',
-            data: {
-                username: currentUsername,
-                month: month,
-                year: year,
-                amount: amount,
-                notes: notes
-            },
-            dataType: 'json',
-            success: function(response) {
-                // Reset button
-                $('#paymentModal .submit-btn').prop('disabled', false).text('Submit Payment');
-                
-                if (response.success) {
-                    // Update the user balance
-                    currentUserBalance = parseFloat(response.new_balance);
-                    updateBalanceDisplay();
-                    
-                    // Update the balance in the main table
-                    updateMainTableBalance();
-                    
-                    // Reload the current year data
-                    loadYearData(currentYear, true);
-                    
-                    closeModal('paymentModal');
-                } else {
-                    console.error('Payment Error:', response);
-                    alert('Error processing payment: ' + (response.message || 'Unknown error'));
-                }
-            },
-            error: function(xhr, status, error) {
-                // Reset button
-                $('#paymentModal .submit-btn').prop('disabled', false).text('Submit Payment');
-                
-                console.error('Ajax Error:', error);
-                console.error('Status Code:', xhr.status);
-                console.error('Response Text:', xhr.responseText);
-                
-                let errorMessage = 'Error processing payment.';
-                try {
-                    const responseData = JSON.parse(xhr.responseText);
-                    if (responseData && responseData.message) {
-                        errorMessage += ' ' + responseData.message;
-                    }
-                } catch (e) {
-                    errorMessage += ' Please check the server logs.';
-                }
-                
-                alert(errorMessage);
-            }
-        });
-    }
-    
-    function submitExternalPayment(month, year, amount, notes, proofFile) {
+        const fileInput = document.getElementById('paymentProof');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert('Please upload proof of payment');
+            return;
+        }
+        
         // Create FormData object for file upload
         const formData = new FormData();
         formData.append('username', currentUsername);
@@ -1242,14 +1062,13 @@ if ($result && $result->num_rows > 0) {
         formData.append('year', year);
         formData.append('amount', amount);
         formData.append('notes', notes);
-        formData.append('payment_method', 'External');
-        formData.append('proof', proofFile);
+        formData.append('proof', fileInput.files[0]);
         
         // Show loading indicator
         $('#paymentModal .submit-btn').prop('disabled', true).text('Processing...');
         
         $.ajax({
-            url: '../../backend/process_external_payment.php',
+            url: '../../backend/process_payment.php',
             method: 'POST',
             data: formData,
             dataType: 'json',
@@ -1260,11 +1079,30 @@ if ($result && $result->num_rows > 0) {
                 $('#paymentModal .submit-btn').prop('disabled', false).text('Submit Payment');
                 
                 if (response.success) {
+                    // Update the user balance
+                    currentUserBalance = parseFloat(response.new_balance);
+                    updateBalanceDisplay();
+                    
+                    // Update the balance in the main table
+                    const mainTableRow = $(`.orders-table tbody tr:contains("${currentUsername}")`);
+                    if (mainTableRow.length) {
+                        const balanceCell = mainTableRow.find('td:nth-child(2) span');
+                        balanceCell.text(`PHP ${numberFormat(currentUserBalance)}`);
+                        
+                        if (currentUserBalance > 0) {
+                            balanceCell.attr('class', 'total-balance-positive');
+                        } else if (currentUserBalance < 0) {
+                            balanceCell.attr('class', 'total-balance-negative');
+                        } else {
+                            balanceCell.attr('class', 'total-balance-zero');
+                        }
+                    }
+                    
                     // Reload the current year data
                     loadYearData(currentYear, true);
+                    
                     closeModal('paymentModal');
                 } else {
-                    console.error('Payment Error:', response);
                     alert('Error processing payment: ' + (response.message || 'Unknown error'));
                 }
             },
@@ -1275,36 +1113,9 @@ if ($result && $result->num_rows > 0) {
                 console.error('Ajax Error:', error);
                 console.error('Status Code:', xhr.status);
                 console.error('Response Text:', xhr.responseText);
-                
-                let errorMessage = 'Error processing payment.';
-                try {
-                    const responseData = JSON.parse(xhr.responseText);
-                    if (responseData && responseData.message) {
-                        errorMessage += ' ' + responseData.message;
-                    }
-                } catch (e) {
-                    errorMessage += ' Please check the server logs.';
-                }
-                
-                alert(errorMessage);
+                alert(`Error processing payment. Status: ${xhr.status}. Please check the server logs.`);
             }
         });
-    }
-    
-    function updateMainTableBalance() {
-        const mainTableRow = $(`.orders-table tbody tr:contains("${currentUsername}")`);
-        if (mainTableRow.length) {
-            const balanceCell = mainTableRow.find('td:nth-child(2) span');
-            balanceCell.text(`PHP ${numberFormat(currentUserBalance)}`);
-            
-            if (currentUserBalance > 0) {
-                balanceCell.attr('class', 'total-balance-positive');
-            } else if (currentUserBalance < 0) {
-                balanceCell.attr('class', 'total-balance-negative');
-            } else {
-                balanceCell.attr('class', 'total-balance-zero');
-            }
-        }
     }
 
     function openChangeStatusModal(username, month, year, currentStatus) {
@@ -1410,6 +1221,7 @@ if ($result && $result->num_rows > 0) {
         $.ajax({
             url: `../../backend/get_monthly_orders.php?username=${username}&month=${month}&year=${year}${cacheBuster}`,
             method: 'GET',
+            // Removed duplicate data parameter
             dataType: 'json',
             cache: false,
             success: function(response) {
