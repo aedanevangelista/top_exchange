@@ -155,3 +155,33 @@
             VALUES (?, ?, ?, ?, 'Payment', ?, ?, ?)
 2025-03-25 18:36:07 - ERROR: Prepare failed for payment history: 
 2025-03-25 18:36:07 - Process completed
+2025-03-25 18:48:15 - Get Available Years Started
+2025-03-25 18:48:15 - Fetching available years for: Jeff Santonia
+2025-03-25 18:48:15 - Available years: 2025
+2025-03-25 18:48:15 - Get Available Years completed
+2025-03-25 18:48:15 - Get Monthly Payments Started
+2025-03-25 18:48:15 - Get Monthly Payments - Examining database schema
+2025-03-25 18:48:15 - Fetching payments for: Jeff Santonia, Year: 2025
+2025-03-25 18:48:15 - Available columns: id, username, month, year, total_amount, amount_paid, payment_status, created_at, updated_at, remaining_balance, proof_image, notes, payment_method
+2025-03-25 18:48:15 - SQL Query: SELECT month, total_amount, payment_status, remaining_balance, payment_method, proof_image, notes FROM monthly_payments WHERE username = ? AND year = ?
+2025-03-25 18:48:15 - Successfully fetched 12 records
+2025-03-25 18:48:15 - Get Monthly Payments completed
+2025-03-25 18:48:20 - Internal Payment Process Started
+2025-03-25 18:48:20 - Processing payment for: Jeff Santonia, Month: 2, Year: 2025, Amount: 15400
+2025-03-25 18:48:20 - Current balance: 25215
+2025-03-25 18:48:20 - Transaction started
+2025-03-25 18:48:20 - Updated client balance to: 9815
+2025-03-25 18:48:20 - Updating existing payment record ID: 146
+2025-03-25 18:48:20 - SQL: UPDATE monthly_payments SET 
+                amount_paid = ?, 
+                remaining_balance = ?, 
+                payment_status = ?, 
+                payment_method = ?,
+                notes = ?
+                WHERE id = ?
+2025-03-25 18:48:20 - Updated payment record successfully
+2025-03-25 18:48:20 - SQL for payment history: INSERT INTO payment_history 
+            (username, month, year, amount, transaction_type, notes, payment_method, created_by)
+            VALUES (?, ?, ?, ?, 'Payment', ?, ?, ?)
+2025-03-25 18:48:20 - ERROR: Prepare failed for payment history: 
+2025-03-25 18:48:20 - Process completed
