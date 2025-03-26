@@ -131,6 +131,13 @@ body {
     padding: 10px;
     text-align: center;
     border-bottom: 1px solid #e0e0e0;
+    height: 100%; /* Add this */
+}
+
+/* Add specific styling for the adjust-stock cell */
+.inventory-table td.adjust-stock {
+    height: 100%;
+    padding: 0; /* Remove padding since it's handled by the inner div */
 }
 
 .inventory-table tr:hover {
@@ -207,6 +214,9 @@ body {
     align-items: center;
     justify-content: center;
     gap: 5px;
+    height: 100%; /* Add this to fill the row height */
+    min-height: 80px; /* Add this to ensure minimum height */
+    padding: 10px; /* Add padding to match other cells */
 }
 
 .adjust-stock input {
@@ -360,4 +370,101 @@ body {
 ========================= */
 #toast-container > .toast {
     opacity: 1 !important;
+}
+
+/* =========================
+   Edit Product Modal Fixes
+========================= */
+/* Ensure proper styling for Edit Product modal */
+#editProductModal.overlay {
+    display: none;
+    position: fixed;
+    top: 0; 
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7); 
+    z-index: 1000;
+    backdrop-filter: blur(3px);
+}
+
+#editProductModal .overlay-content {
+    width: 450px;
+    max-width: 90%;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Form styles for edit product form */
+#edit-product-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-align: left;
+}
+
+#edit-product-form label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #34495e;
+    display: block;
+    margin-bottom: 5px;
+}
+
+#edit-product-form input,
+#edit-product-form select,
+#edit-product-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+#edit-product-form textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Current image container styling */
+#current-image-container {
+    margin: 10px 0;
+    text-align: center;
+}
+
+#current-image-container img {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 5px;
+    border: 1px solid #eee;
+    padding: 3px;
+}
+
+#current-image-container p {
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #555;
+}
+
+/* Image upload field styling */
+#edit_product_image {
+    padding: 8px;
+    background-color: #f9f9f9;
+}
+
+.file-info {
+    font-size: 0.85em;
+    color: #777;
+}
+
+/* Error message specifically for edit product */
+#editProductError {
+    color: #e74c3c;
+    font-size: 14px;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: rgba(231, 76, 60, 0.1);
+    margin-bottom: 15px;
 }

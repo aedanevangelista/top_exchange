@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 26, 2025 at 07:25 PM
+-- Generation Time: Mar 26, 2025 at 08:24 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -382,20 +382,20 @@ INSERT INTO `products` (`product_id`, `category`, `item_description`, `packaging
 (16, 'Dimsum & Dumplings', 'Regular Sharksfin Dumpling', '30pcs/pack', 180.00, 0, NULL, NULL),
 (17, 'Dimsum & Dumplings', 'Special Sharksfin Dumpling', '30pcs/pack', 260.00, 0, NULL, NULL),
 (18, 'Dimsum & Dumplings', 'Kutchay Dumpling', '30pcs/pack', 275.00, 0, NULL, NULL),
-(19, 'Dimsum & Dumplings', 'Chicken Siomai', '30pcs/pack', 300.00, 0, NULL, NULL),
-(20, 'Dimsum & Dumplings', 'Beef Siomai', '20pcs/pack', 250.00, 0, NULL, NULL),
+(19, 'Dimsum & Dumplings', 'Chicken Siomai', '30pcs/pack', 300.00, 0, '0', '/top_exchange/uploads/products/Chicken_Siomai/product_image.png'),
+(20, 'Dimsum & Dumplings', 'Beef Siomai', '20pcs/pack', 250.00, 0, '0', '/top_exchange/uploads/products/Beef_Siomai/product_image.png'),
 (21, 'Dimsum & Dumplings', 'Premium Pork Siomai (A)', '20pcs/pack', 280.00, 0, NULL, NULL),
 (22, 'Dimsum & Dumplings', 'Premium Pork Siomai w/ Shrimp (A)', '20pcs/pack', 310.00, 0, NULL, NULL),
 (23, 'Dimsum & Dumplings', 'Premium Sharksfin Dumpling', '20pcs/pack', 300.00, 0, NULL, NULL),
-(24, 'Dimsum & Dumplings', 'Hakaw (Shrimp Dumpling) (A)', '12pcs/pack', 300.00, 0, NULL, NULL),
-(25, 'Dimsum & Dumplings', 'Hakaw (Shrimp Dumpling) (B)', '20pcs/pack', 480.00, 0, NULL, NULL),
+(24, 'Dimsum & Dumplings', 'Hakaw (Shrimp Dumpling) (A)', '12pcs/pack', 300.00, 0, '0', '/top_exchange/uploads/products/Hakaw__Shrimp_Dumpling___A_/product_image.png'),
+(25, 'Dimsum & Dumplings', 'Hakaw (Shrimp Dumpling) (B)', '20pcs/pack', 480.00, 0, '0', '/top_exchange/uploads/products/Hakaw__Shrimp_Dumpling___B_/product_image.png'),
 (26, 'Dimsum & Dumplings', 'Japanese Pork Siomai (A)', '20pcs/pack', 325.00, 0, NULL, NULL),
 (27, 'Dimsum & Dumplings', 'Polonchay Dumpling (Min 6 Packs) (A)', '12pcs/pack', 310.00, 0, NULL, NULL),
 (28, 'Dimsum & Dumplings', 'Polonchay Dumpling (Min 6 Packs) (B)', '20pcs/pack', 470.00, 0, NULL, NULL),
 (29, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (A)', '12pcs/pack', 330.00, 0, NULL, NULL),
 (30, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (B)', '20pcs/pack', 530.00, 0, NULL, NULL),
-(31, 'Dimsum & Dumplings', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 688, NULL, NULL),
-(32, 'Dimsum & Dumplings', 'Beancurd Roll (B)', '20pcs/pack', 500.00, 0, NULL, NULL),
+(31, 'Dimsum & Dumplings', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 691, '0', '/top_exchange/uploads/products/Beancurd_Roll__A_/product_image.png'),
+(32, 'Dimsum & Dumplings', 'Beancurd Roll (B)', '20pcs/pack', 500.00, 0, '0', '/top_exchange/uploads/products/Beancurd_Roll__B_/product_image.png'),
 (33, 'Dimsum & Dumplings', 'Pork Gyoza Dumpling (A)', '20pcs/pack', 390.00, 0, NULL, NULL),
 (34, 'Dimsum & Dumplings', 'Shanghai Dumpling (A)', '20pcs/pack', 255.00, 0, NULL, NULL),
 (35, 'Dimsum & Dumplings', 'Siao Long Pao', '15pcs/pack', 270.00, 0, NULL, NULL),
@@ -405,7 +405,7 @@ INSERT INTO `products` (`product_id`, `category`, `item_description`, `packaging
 (39, 'Dimsum & Dumplings', 'Machang w/ Chestnut (Min 6 Packs)', '1pc', 110.00, 0, NULL, NULL),
 (40, 'Dimsum & Dumplings', 'Pork Rib Taosi', '500g', 200.00, 0, NULL, NULL),
 (41, 'Dimsum & Dumplings', 'Pork Spring Roll', '20pcs/pack', 320.00, 0, NULL, NULL),
-(42, 'Dimsum & Dumplings', 'Chicken Feet', '500g', 200.00, 0, NULL, NULL),
+(42, 'Dimsum & Dumplings', 'Chicken Feet', '500g', 200.00, 0, '0', '/top_exchange/uploads/products/Chicken_Feet/product_image.png'),
 (43, 'Dimsum & Dumplings', 'Radish Cake 1.5kg', '1.5kg', 370.00, 0, NULL, NULL),
 (44, 'Dimsum & Dumplings', 'Radish Cake 1kg', '1kg', 300.00, 0, NULL, NULL),
 (45, 'Dimsum & Dumplings', 'Pumpkin Cake 1.5kg', '1.5kg', 370.00, 0, NULL, NULL),

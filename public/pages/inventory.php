@@ -273,6 +273,8 @@ $result = $conn->query($sql);
             max-height: 200px;
             margin-bottom: 10px;
         }
+        
+        
     </style>
 </head>
 
@@ -347,16 +349,17 @@ $result = $conn->query($sql);
                             
                             echo "</td>
                                     <td class='additional-desc'>" . htmlspecialchars($row['additional_description'] ?? '') . "</td>
-                                    <td class='adjust-stock'>
-                                        <button class='add-btn' onclick='updateStock({$row['product_id']}, \"add\")'>Add</button>
-                                        <input type='number' id='adjust-{$row['product_id']}' min='1' value='1'>
-                                        <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\")'>Remove</button>
-                                    </td>
-                                    <td class='action-buttons'>
+                                        <td class='adjust-stock'>
+                                            <button class='add-btn' onclick='updateStock({$row['product_id']}, \"add\")'>Add</button>
+                                            <input type='number' id='adjust-{$row['product_id']}' min='1' value='1'>
+                                            <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\")'>Remove</button>
+                                        </td>
+                                        <td>
                                         <button class='edit-btn' onclick='editProduct({$row['product_id']})'>
-                                            <i class='fas fa-edit'></i> Edit
-                                        </button>
-                                    </td>
+                                                <i class='fas fa-edit'></i> Edit
+                                            </button>
+                                        </td>
+ 
                                 </tr>";
                         }
                     } else {
