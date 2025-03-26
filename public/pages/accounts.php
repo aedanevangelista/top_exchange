@@ -2,9 +2,9 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Accounts - Admin'); // Ensure the user has access to the Accounts page
+checkRole('Accounts - Admin');
 
-// Fetch roles from the database
+
 $roles = [];
 $roleQuery = "SELECT role_name FROM roles WHERE status = 'active'";
 $result = $conn->query($roleQuery);
@@ -14,20 +14,19 @@ if ($result && $result->num_rows > 0) {
     }
 }
 
-// Function to return JSON response
+
 function returnJsonResponse($success, $reload, $message = '') {
     echo json_encode(['success' => $success, 'reload' => $reload, 'message' => $message]);
     exit;
 }
 
-// Handle form submission (Add Account)
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
     header('Content-Type: application/json');
 
     $username = trim($_POST['username']);
     $password = $_POST['password'];
     $role = $_POST['role'];
-    $status = 'Active'; // Default status for new accounts
+    $status = 'Active'; 
     $created_at = date('Y-m-d H:i:s');
 
     $checkStmt = $conn->prepare("SELECT id FROM accounts WHERE username = ?");
@@ -52,7 +51,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     exit;
 }
 
-// Handle form submission (Edit Account)
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'edit') {
     header('Content-Type: application/json');
 
@@ -83,7 +81,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     exit;
 }
 
-// Handle status change
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'status') {
     header('Content-Type: application/json');
 
@@ -102,10 +99,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     exit;
 }
 
-// Handle status filter
 $status_filter = $_GET['status'] ?? '';
 
-// Fetch accounts for display
 $sql = "SELECT id, username, role, status, created_at FROM accounts";
 if (!empty($status_filter)) {
     $sql .= " WHERE status = ?";
@@ -212,7 +207,6 @@ if (!empty($status_filter)) {
         </div>
     </div>
 
-    <!-- Overlay Form for Adding New Account -->
     <div id="addAccountOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-user-plus"></i> Add New Account</h2>
@@ -240,14 +234,13 @@ if (!empty($status_filter)) {
         </div>
     </div>
 
-    <!-- Overlay Form for Editing Account -->
     <div id="editAccountOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-edit"></i> Edit Account</h2>
             <div id="editAccountError" class="error-message"></div>
             <form id="editAccountForm" method="POST" class="account-form" action="">
                 <input type="hidden" name="formType" value="edit">
-                <input type="hidden" id="edit-id" name="id"> <!-- Hidden field for account ID -->
+                <input type="hidden" id="edit-id" name="id"> 
                 <label for="edit-username">Username:</label>
                 <input type="text" id="edit-username" name="username" autocomplete="username" required>
                 <label for="edit-password">Password:</label>
@@ -269,7 +262,6 @@ if (!empty($status_filter)) {
         </div>
     </div>
 
-    <!-- Overlay Modal for Status Change -->
     <div id="statusModal" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2>Change Status</h2>
@@ -293,7 +285,7 @@ if (!empty($status_filter)) {
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script> <!-- Add jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/top_exchange/public/js/toast.js"></script>
     <script src="/top_exchange/public/js/accounts.js"></script>

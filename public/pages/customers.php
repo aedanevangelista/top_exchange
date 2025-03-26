@@ -2,7 +2,7 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Customers'); // Ensure the user has access to the Accounts page
+checkRole('Customers');
 
 function handleAjaxResponse($success, $message = '', $reload = false) {
     echo json_encode(['success' => $success, 'message' => $message, 'reload' => $reload]);
@@ -14,9 +14,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
     try {
         if ($_POST['formType'] == 'add') {
             $customer_name = trim($_POST['customer_name']);
-            $created_at = gmdate('Y-m-d H:i:s'); // Use gmdate to get UTC time
+            $created_at = gmdate('Y-m-d H:i:s'); 
 
-            // Check for duplicate customer name
             $checkStmt = $conn->prepare("SELECT customer_id FROM customers WHERE customer_name = ?");
             if ($checkStmt === false) throw new Exception($conn->error);
 
@@ -45,7 +44,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $customer_id = $_POST['customer_id'];
             $customer_name = trim($_POST['customer_name']);
 
-            // Check for duplicate customer name
             $checkStmt = $conn->prepare("SELECT customer_id FROM customers WHERE customer_name = ? AND customer_id != ?");
             if ($checkStmt === false) throw new Exception($conn->error);
 
@@ -147,7 +145,6 @@ $result = $conn->query($sql);
         </div>
     </div>
 
-    <!-- Add/Edit Customer Modal -->
     <div id="customer-modal" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2 id="modal-title"><i class="fas fa-user-plus"></i> Add Customer</h2>
@@ -165,7 +162,6 @@ $result = $conn->query($sql);
         </div>
     </div>
 
-    <!-- Delete Customer Confirmation Modal -->
     <div id="delete-modal" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-trash"></i> Delete Customer</h2>

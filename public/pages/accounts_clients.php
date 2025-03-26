@@ -2,12 +2,12 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Accounts - Clients'); // Ensure the user has access to the Accounts Clients page
+checkRole('Accounts - Clients');
 
-// Disable error reporting to avoid breaking JSON response
+
 error_reporting(0);
 
-// Validate if username or email already exists
+
 function validateUnique($conn, $username, $email, $id = null) {
     $query = "SELECT COUNT(*) as count FROM clients_accounts WHERE (username = ? OR email = ?)";
     if ($id) {
@@ -25,7 +25,7 @@ function validateUnique($conn, $username, $email, $id = null) {
     return $result['count'] > 0;
 }
 
-// Handle form submission (Add Account)
+
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
     header('Content-Type: application/json');
 
@@ -35,7 +35,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $phone = $_POST['phone'] ?? null;
     $region = $_POST['region'];
     $city = $_POST['city'];
-    $company = $_POST['company'] ?? null; // Add company field
+    $company = $_POST['company'] ?? null; 
     $company_address = $_POST['company_address'];
     $business_proof = [];
 
@@ -57,7 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
         foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
             if ($_FILES['business_proof']['error'][$key] == 0) {
                 $allowed_types = ['image/jpeg', 'image/png'];
-                $max_size = 20 * 1024 * 1024; // 20MB
+                $max_size = 20 * 1024 * 1024; 
                 $file_type = $_FILES['business_proof']['type'][$key];
                 $file_size = $_FILES['business_proof']['size'][$key];
 
@@ -92,7 +92,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     exit;
 }
 
-// Handle form submission (Edit Account)
+
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'edit') {
     header('Content-Type: application/json');
 
@@ -103,7 +103,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $phone = $_POST['phone'] ?? null;
     $region = $_POST['region'];
     $city = $_POST['city'];
-    $company = $_POST['company'] ?? null; // Add company field
+    $company = $_POST['company'] ?? null; 
     $company_address = $_POST['company_address'];
     $business_proof = [];
 
@@ -112,7 +112,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
         exit;
     }
 
-    // Get the old username from the database (in case it's being changed)
+   
     $old_username = '';
     $stmt = $conn->prepare("SELECT username FROM clients_accounts WHERE id = ?");
     $stmt->bind_param("i", $id);
@@ -123,28 +123,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     }
     $stmt->close();
 
-    // Create user directory if it doesn't exist
+   
     $user_upload_dir = __DIR__ . '/../../uploads/' . $username . '/';
     if (!file_exists($user_upload_dir)) {
         mkdir($user_upload_dir, 0777, true);
     }
 
-    // Process the existing and new business proof files
+  
     $existing_business_proof = json_decode($_POST['existing_business_proof'], true) ?? [];
     $old_upload_dir = __DIR__ . '/../../uploads/' . $old_username . '/';
 
-    // Check if new files are being uploaded
+  
     if (isset($_FILES['business_proof']) && !empty($_FILES['business_proof']['name'][0])) {
-        // New files are being uploaded, so we'll replace the existing ones
-        // Clear the business_proof array as we're replacing all images
         $business_proof = [];
 
-        // If username was changed, we need to create the new directory
+      
         if ($old_username !== $username && !file_exists($user_upload_dir)) {
             mkdir($user_upload_dir, 0777, true);
         }
 
-        // Delete all existing files in the user's directory if we're uploading new ones
+
         if (file_exists($old_upload_dir)) {
             $old_files = array_diff(scandir($old_upload_dir), array('.', '..'));
             foreach ($old_files as $file) {
@@ -152,17 +150,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
             }
         }
 
-        // Check if we're not exceeding the limit of 3 photos
+
         if (count($_FILES['business_proof']['name']) > 3) {
             echo json_encode(['success' => false, 'message' => 'Maximum of 3 photos allowed.']);
             exit;
         }
 
-        // Handle the new uploads
         foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
             if ($_FILES['business_proof']['error'][$key] == 0) {
                 $allowed_types = ['image/jpeg', 'image/png'];
-                $max_size = 20 * 1024 * 1024; // 20MB
+                $max_size = 20 * 1024 * 1024;
                 $file_type = $_FILES['business_proof']['type'][$key];
                 $file_size = $_FILES['business_proof']['size'][$key];
 
@@ -181,9 +178,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
             }
         }
     } else {
-        // No new files uploaded, keep existing ones and handle username change if needed
+       
         if ($old_username !== $username) {
-            // Username changed, need to move files
+           
             foreach ($existing_business_proof as $index => $old_path) {
                 $old_file = basename($old_path);
                 $old_file_path = $old_upload_dir . $old_file;
@@ -192,21 +189,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
                 if (file_exists($old_file_path) && copy($old_file_path, $new_file_path)) {
                     $business_proof[] = $new_path;
-                    @unlink($old_file_path); // Delete the old file after copying
+                    @unlink($old_file_path); 
                 }
             }
             
-            // Remove old directory if empty
+           
             if (file_exists($old_upload_dir) && count(array_diff(scandir($old_upload_dir), array('.', '..'))) == 0) {
                 @rmdir($old_upload_dir);
             }
         } else {
-            // Username didn't change, keep existing files
+           
             $business_proof = $existing_business_proof;
         }
     }
 
-    // Update the database
+  
     $business_proof_json = json_encode($business_proof);
 
     $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, business_proof = ? WHERE id = ?");
@@ -222,7 +219,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     exit;
 }
 
-// Handle form submission (Change Status)
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'status') {
     header('Content-Type: application/json');
 
@@ -241,10 +237,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     exit;
 }
 
-// Handle status filter
+
 $status_filter = $_GET['status'] ?? '';
 
-// Fetch accounts for display
 $sql = "SELECT id, username, email, phone, region, city, company, company_address, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
 if (!empty($status_filter)) {
     $sql .= " AND status = ?";
@@ -280,10 +275,75 @@ function truncate($text, $max = 15) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" href="/top_exchange/public/css/accounts_clients.css">
     <link rel="stylesheet" href="/top_exchange/public/css/toast.css">
+    <style>
+
+        #myModal {
+            display: none;
+            position: fixed;
+            z-index: 9999; 
+            padding-top: 100px;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.9);
+        }
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 80%;
+            max-height: 80%;
+        }
+
+        #caption {
+            margin: auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+            text-align: center;
+            color: #ccc;
+            padding: 10px 0;
+            height: 150px;
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+        }
+
+        .photo-album img {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .photo-album img:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+
+        .file-info {
+            font-size: 0.9em;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
-    <!-- Add toast container at the same position as in orders.php -->
     <div id="toast-container" class="toast-container"></div>
     <div class="main-content">
         <div class="accounts-header">
@@ -311,7 +371,7 @@ function truncate($text, $max = 15) {
                         <th>Phone</th>
                         <th>Region</th>
                         <th>City</th>
-                        <th>Company</th> <!-- Add this line -->
+                        <th>Company</th>
                         <th>Company Address</th>
                         <th>Business Proof</th>
                         <th>Status</th>
@@ -327,7 +387,7 @@ function truncate($text, $max = 15) {
                                 <td><?= htmlspecialchars(truncate($row['phone'] ?? 'N/A')) ?></td>
                                 <td><?= htmlspecialchars(truncate($row['region'] ?? 'N/A')) ?></td>
                                 <td><?= htmlspecialchars(truncate($row['city'] ?? 'N/A')) ?></td>
-                                <td><?= htmlspecialchars(truncate($row['company'] ?? 'N/A')) ?></td> <!-- Add this line -->
+                                <td><?= htmlspecialchars(truncate($row['company'] ?? 'N/A')) ?></td>
                                 <td><?= htmlspecialchars(truncate($row['company_address'] ?? 'N/A')) ?></td>
                                 <td class="photo-album">
                                     <?php
@@ -374,7 +434,6 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- Overlay Form for Adding New Account -->
     <div id="addAccountOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-user-plus"></i> Add New Account</h2>
@@ -409,7 +468,6 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- Overlay Form for Editing Account -->
     <div id="editAccountOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-edit"></i> Edit Account</h2>
@@ -447,7 +505,6 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- Overlay Modal for Status Change -->
     <div id="statusModal" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2>Change Status</h2>
@@ -474,13 +531,17 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- The Modal -->
     <div id="myModal" class="modal">
         <span class="close" onclick="closeModal()">&times;</span>
         <img class="modal-content" id="img01">
         <div id="caption"></div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="/top_exchange/public/js/toast.js"></script>
+    <script src="/top_exchange/public/js/accounts_clients.js"></script>
+    
     <script>
     function openModal(imgElement) {
         var modal = document.getElementById("myModal");
@@ -496,18 +557,5 @@ function truncate($text, $max = 15) {
         modal.style.display = "none";
     }
     </script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src="/top_exchange/public/js/toast.js"></script> <!-- Add this line -->
-    <script src="/top_exchange/public/js/accounts_clients.js"></script>
-    
-    <style>
-    .file-info {
-        font-size: 0.9em;
-        color: #666;
-        font-style: italic;
-    }
-    </style>
 </body>
 </html>

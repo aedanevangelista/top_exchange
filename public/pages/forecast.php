@@ -2,13 +2,11 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Forecast'); // Ensure the user has access to the Forecast page
+checkRole('Forecast');
 
-// Get current month and year
 $month = isset($_GET['month']) ? intval($_GET['month']) : intval(date('m'));
 $year = isset($_GET['year']) ? intval($_GET['year']) : intval(date('Y'));
 
-// Validate month and year
 if ($month < 1 || $month > 12) {
     $month = intval(date('m'));
 }
@@ -16,15 +14,11 @@ if ($year < 2020 || $year > 2030) {
     $year = intval(date('Y'));
 }
 
-// Get the first day of the month
 $firstDay = strtotime("$year-$month-01");
-// Get the number of days in the month
 $daysInMonth = date('t', $firstDay);
 
-// Create array to store delivery dates and counts
 $deliveryDates = [];
 
-// Fetch orders with delivery date in the current month
 $sql = "SELECT delivery_date, COUNT(*) as order_count 
         FROM orders 
         WHERE MONTH(delivery_date) = ? 
@@ -42,7 +36,6 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Function to get previous and next month links
 function getMonthNavigation($month, $year) {
     $prevMonth = $month - 1;
     $prevYear = $year;
@@ -285,7 +278,6 @@ $navigation = getMonthNavigation($month, $year);
             text-align: center;
         }
 
-        /* Make sure weekends are differently colored but MWF are highlighted */
         .weekend {
             background-color: #f0f0f0;
         }
@@ -338,7 +330,6 @@ $navigation = getMonthNavigation($month, $year);
             }
         }
         
-        /* Address styling */
         .delivery-address {
             max-width: 250px;
             overflow: hidden;
@@ -380,44 +371,35 @@ $navigation = getMonthNavigation($month, $year);
                 </thead>
                 <tbody>
                     <?php 
-                    // Get the weekday of the first day (0 = Sunday, 6 = Saturday)
                     $firstDayOfWeek = date('w', $firstDay);
                     
-                    // Calculate the number of rows needed in the calendar
                     $totalDays = $firstDayOfWeek + $daysInMonth;
                     $totalRows = ceil($totalDays / 7);
                     
                     $dayCounter = 1;
                     
-                    // Loop through each row
                     for ($row = 0; $row < $totalRows; $row++) {
                         echo "<tr>";
                         
-                        // Loop through each column (day of the week)
                         for ($col = 0; $col < 7; $col++) {
-                            // Skip cells before the first day of the month
                             if ($row === 0 && $col < $firstDayOfWeek) {
                                 echo '<td class="empty"></td>';
                                 continue;
                             }
                             
-                            // Skip cells after the last day of the month
                             if ($dayCounter > $daysInMonth) {
                                 echo '<td class="empty"></td>';
                                 continue;
                             }
                             
-                            // Format the date for comparison
                             $currentDate = sprintf("%04d-%02d-%02d", $year, $month, $dayCounter);
                             $dayOfWeek = date('w', strtotime($currentDate));
                             
-                            // Add classes for today and weekends
                             $classes = [];
                             if ($currentDate === date('Y-m-d')) {
                                 $classes[] = 'today';
                             }
                             
-                            // Check if it's Monday (1), Wednesday (3), or Friday (5)
                             $isDeliveryDay = in_array($dayOfWeek, [1, 3, 5]);
                             if ($isDeliveryDay) {
                                 $classes[] = 'delivery-day';
@@ -427,13 +409,11 @@ $navigation = getMonthNavigation($month, $year);
                                 $classes[] = 'non-delivery-day';
                             }
                             
-                            // Get number of orders for this date
                             $orderCount = isset($deliveryDates[$currentDate]) ? $deliveryDates[$currentDate] : 0;
                             
                             echo '<td class="' . implode(' ', $classes) . '">';
                             echo '<div class="day-number">' . $dayCounter . '</div>';
                             
-                            // Only show orders box for delivery days (Mon, Wed, Fri)
                             if ($isDeliveryDay && $orderCount > 0) {
                                 echo '<div class="orders-box" onclick="showOrders(\'' . $currentDate . '\')">';
                                 echo '<i class="fas fa-box"></i> ' . $orderCount . ' ' . ($orderCount == 1 ? 'Order' : 'Orders');
@@ -449,7 +429,6 @@ $navigation = getMonthNavigation($month, $year);
                         
                         echo "</tr>";
                         
-                        // Break if we've displayed all days
                         if ($dayCounter > $daysInMonth) {
                             break;
                         }
@@ -460,7 +439,6 @@ $navigation = getMonthNavigation($month, $year);
         </div>
     </div>
     
-    <!-- Orders Modal -->
     <div id="ordersModal" class="orders-modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal()">&times;</span>
@@ -478,14 +456,12 @@ $navigation = getMonthNavigation($month, $year);
                         </tr>
                     </thead>
                     <tbody id="ordersTableBody">
-                        <!-- Orders will be populated here -->
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Order Details Modal -->
     <div id="orderDetailsModal" class="orders-modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeOrderDetailsModal()">&times;</span>
@@ -506,7 +482,6 @@ $navigation = getMonthNavigation($month, $year);
                         </tr>
                     </thead>
                     <tbody id="orderDetailsBody">
-                        <!-- Order details will be populated here -->
                     </tbody>
                 </table>
             </div>
@@ -515,13 +490,11 @@ $navigation = getMonthNavigation($month, $year);
     
     <script src="/top_exchange/public/js/orders.js"></script>
     <script>
-        // Function to show the orders modal for a specific date
         function showOrders(date) {
             const modal = document.getElementById('ordersModal');
             const modalDate = document.getElementById('modalDate');
             const ordersTableBody = document.getElementById('ordersTableBody');
             
-            // Format the date for display
             const formattedDate = new Date(date).toLocaleDateString('en-US', {
                 weekday: 'long',
                 year: 'numeric',
@@ -531,7 +504,6 @@ $navigation = getMonthNavigation($month, $year);
             
             modalDate.textContent = 'Orders for ' + formattedDate;
             
-            // Fetch orders for the selected date
             fetch(`/top_exchange/backend/get_orders_by_date.php?date=${date}`)
                 .then(response => response.json())
                 .then(data => {
@@ -568,7 +540,6 @@ $navigation = getMonthNavigation($month, $year);
             modal.style.display = 'block';
         }
         
-        // Function to view order details
         function viewOrderDetails(orders, poNumber, deliveryAddress) {
             try {
                 const orderDetailsBody = document.getElementById('orderDetailsBody');
@@ -576,7 +547,6 @@ $navigation = getMonthNavigation($month, $year);
                 const orderDeliveryAddress = document.getElementById('orderDeliveryAddress');
                 const orderDetailsModal = document.getElementById('orderDetailsModal');
                 
-                // Set order information
                 orderPoNumber.textContent = `PO Number: ${poNumber}`;
                 orderDeliveryAddress.textContent = `Delivery Address: ${deliveryAddress || 'Not specified'}`;
                 
@@ -603,17 +573,14 @@ $navigation = getMonthNavigation($month, $year);
             }
         }
         
-        // Function to close the orders modal
         function closeModal() {
             document.getElementById('ordersModal').style.display = 'none';
         }
         
-        // Function to close the order details modal
         function closeOrderDetailsModal() {
             document.getElementById('orderDetailsModal').style.display = 'none';
         }
         
-        // Close modals when clicking outside the content
         window.onclick = function(event) {
             const ordersModal = document.getElementById('ordersModal');
             const orderDetailsModal = document.getElementById('orderDetailsModal');

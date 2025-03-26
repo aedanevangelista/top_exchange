@@ -379,8 +379,8 @@ if ($result && $row = $result->fetch_assoc()) {
         }
 
         @keyframes modalFade {
-            from {opacity: 0; transform: translateY(-20px);}
-            to {opacity: 1; transform: translateY(0);}
+            from {opacity: 0; transform: translate(-50%, -50%) scale(0.9);}
+            to {opacity: 1; transform: translate(-50%, -50%) scale(1);}
         }
 
         .close {
