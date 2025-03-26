@@ -515,6 +515,12 @@ if ($result && $row = $result->fetch_assoc()) {
             border-bottom: 1px solid #eee;
         }
 
+        /* Action buttons in main table */
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
         /* Responsive styling */
         @media (max-width: 768px) {
             .modal-content {
@@ -531,6 +537,10 @@ if ($result && $row = $result->fetch_assoc()) {
             .balance-display {
                 margin-top: 10px;
             }
+        }
+        
+        .fas.fa-history {
+            margin-right: 5px;
         }
 
         
@@ -556,7 +566,7 @@ if ($result && $row = $result->fetch_assoc()) {
                         <th>Username</th>
                         <th>Total Balance</th>
                         <th>Status</th>
-                        <th>Payment History</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -582,9 +592,14 @@ if ($result && $row = $result->fetch_assoc()) {
                                 </span>
                             </td>
                             <td>
-                                <button class="view-button" onclick="viewPaymentHistory('<?= htmlspecialchars($user['username']) ?>', <?= $user['balance'] ?>)">
-                                    <i class="far fa-money-bill-alt"></i>View Payments
-                                </button>
+                                <div class="action-buttons">
+                                    <button class="view-button" onclick="viewPaymentHistory('<?= htmlspecialchars($user['username']) ?>', <?= $user['balance'] ?>)">
+                                        <i class="far fa-money-bill-alt"></i>View Payments
+                                    </button>
+                                    <button class="view-button" onclick="viewPaymentHistoryOnly('<?= htmlspecialchars($user['username']) ?>')">
+                                        <i class="fas fa-history"></i>Payment History
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -773,6 +788,31 @@ if ($result && $row = $result->fetch_assoc()) {
                 <h2>Payment Proof</h2>
                 <div id="proofImageContainer">
                     <img id="fullProofImage" src="#" alt="Payment Proof">
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment History Only Modal -->
+        <div id="paymentHistoryOnlyModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('paymentHistoryOnlyModal')">&times;</span>
+                <h2>Payment History - <span id="historyModalUsername"></span></h2>
+                <div class="modal-body">
+                    <table class="orders-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Month/Year</th>
+                                <th>Amount</th>
+                                <th>Payment Type</th>
+                                <th>Notes</th>
+                                <th>Proof</th>
+                                <th>Created By</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentHistoryOnlyBody">
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -1478,6 +1518,99 @@ if ($result && $row = $result->fetch_assoc()) {
         }
     }
 
+    // New function to view payment history only
+    function viewPaymentHistoryOnly(username) {
+        $('#historyModalUsername').text(username);
+        
+        // Show loading state
+        $('#paymentHistoryOnlyBody').html('<tr><td colspan="7">Loading payment history...</td></tr>');
+        $('#paymentHistoryOnlyModal').show();
+        
+        // Add cache-busting parameter
+        const cacheBuster = `&_=${new Date().getTime()}`;
+        
+        $.ajax({
+            url: `../../backend/get_payment_history.php?username=${username}${cacheBuster}`,
+            method: 'GET',
+            dataType: 'json',
+            cache: false,
+            success: function(response) {
+                let historyHtml = '';
+                
+                if (!response.success) {
+                    $('#paymentHistoryOnlyBody').html(
+                        `<tr><td colspan="7" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
+                    );
+                    return;
+                }
+
+                const payments = response.data || [];
+                
+                if (payments.length === 0) {
+                    $('#paymentHistoryOnlyBody').html('<tr><td colspan="7">No payment history found</td></tr>');
+                    return;
+                }
+                
+                payments.forEach(payment => {
+                    const date = new Date(payment.created_at).toLocaleDateString();
+                    const monthName = months[payment.month - 1];
+                    
+                    // Payment proof image handling
+                    let proofHtml = 'No proof';
+                    if (payment.proof_image) {
+                        proofHtml = `<img src="../../payments/${username}/${monthName} - ${payment.year}/${payment.proof_image}" 
+                                    class="payment-proof-thumbnail" 
+                                    onclick="viewPaymentProof('${username}', '${monthName}', ${payment.year}, '${payment.proof_image}')"
+                                    alt="Payment Proof">`;
+                    }
+                    
+                    // Notes formatting
+                    let notesHtml = 'None';
+                    if (payment.notes && payment.notes.trim() !== '') {
+                        const notesText = payment.notes.trim();
+                        if (notesText.length > 25) {
+                            notesHtml = `
+                                <div class="payment-notes-tooltip">
+                                    <span class="payment-notes">${notesText.substring(0, 25)}...</span>
+                                    <span class="notes-tooltip-text">${notesText}</span>
+                                </div>`;
+                        } else {
+                            notesHtml = `<span class="payment-notes">${notesText}</span>`;
+                        }
+                    }
+                    
+                    // Payment type styling
+                    let paymentTypeHtml = 'N/A';
+                    if (payment.payment_type) {
+                        const paymentTypeClass = `payment-type-${payment.payment_type.toLowerCase()}`;
+                        paymentTypeHtml = `<span class="payment-type ${paymentTypeClass}">${payment.payment_type}</span>`;
+                    }
+                    
+                    historyHtml += `
+                        <tr>
+                            <td>${date}</td>
+                            <td>${monthName} ${payment.year}</td>
+                            <td>PHP ${numberFormat(payment.amount)}</td>
+                            <td>${paymentTypeHtml}</td>
+                            <td>${notesHtml}</td>
+                            <td>${proofHtml}</td>
+                            <td>${payment.created_by || 'System'}</td>
+                        </tr>
+                    `;
+                });
+                
+                $('#paymentHistoryOnlyBody').html(historyHtml);
+            },
+            error: function(xhr, status, error) {
+                console.error('Ajax Error:', error);
+                console.error('Response:', xhr.responseText);
+                $('#paymentHistoryOnlyBody').html(
+                    '<tr><td colspan="7" style="color: red;">Error loading payment history. Please try again.</td></tr>'
+                );
+            }
+        });
+    }
+
     function closeModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
         
@@ -1486,6 +1619,8 @@ if ($result && $row = $result->fetch_assoc()) {
             $('#monthlyPaymentsBody').html('');
         } else if (modalId === 'monthlyOrdersModal') {
             $('#monthlyOrdersBody').html('');
+        } else if (modalId === 'paymentHistoryOnlyModal') {
+            $('#paymentHistoryOnlyBody').html('');
         }
     }
 

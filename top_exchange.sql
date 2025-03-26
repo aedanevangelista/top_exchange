@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 26, 2025 at 03:21 PM
+-- Generation Time: Mar 26, 2025 at 06:50 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -100,7 +100,7 @@ CREATE TABLE `clients_accounts` (
 --
 
 INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company`, `company_address`, `business_proof`, `status`, `balance`, `created_at`) VALUES
-(3, 'Jeff Santonia', '$2y$10$dwjDK/6QbkEF.qBuozhjneWerFL6jY4qyZ8hchngxdbNZ3k/u80vm', 'jeffsantonia@gmail.com', '1236969420', 'Munoz', 'Quezon City', 'Jeff Company', 'Jeff City', '[\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/3.png\",\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/4.png\"]', 'Active', 473815.00, '2025-03-09 14:12:20'),
+(3, 'Jeff Santonia', '$2y$10$dwjDK/6QbkEF.qBuozhjneWerFL6jY4qyZ8hchngxdbNZ3k/u80vm', 'jeffsantonia@gmail.com', '1236969420', 'Munoz', 'Quezon City', 'Jeff Company', 'Jeff City', '[\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/3.png\",\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/4.png\"]', 'Active', 473812.00, '2025-03-09 14:12:20'),
 (4, 'joe', '$2y$10$0kM1rjCbnDXkL4/.BSrvEuVCSMjLN/ICY5KeSmzJ0wQ0aPQEsyQwe', 'joemama@gmail.com', '123123123', 'Metro Manila', 'QC', 'Joe Mama Corp', 'Joe mama address', '[\"\\/top_exchange\\/uploads\\/joe\\/audience2.png\"]', 'Inactive', 0.00, '2025-03-20 16:08:02'),
 (5, 'asdas', '$2y$10$dMplMlvggRnx7M8ln/AjfOkQHL.Ulbj8W.tU7nvAs2KkCGbXZJkge', 'asdsas@g.com', 'asdasdasd', 'asdasas', 'dasasd', 'asdas', 'asdasdas', '[\"\\/top_exchange\\/uploads\\/asdas\\/audience.png\",\"\\/top_exchange\\/uploads\\/asdas\\/audience2.png\",\"\\/top_exchange\\/uploads\\/asdas\\/file copie.png\"]', 'Inactive', 0.00, '2025-03-20 16:09:21');
 
@@ -189,7 +189,7 @@ INSERT INTO `monthly_payments` (`id`, `username`, `month`, `year`, `total_amount
 (36, 'asdasd', 12, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
 (145, 'Jeff Santonia', 1, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
 (146, 'Jeff Santonia', 2, 2025, 15400.00, 'Fully Paid', '2025-03-19 18:05:51', '2025-03-26 04:05:35', 0.00, 'payment_1742961760.png', NULL, 'Internal'),
-(147, 'Jeff Santonia', 3, 2025, 4795.00, 'Partially Paid', '2025-03-19 18:05:51', '2025-03-26 04:06:01', 3995.00, 'payment_1742961956.png', NULL, 'External'),
+(147, 'Jeff Santonia', 3, 2025, 4795.00, 'Fully Paid', '2025-03-19 18:05:51', '2025-03-26 15:09:42', 0.00, 'payment_1743001774.png', NULL, 'External'),
 (148, 'Jeff Santonia', 4, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
 (149, 'Jeff Santonia', 5, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
 (150, 'Jeff Santonia', 6, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
@@ -293,30 +293,16 @@ CREATE TABLE `payment_history` (
   `notes` text DEFAULT NULL,
   `proof_image` varchar(255) DEFAULT NULL,
   `created_by` varchar(100) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `payment_type` enum('Internal','External') DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `payment_history`
 --
 
-INSERT INTO `payment_history` (`id`, `username`, `month`, `year`, `amount`, `notes`, `proof_image`, `created_by`, `created_at`) VALUES
-(1, 'Jeff Santonia', 3, 2025, 4795.00, '', 'payment_1742796032.png', 'admin', '2025-03-24 06:00:32'),
-(2, 'Jeff Santonia', 3, 2025, 4795.00, '', 'payment_1742796215.png', 'admin', '2025-03-24 06:03:35'),
-(3, 'Jeff Santonia', 3, 2025, 4795.00, NULL, 'payment_1742815851.png', 'admin', '2025-03-24 11:30:51'),
-(4, 'Jeff Santonia', 2, 2025, 15400.00, NULL, 'payment_1742918495.png', 'admin', '2025-03-25 16:01:35'),
-(5, 'Jeff Santonia', 2, 2025, 15400.00, NULL, 'payment_1742957654.png', 'admin', '2025-03-26 02:54:14'),
-(6, 'Jeff Santonia', 2, 2025, 15400.00, NULL, NULL, 'admin', '2025-03-26 02:54:23'),
-(7, 'Jeff Santonia', 3, 2025, 4795.00, NULL, 'payment_1742957677.png', 'admin', '2025-03-26 02:54:37'),
-(8, 'Jeff Santonia', 2, 2025, 15400.00, NULL, 'payment_1742957906.png', 'admin', '2025-03-26 02:58:26'),
-(9, 'Jeff Santonia', 2, 2025, 1000.00, NULL, 'payment_1742961180.png', 'admin', '2025-03-26 03:53:00'),
-(10, 'Jeff Santonia', 2, 2025, 14400.00, NULL, NULL, 'admin', '2025-03-26 04:02:18'),
-(11, 'Jeff Santonia', 2, 2025, 15400.00, NULL, NULL, 'admin', '2025-03-26 04:02:24'),
-(12, 'Jeff Santonia', 2, 2025, 15400.00, NULL, NULL, 'admin', '2025-03-26 04:02:35'),
-(13, 'Jeff Santonia', 2, 2025, 15400.00, NULL, 'payment_1742961760.png', 'admin', '2025-03-26 04:02:40'),
-(14, 'Jeff Santonia', 2, 2025, 15400.00, NULL, NULL, 'admin', '2025-03-26 04:05:35'),
-(15, 'Jeff Santonia', 3, 2025, 400.00, NULL, NULL, 'admin', '2025-03-26 04:05:47'),
-(16, 'Jeff Santonia', 3, 2025, 400.00, NULL, 'payment_1742961956.png', 'admin', '2025-03-26 04:05:56');
+INSERT INTO `payment_history` (`id`, `username`, `month`, `year`, `amount`, `notes`, `proof_image`, `created_by`, `created_at`, `payment_type`) VALUES
+(20, 'Jeff Santonia', 3, 2025, 4795.00, NULL, 'payment_1743001774.png', 'admin', '2025-03-26 15:09:34', 'External');
 
 -- --------------------------------------------------------
 
@@ -349,7 +335,12 @@ INSERT INTO `payment_status_history` (`id`, `username`, `month`, `year`, `old_st
 (7, 'Jeff Santonia', 3, 2025, 'Paid', 'Unpaid', 'admin', '2025-03-24 11:29:25'),
 (8, 'Jeff Santonia', 3, 2025, 'For Approval', 'Paid', 'admin', '2025-03-24 11:31:27'),
 (9, 'Jeff Santonia', 3, 2025, 'Paid', 'Unpaid', 'admin', '2025-03-24 11:39:57'),
-(10, 'Jeff Santonia', 3, 2025, 'For Approval', 'Partially Paid', 'admin', '2025-03-26 04:06:01');
+(10, 'Jeff Santonia', 3, 2025, 'For Approval', 'Partially Paid', 'admin', '2025-03-26 04:06:01'),
+(11, 'Jeff Santonia', 3, 2025, 'For Approval', 'Fully Paid', 'admin', '2025-03-26 14:24:30'),
+(12, 'Jeff Santonia', 3, 2025, 'Fully Paid', 'Unpaid', 'admin', '2025-03-26 14:50:47'),
+(13, 'Jeff Santonia', 3, 2025, 'For Approval', 'Partially Paid', 'admin', '2025-03-26 14:50:59'),
+(14, 'Jeff Santonia', 3, 2025, 'Fully Paid', 'Unpaid', 'admin', '2025-03-26 15:09:30'),
+(15, 'Jeff Santonia', 3, 2025, 'For Approval', 'Fully Paid', 'admin', '2025-03-26 15:09:42');
 
 -- --------------------------------------------------------
 
@@ -600,13 +591,13 @@ ALTER TABLE `pages`
 -- AUTO_INCREMENT for table `payment_history`
 --
 ALTER TABLE `payment_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `payment_status_history`
 --
 ALTER TABLE `payment_status_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `products`
