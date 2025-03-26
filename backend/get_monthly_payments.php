@@ -41,29 +41,46 @@ try {
     $check_notes_column = "SHOW COLUMNS FROM monthly_payments LIKE 'notes'";
     $notes_column_exists = $conn->query($check_notes_column)->num_rows > 0;
     
-    // Now get monthly payments data
-    if ($notes_column_exists) {
-        $sql = "SELECT 
-                    mp.month, 
-                    mp.total_amount, 
-                    mp.payment_status,
-                    mp.remaining_balance,
-                    mp.proof_image,
-                    mp.notes
-                FROM monthly_payments mp
-                WHERE mp.username = ? AND mp.year = ?
-                ORDER BY mp.month";
-    } else {
-        $sql = "SELECT 
-                    mp.month, 
-                    mp.total_amount, 
-                    mp.payment_status,
-                    mp.remaining_balance,
-                    mp.proof_image
-                FROM monthly_payments mp
-                WHERE mp.username = ? AND mp.year = ?
-                ORDER BY mp.month";
+    // Verify if monthly_payments table has payment_type column
+    $check_payment_type_column = "SHOW COLUMNS FROM monthly_payments LIKE 'payment_type'";
+    $payment_type_column_exists = $conn->query($check_payment_type_column)->num_rows > 0;
+    
+    // Check if payment_status enum includes the new statuses
+    $check_status_values = "SHOW COLUMNS FROM monthly_payments LIKE 'payment_status'";
+    $result = $conn->query($check_status_values);
+    $update_enum = false;
+
+    if ($result && $row = $result->fetch_assoc()) {
+        $type = $row['Type'];
+        if (strpos($type, 'Fully Paid') === false || strpos($type, 'Partially Paid') === false) {
+            $update_enum = true;
+            
+            // Update the payment_status enum
+            $conn->query("ALTER TABLE monthly_payments 
+                         MODIFY COLUMN payment_status ENUM('Fully Paid', 'Partially Paid', 'Unpaid', 'For Approval') 
+                         NOT NULL DEFAULT 'Unpaid'");
+        }
     }
+    
+    // Build the SQL query based on which columns exist
+    $sql = "SELECT 
+                mp.month, 
+                mp.total_amount, 
+                mp.payment_status,
+                mp.remaining_balance,
+                mp.proof_image";
+    
+    if ($notes_column_exists) {
+        $sql .= ", mp.notes";
+    }
+    
+    if ($payment_type_column_exists) {
+        $sql .= ", mp.payment_type";
+    }
+    
+    $sql .= " FROM monthly_payments mp
+              WHERE mp.username = ? AND mp.year = ?
+              ORDER BY mp.month";
     
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("si", $username, $year);
@@ -80,7 +97,8 @@ try {
             'payment_status' => 'Unpaid',
             'remaining_balance' => isset($monthly_order_totals[$i]) ? $monthly_order_totals[$i] : 0,
             'proof_image' => null,
-            'notes' => ''
+            'notes' => '',
+            'payment_type' => null
         ];
         
         $payments[$i] = $payment_data;
@@ -105,9 +123,23 @@ try {
                 $update_stmt->execute();
             }
             
+            // Convert old 'Paid' status to 'Fully Paid'
+            if ($row['payment_status'] === 'Paid') {
+                $row['payment_status'] = 'Fully Paid';
+                
+                // Update the database to use the new status
+                $update_status_sql = "UPDATE monthly_payments 
+                                     SET payment_status = 'Fully Paid' 
+                                     WHERE username = ? AND month = ? AND year = ? AND payment_status = 'Paid'";
+                $update_status_stmt = $conn->prepare($update_status_sql);
+                $update_status_stmt->bind_param("sii", $username, $month, $year);
+                $update_status_stmt->execute();
+            }
+            
             // Set remaining balance to total amount if it's null AND not paid
             if (($row['remaining_balance'] === null || $row['remaining_balance'] == 0) && 
-                $row['payment_status'] != 'Paid' && $row['total_amount'] > 0) {
+                $row['payment_status'] != 'Fully Paid' && $row['payment_status'] != 'Partially Paid' && 
+                $row['total_amount'] > 0) {
                 $row['remaining_balance'] = $row['total_amount'];
                 
                 // Update the database record with this remaining balance
@@ -115,20 +147,20 @@ try {
                                       SET remaining_balance = total_amount 
                                       WHERE username = ? AND month = ? AND year = ? AND 
                                       (remaining_balance IS NULL OR remaining_balance = 0) AND 
-                                      payment_status != 'Paid' AND total_amount > 0";
+                                      payment_status NOT IN ('Fully Paid', 'Partially Paid') AND total_amount > 0";
                 $update_balance_stmt = $conn->prepare($update_balance_sql);
                 $update_balance_stmt->bind_param("sii", $username, $month, $year);
                 $update_balance_stmt->execute();
             }
             
-            // If status is Paid, remaining balance should be 0
-            if ($row['payment_status'] == 'Paid') {
+            // If status is Fully Paid, remaining balance should be 0
+            if ($row['payment_status'] == 'Fully Paid') {
                 $row['remaining_balance'] = 0;
                 
                 // Update the database to ensure consistency
                 $update_paid_sql = "UPDATE monthly_payments 
                                    SET remaining_balance = 0 
-                                   WHERE username = ? AND month = ? AND year = ? AND payment_status = 'Paid'";
+                                   WHERE username = ? AND month = ? AND year = ? AND payment_status = 'Fully Paid'";
                 $update_paid_stmt = $conn->prepare($update_paid_sql);
                 $update_paid_stmt->bind_param("sii", $username, $month, $year);
                 $update_paid_stmt->execute();
@@ -137,6 +169,11 @@ try {
             // Handle notes field if it doesn't exist in result
             if (!isset($row['notes'])) {
                 $row['notes'] = '';
+            }
+            
+            // Handle payment_type field if it doesn't exist in result
+            if (!isset($row['payment_type'])) {
+                $row['payment_type'] = null;
             }
             
             $payments[$month] = $row;

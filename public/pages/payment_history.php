@@ -13,6 +13,19 @@ if ($result && $result->num_rows > 0) {
         $users[] = $row;
     }
 }
+
+// Update the payment_status enum if needed
+$check_status_values = "SHOW COLUMNS FROM monthly_payments LIKE 'payment_status'";
+$result = $conn->query($check_status_values);
+if ($result && $row = $result->fetch_assoc()) {
+    $type = $row['Type'];
+    if (strpos($type, 'Fully Paid') === false || strpos($type, 'Partially Paid') === false) {
+        // Update the enum to include the new statuses
+        $conn->query("ALTER TABLE monthly_payments 
+                     MODIFY COLUMN payment_status ENUM('Fully Paid', 'Partially Paid', 'Unpaid', 'For Approval') 
+                     NOT NULL DEFAULT 'Unpaid'");
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -29,10 +42,12 @@ if ($result && $result->num_rows > 0) {
     <style>
         /* Year Tabs Styling */
         .year-tabs {
-            display: flex;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
+            position: sticky;
+            top: 65px; /* Adjust based on header height */
+            background-color: #fefefe;
+            z-index: 4;
+            padding: 10px 0;
+            margin-bottom: 10px;
         }
         
         .year-tab {
@@ -92,8 +107,13 @@ if ($result && $result->num_rows > 0) {
             font-weight: 600;
         }
 
-        .payment-status-paid {
+        .payment-status-fullypaid {
             color: #28a745;
+            font-weight: 600;
+        }
+        
+        .payment-status-partiallypaid {
+            color: #17a2b8;
             font-weight: 600;
         }
 
@@ -292,8 +312,12 @@ if ($result && $result->num_rows > 0) {
             background-color: #ffc107;
         }
 
-        .status-paid {
+        .status-fullypaid {
             background-color: #28a745;
+        }
+        
+        .status-partiallypaid {
+            background-color: #17a2b8;
         }
 
         .status-pending {
@@ -329,19 +353,29 @@ if ($result && $result->num_rows > 0) {
         .modal-content {
             position: relative;
             background-color: #fefefe;
-            margin: 5% auto;
-            padding: 20px;
+            margin: 0;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
             width: 80%;
-            max-width: 900px;
+            max-width: 1200px;
+            max-height: 80vh;
             animation: modalFade 0.3s ease;
+            overflow: hidden;
+            
+            /* Center the modal in viewport */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
         }
 
         /* Make monthly payments modal wider */
         #monthlyPaymentsModal .modal-content {
-            width: 75%;
+            width: 80%;
             max-width: 1200px;
+            max-height: 80vh;
         }
 
         @keyframes modalFade {
@@ -448,6 +482,38 @@ if ($result && $result->num_rows > 0) {
             white-space: normal;
             overflow: visible;
         }
+        
+        /* Payment type styling */
+        .payment-type {
+            font-style: italic;
+            color: #495057;
+        }
+        
+        .payment-type-internal {
+            color: #17a2b8;
+            font-weight: bold;
+        }
+        
+        .payment-type-external {
+            color: #fd7e14;
+            font-weight: bold;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 20px 20px 20px;
+        }
+
+        .modal-header-with-balance {
+            position: sticky;
+            top: 0;
+            background-color: #fefefe;
+            z-index: 5;
+            padding: 20px 20px 10px 20px;
+            margin-bottom: 0;
+            border-bottom: 1px solid #eee;
+        }
 
         /* Responsive styling */
         @media (max-width: 768px) {
@@ -464,6 +530,88 @@ if ($result && $result->num_rows > 0) {
             
             .balance-display {
                 margin-top: 10px;
+            }
+        }
+
+        .orders-table-container {
+            max-height: 100%;
+            overflow: visible;
+        }
+
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .orders-table thead {
+            position: sticky;
+            top: 120px; /* Adjust based on header + tabs height */
+            background-color: #f8f9fa;
+            z-index: 3;
+        }
+
+        .orders-table th {
+            background-color: #f8f9fa;
+            box-shadow: 0 1px 0 rgba(0,0,0,0.1);
+        }
+
+        /* Center small modals */
+        #addBalanceModal .modal-content,
+        #paymentModal .modal-content,
+        #changeStatusModal .modal-content,
+        #paymentProofModal .modal-content {
+            width: auto;
+            max-width: 500px;
+        }
+
+        /* Style for the close button */
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+            z-index: 10;
+            text-decoration: none;
+        }
+
+        .close:hover {
+            color: #f44336;
+        }
+
+        @keyframes modalFade {
+            from {opacity: 0; transform: translate(-50%, -60%);}
+            to {opacity: 1; transform: translate(-50%, -50%);}
+        }
+        
+        /* More responsive styling */
+        @media (max-width: 992px) {
+            .modal-content {
+                width: 90%;
+                max-height: 85vh;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                max-height: 90vh;
+            }
+            
+            .modal-header-with-balance {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .balance-display {
+                margin-top: 10px;
+            }
+            
+            .orders-table thead {
+                top: 150px;
             }
         }
     </style>
@@ -542,22 +690,25 @@ if ($result && $result->num_rows > 0) {
                     <!-- Tabs will be added dynamically -->
                 </div>
                 
-                <table class="orders-table">
-                    <thead>
-                        <tr>
-                            <th>Month</th>
-                            <th>Orders</th>
-                            <th>Total Amount</th>
-                            <th>Remaining Balance</th>
-                            <th>Proof</th>
-                            <th>Notes</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="monthlyPaymentsBody">
-                    </tbody>
-                </table>
+                <div class="modal-body">
+                    <table class="orders-table">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Orders</th>
+                                <th>Total Amount</th>
+                                <th>Remaining Balance</th>
+                                <th>Proof</th>
+                                <th>Notes</th>
+                                <th>Payment Type</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthlyPaymentsBody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -624,25 +775,38 @@ if ($result && $result->num_rows > 0) {
                 </div>
                 
                 <div class="input-group">
-                    <label for="amountToPay">Amount to Pay (PHP)</label>
-                    <input type="number" id="amountToPay" min="1" step="0.01" readonly>
+                    <label for="paymentType">Payment Type</label>
+                    <select id="paymentType" onchange="togglePaymentFields()">
+                        <option value="Internal">Internal Payment (Use Available Balance)</option>
+                        <option value="External">External Payment (Bank Transfer)</option>
+                    </select>
                 </div>
+                
                 <div class="input-group">
+                    <label for="amountToPay">Amount to Pay (PHP)</label>
+                    <input type="number" id="amountToPay" min="1" step="0.01">
+                </div>
+                
+                <div class="input-group" id="proofFileGroup">
                     <label for="paymentProof">Payment Proof</label>
                     <input type="file" id="paymentProof" accept="image/*" onchange="previewImage(this)">
                     <small>Upload proof of payment (image file)</small>
                 </div>
+                
                 <div class="preview-container" id="imagePreview">
                     <img id="previewImg" src="#" alt="Preview">
                 </div>
+                
                 <div class="input-group">
                     <label for="paymentNotes">Notes (Optional)</label>
                     <input type="text" id="paymentNotes" placeholder="Enter notes">
                 </div>
+                
                 <div class="button-group">
                     <button class="cancel-btn" onclick="closeModal('paymentModal')">Cancel</button>
                     <button class="submit-btn" onclick="submitPayment()">Submit Payment</button>
                 </div>
+                
                 <input type="hidden" id="paymentMonth">
                 <input type="hidden" id="paymentYear">
             </div>
@@ -662,9 +826,13 @@ if ($result && $result->num_rows > 0) {
                         <div class="status-icon status-forapproval"></div>
                         <span>For Approval</span>
                     </div>
-                    <div class="status-option" data-status="Paid" onclick="selectStatus(this)">
-                        <div class="status-icon status-paid"></div>
-                        <span>Paid</span>
+                    <div class="status-option" data-status="Partially Paid" onclick="selectStatus(this)">
+                        <div class="status-icon status-partiallypaid"></div>
+                        <span>Partially Paid</span>
+                    </div>
+                    <div class="status-option" data-status="Fully Paid" onclick="selectStatus(this)">
+                        <div class="status-icon status-fullypaid"></div>
+                        <span>Fully Paid</span>
                     </div>
                 </div>
                 <div class="button-group">
@@ -703,8 +871,8 @@ if ($result && $result->num_rows > 0) {
     let currentYear = new Date().getFullYear();
     let currentUserBalance = 0;
     
-    // Current date for comparison in UTC (as per the user's timestamp: 2025-03-24 17:35:50)
-    const currentDate = new Date('2025-03-24T17:35:50Z');
+    // Current date for comparison in UTC (as per the user's timestamp: 2025-03-26 03:54:05)
+    const currentDate = new Date('2025-03-26T03:54:05Z');
     const currentYearValue = currentDate.getFullYear();
     const currentMonthValue = currentDate.getMonth(); // 0-based index
 
@@ -801,7 +969,7 @@ if ($result && $result->num_rows > 0) {
     function fetchAvailableYears(username, refreshData = false) {
         // Show loading state
         $('#yearTabs').html('<div>Loading years...</div>');
-        $('#monthlyPaymentsBody').html('<tr><td colspan="8">Please select a year...</td></tr>');
+        $('#monthlyPaymentsBody').html('<tr><td colspan="9">Please select a year...</td></tr>');
         $('#monthlyPaymentsModal').show();
         
         // Add cache-busting parameter to prevent browser caching
@@ -810,7 +978,6 @@ if ($result && $result->num_rows > 0) {
         $.ajax({
             url: `../../backend/get_available_years.php?username=${username}${cacheBuster}`,
             method: 'GET',
-            // Removed duplicate data parameter
             dataType: 'json',
             cache: false, // Prevent caching
             success: function(response) {
@@ -869,7 +1036,7 @@ if ($result && $result->num_rows > 0) {
         currentYear = year;
         
         // Show loading state
-        $('#monthlyPaymentsBody').html('<tr><td colspan="8">Loading...</td></tr>');
+        $('#monthlyPaymentsBody').html('<tr><td colspan="9">Loading...</td></tr>');
         
         console.log('Fetching payments for:', currentUsername, year);
 
@@ -879,15 +1046,16 @@ if ($result && $result->num_rows > 0) {
         $.ajax({
             url: `../../backend/get_monthly_payments.php?username=${currentUsername}&year=${year}${cacheBuster}`,
             method: 'GET',
-            // Removed duplicate data parameter
             dataType: 'json',
             cache: false,
             success: function(response) {
+                console.log('Payments response:', response); // Log the response to check if payment_type is included
+                
                 let monthlyPaymentsHtml = '';
                 
                 if (!response.success) {
                     $('#monthlyPaymentsBody').html(
-                        `<tr><td colspan="8" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
+                        `<tr><td colspan="9" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
                     );
                     return;
                 }
@@ -901,14 +1069,16 @@ if ($result && $result->num_rows > 0) {
                         payment_status: 'Unpaid',
                         remaining_balance: 0,
                         proof_image: null,
-                        notes: ''
+                        notes: '',
+                        payment_type: null
                     };
 
                     // Ensure remaining balance is set correctly
                     let remainingBalance = parseFloat(monthData.remaining_balance);
-                    if (monthData.payment_status === 'Paid') {
+                    if (monthData.payment_status === 'Fully Paid') {
                         remainingBalance = 0;
-                    } else if (remainingBalance === 0 && parseFloat(monthData.total_amount) > 0) {
+                    } else if (remainingBalance === 0 && parseFloat(monthData.total_amount) > 0 && 
+                              monthData.payment_status !== 'Fully Paid' && monthData.payment_status !== 'Partially Paid') {
                         // If remaining balance is 0 but payment isn't Paid and there's a total amount
                         remainingBalance = parseFloat(monthData.total_amount);
                     }
@@ -923,12 +1093,29 @@ if ($result && $result->num_rows > 0) {
                         displayStatus = 'Pending';
                     }
                     
-                    const statusClass = isFutureMonth ? 'payment-status-pending' : 
-                                      `payment-status-${monthData.payment_status.toLowerCase().replace(/\s+/g, '')}`;
+                    // Convert old 'Paid' status to 'Fully Paid' for display purposes
+                    if (displayStatus === 'Paid') {
+                        displayStatus = 'Fully Paid';
+                    }
+                    
+                    // Get the correct CSS class for the status
+                    let statusClass = isFutureMonth ? 'payment-status-pending' : '';
+                    
+                    if (!isFutureMonth) {
+                        if (displayStatus === 'Unpaid') {
+                            statusClass = 'payment-status-unpaid';
+                        } else if (displayStatus === 'For Approval') {
+                            statusClass = 'payment-status-forapproval';
+                        } else if (displayStatus === 'Fully Paid') {
+                            statusClass = 'payment-status-fullypaid';
+                        } else if (displayStatus === 'Partially Paid') {
+                            statusClass = 'payment-status-partiallypaid';
+                        }
+                    }
                     
                     // Determine button status and classes
                     const viewOrdersButtonDisabled = false; // Allow viewing orders even for future months
-                    const payButtonDisabled = isFutureMonth || monthData.payment_status === 'Paid' || parseFloat(monthData.total_amount) === 0;
+                    const payButtonDisabled = isFutureMonth || displayStatus === 'Fully Paid' || parseFloat(monthData.total_amount) === 0;
                     const statusButtonDisabled = isFutureMonth;
                     
                     const viewOrdersBtnClass = viewOrdersButtonDisabled ? 'view-button disabled' : 'view-button';
@@ -959,8 +1146,15 @@ if ($result && $result->num_rows > 0) {
                         }
                     }
                     
+                    // Payment type display
+                    let paymentTypeHtml = 'N/A';
+                    if (monthData.payment_type) {
+                        const paymentTypeClass = `payment-type-${monthData.payment_type.toLowerCase()}`;
+                        paymentTypeHtml = `<span class="payment-type ${paymentTypeClass}">${monthData.payment_type}</span>`;
+                    }
+                    
                     const tooltip = isFutureMonth ? 'Month has not ended yet' : 
-                                   (monthData.payment_status === 'Paid' ? 'Already paid' : 
+                                   (displayStatus === 'Fully Paid' ? 'Already paid' : 
                                    (parseFloat(monthData.total_amount) === 0 ? 'No orders to pay' : 'Make payment'));
                     
                     monthlyPaymentsHtml += `
@@ -976,6 +1170,7 @@ if ($result && $result->num_rows > 0) {
                             <td>PHP ${numberFormat(remainingBalance)}</td>
                             <td>${proofHtml}</td>
                             <td>${notesHtml}</td>
+                            <td>${paymentTypeHtml}</td>
                             <td class="${statusClass}">${displayStatus}</td>
                             <td>
                                 <div class="action-buttons">
@@ -1006,7 +1201,7 @@ if ($result && $result->num_rows > 0) {
                 console.error('Response:', xhr.responseText);
                 console.error('Status:', status);
                 $('#monthlyPaymentsBody').html(
-                    '<tr><td colspan="8" style="color: red;">Error loading payment history. Please try again.</td></tr>'
+                    '<tr><td colspan="9" style="color: red;">Error loading payment history. Please try again.</td></tr>'
                 );
             }
         });
@@ -1026,6 +1221,12 @@ if ($result && $result->num_rows > 0) {
             $('#availableBalance').attr('class', 'total-balance-zero');
         }
         
+        // Reset payment type dropdown
+        $('#paymentType').val('Internal');
+        
+        // Update fields based on payment type
+        togglePaymentFields();
+        
         $('#paymentNotes').val('');
         $('#paymentMonth').val(month);
         $('#paymentYear').val(year);
@@ -1037,22 +1238,48 @@ if ($result && $result->num_rows > 0) {
         // Show the modal
         $('#paymentModal').show();
     }
+    
+    function togglePaymentFields() {
+        const paymentType = $('#paymentType').val();
+        
+        if (paymentType === 'Internal') {
+            // For internal payments, no proof image required
+            $('#proofFileGroup').hide();
+            $('#amountToPay').prop('readonly', false);
+        } else {
+            // For external payments, proof image required
+            $('#proofFileGroup').show();
+            $('#amountToPay').prop('readonly', false);
+        }
+    }
 
     function submitPayment() {
         const month = $('#paymentMonth').val();
         const year = $('#paymentYear').val();
         const amount = parseFloat($('#amountToPay').val());
         const notes = $('#paymentNotes').val();
+        const paymentType = $('#paymentType').val();
         
-        if (amount > currentUserBalance) {
-            alert('Insufficient balance. Please add more funds to your account.');
+        if (!amount || amount <= 0) {
+            alert('Please enter a valid amount');
             return;
         }
         
-        const fileInput = document.getElementById('paymentProof');
-        if (!fileInput.files || fileInput.files.length === 0) {
-            alert('Please upload proof of payment');
-            return;
+        // Validation for internal payments
+        if (paymentType === 'Internal') {
+            if (amount > currentUserBalance) {
+                alert('Insufficient balance. Please add more funds to your account or select External Payment.');
+                return;
+            }
+        }
+        
+        // Validation for external payments
+        if (paymentType === 'External') {
+            const fileInput = document.getElementById('paymentProof');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please upload proof of payment for external payments');
+                return;
+            }
         }
         
         // Create FormData object for file upload
@@ -1062,7 +1289,15 @@ if ($result && $result->num_rows > 0) {
         formData.append('year', year);
         formData.append('amount', amount);
         formData.append('notes', notes);
-        formData.append('proof', fileInput.files[0]);
+        formData.append('payment_type', paymentType);
+        
+        // Only append proof file for External payments
+        if (paymentType === 'External') {
+            const fileInput = document.getElementById('paymentProof');
+            if (fileInput.files && fileInput.files.length > 0) {
+                formData.append('proof', fileInput.files[0]);
+            }
+        }
         
         // Show loading indicator
         $('#paymentModal .submit-btn').prop('disabled', true).text('Processing...');
@@ -1075,6 +1310,8 @@ if ($result && $result->num_rows > 0) {
             contentType: false,
             processData: false,
             success: function(response) {
+                console.log('Payment response:', response);
+                
                 // Reset button
                 $('#paymentModal .submit-btn').prop('disabled', false).text('Submit Payment');
                 
@@ -1127,6 +1364,11 @@ if ($result && $result->num_rows > 0) {
         
         // Reset all status options
         $('.status-option').removeClass('selected');
+        
+        // Convert old 'Paid' status to 'Fully Paid' if needed
+        if (currentStatus === 'Paid') {
+            currentStatus = 'Fully Paid';
+        }
         
         // Pre-select the current status if it exists
         $(`.status-option[data-status="${currentStatus}"]`).addClass('selected');
@@ -1221,7 +1463,6 @@ if ($result && $result->num_rows > 0) {
         $.ajax({
             url: `../../backend/get_monthly_orders.php?username=${username}&month=${month}&year=${year}${cacheBuster}`,
             method: 'GET',
-            // Removed duplicate data parameter
             dataType: 'json',
             cache: false,
             success: function(response) {
@@ -1319,6 +1560,13 @@ if ($result && $result->num_rows > 0) {
 
     function closeModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
+        
+        // Clear modal content when closing to avoid stale data
+        if (modalId === 'monthlyPaymentsModal') {
+            $('#monthlyPaymentsBody').html('');
+        } else if (modalId === 'monthlyOrdersModal') {
+            $('#monthlyOrdersBody').html('');
+        }
     }
 
     function numberFormat(number) {
@@ -1351,6 +1599,11 @@ if ($result && $result->num_rows > 0) {
             const username = row.cells[0].textContent.toLowerCase();
             row.style.display = username.includes(searchText) ? '' : 'none';
         });
+    });
+    
+    // Initialize by hiding the proof file group when page loads
+    $(document).ready(function() {
+        togglePaymentFields();
     });
 </script>
 </body>
