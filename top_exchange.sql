@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 25, 2025 at 06:12 PM
+-- Generation Time: Mar 26, 2025 at 03:21 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -69,7 +69,9 @@ CREATE TABLE `balance_history` (
 
 INSERT INTO `balance_history` (`id`, `username`, `amount`, `notes`, `created_by`, `created_at`) VALUES
 (1, 'Jeff Santonia', 50000.00, '', 'admin', '2025-03-24 05:17:00'),
-(2, 'Jeff Santonia', 5000.00, '', 'admin', '2025-03-24 11:30:04');
+(2, 'Jeff Santonia', 5000.00, '', 'admin', '2025-03-24 11:30:04'),
+(3, 'Jeff Santonia', 25000.00, '', 'admin', '2025-03-26 03:02:36'),
+(4, 'Jeff Santonia', 500000.00, '', 'admin', '2025-03-26 04:02:33');
 
 -- --------------------------------------------------------
 
@@ -98,7 +100,7 @@ CREATE TABLE `clients_accounts` (
 --
 
 INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company`, `company_address`, `business_proof`, `status`, `balance`, `created_at`) VALUES
-(3, 'Jeff Santonia', '$2y$10$dwjDK/6QbkEF.qBuozhjneWerFL6jY4qyZ8hchngxdbNZ3k/u80vm', 'jeffsantonia@gmail.com', '1236969420', 'Munoz', 'Quezon City', 'Jeff Company', 'Jeff City', '[\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/3.png\",\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/4.png\"]', 'Active', 25215.00, '2025-03-09 14:12:20'),
+(3, 'Jeff Santonia', '$2y$10$dwjDK/6QbkEF.qBuozhjneWerFL6jY4qyZ8hchngxdbNZ3k/u80vm', 'jeffsantonia@gmail.com', '1236969420', 'Munoz', 'Quezon City', 'Jeff Company', 'Jeff City', '[\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/3.png\",\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/4.png\"]', 'Active', 473815.00, '2025-03-09 14:12:20'),
 (4, 'joe', '$2y$10$0kM1rjCbnDXkL4/.BSrvEuVCSMjLN/ICY5KeSmzJ0wQ0aPQEsyQwe', 'joemama@gmail.com', '123123123', 'Metro Manila', 'QC', 'Joe Mama Corp', 'Joe mama address', '[\"\\/top_exchange\\/uploads\\/joe\\/audience2.png\"]', 'Inactive', 0.00, '2025-03-20 16:08:02'),
 (5, 'asdas', '$2y$10$dMplMlvggRnx7M8ln/AjfOkQHL.Ulbj8W.tU7nvAs2KkCGbXZJkge', 'asdsas@g.com', 'asdasdasd', 'asdasas', 'dasasd', 'asdas', 'asdasdas', '[\"\\/top_exchange\\/uploads\\/asdas\\/audience.png\",\"\\/top_exchange\\/uploads\\/asdas\\/audience2.png\",\"\\/top_exchange\\/uploads\\/asdas\\/file copie.png\"]', 'Inactive', 0.00, '2025-03-20 16:09:21');
 
@@ -135,79 +137,80 @@ CREATE TABLE `monthly_payments` (
   `month` int(11) NOT NULL,
   `year` int(11) NOT NULL,
   `total_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
-  `payment_status` enum('Paid','Unpaid','For Approval') NOT NULL DEFAULT 'Unpaid',
+  `payment_status` enum('Fully Paid','Partially Paid','Unpaid','For Approval') NOT NULL DEFAULT 'Unpaid',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `remaining_balance` decimal(10,2) DEFAULT NULL,
   `proof_image` varchar(255) DEFAULT NULL,
-  `payment_method` varchar(20) DEFAULT NULL
+  `payment_method` varchar(20) DEFAULT NULL,
+  `payment_type` enum('Internal','External') DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `monthly_payments`
 --
 
-INSERT INTO `monthly_payments` (`id`, `username`, `month`, `year`, `total_amount`, `payment_status`, `created_at`, `updated_at`, `remaining_balance`, `proof_image`, `payment_method`) VALUES
-(1, 'aedan', 1, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(2, 'aedan', 2, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(3, 'aedan', 3, 2025, 1625.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 1625.00, NULL, NULL),
-(4, 'aedan', 4, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(5, 'aedan', 5, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(6, 'aedan', 6, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(7, 'aedan', 7, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(8, 'aedan', 8, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(9, 'aedan', 9, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(10, 'aedan', 10, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(11, 'aedan', 11, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(12, 'aedan', 12, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(13, 'asdasd', 1, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(14, 'asdasd', 2, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(15, 'asdasd', 3, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(16, 'asdasd', 4, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(17, 'asdasd', 5, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(18, 'asdasd', 6, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(19, 'asdasd', 7, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(20, 'asdasd', 8, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(21, 'asdasd', 9, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(22, 'asdasd', 10, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(23, 'asdasd', 11, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(24, 'asdasd', 12, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(25, 'asdasd', 1, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(26, 'asdasd', 2, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(27, 'asdasd', 3, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(28, 'asdasd', 4, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(29, 'asdasd', 5, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(30, 'asdasd', 6, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(31, 'asdasd', 7, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(32, 'asdasd', 8, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(33, 'asdasd', 9, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(34, 'asdasd', 10, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(35, 'asdasd', 11, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(36, 'asdasd', 12, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(145, 'Jeff Santonia', 1, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(146, 'Jeff Santonia', 2, 2025, 15400.00, 'For Approval', '2025-03-19 18:05:51', '2025-03-25 16:01:35', 15400.00, 'payment_1742918495.png', NULL),
-(147, 'Jeff Santonia', 3, 2025, 4795.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-24 11:39:57', 4795.00, 'payment_1742815851.png', NULL),
-(148, 'Jeff Santonia', 4, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(149, 'Jeff Santonia', 5, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(150, 'Jeff Santonia', 6, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(151, 'Jeff Santonia', 7, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(152, 'Jeff Santonia', 8, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(153, 'Jeff Santonia', 9, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(154, 'Jeff Santonia', 10, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(155, 'Jeff Santonia', 11, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(156, 'Jeff Santonia', 12, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(769, 'asdas', 1, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(770, 'asdas', 2, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(771, 'asdas', 3, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(772, 'asdas', 4, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(773, 'asdas', 5, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(774, 'asdas', 6, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(775, 'asdas', 7, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(776, 'asdas', 8, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(777, 'asdas', 9, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(778, 'asdas', 10, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(779, 'asdas', 11, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL),
-(780, 'asdas', 12, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL);
+INSERT INTO `monthly_payments` (`id`, `username`, `month`, `year`, `total_amount`, `payment_status`, `created_at`, `updated_at`, `remaining_balance`, `proof_image`, `payment_method`, `payment_type`) VALUES
+(1, 'aedan', 1, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(2, 'aedan', 2, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(3, 'aedan', 3, 2025, 1625.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 1625.00, NULL, NULL, NULL),
+(4, 'aedan', 4, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(5, 'aedan', 5, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(6, 'aedan', 6, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(7, 'aedan', 7, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(8, 'aedan', 8, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(9, 'aedan', 9, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(10, 'aedan', 10, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(11, 'aedan', 11, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(12, 'aedan', 12, 2025, 0.00, 'Unpaid', '2025-03-19 16:59:07', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(13, 'asdasd', 1, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(14, 'asdasd', 2, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(15, 'asdasd', 3, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(16, 'asdasd', 4, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(17, 'asdasd', 5, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(18, 'asdasd', 6, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(19, 'asdasd', 7, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(20, 'asdasd', 8, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(21, 'asdasd', 9, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(22, 'asdasd', 10, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(23, 'asdasd', 11, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(24, 'asdasd', 12, 2025, 0.00, 'Unpaid', '2025-03-19 17:13:14', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(25, 'asdasd', 1, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(26, 'asdasd', 2, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(27, 'asdasd', 3, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(28, 'asdasd', 4, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(29, 'asdasd', 5, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(30, 'asdasd', 6, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(31, 'asdasd', 7, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(32, 'asdasd', 8, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(33, 'asdasd', 9, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(34, 'asdasd', 10, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(35, 'asdasd', 11, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(36, 'asdasd', 12, 2024, 0.00, 'Unpaid', '2025-03-19 17:49:56', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(145, 'Jeff Santonia', 1, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(146, 'Jeff Santonia', 2, 2025, 15400.00, 'Fully Paid', '2025-03-19 18:05:51', '2025-03-26 04:05:35', 0.00, 'payment_1742961760.png', NULL, 'Internal'),
+(147, 'Jeff Santonia', 3, 2025, 4795.00, 'Partially Paid', '2025-03-19 18:05:51', '2025-03-26 04:06:01', 3995.00, 'payment_1742961956.png', NULL, 'External'),
+(148, 'Jeff Santonia', 4, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(149, 'Jeff Santonia', 5, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(150, 'Jeff Santonia', 6, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(151, 'Jeff Santonia', 7, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(152, 'Jeff Santonia', 8, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(153, 'Jeff Santonia', 9, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(154, 'Jeff Santonia', 10, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(155, 'Jeff Santonia', 11, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(156, 'Jeff Santonia', 12, 2025, 0.00, 'Unpaid', '2025-03-19 18:05:51', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(769, 'asdas', 1, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(770, 'asdas', 2, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(771, 'asdas', 3, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(772, 'asdas', 4, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(773, 'asdas', 5, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(774, 'asdas', 6, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(775, 'asdas', 7, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(776, 'asdas', 8, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(777, 'asdas', 9, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(778, 'asdas', 10, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(779, 'asdas', 11, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL),
+(780, 'asdas', 12, 2025, 0.00, 'Unpaid', '2025-03-22 18:47:30', '2025-03-23 11:45:21', 0.00, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -301,7 +304,19 @@ INSERT INTO `payment_history` (`id`, `username`, `month`, `year`, `amount`, `not
 (1, 'Jeff Santonia', 3, 2025, 4795.00, '', 'payment_1742796032.png', 'admin', '2025-03-24 06:00:32'),
 (2, 'Jeff Santonia', 3, 2025, 4795.00, '', 'payment_1742796215.png', 'admin', '2025-03-24 06:03:35'),
 (3, 'Jeff Santonia', 3, 2025, 4795.00, NULL, 'payment_1742815851.png', 'admin', '2025-03-24 11:30:51'),
-(4, 'Jeff Santonia', 2, 2025, 15400.00, NULL, 'payment_1742918495.png', 'admin', '2025-03-25 16:01:35');
+(4, 'Jeff Santonia', 2, 2025, 15400.00, NULL, 'payment_1742918495.png', 'admin', '2025-03-25 16:01:35'),
+(5, 'Jeff Santonia', 2, 2025, 15400.00, NULL, 'payment_1742957654.png', 'admin', '2025-03-26 02:54:14'),
+(6, 'Jeff Santonia', 2, 2025, 15400.00, NULL, NULL, 'admin', '2025-03-26 02:54:23'),
+(7, 'Jeff Santonia', 3, 2025, 4795.00, NULL, 'payment_1742957677.png', 'admin', '2025-03-26 02:54:37'),
+(8, 'Jeff Santonia', 2, 2025, 15400.00, NULL, 'payment_1742957906.png', 'admin', '2025-03-26 02:58:26'),
+(9, 'Jeff Santonia', 2, 2025, 1000.00, NULL, 'payment_1742961180.png', 'admin', '2025-03-26 03:53:00'),
+(10, 'Jeff Santonia', 2, 2025, 14400.00, NULL, NULL, 'admin', '2025-03-26 04:02:18'),
+(11, 'Jeff Santonia', 2, 2025, 15400.00, NULL, NULL, 'admin', '2025-03-26 04:02:24'),
+(12, 'Jeff Santonia', 2, 2025, 15400.00, NULL, NULL, 'admin', '2025-03-26 04:02:35'),
+(13, 'Jeff Santonia', 2, 2025, 15400.00, NULL, 'payment_1742961760.png', 'admin', '2025-03-26 04:02:40'),
+(14, 'Jeff Santonia', 2, 2025, 15400.00, NULL, NULL, 'admin', '2025-03-26 04:05:35'),
+(15, 'Jeff Santonia', 3, 2025, 400.00, NULL, NULL, 'admin', '2025-03-26 04:05:47'),
+(16, 'Jeff Santonia', 3, 2025, 400.00, NULL, 'payment_1742961956.png', 'admin', '2025-03-26 04:05:56');
 
 -- --------------------------------------------------------
 
@@ -333,7 +348,8 @@ INSERT INTO `payment_status_history` (`id`, `username`, `month`, `year`, `old_st
 (6, 'Jeff Santonia', 3, 2025, 'For Approval', 'Paid', 'admin', '2025-03-24 06:22:37'),
 (7, 'Jeff Santonia', 3, 2025, 'Paid', 'Unpaid', 'admin', '2025-03-24 11:29:25'),
 (8, 'Jeff Santonia', 3, 2025, 'For Approval', 'Paid', 'admin', '2025-03-24 11:31:27'),
-(9, 'Jeff Santonia', 3, 2025, 'Paid', 'Unpaid', 'admin', '2025-03-24 11:39:57');
+(9, 'Jeff Santonia', 3, 2025, 'Paid', 'Unpaid', 'admin', '2025-03-24 11:39:57'),
+(10, 'Jeff Santonia', 3, 2025, 'For Approval', 'Partially Paid', 'admin', '2025-03-26 04:06:01');
 
 -- --------------------------------------------------------
 
@@ -548,7 +564,7 @@ ALTER TABLE `accounts`
 -- AUTO_INCREMENT for table `balance_history`
 --
 ALTER TABLE `balance_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `clients_accounts`
@@ -584,13 +600,13 @@ ALTER TABLE `pages`
 -- AUTO_INCREMENT for table `payment_history`
 --
 ALTER TABLE `payment_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `payment_status_history`
 --
 ALTER TABLE `payment_status_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `products`
