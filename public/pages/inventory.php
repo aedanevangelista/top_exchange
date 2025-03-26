@@ -2,47 +2,51 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Inventory'); // Ensure the user has access to the Inventory page
+checkRole('Inventory');
 
-// Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
     header("Location: http://localhost/top_exchange/public/login.php");
     exit();
 }
 
-// Handle image upload for products
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST['formType'] == 'edit_product') {
     header('Content-Type: application/json');
     
     $product_id = $_POST['product_id'];
+    $category = $_POST['category'];
     $item_description = $_POST['item_description'];
+    $packaging = $_POST['packaging'];
+    $price = floatval($_POST['price']);
+    $stock_quantity = intval($_POST['stock_quantity']);
     $additional_description = $_POST['additional_description'];
-    $product_image = '';
     
-    // Get the existing item description to determine the folder name
-    $stmt = $conn->prepare("SELECT item_description FROM products WHERE product_id = ?");
+    if ($category === 'new' && isset($_POST['new_category']) && !empty($_POST['new_category'])) {
+        $category = $_POST['new_category'];
+    }
+    
+    $stmt = $conn->prepare("SELECT item_description, product_image FROM products WHERE product_id = ?");
     $stmt->bind_param("i", $product_id);
     $stmt->execute();
     $result = $stmt->get_result();
     $old_item_data = $result->fetch_assoc();
     $old_item_description = $old_item_data['item_description'] ?? '';
+    $old_product_image = $old_item_data['product_image'] ?? '';
     $stmt->close();
     
-    // Create upload directory if it doesn't exist
+    $product_image = $old_product_image;
+    
     $upload_dir = __DIR__ . '/../../uploads/products/';
     if (!file_exists($upload_dir)) {
         mkdir($upload_dir, 0777, true);
     }
     
-    // Process image upload
     if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
         $allowed_types = ['image/jpeg', 'image/png'];
-        $max_size = 20 * 1024 * 1024; // 20MB
+        $max_size = 20 * 1024 * 1024;
         $file_type = $_FILES['product_image']['type'];
         $file_size = $_FILES['product_image']['size'];
         
         if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-            // Create folder based on item description (for grouping same products)
             $item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $item_description);
             $item_dir = $upload_dir . $item_folder . '/';
             
@@ -50,69 +54,57 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
                 mkdir($item_dir, 0777, true);
             }
             
-            // Remove old image if item description has changed
-            if ($old_item_description != $item_description) {
+            if ($old_item_description != $item_description && !empty($old_product_image)) {
                 $old_item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $old_item_description);
                 $old_item_dir = $upload_dir . $old_item_folder . '/';
                 
-                // Delete all files in old directory
                 if (file_exists($old_item_dir)) {
                     $old_files = array_diff(scandir($old_item_dir), array('.', '..'));
                     foreach ($old_files as $file) {
                         @unlink($old_item_dir . $file);
                     }
                     
-                    // Try to remove directory if empty
                     if (count(array_diff(scandir($old_item_dir), array('.', '..'))) == 0) {
                         @rmdir($old_item_dir);
                     }
                 }
             }
             
-            // Save the new image
             $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
             $filename = 'product_image.' . $file_extension;
             $product_image_path = '/top_exchange/uploads/products/' . $item_folder . '/' . $filename;
             
             if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
-                // Update the database
-                $stmt = $conn->prepare("UPDATE products SET additional_description = ?, product_image = ? WHERE product_id = ?");
-                $stmt->bind_param("ssi", $additional_description, $product_image_path, $product_id);
-                
-                if ($stmt->execute()) {
-                    // Update all products with the same name to use the same image
-                    $stmt = $conn->prepare("UPDATE products SET product_image = ? WHERE item_description = ? AND product_id != ?");
-                    $stmt->bind_param("ssi", $product_image_path, $item_description, $product_id);
-                    $stmt->execute();
-                    
-                    echo json_encode(['success' => true, 'message' => 'Product updated successfully']);
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'Error updating product']);
-                }
-                $stmt->close();
+                $product_image = $product_image_path;
             } else {
                 echo json_encode(['success' => false, 'message' => 'Failed to upload image']);
+                exit;
             }
         } else {
             echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
+            exit;
         }
-    } else {
-        // Just update the additional description without changing the image
-        $stmt = $conn->prepare("UPDATE products SET additional_description = ? WHERE product_id = ?");
-        $stmt->bind_param("si", $additional_description, $product_id);
-        
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true, 'message' => 'Product description updated successfully']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Error updating product description']);
-        }
-        $stmt->close();
     }
+    
+    $stmt = $conn->prepare("UPDATE products SET category = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, product_image = ? WHERE product_id = ?");
+    $stmt->bind_param("sssdiisi", $category, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $product_id);
+    
+    if ($stmt->execute()) {
+        if ($old_item_description != $item_description && !empty($product_image)) {
+            $stmt = $conn->prepare("UPDATE products SET product_image = ? WHERE item_description = ? AND product_id != ?");
+            $stmt->bind_param("ssi", $product_image, $item_description, $product_id);
+            $stmt->execute();
+        }
+        
+        echo json_encode(['success' => true, 'message' => 'Product updated successfully']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Error updating product: ' . $conn->error]);
+    }
+    $stmt->close();
     
     exit;
 }
 
-// Fetch inventory data from `products`
 $sql = "SELECT DISTINCT category FROM products ORDER BY category";
 $categories = $conn->query($sql);
 
@@ -131,11 +123,10 @@ $result = $conn->query($sql);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
-        /* Modal Styles */
         #myModal {
             display: none;
             position: fixed;
-            z-index: 9999; /* High z-index to ensure it's on top of everything */
+            z-index: 9999;
             padding-top: 100px;
             left: 0;
             top: 0;
@@ -180,7 +171,6 @@ $result = $conn->query($sql);
             text-decoration: none;
         }
 
-        /* Product image thumbnail */
         .product-img {
             width: 50px;
             height: 50px;
@@ -195,7 +185,6 @@ $result = $conn->query($sql);
             transform: scale(1.05);
         }
 
-        /* Add placeholder for products without images */
         .no-image {
             width: 50px;
             height: 50px;
@@ -208,38 +197,96 @@ $result = $conn->query($sql);
             font-size: 12px;
         }
 
-        /* Form style for image upload */
         .file-info {
             font-size: 0.9em;
             color: #666;
             font-style: italic;
         }
 
-        /* Additional Description styling */
         .additional-desc {
             max-width: 150px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .overlay-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .form-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .save-btn, .cancel-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .save-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .cancel-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .error-message {
+            color: red;
+            margin-bottom: 10px;
+        }
+        
+        #current-image-container img {
+            max-width: 100%;
+            max-height: 200px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 
 <body>
-
-    <!-- Sidebar -->
     <?php include '../sidebar.php'; ?>
 
     <div class="main-content">
         <div class="inventory-header">
             <h1>Inventory Management</h1>
             <div class="search-filter-container">
-                <!-- Search bar -->
                 <div class="search-container">
                     <input type="text" id="search-input" placeholder="Search products..." onkeyup="searchProducts()">
                     <button class="search-btn"><i class="fas fa-search"></i></button>
                 </div>
-                <!-- Filter dropdown -->
                 <div class="filter-section">
                     <label for="category-filter">Filter by Category:</label>
                     <select id="category-filter" onchange="filterByCategory()">
@@ -254,7 +301,6 @@ $result = $conn->query($sql);
                     </select>
                 </div>
             </div>
-            <!-- Add New Product button -->
             <button onclick="openAddProductForm()" class="add-product-btn">
                 <i class="fas fa-plus-circle"></i> Add New Product
             </button>
@@ -279,7 +325,6 @@ $result = $conn->query($sql);
                     <?php
                     if ($result->num_rows > 0) {
                         while ($row = $result->fetch_assoc()) {
-                            // Store additional data attributes for search
                             $data_attributes = "data-category='{$row['category']}' 
                                                data-product-id='{$row['product_id']}' 
                                                data-item-description='{$row['item_description']}'
@@ -294,7 +339,6 @@ $result = $conn->query($sql);
                                     <td id='stock-{$row['product_id']}'>{$row['stock_quantity']}</td>
                                     <td class='product-image-cell'>";
                             
-                            // Display product image or placeholder
                             if (!empty($row['product_image'])) {
                                 echo "<img src='" . htmlspecialchars($row['product_image']) . "' alt='Product Image' class='product-img' onclick='openModal(this)'>";
                             } else {
@@ -309,9 +353,8 @@ $result = $conn->query($sql);
                                         <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\")'>Remove</button>
                                     </td>
                                     <td class='action-buttons'>
-                                        <button class='edit-btn' onclick='editStock({$row['product_id']})'>Edit Stock</button>
-                                        <button class='edit-btn' onclick='editProduct({$row['product_id']}, \"{$row['item_description']}\", \"" . htmlspecialchars($row['additional_description'] ?? '', ENT_QUOTES) . "\", \"" . htmlspecialchars($row['product_image'] ?? '', ENT_QUOTES) . "\")'>
-                                            <i class='fas fa-edit'></i> Edit Details
+                                        <button class='edit-btn' onclick='editProduct({$row['product_id']})'>
+                                            <i class='fas fa-edit'></i> Edit
                                         </button>
                                     </td>
                                 </tr>";
@@ -324,25 +367,6 @@ $result = $conn->query($sql);
             </table>
         </div>
 
-        <!-- Edit Stock Modal -->
-        <div id="editStockModal" class="overlay" style="display: none;">
-            <div class="overlay-content">
-                <h2>Edit Stock Quantity</h2>
-                <form id="edit-stock-form">
-                    <input type="hidden" id="edit_product_id" name="product_id">
-                    <label for="edit_stock_quantity">Stock Quantity:</label>
-                    <input type="number" id="edit_stock_quantity" name="stock_quantity" required>
-                    <div class="form-buttons">
-                        <button type="button" class="cancel-btn" onclick="closeEditModal()">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>
-                        <button type="submit" class="save-btn"><i class="fas fa-save"></i> Update</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Add New Product Modal -->
         <div id="addProductModal" class="overlay" style="display: none;">
             <div class="overlay-content">
                 <h2><i class="fas fa-plus-circle"></i> Add New Product</h2>
@@ -352,7 +376,6 @@ $result = $conn->query($sql);
                     <select id="category" name="category" required>
                         <option value="">Select Category</option>
                         <?php
-                        // Reset the categories result pointer
                         $categories->data_seek(0);
                         if ($categories->num_rows > 0) {
                             while ($row = $categories->fetch_assoc()) {
@@ -363,7 +386,6 @@ $result = $conn->query($sql);
                         <option value="new">+ Add New Category</option>
                     </select>
                     
-                    <!-- New category input (initially hidden) -->
                     <div id="new-category-container" style="display: none;">
                         <label for="new_category">New Category Name:</label>
                         <input type="text" id="new_category" name="new_category" placeholder="Enter new category name">
@@ -394,37 +416,70 @@ $result = $conn->query($sql);
             </div>
         </div>
 
-        <!-- Edit Product Modal -->
         <div id="editProductModal" class="overlay" style="display: none;">
             <div class="overlay-content">
-                <h2><i class="fas fa-edit"></i> Edit Product Details</h2>
+                <h2><i class="fas fa-edit"></i> Edit Product</h2>
                 <div id="editProductError" class="error-message"></div>
                 <form id="edit-product-form" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="formType" value="edit_product">
                     <input type="hidden" id="edit_product_id" name="product_id">
-                    <input type="hidden" id="edit_item_description" name="item_description">
                     
-                    <label for="edit_additional_description">Additional Description:</label>
-                    <textarea id="edit_additional_description" name="additional_description" placeholder="Add more details about the product"></textarea>
-                    
-                    <div id="current-image-container">
-                        <!-- This will be populated with the current image if it exists -->
+                    <div class="form-grid">
+                        <div>
+                            <label for="edit_category">Category:</label>
+                            <select id="edit_category" name="category" required>
+                                <option value="">Select Category</option>
+                                <?php
+                                $categories->data_seek(0);
+                                if ($categories->num_rows > 0) {
+                                    while ($row = $categories->fetch_assoc()) {
+                                        echo "<option value='{$row['category']}'>{$row['category']}</option>";
+                                    }
+                                }
+                                ?>
+                                <option value="new">+ Add New Category</option>
+                            </select>
+                            
+                            <div id="edit-new-category-container" style="display: none;">
+                                <label for="edit_new_category">New Category Name:</label>
+                                <input type="text" id="edit_new_category" name="new_category" placeholder="Enter new category name">
+                            </div>
+                            
+                            <label for="edit_item_description">Item Description (Name):</label>
+                            <input type="text" id="edit_item_description" name="item_description" required placeholder="Enter product name/description">
+                            
+                            <label for="edit_packaging">Packaging:</label>
+                            <input type="text" id="edit_packaging" name="packaging" required placeholder="e.g., Box of 10, 250g pack">
+                        </div>
+                        
+                        <div>
+                            <label for="edit_price">Price (₱):</label>
+                            <input type="number" id="edit_price" name="price" step="0.01" min="0" required placeholder="0.00">
+                            
+                            <label for="edit_stock_quantity">Stock Quantity:</label>
+                            <input type="number" id="edit_stock_quantity" name="stock_quantity" min="0" required placeholder="0">
+                            
+                            <label for="edit_additional_description">Additional Description:</label>
+                            <textarea id="edit_additional_description" name="additional_description" placeholder="Add more details about the product"></textarea>
+                        </div>
                     </div>
                     
-                    <label for="product_image">Product Image: <span class="file-info">(Max: 20MB, JPG/PNG only)</span></label>
+                    <div id="current-image-container">
+                    </div>
+                    
+                    <label for="edit_product_image">Product Image: <span class="file-info">(Max: 20MB, JPG/PNG only)</span></label>
                     <input type="file" id="edit_product_image" name="product_image" accept="image/jpeg, image/png">
                     
                     <div class="form-buttons">
                         <button type="button" class="cancel-btn" onclick="closeEditProductModal()">
                             <i class="fas fa-times"></i> Cancel
                         </button>
-                        <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                        <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save Changes</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- The Image Modal -->
         <div id="myModal" class="modal">
             <span class="close" onclick="closeModal()">&times;</span>
             <img class="modal-content" id="img01">
@@ -440,7 +495,6 @@ $result = $conn->query($sql);
             "opacity": 1
         };
 
-        // Search products functionality
         function searchProducts() {
             const searchValue = document.getElementById('search-input').value.toLowerCase();
             const rows = document.querySelectorAll('#inventory-table tr');
@@ -462,7 +516,6 @@ $result = $conn->query($sql);
             });
         }
 
-        // Show/hide new category input based on selection
         document.getElementById('category').addEventListener('change', function() {
             if (this.value === 'new') {
                 document.getElementById('new-category-container').style.display = 'block';
@@ -470,8 +523,17 @@ $result = $conn->query($sql);
                 document.getElementById('new-category-container').style.display = 'none';
             }
         });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('edit_category').addEventListener('change', function() {
+                if (this.value === 'new') {
+                    document.getElementById('edit-new-category-container').style.display = 'block';
+                } else {
+                    document.getElementById('edit-new-category-container').style.display = 'none';
+                }
+            });
+        });
 
-        // Add Product Form Submission
         document.getElementById('add-product-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -491,22 +553,19 @@ $result = $conn->query($sql);
             const price = document.getElementById('price').value;
             const additional_description = document.getElementById('additional_description').value;
             
-            // Create form data for file upload
             const formData = new FormData();
             formData.append('category', category);
             formData.append('item_description', item_description);
             formData.append('packaging', packaging);
             formData.append('price', price);
             formData.append('additional_description', additional_description);
-            formData.append('stock_quantity', 0); // Starting with 0 stock
+            formData.append('stock_quantity', 0);
             
-            // Add image file if selected
             const product_image = document.getElementById('product_image').files[0];
             if (product_image) {
                 formData.append('product_image', product_image);
             }
             
-            // Submit form data
             fetch("../../backend/add_product.php", {
                 method: "POST",
                 body: formData
@@ -519,7 +578,7 @@ $result = $conn->query($sql);
                 if (data.success) {
                     toastr.success(data.message, { timeOut: 3000, closeButton: true });
                     closeAddProductModal();
-                    fetchInventory(); // Refresh inventory table
+                    window.location.reload();
                 } else {
                     document.getElementById('addProductError').textContent = data.message;
                 }
@@ -530,14 +589,11 @@ $result = $conn->query($sql);
             });
         });
 
-        // Edit Product Form Submission
         document.getElementById('edit-product-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // Create form data for file upload
             const formData = new FormData(this);
             
-            // Submit form data
             fetch(window.location.href, {
                 method: "POST",
                 body: formData
@@ -550,7 +606,6 @@ $result = $conn->query($sql);
                 if (data.success) {
                     toastr.success(data.message, { timeOut: 3000, closeButton: true });
                     closeEditProductModal();
-                    // Refresh the page to show updated data
                     window.location.reload();
                 } else {
                     document.getElementById('editProductError').textContent = data.message;
@@ -573,33 +628,65 @@ $result = $conn->query($sql);
             document.getElementById('addProductModal').style.display = 'none';
         }
 
-        function closeEditModal() {
-            document.getElementById('editStockModal').style.display = 'none';
-        }
-
         function closeEditProductModal() {
             document.getElementById('editProductModal').style.display = 'none';
         }
 
-        function editProduct(productId, itemDescription, additionalDescription, productImage) {
-            document.getElementById('edit_product_id').value = productId;
-            document.getElementById('edit_item_description').value = itemDescription;
-            document.getElementById('edit_additional_description').value = additionalDescription || '';
-            
-            // Clear previous image
-            document.getElementById('current-image-container').innerHTML = '';
-            
-            // Show current image if it exists
-            if (productImage) {
-                const imgContainer = document.getElementById('current-image-container');
-                imgContainer.innerHTML = `
-                    <p>Current Image:</p>
-                    <img src="${productImage}" alt="Current product image" style="max-width: 200px; max-height: 200px; margin-bottom: 10px;">
-                `;
-            }
-            
-            document.getElementById('editProductModal').style.display = 'flex';
-            document.getElementById('editProductError').textContent = '';
+        function editProduct(productId) {
+            fetch(`../pages/api/get_product.php?id=${productId}`)
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    return response.json();
+                })
+                .then(product => {
+                    document.getElementById('edit_product_id').value = product.product_id;
+                    document.getElementById('edit_category').value = product.category;
+                    document.getElementById('edit_item_description').value = product.item_description;
+                    document.getElementById('edit_packaging').value = product.packaging;
+                    document.getElementById('edit_price').value = product.price;
+                    document.getElementById('edit_stock_quantity').value = product.stock_quantity;
+                    document.getElementById('edit_additional_description').value = product.additional_description || '';
+                    
+                    document.getElementById('current-image-container').innerHTML = '';
+                    
+                    if (product.product_image) {
+                        const imgContainer = document.getElementById('current-image-container');
+                        imgContainer.innerHTML = `
+                            <p>Current Image:</p>
+                            <img src="${product.product_image}" alt="Current product image" style="max-width: 200px; max-height: 200px; margin-bottom: 10px;">
+                        `;
+                    }
+                    
+                    document.getElementById('edit-new-category-container').style.display = 'none';
+                    document.getElementById('editProductModal').style.display = 'flex';
+                    document.getElementById('editProductError').textContent = '';
+                })
+                .catch(error => {
+                    toastr.error("Error fetching product details", { timeOut: 3000, closeButton: true });
+                    console.error("Error fetching product details:", error);
+                });
+        }
+
+        function updateStock(productId, action) {
+            const amount = document.getElementById(`adjust-${productId}`).value;
+
+            fetch("../pages/api/update_stock.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ product_id: productId, action: action, amount: amount })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                toastr.success(data.message, { timeOut: 3000, closeButton: true });
+                window.location.reload();
+            })
+            .catch(error => {
+                toastr.error("Error updating stock", { timeOut: 3000, closeButton: true });
+                console.error("Error updating stock:", error);
+            });
         }
 
         function filterByCategory() {
@@ -615,7 +702,6 @@ $result = $conn->query($sql);
             });
         }
 
-        // Handle image modal
         function openModal(imgElement) {
             var modal = document.getElementById("myModal");
             var modalImg = document.getElementById("img01");
@@ -630,19 +716,13 @@ $result = $conn->query($sql);
             modal.style.display = "none";
         }
 
-        // Handle clicks outside modals to close them
         window.addEventListener('click', function(e) {
             const addProductModal = document.getElementById('addProductModal');
-            const editStockModal = document.getElementById('editStockModal');
             const editProductModal = document.getElementById('editProductModal');
             const imgModal = document.getElementById('myModal');
             
             if (e.target === addProductModal) {
                 closeAddProductModal();
-            }
-            
-            if (e.target === editStockModal) {
-                closeEditModal();
             }
             
             if (e.target === editProductModal) {
@@ -654,6 +734,5 @@ $result = $conn->query($sql);
             }
         });
     </script>
-    <script src="../js/inventory.js"></script>
 </body>
 </html>
