@@ -1,200 +1,157 @@
 <?php
-// Add error reporting at the top
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 session_start();
 include "db_connection.php";
+include "check_role.php";
+checkRole('Payment History');
 
-// Create a log file for debugging
-$log_file = "../logs/payment_debug.log";
-if (!file_exists("../logs")) {
-    mkdir("../logs", 0777, true);
-}
-file_put_contents($log_file, date("Y-m-d H:i:s") . " - Get Monthly Payments Started\n", FILE_APPEND);
-file_put_contents($log_file, date("Y-m-d H:i:s") . " - Get Monthly Payments - Examining database schema\n", FILE_APPEND);
+header('Content-Type: application/json');
 
-// Check if required parameters are provided
+// Check if required data is received
 if (!isset($_GET['username']) || !isset($_GET['year'])) {
-    file_put_contents($log_file, date("Y-m-d H:i:s") . " - Missing parameters in get_monthly_payments\n", FILE_APPEND);
     echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
     exit;
 }
 
-$username = $_GET['username'];
-$year = intval($_GET['year']);
-
-file_put_contents($log_file, date("Y-m-d H:i:s") . " - Fetching payments for: $username, Year: $year\n", FILE_APPEND);
+$username = $conn->real_escape_string($_GET['username']);
+$year = (int)$_GET['year'];
 
 try {
-    // Let's first check the actual schema of the monthly_payments table
-    $schema_check = $conn->query("DESCRIBE monthly_payments");
-    $columns = [];
-    while ($col = $schema_check->fetch_assoc()) {
-        $columns[] = $col['Field'];
-    }
-    file_put_contents($log_file, date("Y-m-d H:i:s") . " - Available columns: " . implode(", ", $columns) . "\n", FILE_APPEND);
+    // First, get the total amount of completed orders for each month
+    $orders_sql = "SELECT 
+                MONTH(delivery_date) as order_month,
+                YEAR(delivery_date) as order_year,
+                SUM(total_amount) as total_amount
+            FROM orders
+            WHERE username = ? 
+                AND YEAR(delivery_date) = ?
+                AND status = 'Completed'
+            GROUP BY MONTH(delivery_date), YEAR(delivery_date)";
     
-    // Build a query that only uses the columns that exist
-    $select_columns = "month, total_amount, payment_status";
+    $orders_stmt = $conn->prepare($orders_sql);
+    $orders_stmt->bind_param("si", $username, $year);
+    $orders_stmt->execute();
+    $orders_result = $orders_stmt->get_result();
     
-    if (in_array("remaining_balance", $columns)) {
-        $select_columns .= ", remaining_balance";
-    }
-    
-    if (in_array("payment_method", $columns)) {
-        $select_columns .= ", payment_method";
-    }
-    
-    if (in_array("proof_image", $columns)) {
-        $select_columns .= ", proof_image";
+    $monthly_order_totals = [];
+    while ($row = $orders_result->fetch_assoc()) {
+        $monthly_order_totals[$row['order_month']] = $row['total_amount'];
     }
     
-    if (in_array("notes", $columns)) {
-        $select_columns .= ", notes";
-    }
+    // Verify if monthly_payments table has notes column
+    $check_notes_column = "SHOW COLUMNS FROM monthly_payments LIKE 'notes'";
+    $notes_column_exists = $conn->query($check_notes_column)->num_rows > 0;
     
-    // Get monthly payment records for this user and year
-    $sql = "SELECT $select_columns FROM monthly_payments WHERE username = ? AND year = ?";
-    file_put_contents($log_file, date("Y-m-d H:i:s") . " - SQL Query: $sql\n", FILE_APPEND);
+    // Now get monthly payments data
+    if ($notes_column_exists) {
+        $sql = "SELECT 
+                    mp.month, 
+                    mp.total_amount, 
+                    mp.payment_status,
+                    mp.remaining_balance,
+                    mp.proof_image,
+                    mp.notes
+                FROM monthly_payments mp
+                WHERE mp.username = ? AND mp.year = ?
+                ORDER BY mp.month";
+    } else {
+        $sql = "SELECT 
+                    mp.month, 
+                    mp.total_amount, 
+                    mp.payment_status,
+                    mp.remaining_balance,
+                    mp.proof_image
+                FROM monthly_payments mp
+                WHERE mp.username = ? AND mp.year = ?
+                ORDER BY mp.month";
+    }
     
     $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        throw new Exception("Prepare failed: " . $conn->error);
-    }
-    
     $stmt->bind_param("si", $username, $year);
-    
-    if (!$stmt->execute()) {
-        throw new Exception("Execute failed: " . $stmt->error);
-    }
-    
+    $stmt->execute();
     $result = $stmt->get_result();
+    
     $payments = [];
     
-    while ($row = $result->fetch_assoc()) {
-        $payments[] = $row;
-    }
-    
-    // If no payments found, check if the user exists
-    if (empty($payments)) {
-        $sql = "SELECT username FROM clients_accounts WHERE username = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("s", $username);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        if ($result->num_rows == 0) {
-            file_put_contents($log_file, date("Y-m-d H:i:s") . " - User not found: $username\n", FILE_APPEND);
-            echo json_encode(['success' => false, 'message' => 'User not found']);
-            exit;
-        }
-        
-        // User exists but no payments for this year, return empty array
-        file_put_contents($log_file, date("Y-m-d H:i:s") . " - No payments found for user: $username in year: $year\n", FILE_APPEND);
-    }
-    
-    // Get orders for the year to ensure we have data for all months
-    $sql = "SELECT 
-                MONTH(delivery_date) as month, 
-                SUM(total_amount) as total 
-            FROM orders 
-            WHERE username = ? AND YEAR(delivery_date) = ? 
-            GROUP BY MONTH(delivery_date)";
-    
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        throw new Exception("Prepare failed for orders query: " . $conn->error);
-    }
-    
-    $stmt->bind_param("si", $username, $year);
-    
-    if (!$stmt->execute()) {
-        throw new Exception("Execute failed for orders query: " . $stmt->error);
-    }
-    
-    $result = $stmt->get_result();
-    $orders = [];
-    
-    while ($row = $result->fetch_assoc()) {
-        $month = intval($row['month']);
-        $order_data = [
-            'month' => $month,
-            'total_amount' => floatval($row['total']),
+    // Populate all months from 1-12
+    for ($i = 1; $i <= 12; $i++) {
+        $payment_data = [
+            'month' => $i,
+            'total_amount' => isset($monthly_order_totals[$i]) ? $monthly_order_totals[$i] : 0,
             'payment_status' => 'Unpaid',
-            'remaining_balance' => floatval($row['total'])
+            'remaining_balance' => isset($monthly_order_totals[$i]) ? $monthly_order_totals[$i] : 0,
+            'proof_image' => null,
+            'notes' => ''
         ];
         
-        // Only add fields that exist in our schema
-        if (in_array("payment_method", $columns)) {
-            $order_data['payment_method'] = '';
-        }
-        
-        if (in_array("proof_image", $columns)) {
-            $order_data['proof_image'] = null;
-        }
-        
-        if (in_array("notes", $columns)) {
-            $order_data['notes'] = '';
-        }
-        
-        $orders[$month] = $order_data;
+        $payments[$i] = $payment_data;
     }
     
-    // Merge payments data with orders data
-    foreach ($payments as $payment) {
-        $month = intval($payment['month']);
-        if (isset($orders[$month])) {
-            // Update existing order data with payment info
-            foreach ($payment as $key => $value) {
-                if ($key != 'month') {
-                    $orders[$month][$key] = $value;
-                }
+    // Update with actual payment data where available
+    while ($row = $result->fetch_assoc()) {
+        $month = $row['month'];
+        
+        // If we have actual payment data, use it
+        if (isset($payments[$month])) {
+            // If there's order data but payment record has no total, use the order total
+            if ($row['total_amount'] == 0 && isset($monthly_order_totals[$month])) {
+                $row['total_amount'] = $monthly_order_totals[$month];
+                
+                // Update the database record with this total amount
+                $update_sql = "UPDATE monthly_payments 
+                              SET total_amount = ? 
+                              WHERE username = ? AND month = ? AND year = ? AND total_amount = 0";
+                $update_stmt = $conn->prepare($update_sql);
+                $update_stmt->bind_param("dsii", $monthly_order_totals[$month], $username, $month, $year);
+                $update_stmt->execute();
             }
             
-            // Ensure remaining_balance is set properly
-            if (isset($payment['remaining_balance'])) {
-                $orders[$month]['remaining_balance'] = floatval($payment['remaining_balance']);
-            }
-        } else {
-            // Payment exists but no order found (could happen if payment was created manually)
-            $orders[$month] = [];
-            $orders[$month]['month'] = $month;
-            $orders[$month]['total_amount'] = isset($payment['total_amount']) ? floatval($payment['total_amount']) : 0;
-            $orders[$month]['payment_status'] = isset($payment['payment_status']) ? $payment['payment_status'] : 'Unpaid';
-            
-            // Only add fields that exist in our schema
-            if (isset($payment['remaining_balance'])) {
-                $orders[$month]['remaining_balance'] = floatval($payment['remaining_balance']);
-            } else {
-                $orders[$month]['remaining_balance'] = floatval($payment['total_amount']);
+            // Set remaining balance to total amount if it's null AND not paid
+            if (($row['remaining_balance'] === null || $row['remaining_balance'] == 0) && 
+                $row['payment_status'] != 'Paid' && $row['total_amount'] > 0) {
+                $row['remaining_balance'] = $row['total_amount'];
+                
+                // Update the database record with this remaining balance
+                $update_balance_sql = "UPDATE monthly_payments 
+                                      SET remaining_balance = total_amount 
+                                      WHERE username = ? AND month = ? AND year = ? AND 
+                                      (remaining_balance IS NULL OR remaining_balance = 0) AND 
+                                      payment_status != 'Paid' AND total_amount > 0";
+                $update_balance_stmt = $conn->prepare($update_balance_sql);
+                $update_balance_stmt->bind_param("sii", $username, $month, $year);
+                $update_balance_stmt->execute();
             }
             
-            if (isset($payment['payment_method'])) {
-                $orders[$month]['payment_method'] = $payment['payment_method'];
+            // If status is Paid, remaining balance should be 0
+            if ($row['payment_status'] == 'Paid') {
+                $row['remaining_balance'] = 0;
+                
+                // Update the database to ensure consistency
+                $update_paid_sql = "UPDATE monthly_payments 
+                                   SET remaining_balance = 0 
+                                   WHERE username = ? AND month = ? AND year = ? AND payment_status = 'Paid'";
+                $update_paid_stmt = $conn->prepare($update_paid_sql);
+                $update_paid_stmt->bind_param("sii", $username, $month, $year);
+                $update_paid_stmt->execute();
             }
             
-            if (isset($payment['proof_image'])) {
-                $orders[$month]['proof_image'] = $payment['proof_image'];
+            // Handle notes field if it doesn't exist in result
+            if (!isset($row['notes'])) {
+                $row['notes'] = '';
             }
             
-            if (isset($payment['notes'])) {
-                $orders[$month]['notes'] = $payment['notes'];
-            }
+            $payments[$month] = $row;
         }
     }
     
-    // Convert to numerically indexed array
-    $result_data = array_values($orders);
+    // Convert to indexed array for JSON response
+    $payments_array = array_values($payments);
     
-    file_put_contents($log_file, date("Y-m-d H:i:s") . " - Successfully fetched " . count($result_data) . " records\n", FILE_APPEND);
-    echo json_encode(['success' => true, 'data' => $result_data]);
-
+    echo json_encode(['success' => true, 'data' => $payments_array]);
+    
 } catch (Exception $e) {
-    file_put_contents($log_file, date("Y-m-d H:i:s") . " - ERROR in get_monthly_payments: " . $e->getMessage() . "\n", FILE_APPEND);
-    echo json_encode(['success' => false, 'message' => 'Error fetching payment data: ' . $e->getMessage()]);
+    error_log("Error getting monthly payments: " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
 }
 
 $conn->close();
-file_put_contents($log_file, date("Y-m-d H:i:s") . " - Get Monthly Payments completed\n", FILE_APPEND);
 ?>

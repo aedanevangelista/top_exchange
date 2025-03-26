@@ -1,96 +1,66 @@
 <?php
-// Add error reporting at the top
-error_reporting(E_ALL);
+// Turn on all error reporting
 ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
-session_start();
-include "db_connection.php";
-
-// Create a log file for debugging
-$log_file = "../logs/payment_debug.log";
-if (!file_exists("../logs")) {
-    mkdir("../logs", 0777, true);
-}
-file_put_contents($log_file, date("Y-m-d H:i:s") . " - Get Available Years Started\n", FILE_APPEND);
-
-// Check if username parameter is provided
-if (!isset($_GET['username'])) {
-    file_put_contents($log_file, date("Y-m-d H:i:s") . " - Missing username parameter\n", FILE_APPEND);
-    echo json_encode(['success' => false, 'message' => 'Username parameter is required']);
-    exit;
-}
-
-$username = $_GET['username'];
-file_put_contents($log_file, date("Y-m-d H:i:s") . " - Fetching available years for: $username\n", FILE_APPEND);
+// Set content type header
+header('Content-Type: application/json');
 
 try {
-    // Get years from both orders and payments
-    $years = [];
+    // Include database connection
+    require_once "db_connection.php";
     
-    // Get years from orders
-    $sql = "SELECT DISTINCT YEAR(delivery_date) as year FROM orders WHERE username = ? ORDER BY year DESC";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        throw new Exception("Prepare failed for orders query: " . $conn->error);
+    if (!isset($_GET['username']) || empty($_GET['username'])) {
+        throw new Exception('Username is required');
     }
+
+    $username = $_GET['username'];
     
+    // Check for distinct years in orders table
+    $years_sql = "SELECT DISTINCT YEAR(order_date) as year 
+                  FROM orders 
+                  WHERE username = ? 
+                  AND status = 'Completed'
+                  ORDER BY year DESC";
+    
+    $stmt = $conn->prepare($years_sql);
     $stmt->bind_param("s", $username);
-    
-    if (!$stmt->execute()) {
-        throw new Exception("Execute failed for orders query: " . $stmt->error);
-    }
-    
+    $stmt->execute();
     $result = $stmt->get_result();
     
+    $years = [];
     while ($row = $result->fetch_assoc()) {
         $years[] = intval($row['year']);
     }
     
-    // Get years from payments
-    $sql = "SELECT DISTINCT year FROM monthly_payments WHERE username = ? ORDER BY year DESC";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        throw new Exception("Prepare failed for payments query: " . $conn->error);
-    }
-    
-    $stmt->bind_param("s", $username);
-    
-    if (!$stmt->execute()) {
-        throw new Exception("Execute failed for payments query: " . $stmt->error);
-    }
-    
-    $result = $stmt->get_result();
-    
-    while ($row = $result->fetch_assoc()) {
-        $year = intval($row['year']);
-        if (!in_array($year, $years)) {
-            $years[] = $year;
+    // If no years found in orders, check monthly_payments table
+    if (empty($years)) {
+        $payments_sql = "SELECT DISTINCT year FROM monthly_payments WHERE username = ? ORDER BY year DESC";
+        $stmt = $conn->prepare($payments_sql);
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        while ($row = $result->fetch_assoc()) {
+            $years[] = intval($row['year']);
         }
     }
     
-    // Sort years in descending order (most recent first)
-    rsort($years);
-    
-    // Always include current year
-    $currentYear = date('Y');
-    if (!in_array($currentYear, $years)) {
-        $years[] = intval($currentYear);
-        rsort($years);
-    }
-    
-    // If no years found at all, return current year
+    // If still no years, add the current year
     if (empty($years)) {
-        $years[] = intval($currentYear);
+        $years[] = intval(date('Y'));
     }
     
-    file_put_contents($log_file, date("Y-m-d H:i:s") . " - Available years: " . implode(", ", $years) . "\n", FILE_APPEND);
-    echo json_encode(['success' => true, 'data' => $years]);
+    echo json_encode([
+        'success' => true,
+        'data' => $years
+    ]);
     
 } catch (Exception $e) {
-    file_put_contents($log_file, date("Y-m-d H:i:s") . " - ERROR in get_available_years: " . $e->getMessage() . "\n", FILE_APPEND);
-    echo json_encode(['success' => false, 'message' => 'Error fetching available years: ' . $e->getMessage()]);
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'An error occurred: ' . $e->getMessage()
+    ]);
 }
-
-$conn->close();
-file_put_contents($log_file, date("Y-m-d H:i:s") . " - Get Available Years completed\n", FILE_APPEND);
 ?>
