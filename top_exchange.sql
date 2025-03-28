@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 26, 2025 at 08:24 PM
+-- Generation Time: Mar 27, 2025 at 02:52 PM
 -- Server version: 10.4.32-MariaDB
--- PHP Version: 8.0.30
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -102,7 +102,8 @@ CREATE TABLE `clients_accounts` (
 INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company`, `company_address`, `business_proof`, `status`, `balance`, `created_at`) VALUES
 (3, 'Jeff Santonia', '$2y$10$dwjDK/6QbkEF.qBuozhjneWerFL6jY4qyZ8hchngxdbNZ3k/u80vm', 'jeffsantonia@gmail.com', '1236969420', 'Munoz', 'Quezon City', 'Jeff Company', 'Jeff City', '[\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/3.png\",\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/4.png\"]', 'Active', 473812.00, '2025-03-09 14:12:20'),
 (4, 'joe', '$2y$10$0kM1rjCbnDXkL4/.BSrvEuVCSMjLN/ICY5KeSmzJ0wQ0aPQEsyQwe', 'joemama@gmail.com', '123123123', 'Metro Manila', 'QC', 'Joe Mama Corp', 'Joe mama address', '[\"\\/top_exchange\\/uploads\\/joe\\/audience2.png\"]', 'Inactive', 0.00, '2025-03-20 16:08:02'),
-(5, 'asdas', '$2y$10$dMplMlvggRnx7M8ln/AjfOkQHL.Ulbj8W.tU7nvAs2KkCGbXZJkge', 'asdsas@g.com', 'asdasdasd', 'asdasas', 'dasasd', 'asdas', 'asdasdas', '[\"\\/top_exchange\\/uploads\\/asdas\\/audience.png\",\"\\/top_exchange\\/uploads\\/asdas\\/audience2.png\",\"\\/top_exchange\\/uploads\\/asdas\\/file copie.png\"]', 'Inactive', 0.00, '2025-03-20 16:09:21');
+(5, 'asdas', '$2y$10$dMplMlvggRnx7M8ln/AjfOkQHL.Ulbj8W.tU7nvAs2KkCGbXZJkge', 'asdsas@g.com', 'asdasdasd', 'asdasas', 'dasasd', 'asdas', 'asdasdas', '[\"\\/top_exchange\\/uploads\\/asdas\\/audience.png\",\"\\/top_exchange\\/uploads\\/asdas\\/audience2.png\",\"\\/top_exchange\\/uploads\\/asdas\\/file copie.png\"]', 'Inactive', 0.00, '2025-03-20 16:09:21'),
+(7, 'Boters', '$2y$10$g8CvqtZ45IFW8QiCk1V4/OoeNq0LJT4sZlshs.WFrGQpX/hwbdsFa', 'jefferson_santonia@yahoo.com', '09185585149', 'asd', 'asd', '', '', '[]', 'Active', 0.00, '2025-03-27 12:36:22');
 
 -- --------------------------------------------------------
 
@@ -227,29 +228,36 @@ CREATE TABLE `orders` (
   `delivery_address` varchar(255) DEFAULT NULL,
   `orders` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`orders`)),
   `total_amount` decimal(10,2) NOT NULL,
-  `status` enum('Pending','Active','Rejected','Completed') NOT NULL DEFAULT 'Pending'
+  `status` enum('Pending','Active','Rejected','Completed') NOT NULL DEFAULT 'Pending',
+  `contact_number` varchar(20) DEFAULT NULL,
+  `special_instructions` text DEFAULT NULL,
+  `payment_method` varchar(50) DEFAULT NULL,
+  `subtotal` decimal(10,2) DEFAULT 0.00,
+  `delivery_fee` decimal(10,2) DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_date`, `delivery_address`, `orders`, `total_amount`, `status`) VALUES
-(17, 'aedan-1', 'aedan', '2024-03-20', '2024-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 1625.00, 'Completed'),
-(18, 'Jeff Santonia-1', 'Jeff Santonia', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":6,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Small)\",\"packaging\":\"15pcs/pack\",\"price\":205,\"quantity\":10}]', 2050.00, 'Completed'),
-(19, 'aedan-2', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed'),
-(20, 'aedan-3', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":10}]', 3250.00, 'Completed'),
-(21, 'aedan-4', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":12}]', 3900.00, 'Completed'),
-(22, 'aedan-5', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":5,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs/pack\",\"price\":250,\"quantity\":2}]', 500.00, 'Completed'),
-(23, 'Jeff Santonia-2', 'Jeff Santonia', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":4}]', 1120.00, 'Completed'),
-(24, 'Jeff Santonia-3', 'Jeff Santonia', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 1625.00, 'Completed'),
-(25, 'aedan-6', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 1625.00, 'Active'),
-(26, 'aedan-7', 'aedan', '2025-03-21', '2025-03-28', NULL, '[{\"product_id\":73,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"shumai\",\"packaging\":123,\"price\":123,\"quantity\":5}]', 615.00, 'Active'),
-(27, 'asdasd-1', 'asdasd', '2025-03-21', '2025-03-24', NULL, '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Active'),
-(28, 'Jeff Santonia-4', 'Jeff Santonia', '2025-02-19', '2025-02-26', NULL, '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":55}]', 15400.00, 'Completed'),
-(29, 'Jeff Santonia-5', 'Jeff Santonia', '2025-03-24', '2025-03-26', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":55}]', 17875.00, 'Active'),
-(30, 'Jeff Santonia-6', 'Jeff Santonia', '2025-03-24', '2025-03-26', 'Siomai Jeff Address 123', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed'),
-(31, 'Jeff Santonia-7', 'Jeff Santonia', '2025-03-24', '2025-03-26', 'Jeff City', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Active');
+INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_date`, `delivery_address`, `orders`, `total_amount`, `status`, `contact_number`, `special_instructions`, `payment_method`, `subtotal`, `delivery_fee`) VALUES
+(17, 'aedan-1', 'aedan', '2024-03-20', '2024-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 1625.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
+(18, 'Jeff Santonia-1', 'Jeff Santonia', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":6,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Small)\",\"packaging\":\"15pcs/pack\",\"price\":205,\"quantity\":10}]', 2050.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
+(19, 'aedan-2', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
+(20, 'aedan-3', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":10}]', 3250.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
+(21, 'aedan-4', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":12}]', 3900.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
+(22, 'aedan-5', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":5,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs/pack\",\"price\":250,\"quantity\":2}]', 500.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
+(23, 'Jeff Santonia-2', 'Jeff Santonia', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":4}]', 1120.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
+(24, 'Jeff Santonia-3', 'Jeff Santonia', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 1625.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
+(25, 'aedan-6', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 1625.00, 'Active', NULL, NULL, NULL, 0.00, 0.00),
+(26, 'aedan-7', 'aedan', '2025-03-21', '2025-03-28', NULL, '[{\"product_id\":73,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"shumai\",\"packaging\":123,\"price\":123,\"quantity\":5}]', 615.00, 'Active', NULL, NULL, NULL, 0.00, 0.00),
+(27, 'asdasd-1', 'asdasd', '2025-03-21', '2025-03-24', NULL, '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Active', NULL, NULL, NULL, 0.00, 0.00),
+(28, 'Jeff Santonia-4', 'Jeff Santonia', '2025-02-19', '2025-02-26', NULL, '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":55}]', 15400.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
+(29, 'Jeff Santonia-5', 'Jeff Santonia', '2025-03-24', '2025-03-26', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":55}]', 17875.00, 'Active', NULL, NULL, NULL, 0.00, 0.00),
+(30, 'Jeff Santonia-6', 'Jeff Santonia', '2025-03-24', '2025-03-26', 'Siomai Jeff Address 123', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
+(31, 'Jeff Santonia-7', 'Jeff Santonia', '2025-03-24', '2025-03-26', 'Jeff City', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Active', NULL, NULL, NULL, 0.00, 0.00),
+(32, 'admin-1', 'admin', '2025-03-27', '2025-03-28', 'asddsa', '[{\"product_id\":2,\"category\":\"\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs\\/pack\",\"price\":\"325.00\",\"quantity\":1},{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":1},{\"product_id\":1,\"category\":\"\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"280.00\",\"quantity\":1}]', 875.00, 'Pending', '09185585149', '', 'Cash on Delivery', 875.00, 0.00),
+(33, 'Boters-1', 'Boters', '2025-03-27', '2025-03-28', 'ASADS', '[{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":1},{\"product_id\":2,\"category\":\"\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs\\/pack\",\"price\":\"325.00\",\"quantity\":1},{\"product_id\":1,\"category\":\"\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"280.00\",\"quantity\":1}]', 875.00, 'Pending', '09185585149', '', 'Cash on Delivery', 875.00, 0.00);
 
 -- --------------------------------------------------------
 
@@ -394,7 +402,7 @@ INSERT INTO `products` (`product_id`, `category`, `item_description`, `packaging
 (28, 'Dimsum & Dumplings', 'Polonchay Dumpling (Min 6 Packs) (B)', '20pcs/pack', 470.00, 0, NULL, NULL),
 (29, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (A)', '12pcs/pack', 330.00, 0, NULL, NULL),
 (30, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (B)', '20pcs/pack', 530.00, 0, NULL, NULL),
-(31, 'Dimsum & Dumplings', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 691, '0', '/top_exchange/uploads/products/Beancurd_Roll__A_/product_image.png'),
+(31, 'Dimsum & Dumplings', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 685, '0', '/top_exchange/uploads/products/Beancurd_Roll__A_/product_image.png'),
 (32, 'Dimsum & Dumplings', 'Beancurd Roll (B)', '20pcs/pack', 500.00, 0, '0', '/top_exchange/uploads/products/Beancurd_Roll__B_/product_image.png'),
 (33, 'Dimsum & Dumplings', 'Pork Gyoza Dumpling (A)', '20pcs/pack', 390.00, 0, NULL, NULL),
 (34, 'Dimsum & Dumplings', 'Shanghai Dumpling (A)', '20pcs/pack', 255.00, 0, NULL, NULL),
@@ -414,7 +422,7 @@ INSERT INTO `products` (`product_id`, `category`, `item_description`, `packaging
 (48, 'Healthy Dimsum', 'Vegetable Dumpling (B)', '20pcs/pack', 300.00, 0, NULL, NULL),
 (49, 'Healthy Dimsum', 'Vegetable Spring Roll (A)', '12pcs/pack', 230.00, 0, NULL, NULL),
 (50, 'Healthy Dimsum', 'Vegetable Spring Roll (B)', '20pcs/pack', 360.00, 0, NULL, NULL),
-(51, 'Sauces', 'Chili Sauce (A)', '1.5kg/cntr', 590.00, 0, NULL, NULL),
+(51, 'Sauces', 'Chili Sauce (A)', '1.5kg/cntr', 590.00, 0, '0', '/top_exchange/uploads/products/Chili_Sauce__A_/product_image.png'),
 (52, 'Sauces', 'Chili Sauce (B)', '220g/btl', 160.00, 0, NULL, NULL),
 (53, 'Sauces', 'Seafood XO Sauce', '220g/btl', 320.00, 0, NULL, NULL),
 (54, 'Sauces', 'Lemon Sauce (A)', '420g/btl', 135.00, 0, NULL, NULL),
@@ -462,6 +470,19 @@ INSERT INTO `roles` (`role_id`, `role_name`, `status`, `pages`) VALUES
 (3, 'Secretary', 'active', 'Customers, Dashboard, Inventory, Order History, Orders, Payment History'),
 (4, 'Accountant', 'active', 'Dashboard, Order History, Orders, Payment History'),
 (36, 'aed', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, User Roles');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `username` varchar(50) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Indexes for dumped tables
@@ -544,6 +565,12 @@ ALTER TABLE `roles`
   ADD UNIQUE KEY `unique_role` (`role_name`);
 
 --
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -563,7 +590,7 @@ ALTER TABLE `balance_history`
 -- AUTO_INCREMENT for table `clients_accounts`
 --
 ALTER TABLE `clients_accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `customers`
@@ -581,7 +608,7 @@ ALTER TABLE `monthly_payments`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT for table `pages`
@@ -612,6 +639,12 @@ ALTER TABLE `products`
 --
 ALTER TABLE `roles`
   MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
