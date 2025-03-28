@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: top-exchange
+    env: php
+    buildCommand: composer install --no-interaction --optimize-autoloader --no-dev
+    startCommand: php -S 0.0.0.0:$PORT -t ./
+    envVars:
+      - key: PHP_VERSION
+        value: 8.0

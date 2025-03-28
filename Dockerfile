@@ -30,3 +30,12 @@ EXPOSE 80
 
 # Start the Apache server
 CMD ["apache2-foreground"]
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set memory limit for Composer
+ENV COMPOSER_MEMORY_LIMIT=-1
+
+# Install application dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction
