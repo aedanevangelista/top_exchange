@@ -14,6 +14,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
     
     $product_id = $_POST['product_id'];
     $category = $_POST['category'];
+    $product_name = $_POST['product_name']; // New field
     $item_description = $_POST['item_description'];
     $packaging = $_POST['packaging'];
     $price = floatval($_POST['price']);
@@ -22,6 +23,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
     
     if ($category === 'new' && isset($_POST['new_category']) && !empty($_POST['new_category'])) {
         $category = $_POST['new_category'];
+    }
+    
+    if ($product_name === 'new' && isset($_POST['new_product_name']) && !empty($_POST['new_product_name'])) {
+        $product_name = $_POST['new_product_name'];
     }
     
     $stmt = $conn->prepare("SELECT item_description, product_image FROM products WHERE product_id = ?");
@@ -86,8 +91,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         }
     }
     
-    $stmt = $conn->prepare("UPDATE products SET category = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, product_image = ? WHERE product_id = ?");
-    $stmt->bind_param("sssdiisi", $category, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $product_id);
+    $stmt = $conn->prepare("UPDATE products SET category = ?, product_name = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, product_image = ? WHERE product_id = ?");
+    $stmt->bind_param("ssssdissi", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $product_id);
     
     if ($stmt->execute()) {
         if ($old_item_description != $item_description && !empty($product_image)) {
@@ -108,7 +113,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
 $sql = "SELECT DISTINCT category FROM products ORDER BY category";
 $categories = $conn->query($sql);
 
-$sql = "SELECT product_id, category, item_description, packaging, price, stock_quantity, additional_description, product_image FROM products ORDER BY category, item_description";
+$sql = "SELECT DISTINCT product_name FROM products WHERE product_name IS NOT NULL AND product_name != '' ORDER BY product_name";
+$product_names = $conn->query($sql);
+
+$sql = "SELECT product_id, category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image FROM products ORDER BY category, product_name, item_description";
 $result = $conn->query($sql);
 ?>
 
@@ -269,12 +277,16 @@ $result = $conn->query($sql);
         }
         
         #current-image-container img {
-            max-width: 100%;
-            max-height: 200px;
+            max-width: 50px;
+            max-height: 50px;
             margin-bottom: 10px;
+            object-fit: cover;
+            border-radius: 4px;
         }
         
-        
+        .product-name {
+            font-weight: bold;
+        }
     </style>
 </head>
 
@@ -313,7 +325,8 @@ $result = $conn->query($sql);
                 <thead>
                     <tr>
                         <th>Category</th>
-                        <th>Item Description</th>
+                        <th>Product Name</th>
+                        <th>Product Variant</th>
                         <th>Packaging</th>
                         <th>Price</th>
                         <th>Stock Level</th>
@@ -329,12 +342,14 @@ $result = $conn->query($sql);
                         while ($row = $result->fetch_assoc()) {
                             $data_attributes = "data-category='{$row['category']}' 
                                                data-product-id='{$row['product_id']}' 
+                                               data-product-name='" . htmlspecialchars($row['product_name'] ?? '') . "'
                                                data-item-description='{$row['item_description']}'
                                                data-packaging='{$row['packaging']}'
                                                data-additional-description='" . htmlspecialchars($row['additional_description'] ?? '') . "'";
                             
                             echo "<tr $data_attributes>
                                     <td>{$row['category']}</td>
+                                    <td class='product-name'>" . htmlspecialchars($row['product_name'] ?? '') . "</td>
                                     <td>{$row['item_description']}</td>
                                     <td>{$row['packaging']}</td>
                                     <td>₱" . number_format($row['price'], 2) . "</td>
@@ -363,7 +378,7 @@ $result = $conn->query($sql);
                                 </tr>";
                         }
                     } else {
-                        echo "<tr><td colspan='9'>No products found.</td></tr>";
+                        echo "<tr><td colspan='10'>No products found.</td></tr>";
                     }
                     ?>
                 </tbody>
@@ -394,8 +409,26 @@ $result = $conn->query($sql);
                         <input type="text" id="new_category" name="new_category" placeholder="Enter new category name">
                     </div>
                     
-                    <label for="item_description">Item Description (Name):</label>
-                    <input type="text" id="item_description" name="item_description" required placeholder="Enter product name/description">
+                    <label for="product_name">Product Name:</label>
+                    <select id="product_name" name="product_name" required>
+                        <option value="">Select Product Name</option>
+                        <?php
+                        if ($product_names->num_rows > 0) {
+                            while ($row = $product_names->fetch_assoc()) {
+                                echo "<option value='{$row['product_name']}'>{$row['product_name']}</option>";
+                            }
+                        }
+                        ?>
+                        <option value="new">+ Add New Product Name</option>
+                    </select>
+                    
+                    <div id="new-product-name-container" style="display: none;">
+                        <label for="new_product_name">New Product Name:</label>
+                        <input type="text" id="new_product_name" name="new_product_name" placeholder="Enter new product name">
+                    </div>
+                    
+                    <label for="item_description">Product Variant:</label>
+                    <input type="text" id="item_description" name="item_description" required placeholder="Enter full product description (e.g., Asado Siopao (A Large))">
                     
                     <label for="packaging">Packaging:</label>
                     <input type="text" id="packaging" name="packaging" required placeholder="e.g., Box of 10, 250g pack">
@@ -448,8 +481,27 @@ $result = $conn->query($sql);
                                 <input type="text" id="edit_new_category" name="new_category" placeholder="Enter new category name">
                             </div>
                             
-                            <label for="edit_item_description">Item Description (Name):</label>
-                            <input type="text" id="edit_item_description" name="item_description" required placeholder="Enter product name/description">
+                            <label for="edit_product_name">Product Name:</label>
+                            <select id="edit_product_name" name="product_name" required>
+                                <option value="">Select Product Name</option>
+                                <?php
+                                $product_names->data_seek(0);
+                                if ($product_names->num_rows > 0) {
+                                    while ($row = $product_names->fetch_assoc()) {
+                                        echo "<option value='{$row['product_name']}'>{$row['product_name']}</option>";
+                                    }
+                                }
+                                ?>
+                                <option value="new">+ Add New Product Name</option>
+                            </select>
+                            
+                            <div id="edit-new-product-name-container" style="display: none;">
+                                <label for="edit_new_product_name">New Product Name:</label>
+                                <input type="text" id="edit_new_product_name" name="new_product_name" placeholder="Enter new product name">
+                            </div>
+                            
+                            <label for="edit_item_description">Product Variant:</label>
+                            <input type="text" id="edit_item_description" name="item_description" required placeholder="Enter full product description (e.g., Asado Siopao (A Large))">
                             
                             <label for="edit_packaging">Packaging:</label>
                             <input type="text" id="edit_packaging" name="packaging" required placeholder="e.g., Box of 10, 250g pack">
@@ -504,11 +556,13 @@ $result = $conn->query($sql);
 
             rows.forEach(row => {
                 const itemDescription = (row.getAttribute('data-item-description') || '').toLowerCase();
+                const productName = (row.getAttribute('data-product-name') || '').toLowerCase();
                 const category = (row.getAttribute('data-category') || '').toLowerCase();
                 const packaging = (row.getAttribute('data-packaging') || '').toLowerCase();
                 const additionalDescription = (row.getAttribute('data-additional-description') || '').toLowerCase();
                 
                 if (itemDescription.includes(searchValue) || 
+                    productName.includes(searchValue) ||
                     category.includes(searchValue) || 
                     packaging.includes(searchValue) ||
                     additionalDescription.includes(searchValue)) {
@@ -527,6 +581,23 @@ $result = $conn->query($sql);
             }
         });
         
+        document.getElementById('product_name').addEventListener('change', function() {
+            if (this.value === 'new') {
+                document.getElementById('new-product-name-container').style.display = 'block';
+            } else {
+                document.getElementById('new-product-name-container').style.display = 'none';
+                
+                if (this.value !== '') {
+                    const selectedProductName = this.value;
+                    const itemDescriptionInput = document.getElementById('item_description');
+                    
+                    if (!itemDescriptionInput.value.startsWith(selectedProductName)) {
+                        itemDescriptionInput.value = selectedProductName;
+                    }
+                }
+            }
+        });
+        
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('edit_category').addEventListener('change', function() {
                 if (this.value === 'new') {
@@ -535,96 +606,185 @@ $result = $conn->query($sql);
                     document.getElementById('edit-new-category-container').style.display = 'none';
                 }
             });
+            
+            document.getElementById('edit_product_name').addEventListener('change', function() {
+                if (this.value === 'new') {
+                    document.getElementById('edit-new-product-name-container').style.display = 'block';
+                } else {
+                    document.getElementById('edit-new-product-name-container').style.display = 'none';
+                    
+                    if (this.value !== '') {
+                        const selectedProductName = this.value;
+                        const itemDescriptionInput = document.getElementById('edit_item_description');
+                        
+                        if (!itemDescriptionInput.value.startsWith(selectedProductName)) {
+                            itemDescriptionInput.value = selectedProductName;
+                        }
+                    }
+                }
+            });
+            
+            // Auto-fill product_name when typing item_description in Add form
+            document.getElementById('item_description').addEventListener('input', function() {
+                // Only auto-fill if using the "new" product name option
+                if (document.getElementById('product_name').value === 'new') {
+                    const itemDesc = this.value;
+                    // Extract product name (text before the first parenthesis or the whole text if no parenthesis)
+                    const productName = itemDesc.split('(')[0].trim();
+                    document.getElementById('new_product_name').value = productName;
+                }
+            });
+            
+            // Auto-fill product_name when typing item_description in Edit form
+            document.getElementById('edit_item_description').addEventListener('input', function() {
+                // Only auto-fill if using the "new" product name option
+                if (document.getElementById('edit_product_name').value === 'new') {
+                    const itemDesc = this.value;
+                    // Extract product name (text before the first parenthesis or the whole text if no parenthesis)
+                    const productName = itemDesc.split('(')[0].trim();
+                    document.getElementById('edit_new_product_name').value = productName;
+                }
+            });
         });
 
         document.getElementById('add-product-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const categorySelect = document.getElementById('category');
-            let category = categorySelect.value;
-            
-            if (category === 'new') {
-                category = document.getElementById('new_category').value;
-                if (!category.trim()) {
-                    document.getElementById('addProductError').textContent = 'Please enter a new category name.';
-                    return;
-                }
+    e.preventDefault();
+    
+    const categorySelect = document.getElementById('category');
+    let category = categorySelect.value;
+    
+    if (category === 'new') {
+        category = document.getElementById('new_category').value;
+        if (!category.trim()) {
+            document.getElementById('addProductError').textContent = 'Please enter a new category name.';
+            return;
+        }
+    }
+    
+    const productNameSelect = document.getElementById('product_name');
+    let product_name = productNameSelect.value;
+    
+    if (product_name === 'new') {
+        product_name = document.getElementById('new_product_name').value;
+        if (!product_name.trim()) {
+            document.getElementById('addProductError').textContent = 'Please enter a new product name.';
+            return;
+        }
+    }
+    
+    const item_description = document.getElementById('item_description').value;
+    const packaging = document.getElementById('packaging').value;
+    const price = document.getElementById('price').value;
+    const additional_description = document.getElementById('additional_description').value;
+    
+    const formData = new FormData();
+    formData.append('category', category);
+    formData.append('product_name', product_name);
+    formData.append('item_description', item_description);
+    formData.append('packaging', packaging);
+    formData.append('price', price);
+    formData.append('additional_description', additional_description);
+    formData.append('stock_quantity', 0);
+    
+    const product_image = document.getElementById('product_image').files[0];
+    if (product_image) {
+        formData.append('product_image', product_image);
+    }
+    
+    // Clear previous error messages
+    document.getElementById('addProductError').textContent = '';
+    
+    fetch("../../backend/add_product.php", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => {
+        return response.text().then(text => {
+            try {
+                // Try to parse as JSON
+                return JSON.parse(text);
+            } catch (e) {
+                // If parsing fails, log the raw response and throw an error
+                console.error("Invalid JSON response:", text);
+                throw new Error("Server returned invalid response: " + text.substring(0, 50) + "...");
             }
-            
-            const item_description = document.getElementById('item_description').value;
-            const packaging = document.getElementById('packaging').value;
-            const price = document.getElementById('price').value;
-            const additional_description = document.getElementById('additional_description').value;
-            
-            const formData = new FormData();
-            formData.append('category', category);
-            formData.append('item_description', item_description);
-            formData.append('packaging', packaging);
-            formData.append('price', price);
-            formData.append('additional_description', additional_description);
-            formData.append('stock_quantity', 0);
-            
-            const product_image = document.getElementById('product_image').files[0];
-            if (product_image) {
-                formData.append('product_image', product_image);
-            }
-            
-            fetch("../../backend/add_product.php", {
-                method: "POST",
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    toastr.success(data.message, { timeOut: 3000, closeButton: true });
-                    closeAddProductModal();
-                    window.location.reload();
-                } else {
-                    document.getElementById('addProductError').textContent = data.message;
-                }
-            })
-            .catch(error => {
-                toastr.error("Error adding product", { timeOut: 3000, closeButton: true });
-                console.error("Error:", error);
-            });
         });
+    })
+    .then(data => {
+        if (data.success) {
+            toastr.success(data.message, { timeOut: 3000, closeButton: true });
+            closeAddProductModal();
+            window.location.reload();
+        } else {
+            document.getElementById('addProductError').textContent = data.message || 'An unknown error occurred';
+        }
+    })
+    .catch(error => {
+        toastr.error(error.message, { timeOut: 3000, closeButton: true });
+        document.getElementById('addProductError').textContent = error.message;
+        console.error("Error:", error);
+    });
+});
 
-        document.getElementById('edit-product-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            fetch(window.location.href, {
-                method: "POST",
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    toastr.success(data.message, { timeOut: 3000, closeButton: true });
-                    closeEditProductModal();
-                    window.location.reload();
-                } else {
-                    document.getElementById('editProductError').textContent = data.message;
-                }
-            })
-            .catch(error => {
-                toastr.error("Error updating product", { timeOut: 3000, closeButton: true });
-                console.error("Error:", error);
-            });
+// Similar updates for the edit form submission handler
+document.getElementById('edit-product-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const categorySelect = document.getElementById('edit_category');
+    if (categorySelect.value === 'new' && !document.getElementById('edit_new_category').value.trim()) {
+        document.getElementById('editProductError').textContent = 'Please enter a new category name.';
+        return;
+    }
+    
+    const productNameSelect = document.getElementById('edit_product_name');
+    if (productNameSelect.value === 'new' && !document.getElementById('edit_new_product_name').value.trim()) {
+        document.getElementById('editProductError').textContent = 'Please enter a new product name.';
+        return;
+    }
+    
+    const formData = new FormData(this);
+    
+    // Clear previous error messages
+    document.getElementById('editProductError').textContent = '';
+    
+    fetch(window.location.href, {
+        method: "POST",
+        body: formData
+    })
+    .then(response => {
+        return response.text().then(text => {
+            try {
+                // Try to parse as JSON
+                return JSON.parse(text);
+            } catch (e) {
+                // If parsing fails, log the raw response and throw an error
+                console.error("Invalid JSON response:", text);
+                throw new Error("Server returned invalid response: " + text.substring(0, 50) + "...");
+            }
         });
+    })
+    .then(data => {
+        if (data.success) {
+            toastr.success(data.message, { timeOut: 3000, closeButton: true });
+            closeEditProductModal();
+            window.location.reload();
+        } else {
+            document.getElementById('editProductError').textContent = data.message || 'An unknown error occurred';
+        }
+    })
+    .catch(error => {
+        toastr.error(error.message, { timeOut: 3000, closeButton: true });
+        document.getElementById('editProductError').textContent = error.message;
+        console.error("Error:", error);
+    });
+});
 
         function openAddProductForm() {
             document.getElementById('addProductModal').style.display = 'flex';
             document.getElementById('add-product-form').reset();
             document.getElementById('addProductError').textContent = '';
             document.getElementById('new-category-container').style.display = 'none';
+            document.getElementById('new-product-name-container').style.display = 'none';
         }
 
         function closeAddProductModal() {
@@ -638,12 +798,43 @@ $result = $conn->query($sql);
         function editProduct(productId) {
             fetch(`../pages/api/get_product.php?id=${productId}`)
                 .then(response => {
-                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                    return response.json();
+                    return response.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error("Invalid JSON response:", text);
+                            throw new Error("Server returned invalid response");
+                        }
+                    });
                 })
                 .then(product => {
                     document.getElementById('edit_product_id').value = product.product_id;
                     document.getElementById('edit_category').value = product.category;
+                    
+                    const productNameSelect = document.getElementById('edit_product_name');
+                    let productNameExists = false;
+                    
+                    // Check if the product name exists in the dropdown options
+                    for (let i = 0; i < productNameSelect.options.length; i++) {
+                        if (productNameSelect.options[i].value === product.product_name) {
+                            productNameExists = true;
+                            break;
+                        }
+                    }
+                    
+                    if (productNameExists) {
+                        productNameSelect.value = product.product_name;
+                        document.getElementById('edit-new-product-name-container').style.display = 'none';
+                    } else if (product.product_name) {
+                        // If the product name doesn't exist in the dropdown but is set in the product data
+                        productNameSelect.value = 'new';
+                        document.getElementById('edit-new-product-name-container').style.display = 'block';
+                        document.getElementById('edit_new_product_name').value = product.product_name;
+                    } else {
+                        productNameSelect.value = '';
+                        document.getElementById('edit-new-product-name-container').style.display = 'none';
+                    }
+                    
                     document.getElementById('edit_item_description').value = product.item_description;
                     document.getElementById('edit_packaging').value = product.packaging;
                     document.getElementById('edit_price').value = product.price;
@@ -656,7 +847,7 @@ $result = $conn->query($sql);
                         const imgContainer = document.getElementById('current-image-container');
                         imgContainer.innerHTML = `
                             <p>Current Image:</p>
-                            <img src="${product.product_image}" alt="Current product image" style="max-width: 200px; max-height: 200px; margin-bottom: 10px;">
+                            <img src="${product.product_image}" alt="Current product image" style="max-width: 50px; max-height: 50px; margin-bottom: 10px; object-fit: cover; border-radius: 4px;">
                         `;
                     }
                     
@@ -665,7 +856,7 @@ $result = $conn->query($sql);
                     document.getElementById('editProductError').textContent = '';
                 })
                 .catch(error => {
-                    toastr.error("Error fetching product details", { timeOut: 3000, closeButton: true });
+                    toastr.error("Error fetching product details: " + error.message, { timeOut: 3000, closeButton: true });
                     console.error("Error fetching product details:", error);
                 });
         }
@@ -679,15 +870,21 @@ $result = $conn->query($sql);
                 body: JSON.stringify({ product_id: productId, action: action, amount: amount })
             })
             .then(response => {
-                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                return response.json();
+                return response.text().then(text => {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error("Invalid JSON response:", text);
+                        throw new Error("Server returned invalid response");
+                    }
+                });
             })
             .then(data => {
                 toastr.success(data.message, { timeOut: 3000, closeButton: true });
                 window.location.reload();
             })
             .catch(error => {
-                toastr.error("Error updating stock", { timeOut: 3000, closeButton: true });
+                toastr.error("Error updating stock: " + error.message, { timeOut: 3000, closeButton: true });
                 console.error("Error updating stock:", error);
             });
         }
