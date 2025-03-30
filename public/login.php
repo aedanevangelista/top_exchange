@@ -79,6 +79,10 @@ font-weight: 800;
     font-weight: 800;
 }
 
+.backHome{
+    text-decoration: none;
+    color: white;
+}
 
 body {
     font-family: 'Tahoma';
@@ -161,7 +165,7 @@ label {
                 <br/>
 
                 <button type="submit" class="button">Sign in</button>
-                <button><a href="../LandingPage/index.php">Back to Home</a></button>
+                <button class="backHome"><a href="../LandingPage/index.php">Back to Home</a></button>
             </form>
             
 
