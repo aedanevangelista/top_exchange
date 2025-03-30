@@ -161,9 +161,10 @@ label {
                 <br/>
 
                 <button type="submit" class="button">Sign in</button>
+                <button><a href="../LandingPage/index.php">Back to Home</a></button>
             </form>
             
-            <a href="../LandingPage/index.php">Back to Home</a>
+
         </div>
     </div>
     <!-- Removed reference to non-existent JS file -->
