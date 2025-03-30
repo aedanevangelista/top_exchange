@@ -79,12 +79,7 @@ font-weight: 800;
     font-weight: 800;
 }
 
-.backHome{
-    width: auto;
-    background-color: black;
-    color: white;
-    margin-top: 20px;
-}
+
 
 a:visited{ color: white }
 
@@ -139,6 +134,13 @@ label {
 .excerptOne {
     font-size: 16px;
     color: #646464;
+}
+
+.backHome{
+    width: auto;
+    background-color: black;
+    color: white;
+    margin-top: 20px;
 }
 </style>
 
