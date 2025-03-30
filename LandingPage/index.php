@@ -251,7 +251,7 @@ p {
 .carousel-control-next {
   width: 45px;
   height: 45px;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.3);
   border-radius: 50%;
   top: 50%;
   transform: translateY(-50%);
