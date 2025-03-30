@@ -48,7 +48,7 @@ $(document).ready(function() {
 
         $.ajax({
             type: 'POST',
-            url: 'public/pages/accounts_clients.php',
+            url: '/public/pages/accounts_clients.php',
             data: formData,
             processData: false,
             contentType: false,
