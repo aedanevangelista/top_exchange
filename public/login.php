@@ -138,7 +138,7 @@ label {
 
 .backHome{
     width: auto;
-    color: black;
+    color: #000000;
     padding: 8px;
     text-align: center;
     text-decoration: none;
