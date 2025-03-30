@@ -534,6 +534,9 @@ if (!isset($_SESSION['cart'])) {
                                 <a href="../LandingPage/login.php">Login 
                                     <span style="color: #222222;"><i class="fa fa-user" aria-hidden="true"></i></span>
                                 </a>
+                                <a href="../public/login.php" style="margin-left: 15px;">Admin Login
+                                    <span style="color: #222222;"><i class="fa fa-lock" aria-hidden="true"></i></span>
+                                </a>
                             <?php endif; ?>
                         </div>
                     </form>
@@ -683,8 +686,8 @@ if (!isset($_SESSION['cart'])) {
                             <div class="row">
                                 <div class="col-sm-6">
                                     <h1 class="banner_taital" data-aos="fade-down">Premium Siopao</h1>
-                                    <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Experience the authentic taste of our handcrafted siopao, made with premium ingredients and traditional recipes passed down through generations. Perfectly steamed buns with flavorful fillings that will delight your taste buds.</p>
-                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>">Order Now</a></div>
+                                    <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Experience the authentic taste of our handcrafted siopao, made with premium ingredients and traditional recipes perfected over generations.</p>
+                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>">Shop Now</a></div>
                                 </div>
                                 <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
                                     <div class="banner_img"><img src="../LandingPage/images/Siopao.png" alt="Premium Siopao"></div>
@@ -695,8 +698,8 @@ if (!isset($_SESSION['cart'])) {
                             <div class="row">
                                 <div class="col-sm-6">
                                     <h1 class="banner_taital" data-aos="fade-down">Delicious Siomai</h1>
-                                    <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our signature siomai combines premium pork with special seasonings, wrapped in thin, delicate wrappers that create the perfect texture. A customer favorite that keeps them coming back for more.</p>
-                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>">Order Now</a></div>
+                                    <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our signature siomai combines premium pork with special seasonings, wrapped in thin, delicate wonton wrappers for an unforgettable flavor experience.</p>
+                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>">Shop Now</a></div>
                                 </div>
                                 <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
                                     <div class="banner_img"><img src="../LandingPage/images/Siomai.png" alt="Delicious Siomai"></div>
@@ -707,8 +710,8 @@ if (!isset($_SESSION['cart'])) {
                             <div class="row">
                                 <div class="col-sm-6">
                                     <h1 class="banner_taital" data-aos="fade-down">Flavorful Sauces</h1>
-                                    <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our special blend of sauces enhances every bite. Made from premium ingredients and secret recipes, our sauces will elevate your dishes to the next level of deliciousness.</p>
-                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>">Order Now</a></div>
+                                    <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our special blend of sauces enhances every bite. Made from premium ingredients and secret recipes passed down through generations of master chefs.</p>
+                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>">Shop Now</a></div>
                                 </div>
                                 <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
                                     <div class="banner_img"><img src="../LandingPage/images/Sauces.png" alt="Flavorful Sauces"></div>
@@ -719,8 +722,8 @@ if (!isset($_SESSION['cart'])) {
                             <div class="row">
                                 <div class="col-sm-6">
                                     <h1 class="banner_taital" data-aos="fade-down">Quality Noodles</h1>
-                                    <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Made from the finest ingredients, our noodles maintain perfect texture and absorb flavors beautifully. The foundation of countless delicious Filipino noodle dishes loved by all.</p>
-                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPagelogin.php'; ?>">Order Now</a></div>
+                                    <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Made from the finest ingredients, our noodles maintain perfect texture and absorb flavors beautifully whether stir-fried, boiled, or used in soups.</p>
+                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>">Shop Now</a></div>
                                 </div>
                                 <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
                                     <div class="banner_img"><img src="../LandingPage/images/Noodles.png" alt="Quality Noodles"></div>
@@ -793,8 +796,8 @@ if (!isset($_SESSION['cart'])) {
                 </div>
                 <div class="col-md-6" data-aos="fade-left">
                     <h1 class="about_taital">Top Exchange Food Corp.</h1>
-                    <p class="about_text"><strong>Top Exchange Food Corporation ()</strong> is a top-tier broad line food service supply integrator based in the Philippines. The company began in <strong>1998</strong> as a private enterprise that focused on the compelling need of the local food industry for stability, quality, and value.</p>
-                    <p class="about_text">Today, we continue to meet this need with the help of various partners in our international network of supply resources, providing high-quality Filipino food products to restaurants, cafeterias, and food businesses across the country.</p>
+                    <p class="about_text"><strong>Top Exchange Food Corporation ()</strong> is a top-tier broad line food service supply integrator based in the Philippines. The company began in 1998 as a single-product supplier, responding to the growing demand for delicious homemade siomai and other dimsum products among Filipinos.</p>
+                    <p class="about_text">Today, we continue to meet this need with the help of various partners in our international network of supply resources, providing high-quality Filipino food that represents our commitment to quality, reliability, and superior taste.</p>
                     <div class="read_bt_1" data-aos="fade-up" data-aos-delay="400"><a href="../LandingPage/about.php">Read More</a></div>
                 </div>
             </div>
