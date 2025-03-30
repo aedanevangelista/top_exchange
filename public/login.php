@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "../backend/db_connection.php";
+include "../backend/db_connection.php"; // Ensure correct path
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Sanitize input
@@ -22,16 +22,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['role'] = $user['role'];
 
             // Redirect to pages/dashboard.php
-            header("Location: pages/dashboard.php");
+            header("Location: http://localhost/top_exchange/public/pages/dashboard.php");
             exit();
         } else {
             $_SESSION['error'] = "Incorrect password. Please try again.";
-            header("Location: login.php");
+            header("Location: http://localhost/top_exchange/public/login.php");
             exit();
         }
     } else {
         $_SESSION['error'] = "User not found.";
-        header("Location: login.php");
+        header("Location: http://localhost/top_exchange/public/login.php");
         exit();
     }
 
@@ -46,7 +46,7 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link rel="stylesheet" href="123">
+    <link rel="stylesheet" href="/public_html/public/css/login.css">
 </head>
 <body>
     <div class="login-container">
@@ -65,7 +65,7 @@ $conn->close();
             <?php endif; ?>
 
             <!-- Login Form -->
-            <form class="loginForm" action="login.php" method="POST">
+            <form class="loginForm" action="/top_exchange/public/login.php" method="POST">
                 <label>Username</label>
                 <input type="text" name="username" placeholder="Enter your username" required>
                 <br/>
@@ -78,6 +78,6 @@ $conn->close();
             </form>
         </div>
     </div>
-    <script src="js/login.js"></script>
+    <script src="/top_exchange/public/js/login.js"></script>
 </body>
 </html>
