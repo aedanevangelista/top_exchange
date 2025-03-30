@@ -141,10 +141,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
 
     if (empty($form_errors)) {
         // Handle file uploads for business proof (if provided)
-        // Handle file uploads for business proof (if provided)
         $business_proof = [];
         $business_proof_json = '[]';
-                
+        
         if (!empty($_FILES['business_proof']['name'][0])) {
             $allowed_types = ['image/jpeg', 'image/png', 'application/pdf'];
             $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $username . '/';
@@ -162,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
                 $fileName = uniqid() . '_' . basename($_FILES['business_proof']['name'][$key]);
                 $uploadFilePath = $uploadDir . $fileName;
                 if (move_uploaded_file($tmp_name, $uploadFilePath)) {
-                    $business_proof[] = '/uploads/' . $username . '/' . $fileName;  // Updated path format
+                    $business_proof[] = '/uploads/' . $username . '/' . $fileName;
                 }
             }
             
@@ -172,9 +171,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
         $status = 'Pending';
 
-        // Insert new client using mysqli - FIXED QUERY
-        $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssssssssss", $username, $hashed_password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json, $status);
+        // Insert new client using mysqli
+        $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
+        $stmt->bind_param("sssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json);
 
         if ($stmt->execute()) {
             $success_message = "Sign up successful! Your account is pending approval.";
