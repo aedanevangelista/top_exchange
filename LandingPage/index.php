@@ -236,7 +236,7 @@ p {
   width: 6px;
   height: 6px;
   border-radius: 100%;
-  margin: 0 5px;
+  margin: 0 2px;
   background-color: #ddd;
   cursor: pointer;
 }
