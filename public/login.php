@@ -52,6 +52,94 @@ $conn->close();
     <title>Admin Login</title>
     <!-- Fixed CSS path to use relative path -->
     <link rel="stylesheet" href="css/login.css">
+    <style>
+    /* Including basic styling in case CSS file still has issues */
+    .formHeading {
+        margin-bottom: 40px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .h3{
+        font-size: 24px;
+        font-weight: 800;
+    }
+    
+    body {
+        font-family: 'Tahoma', Arial, sans-serif;
+        background-color: #ffffff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+    
+    .login-container {
+        max-width: 500px;
+        width: 100%;
+        padding: 20px;
+    }
+    
+    .form-content {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .loginForm {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    input, button {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+    
+    button {
+        background: #000000;
+        color: white;
+        padding: 12px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-top: 20px;
+    }
+    
+    button:hover {
+        background: #333333;
+    }
+    
+    label {
+        font-size: 14px;
+        font-weight: 700;
+    }
+    
+    .excerptOne {
+        font-size: 16px;
+        color: #646464;
+    }
+    
+    a {
+        display: block;
+        text-align: center;
+        margin-top: 20px;
+        color: #646464;
+        text-decoration: none;
+    }
+    
+    a:hover {
+        color: #000;
+    }
+    </style>
 </head>
 <body>
     <div class="login-container">
