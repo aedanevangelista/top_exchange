@@ -3,7 +3,7 @@
 
 $host = 'localhost'; // Keep as localhost for Hostinger
 $dbname = 'u701062148_top_exchange'; // Your Hostinger database name
-$username = 'Food'; // Replace XXXXX with your Hostinger database username
+$username = 'u701062148_top_exchange'; // Replace XXXXX with your Hostinger database username
 $password = 'FoodniAedanRyanSheilaJeff1'; // Replace with your Hostinger database password
 
 try {
