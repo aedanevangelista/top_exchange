@@ -1,4 +1,4 @@
-USE if0_38277762_top_exchange;
+USE u701062148_top_exchange;
 
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
