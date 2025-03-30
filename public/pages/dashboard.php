@@ -121,7 +121,7 @@ $clientOrders = getClientOrdersCount($conn, $selectedYear);
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
     <!-- Use relative path for JavaScript -->
-    <script src="../js/dashboard.js"></script>
+    <script src="/js/dashboard.js"></script>
 
 </body>
 </html>
