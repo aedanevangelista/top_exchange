@@ -2,6 +2,13 @@
 session_start();
 include "../backend/db_connection.php"; // Ensure correct path
 
+$path = $_SERVER['PHP_SELF'];
+echo "<script>console.log('Path: " . addslashes($path) . "');</script>";
+
+$fullUrl = "http://{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}";
+echo "<script>console.log('Full URL: " . addslashes($fullUrl) . "');</script>";
+
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Sanitize input
     $username = trim($_POST['username']);
