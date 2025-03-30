@@ -808,50 +808,70 @@ document.getElementById('edit-product-form').addEventListener('submit', function
                     });
                 })
                 .then(product => {
+                    // Set form values
                     document.getElementById('edit_product_id').value = product.product_id;
-                    document.getElementById('edit_category').value = product.category;
                     
-                    const productNameSelect = document.getElementById('edit_product_name');
-                    let productNameExists = false;
-                    
-                    // Check if the product name exists in the dropdown options
-                    for (let i = 0; i < productNameSelect.options.length; i++) {
-                        if (productNameSelect.options[i].value === product.product_name) {
-                            productNameExists = true;
-                            break;
+                    // Set category
+                    const categorySelect = document.getElementById('edit_category');
+                    if (product.category) {
+                        // Check if category exists in options
+                        let categoryExists = false;
+                        for (let i = 0; i < categorySelect.options.length; i++) {
+                            if (categorySelect.options[i].value === product.category) {
+                                categoryExists = true;
+                                break;
+                            }
+                        }
+                        
+                        if (categoryExists) {
+                            categorySelect.value = product.category;
+                        } else {
+                            categorySelect.value = 'new';
+                            document.getElementById('edit-new-category-container').style.display = 'block';
+                            document.getElementById('edit_new_category').value = product.category;
                         }
                     }
                     
-                    if (productNameExists) {
-                        productNameSelect.value = product.product_name;
-                        document.getElementById('edit-new-product-name-container').style.display = 'none';
-                    } else if (product.product_name) {
-                        // If the product name doesn't exist in the dropdown but is set in the product data
-                        productNameSelect.value = 'new';
-                        document.getElementById('edit-new-product-name-container').style.display = 'block';
-                        document.getElementById('edit_new_product_name').value = product.product_name;
-                    } else {
-                        productNameSelect.value = '';
-                        document.getElementById('edit-new-product-name-container').style.display = 'none';
+                    // Set product name
+                    const productNameSelect = document.getElementById('edit_product_name');
+                    if (product.product_name) {
+                        // Check if product name exists in dropdown options
+                        let productNameExists = false;
+                        for (let i = 0; i < productNameSelect.options.length; i++) {
+                            if (productNameSelect.options[i].value === product.product_name) {
+                                productNameExists = true;
+                                break;
+                            }
+                        }
+                        
+                        if (productNameExists) {
+                            productNameSelect.value = product.product_name;
+                            document.getElementById('edit-new-product-name-container').style.display = 'none';
+                        } else {
+                            productNameSelect.value = 'new';
+                            document.getElementById('edit-new-product-name-container').style.display = 'block';
+                            document.getElementById('edit_new_product_name').value = product.product_name;
+                        }
                     }
                     
-                    document.getElementById('edit_item_description').value = product.item_description;
-                    document.getElementById('edit_packaging').value = product.packaging;
-                    document.getElementById('edit_price').value = product.price;
-                    document.getElementById('edit_stock_quantity').value = product.stock_quantity;
+                    // Set other form fields - explicit check for null/undefined with fallback to empty string
+                    document.getElementById('edit_item_description').value = product.item_description || '';
+                    document.getElementById('edit_packaging').value = product.packaging || '';
+                    document.getElementById('edit_price').value = product.price || 0;
+                    document.getElementById('edit_stock_quantity').value = product.stock_quantity || 0;
                     document.getElementById('edit_additional_description').value = product.additional_description || '';
                     
+                    // Show current image if it exists
                     document.getElementById('current-image-container').innerHTML = '';
-                    
                     if (product.product_image) {
                         const imgContainer = document.getElementById('current-image-container');
                         imgContainer.innerHTML = `
                             <p>Current Image:</p>
-                            <img src="${product.product_image}" alt="Current product image" style="max-width: 50px; max-height: 50px; margin-bottom: 10px; object-fit: cover; border-radius: 4px;">
+                            <img src="${product.product_image}" alt="Current product image" style="max-width: 100px; max-height: 100px; margin-bottom: 10px; object-fit: cover; border-radius: 4px;">
                         `;
                     }
                     
-                    document.getElementById('edit-new-category-container').style.display = 'none';
+                    // Show the modal
                     document.getElementById('editProductModal').style.display = 'flex';
                     document.getElementById('editProductError').textContent = '';
                 })
