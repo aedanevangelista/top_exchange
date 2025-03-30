@@ -55,6 +55,7 @@ $conn->close();
     <link rel="stylesheet" type="text/css" href="css/login.css">
 </head>
 <body>
+            <?php include '../sidebar.php'; ?>
     <div class="login-container">
         <div class="form-content">
             <div class="formHeading">
