@@ -14,8 +14,8 @@ if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
-// Connect to MySQL (if needed for any database operations)
-$conn = new mysqli("localhost", "root", "", "top_exchange");
+// Connect to MySQL with CORRECT CREDENTIALS
+$conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
 
 // Check connection
 if ($conn->connect_error) {
@@ -396,7 +396,7 @@ $pageTitle = "About";
             </div>
             <div class="col-md-6">
                 <h1 class="about_taital">Top Exchange Food Corporation</h1>
-                <p class="about_text"><strong>Top Exchange Food Corporation (TEFC)</strong> is a top-tier broad line food service supply integrator based in the Philippines. The company began in <strong>1998</strong> as a private enterprise that focused on the compelling need of the local food industry for stability, quality, and value. Today, the company continues to meet this need with the help of various partners in its international network of supply resources.</p>
+                <p class="about_text"><strong>Top Exchange Food Corporation (TEFC)</strong> is a top-tier broad line food service supply integrator based in the Philippines. The company began in 1998 with a mission to provide high-quality food products and innovative solutions to businesses throughout the country.</p>
                 
                 <div class="mission-vision mt-5">
                     <div class="row">
@@ -404,7 +404,7 @@ $pageTitle = "About";
                             <div class="card h-100">
                                 <div class="card-body">
                                     <h3 class="card-title"><i class="fa fa-bullseye mr-2"></i>Our Mission</h3>
-                                    <p class="card-text">To be the premier food service provider in the Philippines by delivering exceptional quality products, innovative solutions, and unmatched customer service while maintaining the highest standards of integrity and sustainability.</p>
+                                    <p class="card-text">To be the premier food service provider in the Philippines by delivering exceptional quality products, innovative solutions, and unmatched customer service.</p>
                                 </div>
                             </div>
                         </div>
@@ -412,7 +412,7 @@ $pageTitle = "About";
                             <div class="card h-100">
                                 <div class="card-body">
                                     <h3 class="card-title"><i class="fa fa-eye mr-2"></i>Our Vision</h3>
-                                    <p class="card-text">To revolutionize the food service industry by creating a seamless bridge between global food innovations and local culinary traditions, making quality ingredients accessible to every Filipino household and business.</p>
+                                    <p class="card-text">To revolutionize the food service industry by creating a seamless bridge between global food innovations and local culinary traditions, making quality ingredients accessible to all.</p>
                                 </div>
                             </div>
                         </div>
@@ -582,7 +582,7 @@ $pageTitle = "About";
                                 <div class="card-body">
                                     <div class="testimonial-quote">
                                         <i class="fa fa-quote-left text-muted mb-3"></i>
-                                        <p class="card-text">Top Exchange Food Corp has been our trusted supplier for over 10 years. Their consistent quality and reliable delivery make them our top choice.</p>
+                                        <p class="card-text">Top Exchange Food Corp has been our trusted supplier for over 10 years. Their consistent quality and reliable delivery make them our top choice for all our food service needs.</p>
                                     </div>
                                     <div class="testimonial-author mt-3">
                                         <h6 class="mb-0">- Manuel Reyes</h6>
