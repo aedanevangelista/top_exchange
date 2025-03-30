@@ -5,7 +5,8 @@ include "../../backend/check_role.php";
 checkRole('Dashboard');
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: http://localhost/top_exchange/public/login.php");
+    // Use relative path instead of hardcoded URL
+    header("Location: ../login.php");
     exit();
 }
 
@@ -118,7 +119,8 @@ $clientOrders = getClientOrdersCount($conn, $selectedYear);
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
-    <script src="/top_exchange/public/js/dashboard.js"></script>
+    <!-- Use relative path for JavaScript -->
+    <script src="../js/dashboard.js"></script>
 
 </body>
 </html>
