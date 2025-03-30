@@ -171,7 +171,7 @@ label {
                 <br/>
 
                 <button type="submit" class="button">Sign in</button>
-                <a href="../LandingPage/index.php">Back to Home</a>
+                <div class="backHome"><a href="../LandingPage/index.php">Back to Home</a></div>
             </form>
             
 
