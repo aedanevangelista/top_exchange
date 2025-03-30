@@ -1,4 +1,11 @@
-# Enable proper MIME type handling
+# Prevent PHP processing of non-PHP files
+<FilesMatch "\.(js|css)$">
+    SetHandler default-handler
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
+
+# Set proper MIME types
 AddType application/javascript .js
 AddType text/css .css
 
@@ -8,8 +15,13 @@ AddType application/x-httpd-php .php
 # Prevent directory listing
 Options -Indexes
 
-# Allow access to JavaScript and CSS files
+# Prevent PHP from processing these file types
+<FilesMatch "\.(js|css|jpg|jpeg|png|gif|ico)$">
+    SetHandler default-handler
+</FilesMatch>
+
+# Force download of .js and .css files
 <FilesMatch "\.(js|css)$">
-    Order Allow,Deny
-    Allow from all
+    Header set Content-Type "application/javascript"
+    Header set X-Content-Type-Options "nosniff"
 </FilesMatch> 
