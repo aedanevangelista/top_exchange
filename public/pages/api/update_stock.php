@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    include $_SERVER['DOCUMENT_ROOT'] . "/top_exchange/backend/db_connection.php";
+    include $_SERVER['DOCUMENT_ROOT'] . "/backend/db_connection.php";
 
     if ($conn->connect_error) {
         $response['error'] = "Database connection failed: " . $conn->connect_error;
