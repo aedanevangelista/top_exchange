@@ -15,11 +15,8 @@ if (empty($_POST['address']) || empty($_POST['contact'])) {
 }
 
 // Connect to database
-$conn = new mysqli("localhost", "root", "", "top_exchange");
-if ($conn->connect_error) {
-    echo json_encode(['success' => false, 'message' => 'Database connection failed']);
-    exit;
-}
+require_once('db_connection.php');
+// Use the $conn variable from db_connection.php
 
 try {
     $conn->begin_transaction();

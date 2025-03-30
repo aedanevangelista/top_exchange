@@ -14,10 +14,8 @@ if (empty($_SESSION['cart'])) {
 }
 
 // Connect to database
-$conn = new mysqli("localhost", "root", "", "top_exchange");
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+require_once('db_connection.php');
+// Use the $conn variable from db_connection.php
 
 // Process checkout form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
