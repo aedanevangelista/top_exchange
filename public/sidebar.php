@@ -28,13 +28,13 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <span class="menu-title"><b>MAIN MENU</b></span>
             <hr>
             <?php if (in_array('Dashboard', $allowedPages)): ?>
-                <a href="/top_exchange/public/pages/dashboard.php" class="menu-item">
+                <a href="/public/pages/dashboard.php" class="menu-item">
                     <i class="fas fa-home"></i> Dashboard
                 </a>
             <?php endif; ?>
             
             <?php if (in_array('Forecast', $allowedPages)): ?>
-                <a href="/top_exchange/public/pages/forecast.php" class="menu-item">
+                <a href="/public/pages/forecast.php" class="menu-item">
                     <i class="fas fa-chart-line"></i> Forecast
                 </a>
             <?php endif; ?>
@@ -47,16 +47,16 @@ $allowedPages = array_map('trim', explode(',', $pages));
                     </span>
                     <div class="submenu-items">
                         <?php if (in_array('Orders', $allowedPages)): ?>
-                            <a href="/top_exchange/public/pages/orders.php" class="submenu-item">
+                            <a href="/public/pages/orders.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Orders
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Order History', $allowedPages)): ?>
-                            <a href="/top_exchange/public/pages/order_history.php" class="submenu-item">
+                            <a href="public/pages/order_history.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Order History
                             </a>
                         <?php if (in_array('Payment History', $allowedPages)): ?>
-                            <a href="/top_exchange/public/pages/payment_history.php" class="submenu-item">
+                            <a href="/public/pages/payment_history.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Payment History
                             </a>
                         <?php endif; ?>
@@ -66,7 +66,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php endif; ?>
 
             <?php if (in_array('Sales Data', $allowedPages)): ?>
-                <a href="/top_exchange/public/pages/sales.php" class="menu-item">
+                <a href="/public/pages/sales.php" class="menu-item">
                     <i class="fas fa-chart-bar"></i> Sales Data
                 </a>
             <?php endif; ?>
@@ -77,7 +77,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <span class="menu-title"><b>DATA</b></span>
             <hr>
             <?php if (in_array('Customers', $allowedPages)): ?>
-                <a href="/top_exchange/public/pages/customers.php" class="menu-item">
+                <a href="/public/pages/customers.php" class="menu-item">
                     <i class="fas fa-users"></i> Customers
                 </a>
             <?php endif; ?>
@@ -90,17 +90,17 @@ $allowedPages = array_map('trim', explode(',', $pages));
                     </span>
                     <div class="submenu-items">
                         <?php if (in_array('Accounts - Admin', $allowedPages)): ?>
-                            <a href="/top_exchange/public/pages/accounts.php" class="submenu-item">
+                            <a href="/public/pages/accounts.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Admin
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Accounts - Clients', $allowedPages)): ?>
-                            <a href="/top_exchange/public/pages/accounts_clients.php" class="submenu-item">
+                            <a href="/public/pages/accounts_clients.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Clients
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('User Roles', $allowedPages)): ?>
-                            <a href="/top_exchange/public/pages/user_roles.php" class="submenu-item">
+                            <a href="/public/pages/user_roles.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> User Roles
                             </a>
                         <?php endif; ?>
@@ -109,7 +109,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php endif; ?>
 
             <?php if (in_array('Inventory', $allowedPages)): ?>
-                <a href="/top_exchange/public/pages/inventory.php" class="menu-item">
+                <a href="/public/pages/inventory.php" class="menu-item">
                     <i class="fas fa-box"></i> Inventory
                 </a>
             <?php endif; ?>
@@ -128,7 +128,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                 ?>
             </strong> (<?= htmlspecialchars(ucfirst($role)) ?>)
         </div>
-        <a href="/top_exchange/backend/logout.php" class="logout-btn">
+        <a href="/backend/logout.php" class="logout-btn">
             <i class="fas fa-sign-out-alt"></i> Logout
         </a>
     </div>
