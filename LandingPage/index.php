@@ -1143,7 +1143,7 @@ p {
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="images/siomai-product.jpg" alt="Premium Pork Siomai">
+                            <img src="/LandingPage/images/Sioma1.png" alt="Premium Pork Siomai">
                             <span class="product-badge">BESTSELLER</span>
                         </div>
                         <div class="product-body">
@@ -1165,7 +1165,7 @@ p {
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="400">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="/LandingPage/images/sharksfin-product.jpg" alt="Special Sharksfin Dumpling">
+                            <img src="/LandingPage/images/dumpling.png" alt="Special Sharksfin Dumpling">
                             <span class="product-badge">POPULAR</span>
                         </div>
                         <div class="product-body">
@@ -1187,7 +1187,7 @@ p {
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="600">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="/LandingPage/images/wanton-product.jpg" alt="Wanton Regular">
+                            <img src="/LandingPage/images/wanton.jpg" alt="Wanton Regular">
                         </div>
                         <div class="product-body">
                             <div class="product-price">₱315</div>
@@ -1210,7 +1210,7 @@ p {
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="/LandingPage/images/egg-noodles-product.jpg" alt="Dried Egg Noodles">
+                            <img src="/LandingPage/images/driedegg.jpg" alt="Dried Egg Noodles">
                         </div>
                         <div class="product-body">
                             <div class="product-price">₱185</div>
@@ -1231,7 +1231,7 @@ p {
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="400">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="/LandingPage/images/pancit-product.jpg" alt="Pancit Canton">
+                            <img src="/LandingPage/images/pancitcantonjpg" alt="Pancit Canton">
                             <span class="product-badge">NEW</span>
                         </div>
                         <div class="product-body">
@@ -1253,7 +1253,7 @@ p {
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="600">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="/LandingPage/images/siopao-product.jpg" alt="Asado Siopao">
+                            <img src="/LandingPage/images/asadosiopao.jpg" alt="Asado Siopao">
                         </div>
                         <div class="product-body">
                             <div class="product-price">₱280</div>
