@@ -624,7 +624,7 @@ $result = $conn->query($sql);
                 }
             });
             
-            // Auto-fill product_name when typing item_description in Add form
+            // Auto-fill product_name when typing item_description in Add form only
             document.getElementById('item_description').addEventListener('input', function() {
                 // Only auto-fill if using the "new" product name option
                 if (document.getElementById('product_name').value === 'new') {
@@ -635,16 +635,6 @@ $result = $conn->query($sql);
                 }
             });
             
-            // Auto-fill product_name when typing item_description in Edit form
-            document.getElementById('edit_item_description').addEventListener('input', function() {
-                // Only auto-fill if using the "new" product name option
-                if (document.getElementById('edit_product_name').value === 'new') {
-                    const itemDesc = this.value;
-                    // Extract product name (text before the first parenthesis or the whole text if no parenthesis)
-                    const productName = itemDesc.split('(')[0].trim();
-                    document.getElementById('edit_new_product_name').value = productName;
-                }
-            });
         });
 
         document.getElementById('add-product-form').addEventListener('submit', function(e) {
