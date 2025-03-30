@@ -11,6 +11,9 @@ header("Pragma: no-cache");
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
+
+// Include database connection file if needed
+include_once('db_connection.php');
 ?>
 
 <!DOCTYPE html>

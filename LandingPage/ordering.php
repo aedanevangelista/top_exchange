@@ -12,8 +12,8 @@ if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
-// Connect to MySQL
-$conn = new mysqli("151.106.122.5", "u701062148_top_exchange", "CreamLine123", "u701062148_top_exchange");
+// Include database connection file
+include_once('db_connection.php');
 
 // Check connection
 if ($conn->connect_error) {
