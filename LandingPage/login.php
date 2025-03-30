@@ -146,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
         
         if (!empty($_FILES['business_proof']['name'][0])) {
             $allowed_types = ['image/jpeg', 'image/png', 'application/pdf'];
-            $uploadDir = __DIR__ . '/../../uploads/' . $username . '/';
+            $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/../../uploads/' . $username . '/';
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0777, true);
             }
@@ -172,8 +172,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
         $status = 'Pending';
 
         // Insert new client using mysqli
-$stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->bind_param("ssssssssss", $username, $hashed_password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json, $status);
+        $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("ssssssssss", $username, $hashed_password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json, $status);
 
         if ($stmt->execute()) {
             $success_message = "Sign up successful! Your account is pending approval.";
