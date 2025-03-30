@@ -492,126 +492,129 @@ $navigation = getMonthNavigation($month, $year);
     
     <script src="/js/orders.js"></script>
     <script>
-        function showOrders(date) {
-            const modal = document.getElementById('ordersModal');
-            const modalDate = document.getElementById('modalDate');
-            const ordersTableBody = document.getElementById('ordersTableBody');
-            
-            const formattedDate = new Date(date).toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            
-            modalDate.textContent = 'Orders for ' + formattedDate;
-            
-            fetch(`/backend/get_orders_by_date.php?date=${date}`)
-    .then(response => response.json())
-    .then(data => {
-        ordersTableBody.innerHTML = '';
+    function showOrders(date) {
+        const modal = document.getElementById('ordersModal');
+        const modalDate = document.getElementById('modalDate');
+        const ordersTableBody = document.getElementById('ordersTableBody');
         
-        // Check if data is null or not an array
-        if (!data || !Array.isArray(data)) {
-            console.error('Expected array but got:', data);
-            ordersTableBody.innerHTML = '<tr><td colspan="6">Error: Unexpected data format received.</td></tr>';
-            return;
-        }
-        
-        if (data.length === 0) {
-            ordersTableBody.innerHTML = '<tr><td colspan="6">No orders for this date.</td></tr>';
-            return;
-        }
-        
-        data.forEach(order => {
-            // Parse orders JSON string into an object if it's a string
-            let orderData;
-            if (typeof order.orders === 'string') {
-                try {
-                    orderData = JSON.parse(order.orders);
-                } catch (e) {
-                    console.error('Failed to parse order JSON:', e);
-                    orderData = [];
-                }
-            } else {
-                orderData = order.orders;
-            }
-            
-            const row = document.createElement('tr');
-            const orderJSON = JSON.stringify(orderData).replace(/"/g, '&quot;');
-            const poNumber = order.po_number;
-            const deliveryAddress = order.delivery_address || 'Not specified';
-            
-            row.innerHTML = `
-                <td>${order.po_number}</td>
-                <td>${order.username}</td>
-                <td>${order.order_date}</td>
-                <td class="delivery-address">${deliveryAddress}</td>
-                <td><button class="view-orders-btn" onclick='viewOrderDetails(${orderJSON}, "${poNumber}", "${deliveryAddress}")'>
-                    <i class="fas fa-clipboard-list"></i> View Orders</button></td>
-                <td>PHP ${parseFloat(order.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-            `;
-            ordersTableBody.appendChild(row);
+        const formattedDate = new Date(date).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
-    })
-    .catch(error => {
-        console.error('Error fetching orders:', error);
-        ordersTableBody.innerHTML = '<tr><td colspan="6">Error fetching orders.</td></tr>';
-    });
         
-        function viewOrderDetails(orders, poNumber, deliveryAddress) {
-            try {
-                const orderDetailsBody = document.getElementById('orderDetailsBody');
-                const orderPoNumber = document.getElementById('orderPoNumber');
-                const orderDeliveryAddress = document.getElementById('orderDeliveryAddress');
-                const orderDetailsModal = document.getElementById('orderDetailsModal');
+        modalDate.textContent = 'Orders for ' + formattedDate;
+        
+        fetch(`/backend/get_orders_by_date.php?date=${date}`)
+            .then(response => response.json())
+            .then(data => {
+                ordersTableBody.innerHTML = '';
                 
-                orderPoNumber.textContent = `PO Number: ${poNumber}`;
-                orderDeliveryAddress.textContent = `Delivery Address: ${deliveryAddress || 'Not specified'}`;
+                // Check if data is null or not an array
+                if (!data || !Array.isArray(data)) {
+                    console.error('Expected array but got:', data);
+                    ordersTableBody.innerHTML = '<tr><td colspan="6">Error: Unexpected data format received.</td></tr>';
+                    return;
+                }
                 
-                orderDetailsBody.innerHTML = '';
+                if (data.length === 0) {
+                    ordersTableBody.innerHTML = '<tr><td colspan="6">No orders for this date.</td></tr>';
+                    return;
+                }
                 
-                orders.forEach(product => {
+                data.forEach(order => {
+                    // Parse orders JSON string into an object if it's a string
+                    let orderData;
+                    if (typeof order.orders === 'string') {
+                        try {
+                            orderData = JSON.parse(order.orders);
+                        } catch (e) {
+                            console.error('Failed to parse order JSON:', e);
+                            orderData = [];
+                        }
+                    } else {
+                        orderData = order.orders;
+                    }
+                    
                     const row = document.createElement('tr');
+                    const orderJSON = JSON.stringify(orderData).replace(/"/g, '&quot;');
+                    const poNumber = order.po_number;
+                    const deliveryAddress = order.delivery_address || 'Not specified';
                     
                     row.innerHTML = `
-                        <td>${product.category}</td>
-                        <td>${product.item_description}</td>
-                        <td>${product.packaging}</td>
-                        <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
-                        <td>${product.quantity}</td>
+                        <td>${order.po_number}</td>
+                        <td>${order.username}</td>
+                        <td>${order.order_date}</td>
+                        <td class="delivery-address">${deliveryAddress}</td>
+                        <td><button class="view-orders-btn" onclick='viewOrderDetails(${orderJSON}, "${poNumber}", "${deliveryAddress}")'>
+                            <i class="fas fa-clipboard-list"></i> View Orders</button></td>
+                        <td>PHP ${parseFloat(order.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     `;
-                    orderDetailsBody.appendChild(row);
+                    ordersTableBody.appendChild(row);
                 });
-                
-                orderDetailsModal.style.display = 'block';
-                
-            } catch (e) {
-                console.error('Error parsing order details:', e);
-                alert('Error displaying order details');
-            }
-        }
-        
-        function closeModal() {
-            document.getElementById('ordersModal').style.display = 'none';
-        }
-        
-        function closeOrderDetailsModal() {
-            document.getElementById('orderDetailsModal').style.display = 'none';
-        }
-        
-        window.onclick = function(event) {
-            const ordersModal = document.getElementById('ordersModal');
+            })
+            .catch(error => {
+                console.error('Error fetching orders:', error);
+                ordersTableBody.innerHTML = '<tr><td colspan="6">Error fetching orders.</td></tr>';
+            });
+            
+        modal.style.display = 'block';
+    }
+    
+    function viewOrderDetails(orders, poNumber, deliveryAddress) {
+        try {
+            const orderDetailsBody = document.getElementById('orderDetailsBody');
+            const orderPoNumber = document.getElementById('orderPoNumber');
+            const orderDeliveryAddress = document.getElementById('orderDeliveryAddress');
             const orderDetailsModal = document.getElementById('orderDetailsModal');
             
-            if (event.target === ordersModal) {
-                ordersModal.style.display = 'none';
-            }
+            orderPoNumber.textContent = `PO Number: ${poNumber}`;
+            orderDeliveryAddress.textContent = `Delivery Address: ${deliveryAddress || 'Not specified'}`;
             
-            if (event.target === orderDetailsModal) {
-                orderDetailsModal.style.display = 'none';
-            }
-        };
-    </script>
+            orderDetailsBody.innerHTML = '';
+            
+            orders.forEach(product => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${product.category}</td>
+                    <td>${product.item_description}</td>
+                    <td>${product.packaging}</td>
+                    <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
+                    <td>${product.quantity}</td>
+                `;
+                orderDetailsBody.appendChild(row);
+            });
+            
+            orderDetailsModal.style.display = 'block';
+            
+        } catch (e) {
+            console.error('Error parsing order details:', e);
+            alert('Error displaying order details');
+        }
+    }
+    
+    function closeModal() {
+        document.getElementById('ordersModal').style.display = 'none';
+    }
+    
+    function closeOrderDetailsModal() {
+        document.getElementById('orderDetailsModal').style.display = 'none';
+    }
+    
+    window.onclick = function(event) {
+        const ordersModal = document.getElementById('ordersModal');
+        const orderDetailsModal = document.getElementById('orderDetailsModal');
+        
+        if (event.target === ordersModal) {
+            ordersModal.style.display = 'none';
+        }
+        
+        if (event.target === orderDetailsModal) {
+            orderDetailsModal.style.display = 'none';
+        }
+    };
+</script>
 </body>
 </html>
