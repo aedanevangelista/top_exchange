@@ -791,7 +791,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
 
 <script src="js/jquery.min.js"></script>
 <script src="js/bootstrap.bundle.min.js"></script>
-
 <?php if (isset($_SESSION['username'])): ?>
 <script>
     // Function to show custom popup message
@@ -855,6 +854,63 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                     showPopup("Error adding product to cart.", true);
                 }
             });
+        });
+
+        // Variant selection handler
+        $(document).on('change', '.variant-dropdown', function() {
+            const selectedVariantId = $(this).val();
+            const mainProductId = $(this).data('main-product-id');
+            
+            // If selected variant is the main product
+            if (selectedVariantId == mainProductId) {
+                const mainPrice = $(this).data('main-price');
+                const mainPackaging = $(this).data('main-packaging');
+                const mainImage = $(this).data('main-image');
+                
+                // Update price display
+                $('#product-price-' + mainProductId).text('₱' + parseFloat(mainPrice).toFixed(2));
+                
+                // Update packaging display
+                $('#product-packaging-' + mainProductId).html('<i class="fas fa-box me-2"></i>Packaging: ' + mainPackaging);
+                
+                // Update image if exists
+                if (mainImage) {
+                    $('#product-image-' + mainProductId).attr('src', mainImage);
+                }
+                
+                // Update add to cart button
+                $('#add-to-cart-' + mainProductId)
+                    .data('product-id', mainProductId)
+                    .data('product-price', mainPrice)
+                    .data('packaging', mainPackaging)
+                    .data('image-path', mainImage);
+                
+            } else {
+                // Get data from the selected option
+                const selectedOption = $(this).find('option:selected');
+                const variantPrice = selectedOption.data('price');
+                const variantPackaging = selectedOption.data('packaging');
+                const variantImage = selectedOption.data('image');
+                
+                // Update price display
+                $('#product-price-' + mainProductId).text('₱' + parseFloat(variantPrice).toFixed(2));
+                
+                // Update packaging display
+                $('#product-packaging-' + mainProductId).html('<i class="fas fa-box me-2"></i>Packaging: ' + variantPackaging);
+                
+                // Update image if exists
+                if (variantImage) {
+                    $('#product-image-' + mainProductId).attr('src', variantImage);
+                }
+                
+                // Update add to cart button with variant data
+                $('#add-to-cart-' + mainProductId)
+                    .data('product-id', selectedVariantId)
+                    .data('product-name', selectedOption.text().split(' - ')[0])
+                    .data('product-price', variantPrice)
+                    .data('packaging', variantPackaging)
+                    .data('image-path', variantImage);
+            }
         });
 
         // Quantity adjustment handlers
