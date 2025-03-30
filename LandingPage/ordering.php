@@ -427,13 +427,13 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                         <a class="nav-link" href="../index.php">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="../LandingPageTEFC/about.php">About</a>
+                        <a class="nav-link" href="../LandingPage/about.php">About</a>
                     </li>
                     <li class="nav-item active">
-                        <a class="nav-link" href="../LandingPageTEFC/ordering.php">Products</a>
+                        <a class="nav-link" href="../LandingPage/ordering.php">Products</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="../LandingPageTEFC/contact.php">Contact Us</a>
+                        <a class="nav-link" href="../LandingPage/contact.php">Contact Us</a>
                     </li>
                 </ul>
                 <form class="form-inline my-2 my-lg-0">
