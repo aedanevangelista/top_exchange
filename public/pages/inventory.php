@@ -5,7 +5,7 @@ include "../../backend/check_role.php";
 checkRole('Inventory');
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: http://localhost/top_exchange/public/login.php");
+    header("Location: /public/login.php");
     exit();
 }
 
@@ -77,7 +77,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
             
             $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
             $filename = 'product_image.' . $file_extension;
-            $product_image_path = '/top_exchange/uploads/products/' . $item_folder . '/' . $filename;
+            $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
             
             if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
                 $product_image = $product_image_path;

@@ -45,10 +45,10 @@ function hasAccessToDashboard() {
         </div>
         <?php if(hasAccessToDashboard()): ?>
             <!-- Show dashboard link if user has dashboard access -->
-            <a href="/top_exchange/public/pages/dashboard.php" class="back-to-dashboard">Go to Dashboard</a>
+            <a href="/public/pages/dashboard.php" class="back-to-dashboard">Go to Dashboard</a>
         <?php else: ?>
             <!-- Show login link if user has no dashboard access -->
-            <a href="/top_exchange/public/login.php" class="back-to-dashboard">Go to Login</a>
+            <a href="/public/login.php" class="back-to-dashboard">Go to Login</a>
         <?php endif; ?>
     </div>
 </body>

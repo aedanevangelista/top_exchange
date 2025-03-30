@@ -287,7 +287,7 @@ if (!empty($status_filter)) {
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src="/top_exchange/public/js/toast.js"></script>
-    <script src="/top_exchange/public/js/accounts.js"></script>
+    <script src="/public/js/toast.js"></script>
+    <script src="/public/js/accounts.js"></script>
 </body>
 </html>

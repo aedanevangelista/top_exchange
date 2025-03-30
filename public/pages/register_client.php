@@ -22,10 +22,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     if ($stmt->execute()) {
         $_SESSION['message'] = "Registration successful. Please wait for admin approval.";
-        header("Location: /top_exchange/public/pages/client_registration.php");
+        header("Location: /public/pages/client_registration.php");
     } else {
         $_SESSION['error'] = "Registration failed. Please try again.";
-        header("Location: /top_exchange/public/pages/client_registration.php");
+        header("Location: /public/pages/client_registration.php");
     }
 
     $stmt->close();

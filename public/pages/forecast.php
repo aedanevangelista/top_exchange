@@ -488,7 +488,7 @@ $navigation = getMonthNavigation($month, $year);
         </div>
     </div>
     
-    <script src="/top_exchange/public/js/orders.js"></script>
+    <script src="/public/js/orders.js"></script>
     <script>
         function showOrders(date) {
             const modal = document.getElementById('ordersModal');
@@ -504,7 +504,7 @@ $navigation = getMonthNavigation($month, $year);
             
             modalDate.textContent = 'Orders for ' + formattedDate;
             
-            fetch(`/top_exchange/backend/get_orders_by_date.php?date=${date}`)
+            fetch(`/backend/get_orders_by_date.php?date=${date}`)
                 .then(response => response.json())
                 .then(data => {
                     ordersTableBody.innerHTML = '';
