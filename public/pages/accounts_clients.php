@@ -44,7 +44,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
         exit;
     }
 
-    $user_upload_dir = __DIR__ . '/../../uploads/' . $username . '/';
+    $user_upload_dir = __DIR__ . '../../uploads/' . $username . '/';
     if (!file_exists($user_upload_dir)) {
         mkdir($user_upload_dir, 0777, true);
     }
@@ -62,7 +62,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
                 $file_size = $_FILES['business_proof']['size'][$key];
 
                 if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-                    $business_proof_path = '/../../uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                    $business_proof_path = '../../uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
                     if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
                         $business_proof[] = $business_proof_path;
                     } else {
@@ -124,14 +124,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $stmt->close();
 
    
-    $user_upload_dir = __DIR__ . '/../../uploads/' . $username . '/';
+    $user_upload_dir = __DIR__ . '../../uploads/' . $username . '/';
     if (!file_exists($user_upload_dir)) {
         mkdir($user_upload_dir, 0777, true);
     }
 
   
     $existing_business_proof = json_decode($_POST['existing_business_proof'], true) ?? [];
-    $old_upload_dir = __DIR__ . '/../../uploads/' . $old_username . '/';
+    $old_upload_dir = __DIR__ . '../../uploads/' . $old_username . '/';
 
   
     if (isset($_FILES['business_proof']) && !empty($_FILES['business_proof']['name'][0])) {
@@ -164,7 +164,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
                 $file_size = $_FILES['business_proof']['size'][$key];
 
                 if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-                    $business_proof_path = '/../../uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                    $business_proof_path = '../../uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
                     if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
                         $business_proof[] = $business_proof_path;
                     } else {
@@ -185,7 +185,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
                 $old_file = basename($old_path);
                 $old_file_path = $old_upload_dir . $old_file;
                 $new_file_path = $user_upload_dir . $old_file;
-                $new_path = '/../../uploads/' . $username . '/' . $old_file;
+                $new_path = '../../uploads/' . $username . '/' . $old_file;
 
                 if (file_exists($old_file_path) && copy($old_file_path, $new_file_path)) {
                     $business_proof[] = $new_path;
