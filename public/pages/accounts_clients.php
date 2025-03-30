@@ -62,7 +62,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
                 $file_size = $_FILES['business_proof']['size'][$key];
 
                 if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-                    $business_proof_path = '/top_exchange/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                    $business_proof_path = '/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
                     if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
                         $business_proof[] = $business_proof_path;
                     } else {
@@ -164,7 +164,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
                 $file_size = $_FILES['business_proof']['size'][$key];
 
                 if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-                    $business_proof_path = '/top_exchange/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                    $business_proof_path = '/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
                     if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
                         $business_proof[] = $business_proof_path;
                     } else {
@@ -185,7 +185,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
                 $old_file = basename($old_path);
                 $old_file_path = $old_upload_dir . $old_file;
                 $new_file_path = $user_upload_dir . $old_file;
-                $new_path = '/top_exchange/uploads/' . $username . '/' . $old_file;
+                $new_path = '/uploads/' . $username . '/' . $old_file;
 
                 if (file_exists($old_file_path) && copy($old_file_path, $new_file_path)) {
                     $business_proof[] = $new_path;
@@ -539,8 +539,8 @@ function truncate($text, $max = 15) {
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src="/top_exchange/public/js/toast.js"></script>
-    <script src="/top_exchange/public/js/accounts_clients.js"></script>
+    <script src="/js/toast.js"></script>
+    <script src="/public/js/accounts_clients.js"></script>
     
     <script>
     function openModal(imgElement) {
