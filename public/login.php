@@ -1,17 +1,15 @@
 <?php
 session_start();
-include "../backend/db_connection.php"; // Ensure correct path
+include "../backend/db_connection.php";
 
-$path = $_SERVER['PHP_SELF'];
-echo "<script>console.log('Path: " . addslashes($path) . "');</script>";
-
+// For debugging
 $fullUrl = "http://{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}";
 echo "<script>console.log('Full URL: " . addslashes($fullUrl) . "');</script>";
 
+// Define the base path for your assets
 define('BASE_PATH', '');
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Sanitize input
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
 
@@ -24,22 +22,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $user = $result->fetch_assoc();
 
         if ($password === $user['password']) {
-            // Store session variables
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['role'] = $user['role'];
 
-            // Redirect to pages/dashboard.php
-            header("Location: http://localhost/top_exchange/public/pages/dashboard.php");
+            // Updated redirect path
+            header("Location: /pages/dashboard.php");
             exit();
         } else {
             $_SESSION['error'] = "Incorrect password. Please try again.";
-            header("Location: http://localhost/top_exchange/public/login.php");
+            header("Location: /login.php");
             exit();
         }
     } else {
         $_SESSION['error'] = "User not found.";
-        header("Location: http://localhost/top_exchange/public/login.php");
+        header("Location: /login.php");
         exit();
     }
 
@@ -54,7 +51,8 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link rel="stylesheet" href="top_exchange/public/css/login.css">
+    <!-- Updated CSS path to use absolute path from domain root -->
+    <link rel="stylesheet" type="text/css" href="/css/login.css">
 </head>
 <body>
     <div class="login-container">
@@ -64,16 +62,15 @@ $conn->close();
                 <span class="excerptOne">Enter your username and password to continue.</span>
             </div>
 
-            <!-- Display error messages -->
             <?php if (isset($_SESSION['error'])): ?>
                 <p style="color: red; text-align: center; font-weight: bold;">
                     <?= htmlspecialchars($_SESSION['error']); ?>
                 </p>
-                <?php unset($_SESSION['error']); // Clear the error after displaying ?>
+                <?php unset($_SESSION['error']); ?>
             <?php endif; ?>
 
-            <!-- Login Form -->
-            <form class="loginForm" action="/top_exchange/public/login.php" method="POST">
+            <!-- Updated form action to use absolute path -->
+            <form class="loginForm" action="/login.php" method="POST">
                 <label>Username</label>
                 <input type="text" name="username" placeholder="Enter your username" required>
                 <br/>
@@ -86,6 +83,7 @@ $conn->close();
             </form>
         </div>
     </div>
-    <script src="/top_exchange/public/js/login.js"></script>
+    <!-- Updated JavaScript path to use absolute path from domain root -->
+    <script src="/js/login.js"></script>
 </body>
 </html>
