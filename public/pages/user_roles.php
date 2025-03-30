@@ -118,6 +118,6 @@ if (isset($_GET['error'])) {
             </form>
         </div>
     </div>
-    <script src="../js/user_roles.js"></script>
+    <script src="/js/user_roles.js"></script>
 </body>
 </html>
