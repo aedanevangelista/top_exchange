@@ -1,12 +1,9 @@
 <?php
-// Start the session
 session_start();
-// Include the database connection file
 include "../../backend/db_connection.php";
-// Include role check functionality
 include "../../backend/check_role.php";
-// Check if user has proper role
-checkRole('Accounts - Clients');
+checkRole('Accounts - Admin');
+
 
 $roles = [];
 $roleQuery = "SELECT role_name FROM roles WHERE status = 'active'";
