@@ -52,7 +52,7 @@ $conn->close();
     <div class="login-container">
         <div class="form-content">
             <div class="formHeading">
-                <span class="h3">WELCOME BACK 👋</span> <br/>
+                <span class="h3">WELCOME BACK1 👋</span> <br/>
                 <span class="excerptOne">Enter your username and password to continue.</span>
             </div>
 
