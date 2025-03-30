@@ -7,7 +7,18 @@ if (session_status() == PHP_SESSION_NONE) {
 include_once "../../backend/db_connection.php";
 include_once "../../backend/check_role.php";
 
-$role = $_SESSION['role'] ?? 'guest'; // Get user role from session
+// Determine which session context we're in and get appropriate user info
+if (isset($_SESSION['admin_user_id'])) {
+    $username = $_SESSION['admin_username'] ?? 'Guest';
+    $role = $_SESSION['admin_role'] ?? 'guest';
+} else if (isset($_SESSION['client_user_id'])) {
+    $username = $_SESSION['client_username'] ?? 'Guest';
+    $role = $_SESSION['client_role'] ?? 'guest';
+} else {
+    // Fallback to traditional session variables
+    $username = $_SESSION['username'] ?? 'Guest';
+    $role = $_SESSION['role'] ?? 'guest';
+}
 
 // Fetch pages for the user role
 $stmt = $conn->prepare("SELECT pages FROM roles WHERE role_name = ? AND status = 'active'");
@@ -121,11 +132,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
         <div class="account-info">
             Logged in as: 
             <strong>
-                <?php 
-                echo isset($_SESSION['username']) 
-                    ? htmlspecialchars($_SESSION['username']) 
-                    : "Guest"; 
-                ?>
+                <?php echo htmlspecialchars($username); ?>
             </strong> (<?= htmlspecialchars(ucfirst($role)) ?>)
         </div>
         <a href="/backend/logout.php" class="logout-btn">

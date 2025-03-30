@@ -7,7 +7,19 @@ include_once "db_connection.php"; // Include database connection
 
 function checkRole($pageName) {
     global $conn;
-    $userRole = $_SESSION['role'] ?? 'guest';
+    
+    // Check if we're in admin context (used admin_ session variables)
+    if (isset($_SESSION['admin_user_id'])) {
+        $userRole = $_SESSION['admin_role'] ?? 'guest';
+    } 
+    // Check if we're in client context (used client_ session variables)
+    else if (isset($_SESSION['client_user_id'])) {
+        $userRole = $_SESSION['client_role'] ?? 'guest';
+    } 
+    // Fallback to traditional session for backwards compatibility
+    else {
+        $userRole = $_SESSION['role'] ?? 'guest';
+    }
 
     // Fetch pages for the user role
     $stmt = $conn->prepare("SELECT pages FROM roles WHERE role_name = ? AND status = 'active'");
