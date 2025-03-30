@@ -257,6 +257,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
 
         .backHome a {
             color: #000000;
+            font-size: smaller;
         }
     </style>
 </head>
