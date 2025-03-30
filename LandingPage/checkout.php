@@ -13,8 +13,8 @@ if (empty($_SESSION['cart'])) {
     exit();
 }
 
-// Connect to database
-include_once('db_connection.php'); // Use the shared connection file instead of hard-coding
+// Connect to database - replace hard-coded connection with include
+include_once('db_connection.php');
 
 // Process checkout form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

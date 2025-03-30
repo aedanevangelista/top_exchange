@@ -9,16 +9,11 @@ if (!isset($_GET['id'])) {
 
 $orderId = intval($_GET['id']);
 
-// Connect to database
-$conn = new mysqli("151.106.122.5", "u701062148_top_exchange", "CreamLine123", "u701062148_top_exchange");
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+// Connect to database - replace the hard-coded connection with the include
+include_once('db_connection.php');
 
-// Fetch order details
-$stmt = $conn->prepare("SELECT o.*, c.email FROM orders o 
-                       JOIN clients_accounts c ON o.username = c.username 
-                       WHERE o.id = ?");
+// Fetch order details - Modified query to handle possible table structure issues
+$stmt = $conn->prepare("SELECT o.* FROM orders o WHERE o.id = ?");
 $stmt->bind_param("i", $orderId);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -29,6 +24,19 @@ if ($result->num_rows === 0) {
 
 $order = $result->fetch_assoc();
 $orderItems = json_decode($order['orders'], true);
+
+// Get email separately since join might be causing issues
+$email = '';
+if (isset($order['username'])) {
+    $emailStmt = $conn->prepare("SELECT email FROM clients_accounts WHERE username = ?");
+    $emailStmt->bind_param("s", $order['username']);
+    $emailStmt->execute();
+    $emailResult = $emailStmt->get_result();
+    if ($emailResult->num_rows > 0) {
+        $emailRow = $emailResult->fetch_assoc();
+        $email = $emailRow['email'];
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -67,7 +75,9 @@ $orderItems = json_decode($order['orders'], true);
                 <h2 class="confirmation-header">Order Confirmed!</h2>
                 <p class="thank-you">Thank you for your order, <?php echo htmlspecialchars($order['username']); ?>!</p>
                 <p>Your order #<?php echo $order['po_number']; ?> has been received and is being processed.</p>
-                <p>A confirmation email has been sent to <?php echo htmlspecialchars($order['email']); ?></p>
+                <?php if(!empty($email)): ?>
+                <p>A confirmation email has been sent to <?php echo htmlspecialchars($email); ?></p>
+                <?php endif; ?>
             </div>
             
             <div class="order-details">
