@@ -81,7 +81,8 @@ font-weight: 800;
 
 .backHome{
     text-decoration: none;
-    color: white;
+    color: black;
+    margin-top: 20px;
 }
 
 a:visited{ color: white }
