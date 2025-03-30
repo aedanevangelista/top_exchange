@@ -246,6 +246,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
         .password-toggle:hover {
             color: #555;
         }
+
+        .backHome{
+            width: auto;
+            padding: 8px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 10px;
+        }
+
+        .backHome a {
+            color: #000000;
+        }
     </style>
 </head>
 <body>
