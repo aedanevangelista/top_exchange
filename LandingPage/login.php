@@ -34,9 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 
         if ($user && password_verify($password, $user['password'])) {
             // Login successful for admin/manager accounts - but we'll use client variables
-            $_SESSION['client_user_id'] = $user['id'];
-            $_SESSION['client_username'] = $user['username'];
-            $_SESSION['client_role'] = $user['role'];
+            $_SESSION['user_id'] = $client['id'];
+            $_SESSION['username'] = $client['username']; // This is the key change
+            $_SESSION['role'] = 'Client';
 
             // Redirect based on role
             if ($user['role'] === 'Admin') {
