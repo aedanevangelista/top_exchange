@@ -45,51 +45,62 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         mkdir($upload_dir, 0777, true);
     }
     
-    if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
-        $allowed_types = ['image/jpeg', 'image/png'];
-        $max_size = 20 * 1024 * 1024;
-        $file_type = $_FILES['product_image']['type'];
-        $file_size = $_FILES['product_image']['size'];
+    // Replace lines 48-92 with this improved version
+if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
+    error_log("Processing image upload in edit mode: " . $_FILES['product_image']['name']);
+    
+    $allowed_types = ['image/jpeg', 'image/png'];
+    $max_size = 20 * 1024 * 1024; // 20MB
+    $file_type = $_FILES['product_image']['type'];
+    $file_size = $_FILES['product_image']['size'];
+    
+    if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
+        // Create a sanitized folder name based on item description
+        $item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $item_description);
+        $item_dir = $upload_dir . $item_folder . '/';
         
-        if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-            $item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $item_description);
-            $item_dir = $upload_dir . $item_folder . '/';
+        // Make sure the directory exists
+        if (!file_exists($item_dir)) {
+            mkdir($item_dir, 0777, true);
+        }
+        
+        // If the item description changed, handle the old image folder
+        if ($old_item_description !== $item_description && !empty($old_product_image)) {
+            $old_item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $old_item_description);
+            $old_item_dir = $upload_dir . $old_item_folder . '/';
             
-            if (!file_exists($item_dir)) {
-                mkdir($item_dir, 0777, true);
-            }
-            
-            if ($old_item_description != $item_description && !empty($old_product_image)) {
-                $old_item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $old_item_description);
-                $old_item_dir = $upload_dir . $old_item_folder . '/';
+            if (file_exists($old_item_dir)) {
+                $old_files = array_diff(scandir($old_item_dir), array('.', '..'));
+                foreach ($old_files as $file) {
+                    @unlink($old_item_dir . $file);
+                }
                 
-                if (file_exists($old_item_dir)) {
-                    $old_files = array_diff(scandir($old_item_dir), array('.', '..'));
-                    foreach ($old_files as $file) {
-                        @unlink($old_item_dir . $file);
-                    }
-                    
-                    if (count(array_diff(scandir($old_item_dir), array('.', '..'))) == 0) {
-                        @rmdir($old_item_dir);
-                    }
+                if (count(array_diff(scandir($old_item_dir), array('.', '..'))) == 0) {
+                    @rmdir($old_item_dir);
                 }
             }
-            
-            $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
-            $filename = 'product_image.' . $file_extension;
-            $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
-
-            if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
-                $product_image = $product_image_path;
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to upload image']);
-                exit;
-            }
+        }
+        
+        // Process the new image
+        $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
+        $filename = 'product_image_' . time() . '.' . $file_extension; // Add timestamp to avoid cache issues
+        $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
+        
+        if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
+            // Successfully uploaded the file, update the product_image variable
+            $product_image = $product_image_path;
+            error_log("Image uploaded successfully to: " . $item_dir . $filename);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
+            error_log("Failed to move uploaded file. Error: " . error_get_last()['message']);
+            echo json_encode(['success' => false, 'message' => 'Failed to upload image. Check server permissions.']);
             exit;
         }
+    } else {
+        error_log("Invalid file type or size. Type: $file_type, Size: $file_size");
+        echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
+        exit;
     }
+}
     
     $stmt = $conn->prepare("UPDATE products SET category = ?, product_name = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, product_image = ? WHERE product_id = ?");
     $stmt->bind_param("ssssdissi", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $product_id);
@@ -721,22 +732,35 @@ document.getElementById('edit-product-form').addEventListener('submit', function
         return;
     }
     
+    // Create a form data object
     const formData = new FormData(this);
+    
+    // Explicitly add the file if it exists
+    const fileInput = document.getElementById('edit_product_image');
+    if (fileInput.files.length > 0) {
+        // Log the file being uploaded to console for debugging
+        console.log("File selected for upload:", fileInput.files[0].name);
+        formData.append('product_image', fileInput.files[0]);
+    }
     
     // Clear previous error messages
     document.getElementById('editProductError').textContent = '';
     
+    // Show a loading message
+    document.getElementById('editProductError').textContent = 'Updating product...';
+    
     fetch(window.location.href, {
         method: "POST",
         body: formData
+        // Do NOT set Content-Type header when sending FormData - browser will set it with correct boundary
     })
     .then(response => {
         return response.text().then(text => {
             try {
-                // Try to parse as JSON
+                // Log the raw response for debugging
+                console.log("Raw server response:", text);
                 return JSON.parse(text);
             } catch (e) {
-                // If parsing fails, log the raw response and throw an error
                 console.error("Invalid JSON response:", text);
                 throw new Error("Server returned invalid response: " + text.substring(0, 50) + "...");
             }
