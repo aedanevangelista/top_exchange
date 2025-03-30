@@ -58,9 +58,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 $status = $client['status'];
                 if ($status === 'Active') {
                     // Login successful for active clients - use client specific variables
-                    $_SESSION['client_user_id'] = $client['id'];
-                    $_SESSION['client_username'] = $client['username'];
-                    $_SESSION['client_role'] = 'Client';
+                    $_SESSION['user_id'] = $client['id'];
+                    $_SESSION['username'] = $client['username'];
+                    $_SESSION['role'] = 'Client';
                     header('Location: ordering.php');
                     exit();
                 } elseif ($status === 'Pending') {
