@@ -1,13 +1,11 @@
 <?php
 session_start();
+require_once 'config.php';
 include "../backend/db_connection.php";
 
 // For debugging
 $fullUrl = "http://{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}";
 echo "<script>console.log('Full URL: " . addslashes($fullUrl) . "');</script>";
-
-// Define the base path for your assets
-define('BASE_PATH', '');
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = trim($_POST['username']);
@@ -26,17 +24,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['username'] = $user['username'];
             $_SESSION['role'] = $user['role'];
 
-            // Updated redirect path
-            header("Location: /pages/dashboard.php");
+            header("Location: " . BASE_URL . "/pages/dashboard.php");
             exit();
         } else {
             $_SESSION['error'] = "Incorrect password. Please try again.";
-            header("Location: /login.php");
+            header("Location: " . BASE_URL . "/login.php");
             exit();
         }
     } else {
         $_SESSION['error'] = "User not found.";
-        header("Location: /login.php");
+        header("Location: " . BASE_URL . "/login.php");
         exit();
     }
 
@@ -51,8 +48,7 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <!-- Updated CSS path to use absolute path from domain root -->
-    <link rel="stylesheet" type="text/css" href="css/login.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/css/login.css">
 </head>
 <body>
     <div class="login-container">
@@ -66,11 +62,11 @@ $conn->close();
                 <p style="color: red; text-align: center; font-weight: bold;">
                     <?= htmlspecialchars($_SESSION['error']); ?>
                 </p>
-                <?php unset($_SESSION['error']); ?>
+                <?php unset($_SESSION['error']); // Clear the error after displaying ?>
             <?php endif; ?>
 
-            <!-- Updated form action to use absolute path -->
-            <form class="loginForm" action="/login.php" method="POST">
+            <!-- Login Form -->
+            <form class="loginForm" action="<?php echo BASE_URL; ?>/login.php" method="POST">
                 <label>Username</label>
                 <input type="text" name="username" placeholder="Enter your username" required>
                 <br/>
@@ -83,7 +79,6 @@ $conn->close();
             </form>
         </div>
     </div>
-    <!-- Updated JavaScript path to use absolute path from domain root -->
-    <script src="/js/login.js"></script>
+    <script src="<?php echo BASE_URL; ?>/js/login.js"></script>
 </body>
 </html>
