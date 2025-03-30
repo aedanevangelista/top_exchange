@@ -78,7 +78,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
             $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
             $filename = 'product_image.' . $file_extension;
             $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
-            
+
             if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
                 $product_image = $product_image_path;
             } else {
