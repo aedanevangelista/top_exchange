@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "db_connection.php";  // Update the path if needed
+include "/backend/db_connection.php";
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
