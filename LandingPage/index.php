@@ -822,7 +822,8 @@ p {
 }
 
 #carouselExampleIndicators {
-    border-radius: 80px;
+    width: 100%;
+    height: 4px;
 }
     </style>
 </head>
