@@ -820,6 +820,10 @@ p {
     margin-bottom: 30px;
   }
 }
+
+#carouselExampleIndicators {
+    border-radius: 80px;
+}
     </style>
 </head>
 <body>
