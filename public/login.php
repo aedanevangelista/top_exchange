@@ -55,8 +55,6 @@ $conn->close();
     <link rel="stylesheet" type="text/css" href="css/login.css">
 </head>
 <body>
-    <button class="backButton" onclick="window.location.href='../LandingPage/index.php'">
-        <i class="fas fa-arrow-left"></i> back to login
     <div class="login-container">
         <div class="form-content">
             <div class="formHeading">
