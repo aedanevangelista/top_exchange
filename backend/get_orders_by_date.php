@@ -1,6 +1,7 @@
 <?php
 session_start();
-include "/backend/db_connection.php";
+include "../db_connection.php";
+include $_SERVER['DOCUMENT_ROOT'] . "/backend/db_connection.php";
 
 // Get date parameter
 $date = isset($_GET['date']) ? $_GET['date'] : null;
