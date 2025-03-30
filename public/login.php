@@ -46,13 +46,13 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link rel="stylesheet" href="../css/login.css">
+    <link rel="stylesheet" href="top_exchange/public/css/login.css">
 </head>
 <body>
     <div class="login-container">
         <div class="form-content">
             <div class="formHeading">
-                <span class="h3">WELCOME BACK1 👋</span> <br/>
+                <span class="h3">WELCOME BACK 👋</span> <br/>
                 <span class="excerptOne">Enter your username and password to continue.</span>
             </div>
 
