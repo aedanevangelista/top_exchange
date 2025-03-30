@@ -233,9 +233,9 @@ p {
 }
 
 .carousel-indicators li {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 100%;
   margin: 0 5px;
   background-color: #ddd;
   cursor: pointer;
@@ -243,8 +243,8 @@ p {
 
 .carousel-indicators .active {
   background-color: var(--primary-color);
-  width: 12px;
-  height: 12px;
+  width: 6px;
+  height: 6px;
 }
 
 .carousel-control-prev,
@@ -821,10 +821,6 @@ p {
   }
 }
 
-#carouselExampleIndicators {
-    width: 100%;
-    height: 4px;
-}
     </style>
 </head>
 <body>
