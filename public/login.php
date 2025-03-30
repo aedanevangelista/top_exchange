@@ -3,10 +3,6 @@ session_start();
 require_once 'config.php';
 include "../backend/db_connection.php";
 
-// For debugging
-$fullUrl = "http://{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}";
-echo "<script>console.log('Full URL: " . addslashes($fullUrl) . "');</script>";
-
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
