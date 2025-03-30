@@ -5,7 +5,7 @@ include "../../backend/check_role.php";
 checkRole('Dashboard');
 
 
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['admin_user_id'])) {
     // Use relative path instead of hardcoded URL
     header("Location: ../login.php");
     exit();
@@ -26,10 +26,10 @@ function getAvailableYears($conn) {
 
 function getClientOrdersCount($conn, $year) {
     $data = array();
-    $sql = "SELECT username, COUNT(*) as order_count 
+    $sql = "SELECT admin_username, COUNT(*) as order_count 
             FROM orders 
             WHERE YEAR(order_date) = ? 
-            GROUP BY username";
+            GROUP BY admin_username";
     
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $year);
@@ -39,7 +39,7 @@ function getClientOrdersCount($conn, $year) {
     if ($result && $result->num_rows > 0) {
         while($row = $result->fetch_assoc()) {
             $data[] = array(
-                'username' => $row['username'],
+                'admin_username' => $row['admin_username'],
                 'count' => $row['order_count']
             );
         }
