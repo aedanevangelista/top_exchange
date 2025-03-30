@@ -1,14 +1,12 @@
 <?php
+// Start the session
 session_start();
+// Include the database connection file
 include "../../backend/db_connection.php";
+// Include role check functionality
 include "../../backend/check_role.php";
-checkRole('Dashboard');
-
-if (!isset($_SESSION['user_id'])) {
-    // Use relative path instead of hardcoded URL
-    header("Location: ../login.php");
-    exit();
-}
+// Check if user has proper role
+checkRole('Accounts - Clients');
 
 function getAvailableYears($conn) {
     $years = array();
