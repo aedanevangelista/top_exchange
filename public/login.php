@@ -140,7 +140,8 @@ label {
     width: auto;
     background-color: black;
     color: white;
-    margin-top: 20px;
+    padding: 16px;
+    text-align: center;
 }
 </style>
 
