@@ -507,19 +507,33 @@ $navigation = getMonthNavigation($month, $year);
         modalDate.textContent = 'Orders for ' + formattedDate;
         
         fetch(`/backend/get_orders_by_date.php?date=${date}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Your existing code here
-                })
-                .catch(error => {
-                    console.error('Error fetching orders:', error);
-                    ordersTableBody.innerHTML = '<tr><td colspan="6">Error fetching orders: ' + error.message + '</td></tr>';
-                });
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Your existing code here
+            })
+            .catch(error => {
+                console.error('Error fetching orders:', error);
+                ordersTableBody.innerHTML = '<tr><td colspan="6">Error fetching orders: ' + error.message + '</td></tr>';
+            });
+            .then(data => {
+                ordersTableBody.innerHTML = '';
+                
+                // Check if data is null or not an array
+                if (!data || !Array.isArray(data)) {
+                    console.error('Expected array but got:', data);
+                    ordersTableBody.innerHTML = '<tr><td colspan="6">Error: Unexpected data format received.</td></tr>';
+                    return;
+                }
+                
+                if (data.length === 0) {
+                    ordersTableBody.innerHTML = '<tr><td colspan="6">No orders for this date.</td></tr>';
+                    return;
+                }
                 
                 data.forEach(order => {
                     // Parse orders JSON string into an object if it's a string
