@@ -233,17 +233,17 @@ p {
 }
 
 .carousel-indicators li {
-  width: 6px;
+  width: 12px;
   height: 6px;
   border-radius: 100%;
-  margin: 0 2px;
+  margin: 0 12px;
   background-color: #ddd;
   cursor: pointer;
 }
 
 .carousel-indicators .active {
   background-color: var(--primary-color);
-  width: 6px;
+  width: 12px;
   height: 6px;
 }
 
