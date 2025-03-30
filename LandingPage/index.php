@@ -420,7 +420,7 @@ p {
 .product-img img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transition: transform 0.5s ease;
 }
 
@@ -911,7 +911,7 @@ p {
                                                 <tr>
                                                     <td>
                                                         <img src="<?php echo htmlspecialchars($item['image_path'] ?? 'images/default-product.jpg'); ?>" 
-                                                             style="width: 80px; height: 80px; object-fit: cover;">
+                                                             style="width: 80px; height: 80px; object-fit: contain;">
                                                     </td>
                                                     <td>
                                                         <h6><?php echo htmlspecialchars($item['name']); ?></h6>
@@ -1500,7 +1500,7 @@ p {
                                         <td>
                                             <img src="${item.image_path || '/LandingPage/images/default-product.jpg'}" 
                                                  alt="${item.name}" 
-                                                 style="width: 80px; height: 80px; object-fit: cover;">
+                                                 style="width: 80px; height: 80px; object-fit: contain;">
                                         </td>
                                         <td>
                                             <h6>${item.name}</h6>
