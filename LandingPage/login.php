@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
                 $fileName = uniqid() . '_' . basename($_FILES['business_proof']['name'][$key]);
                 $uploadFilePath = $uploadDir . $fileName;
                 if (move_uploaded_file($tmp_name, $uploadFilePath)) {
-                    $business_proof[] = '/uploads/' . $username . '/' . $fileName;
+                    $business_proof[] = '/u701062148_top_exchange/uploads/' . $username . '/' . $fileName;
                 }
             }
             
