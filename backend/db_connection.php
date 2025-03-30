@@ -4,7 +4,7 @@ ini_set('display_errors', 1); // Changed from 0 to 1 temporarily
 
 try {
     $servername = "localhost";
-    $username = "u701062148_top_exchange";
+    $username = "Food";
     $password = "FoodniAedanRyanSheilaJeff1"; // Make sure this is your actual Hostinger password
     $dbname = "u701062148_top_exchange";
 
