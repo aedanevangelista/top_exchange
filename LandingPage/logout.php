@@ -1,16 +1,12 @@
 <?php
 session_start();
 
-// Unset all session variables
-$_SESSION = [];
-
-// Destroy the session
-session_destroy();
-
-// Delete session cookie
-if (isset($_COOKIE[session_name()])) {
-    setcookie(session_name(), '', time() - 3600, '/');
-}
+// Only unset client session variables
+unset($_SESSION['client_user_id']);
+unset($_SESSION['client_username']);
+unset($_SESSION['client_role']);
+unset($_SESSION['client_email']);
+unset($_SESSION['cart']); // If you're using a cart for clients
 
 // Redirect to login page
 header("Location: login.php");
