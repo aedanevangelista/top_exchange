@@ -80,8 +80,9 @@ font-weight: 800;
 }
 
 .backHome{
-    text-decoration: none;
-    color: black;
+    width: auto;
+    background-color: black;
+    color: white;
     margin-top: 20px;
 }
 
