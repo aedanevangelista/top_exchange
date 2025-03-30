@@ -52,7 +52,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Order History', $allowedPages)): ?>
-                            <a href="public/pages/order_history.php" class="submenu-item">
+                            <a href="/public/pages/order_history.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Order History
                             </a>
                         <?php if (in_array('Payment History', $allowedPages)): ?>
