@@ -507,40 +507,57 @@ $navigation = getMonthNavigation($month, $year);
             modalDate.textContent = 'Orders for ' + formattedDate;
             
             fetch(`/backend/get_orders_by_date.php?date=${date}`)
-                .then(response => response.json())
-                .then(data => {
-                    ordersTableBody.innerHTML = '';
-                    
-                    if (data.length === 0) {
-                        ordersTableBody.innerHTML = '<tr><td colspan="6">No orders for this date.</td></tr>';
-                        return;
-                    }
-                    
-                    data.forEach(order => {
-                        const row = document.createElement('tr');
-                        const orderJSON = JSON.stringify(order.orders).replace(/"/g, '&quot;');
-                        const poNumber = order.po_number;
-                        const deliveryAddress = order.delivery_address || 'Not specified';
-                        
-                        row.innerHTML = `
-                            <td>${order.po_number}</td>
-                            <td>${order.username}</td>
-                            <td>${order.order_date}</td>
-                            <td class="delivery-address">${deliveryAddress}</td>
-                            <td><button class="view-orders-btn" onclick='viewOrderDetails(${orderJSON}, "${poNumber}", "${deliveryAddress}")'>
-                                <i class="fas fa-clipboard-list"></i> View Orders</button></td>
-                            <td>PHP ${parseFloat(order.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                        `;
-                        ordersTableBody.appendChild(row);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error fetching orders:', error);
-                    ordersTableBody.innerHTML = '<tr><td colspan="6">Error fetching orders.</td></tr>';
-                });
-            
-            modal.style.display = 'block';
+    .then(response => response.json())
+    .then(data => {
+        ordersTableBody.innerHTML = '';
+        
+        // Check if data is null or not an array
+        if (!data || !Array.isArray(data)) {
+            console.error('Expected array but got:', data);
+            ordersTableBody.innerHTML = '<tr><td colspan="6">Error: Unexpected data format received.</td></tr>';
+            return;
         }
+        
+        if (data.length === 0) {
+            ordersTableBody.innerHTML = '<tr><td colspan="6">No orders for this date.</td></tr>';
+            return;
+        }
+        
+        data.forEach(order => {
+            // Parse orders JSON string into an object if it's a string
+            let orderData;
+            if (typeof order.orders === 'string') {
+                try {
+                    orderData = JSON.parse(order.orders);
+                } catch (e) {
+                    console.error('Failed to parse order JSON:', e);
+                    orderData = [];
+                }
+            } else {
+                orderData = order.orders;
+            }
+            
+            const row = document.createElement('tr');
+            const orderJSON = JSON.stringify(orderData).replace(/"/g, '&quot;');
+            const poNumber = order.po_number;
+            const deliveryAddress = order.delivery_address || 'Not specified';
+            
+            row.innerHTML = `
+                <td>${order.po_number}</td>
+                <td>${order.username}</td>
+                <td>${order.order_date}</td>
+                <td class="delivery-address">${deliveryAddress}</td>
+                <td><button class="view-orders-btn" onclick='viewOrderDetails(${orderJSON}, "${poNumber}", "${deliveryAddress}")'>
+                    <i class="fas fa-clipboard-list"></i> View Orders</button></td>
+                <td>PHP ${parseFloat(order.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            `;
+            ordersTableBody.appendChild(row);
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching orders:', error);
+        ordersTableBody.innerHTML = '<tr><td colspan="6">Error fetching orders.</td></tr>';
+    });
         
         function viewOrderDetails(orders, poNumber, deliveryAddress) {
             try {
