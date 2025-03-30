@@ -70,7 +70,7 @@ try {
         }
         
         // Create folder for product images if it doesn't exist
-        $upload_dir = __DIR__ . '/uploads/products/';
+        $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/products/';
         if (!file_exists($upload_dir)) {
             if (!mkdir($upload_dir, 0777, true)) {
                 throw new Exception('Failed to create upload directory');
