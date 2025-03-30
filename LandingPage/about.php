@@ -12,13 +12,8 @@ if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
-// Connect to MySQL (if needed for any database operations)
-$conn = new mysqli("151.106.122.5", "u701062148_top_exchange", "CreamLine123", "u701062148_top_exchange");
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+// Include database connection file
+include_once('db_connection.php');
 
 // Set the page title dynamically
 $pageTitle = "About";
