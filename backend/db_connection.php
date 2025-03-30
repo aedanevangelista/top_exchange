@@ -4,8 +4,8 @@ ini_set('display_errors', 0);
 
 try {
     $servername = "localhost";
-    $username = "u701062148_XXXXX"; // Replace XXXXX with your Hostinger database username
-    $password = "YOUR_HOSTINGER_PASSWORD"; // Replace with your Hostinger database password
+    $username = "u701062148_top_exchange"; // Your Hostinger database username
+    $password = "YOUR_HOSTINGER_PASSWORD"; // Replace with your actual Hostinger password
     $dbname = "u701062148_top_exchange"; // Your Hostinger database name
 
     $conn = new mysqli($servername, $username, $password, $dbname);
