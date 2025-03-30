@@ -254,11 +254,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
         <div class="form-container sign-up-container">
             <form action="login.php" method="POST" enctype="multipart/form-data">
                 <h1>Create Account</h1>
-                <div class="social-container">
-                    <a href="#" class="social"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="social"><i class="fab fa-google-plus-g"></i></a>
-                    <a href="#" class="social"><i class="fab fa-linkedin-in"></i></a>
-                </div>
                 <span>or use your email for registration</span>
                 
                 <?php if (!empty($success_message)) : ?>
@@ -342,11 +337,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
         <div class="form-container sign-in-container">
             <form action="login.php" method="POST">
                 <h1>Sign in</h1>
-                <div class="social-container">
-                    <a href="#" class="social"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="social"><i class="fab fa-google-plus-g"></i></a>
-                    <a href="#" class="social"><i class="fab fa-linkedin-in"></i></a>
-                </div>
                 <span>or use your account</span>
                 
                 <?php if (!empty($form_errors['login'])) : ?>
