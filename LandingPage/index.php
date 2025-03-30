@@ -1187,7 +1187,7 @@ p {
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="600">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="/LandingPage/images/wanton.jpg" alt="Wanton Regular">
+                            <img src="/LandingPage/images/wanton.png" alt="Wanton Regular">
                         </div>
                         <div class="product-body">
                             <div class="product-price">₱315</div>
@@ -1210,7 +1210,7 @@ p {
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="/LandingPage/images/driedegg.jpg" alt="Dried Egg Noodles">
+                            <img src="/LandingPage/images/driedegg.png" alt="Dried Egg Noodles">
                         </div>
                         <div class="product-body">
                             <div class="product-price">₱185</div>
@@ -1231,7 +1231,7 @@ p {
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="400">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="/LandingPage/images/pancitcantonjpg" alt="Pancit Canton">
+                            <img src="/LandingPage/images/pancitcanton.png" alt="Pancit Canton">
                             <span class="product-badge">NEW</span>
                         </div>
                         <div class="product-body">
@@ -1253,7 +1253,7 @@ p {
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="600">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="/LandingPage/images/asadosiopao.jpg" alt="Asado Siopao">
+                            <img src="/LandingPage/images/asadosiopao.png" alt="Asado Siopao">
                         </div>
                         <div class="product-body">
                             <div class="product-price">₱280</div>
