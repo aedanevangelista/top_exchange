@@ -254,7 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
         <div class="form-container sign-up-container">
             <form action="login.php" method="POST" enctype="multipart/form-data">
                 <h1>Create Account</h1>
-                <span>or use your email for registration asdasd</span>
+                <span>or use your email for registration</span>
                 
                 <?php if (!empty($success_message)) : ?>
                     <div class="success-message"><?php echo $success_message; ?></div>
