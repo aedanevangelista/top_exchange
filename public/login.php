@@ -79,6 +79,6 @@ $conn->close();
             </form>
         </div>
     </div>
-    <script src="<?php echo BASE_URL; ?>/js/login.js"></script>
+    <script type="application/javascript" src="js/login.js"></script>
 </body>
 </html>

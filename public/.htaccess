@@ -1,0 +1,15 @@
+# Enable proper MIME type handling
+AddType application/javascript .js
+AddType text/css .css
+
+# Ensure proper handling of PHP files
+AddType application/x-httpd-php .php
+
+# Prevent directory listing
+Options -Indexes
+
+# Allow access to JavaScript and CSS files
+<FilesMatch "\.(js|css)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch> 
