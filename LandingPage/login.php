@@ -330,6 +330,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
                     </div>
                 </div>
                 <button type="submit" name="signup">Sign Up</button>
+                <div class="backHome"><a href="/LandingPage/index.php">Back to Home</a></div>
             </form>
         </div>
         
@@ -377,7 +378,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
                     <h1>Hello, Friend!</h1>
                     <p>Enter your personal details and start the journey with us</p>
                     <button class="ghost" id="signUp">Sign Up</button>
-                    <div class="backHome"><a href="/LandingPage/index.php">Back to Home</a></div>
+                    
                 </div>
             </div>
         </div>
