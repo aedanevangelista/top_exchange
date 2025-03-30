@@ -2,14 +2,16 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Dashboard');
 
-
+// Check if the user is logged in as an admin
 if (!isset($_SESSION['admin_user_id'])) {
-    // Use relative path instead of hardcoded URL
+    // Redirect to admin login page
     header("Location: ../login.php");
     exit();
 }
+
+// Check role permission for Dashboard
+checkRole('Dashboard');
 
 function getAvailableYears($conn) {
     $years = array();
@@ -26,10 +28,10 @@ function getAvailableYears($conn) {
 
 function getClientOrdersCount($conn, $year) {
     $data = array();
-    $sql = "SELECT admin_username, COUNT(*) as order_count 
+    $sql = "SELECT username, COUNT(*) as order_count 
             FROM orders 
             WHERE YEAR(order_date) = ? 
-            GROUP BY admin_username";
+            GROUP BY username";
     
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $year);
@@ -39,7 +41,7 @@ function getClientOrdersCount($conn, $year) {
     if ($result && $result->num_rows > 0) {
         while($row = $result->fetch_assoc()) {
             $data[] = array(
-                'admin_username' => $row['admin_username'],
+                'username' => $row['username'],
                 'count' => $row['order_count']
             );
         }
