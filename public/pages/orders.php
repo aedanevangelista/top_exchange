@@ -356,6 +356,6 @@ if ($result && $result->num_rows > 0) {
         </div>
     </div>
 
-    <script src="/public/js/orders.js"></script>
+    <script src="/js/orders.js"></script>
 </body>
 </html>
