@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "../backend/db_connection.php";
+include "/backend/db_connection.php";
 
 // For debugging
 $fullUrl = "http://{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}";
@@ -177,7 +177,7 @@ label {
                 <br/>
 
                 <button type="submit" class="button">Sign in</button>
-                <div class="backHome"><a href="../LandingPage/index.php">Back to Home</a></div>
+                <div class="backHome"><a href="/LandingPage/index.php">Back to Home</a></div>
             </form>
             
 
