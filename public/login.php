@@ -1,28 +1,43 @@
 <?php
 session_start();
-include "../backend/db_connection.php";
-
-// Add this at the top of your file to define the base path
-define('BASE_PATH', '/top_exchange');
+include "../backend/db_connection.php"; // Ensure correct path
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Rest of your PHP code remains the same
-    // ... 
-    
-    if ($password === $user['password']) {
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['role'] = $user['role'];
-        
-        header("Location: " . BASE_PATH . "/public/pages/dashboard.php");
-        exit();
+    // Sanitize input
+    $username = trim($_POST['username']);
+    $password = trim($_POST['password']);
+
+    $stmt = $conn->prepare("SELECT id, username, password, role FROM accounts WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+
+        if ($password === $user['password']) {
+            // Store session variables
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['role'] = $user['role'];
+
+            // Redirect to pages/dashboard.php
+            header("Location: http://localhost/top_exchange/public/pages/dashboard.php");
+            exit();
+        } else {
+            $_SESSION['error'] = "Incorrect password. Please try again.";
+            header("Location: http://localhost/top_exchange/public/login.php");
+            exit();
+        }
     } else {
-        $_SESSION['error'] = "Incorrect password. Please try again.";
-        header("Location: " . BASE_PATH . "/public/login.php");
+        $_SESSION['error'] = "User not found.";
+        header("Location: http://localhost/top_exchange/public/login.php");
         exit();
     }
-    // ...
+
+    $stmt->close();
 }
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -31,8 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <!-- Update CSS path -->
-    <link rel="stylesheet" href="<?php echo BASE_PATH; ?>/public/css/login.css">
+    <link rel="stylesheet" href="/top_exchange/public/css/login.css">
 </head>
 <body>
     <div class="login-container">
@@ -42,15 +56,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <span class="excerptOne">Enter your username and password to continue.</span>
             </div>
 
+            <!-- Display error messages -->
             <?php if (isset($_SESSION['error'])): ?>
                 <p style="color: red; text-align: center; font-weight: bold;">
                     <?= htmlspecialchars($_SESSION['error']); ?>
                 </p>
-                <?php unset($_SESSION['error']); ?>
+                <?php unset($_SESSION['error']); // Clear the error after displaying ?>
             <?php endif; ?>
 
-            <!-- Update form action -->
-            <form class="loginForm" action="<?php echo BASE_PATH; ?>/public/login.php" method="POST">
+            <!-- Login Form -->
+            <form class="loginForm" action="/top_exchange/public/login.php" method="POST">
                 <label>Username</label>
                 <input type="text" name="username" placeholder="Enter your username" required>
                 <br/>
@@ -63,7 +78,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </form>
         </div>
     </div>
-    <!-- Update JavaScript path -->
-    <script src="<?php echo BASE_PATH; ?>/public/js/login.js"></script>
+    <script src="/top_exchange/public/js/login.js"></script>
 </body>
 </html>
