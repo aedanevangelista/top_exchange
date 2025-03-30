@@ -862,8 +862,8 @@ $(document).on('change', '.variant-dropdown', function() {
     // Get the selected option element
     const selectedOption = $(this).find('option:selected');
     
-    // Get the product ID that contains this dropdown
-    const productId = $(this).closest('.cream_box').find('.add-to-cart').data('product-id');
+    // Get the product ID from the dropdown's ID
+    const mainProductId = $(this).attr('id').replace('variant-select-', '');
     
     // Get variant information from the selected option
     const variantId = selectedOption.val();
@@ -872,24 +872,26 @@ $(document).on('change', '.variant-dropdown', function() {
     const variantPackaging = selectedOption.data('packaging');
     const variantImage = selectedOption.data('image');
     
-    // Update price display
-    $('#product-price-' + productId).text('₱' + parseFloat(variantPrice).toFixed(2));
+    // Update price text (this is the price tag that appears over the image)
+    $('#product-price-' + mainProductId).text('₱' + parseFloat(variantPrice).toFixed(2));
     
     // Update packaging display
-    $('#product-packaging-' + productId).html('<i class="fas fa-box me-2"></i>Packaging: ' + variantPackaging);
+    $('#product-packaging-' + mainProductId).html('<i class="fas fa-box me-2"></i>Packaging: ' + variantPackaging);
     
     // Update image if exists
     if (variantImage) {
-        $('#product-image-' + productId).attr('src', variantImage);
+        $('#product-image-' + mainProductId).attr('src', variantImage);
     }
     
     // Update add to cart button with variant data
-    $('#add-to-cart-' + productId)
+    $('#add-to-cart-' + mainProductId)
         .data('product-id', variantId)  // Change to the variant ID
         .data('product-name', variantName)
         .data('product-price', variantPrice)
         .data('packaging', variantPackaging)
         .data('image-path', variantImage);
+    
+    console.log('Price updated to:', variantPrice, 'for product:', mainProductId);
 });
 
         // Quantity adjustment handlers
