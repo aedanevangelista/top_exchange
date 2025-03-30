@@ -158,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
                 $fileName = uniqid() . '_' . basename($_FILES['business_proof']['name'][$key]);
                 $uploadFilePath = $uploadDir . $fileName;
                 if (move_uploaded_file($tmp_name, $uploadFilePath)) {
-                    $business_proof[] = '/top_exchange/uploads/' . $username . '/' . $fileName;
+                    $business_proof[] = '/u701062148_top_exchange/uploads/' . $username . '/' . $fileName;
                 }
             }
             
@@ -196,7 +196,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Page</title>
-    <link rel="stylesheet" href="../LandingPage/css/login.css">
+    <link rel="stylesheet" href="css/login.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .form-content {

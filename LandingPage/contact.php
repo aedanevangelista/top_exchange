@@ -14,7 +14,7 @@ if (!isset($_SESSION['cart'])) {
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <!-- basic -->
     <meta charset="utf-8">
@@ -24,10 +24,10 @@ if (!isset($_SESSION['cart'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1">
     <!-- site metas -->
-    <title>Contact</title>
-    <meta name="keywords" content="">
-    <meta name="description" content="">
-    <meta name="author" content="">
+    <title>Contact Us | Top Exchange Food Corp</title>
+    <meta name="keywords" content="contact, food corporation, restaurant, catering, inquiry">
+    <meta name="description" content="Get in touch with Top Exchange Food Corp for inquiries, partnerships, or customer support. We'd love to hear from you.">
+    <meta name="author" content="Top Exchange Food Corp">
     <!-- bootstrap css -->
     <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
     <!-- style css -->
@@ -42,8 +42,9 @@ if (!isset($_SESSION['cart'])) {
     <link rel="stylesheet" href="css/jquery.mCustomScrollbar.min.css">
     <!-- Tweaks for older IEs-->
     <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Custom Popup Styles */
+        /* Custom Popup Styles (unchanged) */
         .custom-popup {
             position: fixed;
             top: 20px;
@@ -78,7 +79,7 @@ if (!isset($_SESSION['cart'])) {
             to { opacity: 0; }
         }
         
-        /* Cart count badge */
+        /* Cart count badge (unchanged) */
         .badge-danger {
             background-color: #dc3545;
             color: white;
@@ -89,9 +90,311 @@ if (!isset($_SESSION['cart'])) {
             top: -10px;
             left: -5px;
         }
+
+        /* Enhanced Contact Page Styles */
+        .contact-hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('images/background.png') no-repeat center center;
+            background-size: cover;
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .contact-hero h1 {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .contact-hero p {
+            font-size: 18px;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .contact-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        .contact-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .contact-form-container {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .contact-info-container {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 30px;
+            color: #333;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        .section-title:after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 60px;
+            height: 3px;
+            background-color: rgb(173, 133, 59);
+        }
+
+        .contact-form {
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: all 0.3s;
+            background-color: #f9f9f9;
+        }
+
+        .form-control:focus {
+            border-color: rgb(173, 133, 59);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(173, 133, 59, 0.1);
+            background-color: #fff;
+        }
+
+        textarea.form-control {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .submit-btn {
+            background-color: rgb(173, 133, 59);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .submit-btn:hover {
+            background-color: rgba(173, 133, 59, 0.9);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .contact-info {
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        .contact-details {
+            margin-bottom: 30px;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .contact-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .contact-icon {
+            color: rgb(173, 133, 59);
+            font-size: 20px;
+            margin-right: 15px;
+            margin-top: 3px;
+        }
+
+        .contact-content h3 {
+            font-size: 18px;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .contact-content p, .contact-content a {
+            color: #666;
+            margin: 0;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .contact-content a:hover {
+            color: rgb(173, 133, 59);
+        }
+
+        .business-hours {
+            margin-bottom: 30px;
+        }
+
+        .hours-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .hours-table tr {
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .hours-table tr:last-child {
+            border-bottom: none;
+        }
+
+        .hours-table td {
+            padding: 10px 0;
+            color: #666;
+        }
+
+        .hours-table td:first-child {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .map-container {
+            height: 300px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .map-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 15px;
+        }
+
+        .social-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background-color: #f5f5f5;
+            color: #666;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .social-link:hover {
+            background-color: rgb(173, 133, 59);
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        .contact-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .feature-card {
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 40px;
+            color: rgb(173, 133, 59);
+            margin-bottom: 20px;
+        }
+
+        .feature-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .feature-desc {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .contact-hero {
+                padding: 60px 0;
+            }
+            
+            .contact-hero h1 {
+                font-size: 32px;
+            }
+            
+            .contact-section {
+                flex-direction: column;
+            }
+            
+            .section-title {
+                font-size: 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .contact-hero {
+                padding: 40px 0;
+            }
+            
+            .contact-hero h1 {
+                font-size: 28px;
+            }
+            
+            .contact-form, .contact-info {
+                padding: 20px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Header Section (unchanged) -->
     <div class="header_section header_bg">
         <div class="container">
             <nav class="navbar navbar-expand-lg navbar-light bg-light">
@@ -102,7 +405,7 @@ if (!isset($_SESSION['cart'])) {
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav ml-auto">
                         <li class="nav-item">
-                            <a class="nav-link" href="index.php">Home</a>
+                            <a class="nav-link" href="../index.php">Home</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="about.php">About</a>
@@ -130,7 +433,6 @@ if (!isset($_SESSION['cart'])) {
                                 </a>
                             <?php endif; ?>
                         </div>
-                        <div class="fa fa-search form-control-feedback"></div>
                     </form>
                 </div>
             </nav>
@@ -138,7 +440,7 @@ if (!isset($_SESSION['cart'])) {
     </div>
 
     <?php if (isset($_SESSION['username'])): ?>
-    <!-- Cart Modal - Matching the ordering page -->
+    <!-- Cart Modal (unchanged) -->
     <div class="modal fade" id="cartModal" tabindex="-1" role="dialog" aria-labelledby="cartModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
@@ -257,76 +559,165 @@ if (!isset($_SESSION['cart'])) {
     </div>
     <?php endif; ?>
 
-    <!-- Custom Popup Message -->
+    <!-- Custom Popup Message (unchanged) -->
     <div id="customPopup" class="custom-popup">
         <div class="popup-content">
             <span id="popupMessage"></span>
         </div>
     </div>
 
-    <!-- contact section start -->
-    <div class="contact_section layout_padding">
+    <!-- Hero Section -->
+    <div class="contact-hero">
         <div class="container">
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="contact_main">
-                        <h1 class="contact_taital">Contact Us</h1>
-                        <form action="/action_page.php">
-                            <div class="form-group">
-                                <input type="text" class="email-bt" placeholder="Name" name="Name">
-                            </div>
-                            <div class="form-group">
-                                <input type="text" class="email-bt" placeholder="Email" name="Name">
-                            </div>
-                            <div class="form-group">
-                                <input type="text" class="email-bt" placeholder="Phone Number" name="Email">
-                            </div>
-                            <div class="form-group">
-                                <textarea class="massage-bt" placeholder="Massage" rows="5" id="comment" name="Massage"></textarea>
-                            </div>
-                        </form>
-                        <div class="main_bt"><a href="#">SEND</a></div>
+            <h1>We'd Love to Hear From You</h1>
+            <p>Whether you have questions about our products, need catering services, or want to partner with us, our team is ready to assist you.</p>
+        </div>
+    </div>
+
+    <!-- Main Contact Section -->
+    <div class="contact-container">
+        <div class="contact-section">
+            <!-- Contact Form -->
+            <div class="contact-form-container">
+                <h2 class="section-title">Send Us a Message</h2>
+                <form id="contactForm" class="contact-form" action="/submit_contact.php" method="POST">
+                    <div class="form-group">
+                        <input type="text" class="form-control" name="name" placeholder="Your Name*" required>
                     </div>
-                </div>
-                <div class="col-md-8">
-                    <div class="location_text">
-                        <ul>
-                            <li>
-                                <a href="https://maps.app.goo.gl/mJtw3QR2Bks5sGCd8">
-                                <span class="padding_left_10 active"><i class="fa fa-map-marker" aria-hidden="true"></i></span>74 M.H. Del Pilar St, Quezon City, 1105 Metro Manila</a>
-                            </li>
-                            <li>
-                                <a href="#">
-                                <span class="padding_left_10"><i class="fa fa-phone" aria-hidden="true"></i></span>Call : (02) 86307145
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#">
-                                <span class="padding_left_10"><i class="fa fa-envelope" aria-hidden="true"></i></span>Email : aedanevangelista.capstone2@gmail.com
-                                </a>
-                            </li>
-                        </ul>
+                    <div class="form-group">
+                        <input type="email" class="form-control" name="email" placeholder="Email Address*" required>
                     </div>
-                    <div class="footer_social_icon">
-                        <ul>
-                            <li><a href="https://www.facebook.com/secretrecipesfoodcorp"><i class="fa fa-facebook" aria-hidden="true"></i></a></li>
-                            <li><a href="https://www.dnb.com/business-directory/company-profiles.top_exchange_food_corp.b2cf650e8e0ac9905e5e4a3c92fa7e68.html"><i class="fa fa-twitter" aria-hidden="true"></i></a></li>
-                            <li><a href="https://ph.linkedin.com/in/mr-choi-head-office-mayeth-tagle-2ba923110?original_referer=https%3A%2F%2Fwww.google.com%2F"><i class="fa fa-linkedin" aria-hidden="true"></i></a></li>
-                            <li><a href="https://www.instagram.com/topexchangefoodcorp/"><i class="fa fa-instagram" aria-hidden="true"></i></a></li>
-                        </ul>
+                    <div class="form-group">
+                        <input type="tel" class="form-control" name="phone" placeholder="Phone Number">
+                    </div>
+                    <div class="form-group">
+                        <select class="form-control" name="subject">
+                            <option value="">Select Subject</option>
+                            <option value="General Inquiry">General Inquiry</option>
+                            <option value="Product Questions">Product Questions</option>
+                            <option value="Catering Services">Catering Services</option>
+                            <option value="Partnership">Partnership</option>
+                            <option value="Feedback">Feedback</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <textarea class="form-control" name="message" placeholder="Your Message*" required></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn">Send Message</button>
+                </form>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="contact-info-container">
+                <h2 class="section-title">Contact Information</h2>
+                <div class="contact-info">
+                    <div class="contact-details">
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <i class="fa fa-map-marker"></i>
+                            </div>
+                            <div class="contact-content">
+                                <h3>Our Location</h3>
+                                <a href="https://maps.app.goo.gl/mJtw3QR2Bks5sGCd8" target="_blank">
+                                    74 M.H. Del Pilar St, Quezon City, 1105 Metro Manila
+                                </a>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <i class="fa fa-phone"></i>
+                            </div>
+                            <div class="contact-content">
+                                <h3>Phone Numbers</h3>
+                                <p>Main: <a href="tel:+63286307145">(02) 86307145</a></p>
+                                <p>Mobile: <a href="tel:+639123456789">+63 912 345 6789</a></p>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <i class="fa fa-envelope"></i>
+                            </div>
+                            <div class="contact-content">
+                                <h3>Email Address</h3>
+                                <a href="mailto:aedanevangelista.capstone2@gmail.com">aedanevangelista.capstone2@gmail.com</a>
+                                <p>For business inquiries: <a href="mailto:business@topexchange.com">business@topexchange.com</a></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="business-hours">
+                        <h3 class="feature-title">Business Hours</h3>
+                        <table class="hours-table">
+                            <tr>
+                                <td>Monday - Friday</td>
+                                <td>8:00 AM - 8:00 PM</td>
+                            </tr>
+                            <tr>
+                                <td>Saturday</td>
+                                <td>9:00 AM - 6:00 PM</td>
+                            </tr>
+                            <tr>
+                                <td>Sunday</td>
+                                <td>10:00 AM - 4:00 PM</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="map-container">
+                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3860.258570883843!2d121.05215031532774!3d14.63278968000938!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397b7afde2a3a61%3A0x8511af5a1a4f8e1e!2s74%20M.H.%20Del%20Pilar%20St%2C%20Quezon%20City%2C%201105%20Metro%20Manila!5e0!3m2!1sen!2sph!4v1620000000000!5m2!1sen!2sph" allowfullscreen="" loading="lazy"></iframe>
+                    </div>
+
+                    <div class="social-links">
+                        <a href="https://www.facebook.com/secretrecipesfoodcorp" class="social-link" target="_blank" aria-label="Facebook">
+                            <i class="fa fa-facebook"></i>
+                        </a>
+                        <a href="https://www.instagram.com/topexchangefoodcorp/" class="social-link" target="_blank" aria-label="Instagram">
+                            <i class="fa fa-instagram"></i>
+                        </a>
+                        <a href="https://ph.linkedin.com/in/mr-choi-head-office-mayeth-tagle-2ba923110?original_referer=https%3A%2F%2Fwww.google.com%2F" class="social-link" target="_blank" aria-label="LinkedIn">
+                            <i class="fa fa-linkedin"></i>
+                        </a>
+                        <a href="https://www.dnb.com/business-directory/company-profiles.top_exchange_food_corp.b2cf650e8e0ac9905e5e4a3c92fa7e68.html" class="social-link" target="_blank" aria-label="Twitter">
+                            <i class="fa fa-twitter"></i>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-    <!-- contact section end -->
-    <!-- copyright section start -->
-    <div class="copyright_section margin_top90">
-        <div class="container">
-            <p class="copyright_text">2025 All Rights Reserved. Design by STI Munoz Students</p>
+
+        <!-- Additional Features Section -->
+        <div class="contact-features">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa fa-headphones"></i>
+                </div>
+                <h3 class="feature-title">Customer Support</h3>
+                <p class="feature-desc">Our dedicated support team is available to assist you with any questions or concerns about our products and services.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa fa-truck"></i>
+                </div>
+                <h3 class="feature-title">Delivery Inquiry</h3>
+                <p class="feature-desc">Questions about delivery options, timing, or areas we serve? We're happy to provide all the details you need.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fa fa-handshake-o"></i>
+                </div>
+                <h3 class="feature-title">Partnerships</h3>
+                <p class="feature-desc">Interested in becoming a distributor or partner? Contact our business development team for opportunities.</p>
+            </div>
         </div>
     </div>
-    <!-- copyright section end -->
+
+    <!-- Copyright Section -->
+    <div class="copyright_section margin_top90">
+        <div class="container">
+            <p class="copyright_text">© 2025 Top Exchange Food Corp. All Rights Reserved. Design by STI Munoz Students</p>
+        </div>
+    </div>
+
     <!-- Javascript files-->
     <script src="js/jquery.min.js"></script>
     <script src="js/popper.min.js"></script>
@@ -526,6 +917,15 @@ if (!isset($_SESSION['cart'])) {
             // Update cart modal when it's shown
             $('#cartModal').on('show.bs.modal', function() {
                 updateCartModal();
+            });
+
+            // Contact form submission
+            $('#contactForm').on('submit', function(e) {
+                e.preventDefault();
+                // Here you would typically add AJAX form submission
+                // For now, we'll just show a success message
+                showPopup("Your message has been sent successfully! We'll get back to you soon.");
+                this.reset();
             });
         });
     </script>

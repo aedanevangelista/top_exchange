@@ -1,10 +1,10 @@
 <?php
 // db_connection.php
 
-$host = 'localhost'; // Keep as localhost for Hostinger
-$dbname = 'u701062148_top_exchange'; // Your Hostinger database name
-$username = 'u701062148_top_exchange'; // Your Hostinger database username
-$password = 'Aedanpogi123'; // Update with the correct password you provided earlier
+$host = '151.106.122.5'; // Replace with your database host
+$dbname = 'u701062148_top_exchange'; // Replace with your database name
+$username = 'u701062148_top_exchange'; // Replace with your database username
+$password = 'CreamLine123'; // Replace with your database password
 
 try {
     $conn = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);

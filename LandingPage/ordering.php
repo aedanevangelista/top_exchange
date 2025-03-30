@@ -12,26 +12,57 @@ if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
-// Connect to MySQL with corrected credentials
-$conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
+// Connect to MySQL
+$conn = new mysqli("151.106.122.5", "u701062148_top_exchange", "CreamLine123", "u701062148_top_exchange");
 
 // Check connection
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Fetch products - Changed image_path to product_image
-$sql = "SELECT product_id, item_description AS name, price, product_image AS image_path, packaging, category FROM products";  
+// Get filter parameters
 $category = isset($_GET['category']) ? $_GET['category'] : '';
+$search = isset($_GET['search']) ? $_GET['search'] : '';
+$min_price = isset($_GET['min_price']) ? $_GET['min_price'] : '';
+$max_price = isset($_GET['max_price']) ? $_GET['max_price'] : '';
 
+// Build the SQL query
+$sql = "SELECT product_id, item_description AS name, price, product_image AS image_path, packaging, category FROM products WHERE 1=1";
+$params = [];
+$types = '';
+
+// Add filters to the query
 if (!empty($category)) {
-    $sql .= " WHERE category = ?";
+    $sql .= " AND category = ?";
+    $params[] = $category;
+    $types .= 's';
 }
 
+if (!empty($search)) {
+    $sql .= " AND (item_description LIKE ? OR category LIKE ?)";
+    $search_term = "%$search%";
+    $params[] = $search_term;
+    $params[] = $search_term;
+    $types .= 'ss';
+}
+
+if (!empty($min_price) && is_numeric($min_price)) {
+    $sql .= " AND price >= ?";
+    $params[] = $min_price;
+    $types .= 'd';
+}
+
+if (!empty($max_price) && is_numeric($max_price)) {
+    $sql .= " AND price <= ?";
+    $params[] = $max_price;
+    $types .= 'd';
+}
+
+// Prepare and execute the query
 $stmt = $conn->prepare($sql);
 
-if (!empty($category)) {
-    $stmt->bind_param("s", $category);
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
 }
 
 $stmt->execute();
@@ -42,43 +73,57 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Products</title>
+    <title>Products | Top Exchange Food Corp</title>
     <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="icon" href="images/fevicon.png" type="image/gif" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/jquery.mCustomScrollbar.min.css">
-    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css">
+    <!-- fontawesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color:#9a7432;
+            --secondary-color: #e74c3c;
+            --accent-color: #f39c12;
+            --light-bg: #f8f9fa;
+            --dark-text: #2c3e50;
+            --light-text: #7f8c8d;
+            --white: #ffffff;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
         /* Custom Popup Styles */
         .custom-popup {
             position: fixed;
             top: 20px;
             right: 20px;
-            background-color:rgb(173, 133, 59);
-            color: white;
+            background-color: var(--accent-color);
+            color: var(--white);
             padding: 15px 25px;
-            border-radius: 4px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
             z-index: 9999;
             display: none;
             animation: slideIn 0.5s forwards, fadeOut 0.5s forwards 2.5s;
             max-width: 300px;
-        }
-
-        .popup-content {
-            display: flex;
-            align-items: center;
+            font-size: 14px;
         }
 
         .custom-popup.error {
-            background-color: #f44336;
+            background-color: var(--secondary-color);
         }
 
         @keyframes slideIn {
@@ -91,10 +136,10 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             to { opacity: 0; }
         }
         
-        /* Cart badge styling to match other pages */
+        /* Cart badge styling */
         .badge-danger {
-            background-color: #dc3545;
-            color: white;
+            background-color: var(--secondary-color);
+            color: var(--white);
             border-radius: 50%;
             padding: 3px 6px;
             font-size: 12px;
@@ -103,10 +148,267 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             left: -5px;
         }
         
-        /* Cart icon styling */
-        .cart-button {
+        /* Filter section styling */
+        .filter-section {
+            background-color: var(--white);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            margin-bottom: 30px;
+            box-shadow: var(--box-shadow);
+        }
+        
+        .filter-section h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: 1.5rem;
+        }
+        
+        .filter-group {
+            margin-bottom: 20px;
+        }
+        
+        .filter-group label {
+            font-weight: 500;
+            margin-bottom: 8px;
+            display: block;
+            color: var(--dark-text);
+            font-size: 0.9rem;
+        }
+        
+        .form-control, .form-select {
+            border-radius: var(--border-radius);
+            border: 1px solid #ddd;
+            padding: 10px 15px;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.25rem rgba(243, 156, 18, 0.25);
+        }
+        
+        .price-range-inputs {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .price-range-inputs input {
+            flex: 1;
+        }
+        
+        .filter-actions {
+            margin-top: 25px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            border-radius: var(--border-radius);
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #1a252f;
+            border-color: #1a252f;
+        }
+        
+        .btn-outline-secondary {
+            color: var(--primary-color);
+            border-color: #ddd;
+        }
+        
+        .btn-outline-secondary:hover {
+            background-color: var(--light-bg);
+            border-color: #ccc;
+        }
+        
+        .search-box {
             position: relative;
-            margin-right: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .search-box .fas {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--light-text);
+        }
+        
+        .search-box input {
+            padding-left: 45px;
+            border-radius: var(--border-radius);
+        }
+        
+        /* Product cards */
+        .cream_box {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+            margin-bottom: 25px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .cream_box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+        
+        .cream_img {
+            height: 200px;
+            overflow: hidden;
+        }
+        
+        .cream_img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: var(--transition);
+        }
+        
+        .cream_box:hover .cream_img img {
+            transform: scale(1.05);
+        }
+        
+        .price_text {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: var(--accent-color);
+            color: var(--white);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .cream_box_content {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .strawberry_text {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .cream_text {
+            color: var(--light-text);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        .cart_bt {
+            margin-top: auto;
+        }
+        
+        .add-to-cart, .login-to-order {
+            display: block;
+            text-align: center;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        
+        .add-to-cart {
+            background-color: var(--primary-color);
+            color: var(--white);
+            border: 1px solid var(--primary-color);
+        }
+        
+        .add-to-cart:hover {
+            background-color: #1a252f;
+            color: var(--white);
+        }
+        
+        .login-to-order {
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+            border: 1px solid #ddd;
+        }
+        
+        .login-to-order:hover {
+            background-color: #e9ecef;
+            color: var(--dark-text);
+        }
+        
+        /* No results styling */
+        .no-results {
+            text-align: center;
+            padding: 50px 20px;
+            background-color: var(--white);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
+        }
+        
+        .no-results i {
+            font-size: 3rem;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .no-results h4 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        
+        .no-results p {
+            color: var(--light-text);
+        }
+        
+        /* Accessibility improvements */
+        a:focus, button:focus, input:focus, select:focus {
+            outline: 3px solid var(--accent-color);
+            outline-offset: 2px;
+        }
+        
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .price-range-inputs {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .filter-actions {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .cream_img {
+                height: 160px;
+            }
         }
     </style>
 </head>
@@ -115,34 +417,34 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
 <div class="header_section header_bg">
     <div class="container">
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
-            <a class="navbar-brand" href="index.php"><img src="images/resized_food_corp_logo.png"></a>
+            <a class="navbar-brand" href="index.php"><img src="images/resized_food_corp_logo.png" alt="Top Exchange Logo"></a>
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav ml-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php">Home</a>
+                        <a class="nav-link" href="../index.php">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="about.php">About</a>
+                        <a class="nav-link" href="../LandingPageTEFC/about.php">About</a>
                     </li>
                     <li class="nav-item active">
-                        <a class="nav-link" href="ordering.php">Products</a>
+                        <a class="nav-link" href="../LandingPageTEFC/ordering.php">Products</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="contact.php">Contact Us</a>
+                        <a class="nav-link" href="../LandingPageTEFC/contact.php">Contact Us</a>
                     </li>
                 </ul>
                 <form class="form-inline my-2 my-lg-0">
                     <div class="login_bt">
                         <?php if (isset($_SESSION['username'])): ?>
-                            <a href="#" class="cart-button" data-toggle="modal" data-target="#cartModal">
+                            <a href="#" class="cart-button" data-toggle="modal" data-target="#cartModal" aria-label="View shopping cart">
                                 <span style="color: #222222;"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
                                 <span id="cart-count" class="badge badge-danger"><?php echo array_sum(array_column($_SESSION['cart'], 'quantity')); ?></span>
                             </a>
                             <a href="logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>) 
-                                <span style="color: #222222;"><i class="fa fa-sign-out" aria-hidden="true"></i></span>
+                                <span style="color: #222222;"><i class="fa fa-sign-out-alt" aria-hidden="true"></i></span>
                             </a>
                         <?php else: ?>
                             <a href="login.php">Login 
@@ -169,7 +471,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             </div>
             <div class="modal-body">
                 <div id="empty-cart-message" class="text-center py-4" style="display: <?php echo empty($_SESSION['cart']) ? 'block' : 'none'; ?>;">
-                    <i class="fa fa-shopping-cart fa-4x mb-3" style="color: #ddd;"></i>
+                    <i class="fas fa-shopping-cart fa-4x mb-3" style="color: #ddd;"></i>
                     <h4>Your cart is empty</h4>
                     <p>Start shopping to add items to your cart</p>
                 </div>
@@ -197,6 +499,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                         <tr>
                                             <td>
                                                 <img src="<?php echo htmlspecialchars($item['image_path'] ?? 'images/default-product.jpg'); ?>" 
+                                                     alt="<?php echo htmlspecialchars($item['name']); ?>" 
                                                      style="width: 80px; height: 80px; object-fit: cover;">
                                             </td>
                                             <td>
@@ -209,19 +512,22 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                                     <div class="input-group-prepend">
                                                         <button class="btn btn-outline-secondary decrease-quantity" 
                                                                 type="button" 
-                                                                data-product-id="<?php echo $productId; ?>">
-                                                            <i class="fa fa-minus"></i>
+                                                                data-product-id="<?php echo $productId; ?>"
+                                                                aria-label="Decrease quantity">
+                                                            <i class="fas fa-minus"></i>
                                                         </button>
                                                     </div>
                                                     <input type="text" 
                                                            class="form-control text-center quantity-input" 
                                                            value="<?php echo $item['quantity']; ?>" 
-                                                           readonly>
+                                                           readonly
+                                                           aria-label="Quantity">
                                                     <div class="input-group-append">
                                                         <button class="btn btn-outline-secondary increase-quantity" 
                                                                 type="button" 
-                                                                data-product-id="<?php echo $productId; ?>">
-                                                            <i class="fa fa-plus"></i>
+                                                                data-product-id="<?php echo $productId; ?>"
+                                                                aria-label="Increase quantity">
+                                                            <i class="fas fa-plus"></i>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -229,8 +535,9 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                             <td>₱<?php echo number_format($itemSubtotal, 2); ?></td>
                                             <td>
                                                 <button class="btn btn-sm btn-outline-danger remove-from-cart" 
-                                                        data-product-id="<?php echo $productId; ?>">
-                                                    <i class="fa fa-trash"></i>
+                                                        data-product-id="<?php echo $productId; ?>"
+                                                        aria-label="Remove item">
+                                                    <i class="fas fa-trash"></i>
                                                 </button>
                                             </td>
                                         </tr>
@@ -276,61 +583,113 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
 </div>
 <?php endif; ?>
 
-<!-- Category Filter -->
-<form method="GET" action="">
-    <select name="category" onchange="this.form.submit()">
-        <option value="">All Categories</option>
-        <?php while ($row = $category_result->fetch_assoc()): ?>
-            <option value="<?= htmlspecialchars($row['category']) ?>" <?= $category == $row['category'] ? 'selected' : '' ?>>
-                <?= htmlspecialchars($row['category']) ?>
-            </option>
-        <?php endwhile; ?>
-    </select>
-</form>
-
 <div class="cream_section layout_padding">
     <div class="container">
         <div class="row">
             <div class="col-md-12">
-                <h1 class="cream_taital">Products</h1>
-                <p class="cream_text">Eat well. Live well!</p>
+                <h1 class="cream_taital">Our Products</h1>
+                <p class="cream_text">Discover our high-quality selection</p>
             </div>
+        </div>
+        
+        <!-- Filter and Search Section -->
+        <div class="filter-section">
+            <h2><i class="fas fa-sliders-h me-2"></i>Filter Products</h2>
+            <form method="GET" action="" class="row">
+                <div class="col-md-12 search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="search" class="form-control" placeholder="Search products by name or category..." value="<?php echo htmlspecialchars($search); ?>" aria-label="Search products">
+                </div>
+                
+                <div class="col-md-4 col-lg-3 filter-group">
+                    <label for="category-filter"><i class="fas fa-tags me-2"></i>Category</label>
+                    <select name="category" id="category-filter" class="form-select">
+                        <option value="">All Categories</option>
+                        <?php while ($row = $category_result->fetch_assoc()): ?>
+                            <option value="<?= htmlspecialchars($row['category']) ?>" <?= $category == $row['category'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($row['category']) ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                
+                <div class="col-md-8 col-lg-6 filter-group">
+                <label><span class="me-2">₱</span>Price Range</label>
+                    <div class="price-range-inputs">
+                        <input type="number" name="min_price" class="form-control" placeholder="Minimum price" value="<?php echo htmlspecialchars($min_price); ?>" aria-label="Minimum price" min="0" step="0.01">
+                        <input type="number" name="max_price" class="form-control" placeholder="Maximum price" value="<?php echo htmlspecialchars($max_price); ?>" aria-label="Maximum price" min="0" step="0.01">
+                    </div>
+                </div>
+                
+                <div class="col-md-12 filter-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                    <a href="ordering.php" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-2"></i>Reset Filters
+                    </a>
+                </div>
+            </form>
         </div>
 
         <div class="cream_section_2">
             <div class="row">
-                <?php while ($row = $result->fetch_assoc()) { ?>
-                    <div class="col-md-4">
-                        <div class="cream_box">
-                            <div class="cream_img">
-                                <img src="<?php echo htmlspecialchars($row['image_path']); ?>">   
-                            </div>
-                            <div class="price_text">
-                                ₱<?php echo isset($row['price']) ? number_format($row['price'], 2) : '0.00'; ?>
-                            </div>
-                            <h6 class="strawberry_text">
-                                <?php echo isset($row['name']) ? htmlspecialchars($row['name']) : 'No Name'; ?>
-                            </h6>
-                            <p class="cream_text">
-                                Packaging: <?php echo isset($row['packaging']) ? htmlspecialchars($row['packaging']) : 'N/A'; ?>
-                            </p>
-                            <div class="cart_bt">
-                                <?php if (isset($_SESSION['username'])): ?>
-                                    <a href="#" class="add-to-cart" data-product-id="<?php echo $row['product_id']; ?>" data-product-name="<?php echo htmlspecialchars($row['name']); ?>" data-product-price="<?php echo $row['price']; ?>" data-image-path="<?php echo htmlspecialchars($row['image_path']); ?>" data-packaging="<?php echo htmlspecialchars($row['packaging']); ?>">Add to Cart</a>
-                                <?php else: ?>
-                                    <a href="login.php" class="login-to-order">Login to Order</a>
-                                <?php endif; ?>
+                <?php if ($result->num_rows > 0): ?>
+                    <?php while ($row = $result->fetch_assoc()) { ?>
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="cream_box">
+                                <div class="cream_img">
+                                    <img src="<?php echo htmlspecialchars($row['image_path']); ?>" alt="<?php echo htmlspecialchars($row['name']); ?>">   
+                                    <div class="price_text">
+                                        ₱<?php echo isset($row['price']) ? number_format($row['price'], 2) : '0.00'; ?>
+                                    </div>
+                                </div>
+                                <div class="cream_box_content">
+                                    <h6 class="strawberry_text">
+                                        <?php echo isset($row['name']) ? htmlspecialchars($row['name']) : 'No Name'; ?>
+                                    </h6>
+                                    <p class="cream_text">
+                                        <i class="fas fa-box me-2"></i>Packaging: <?php echo isset($row['packaging']) ? htmlspecialchars($row['packaging']) : 'N/A'; ?>
+                                    </p>
+                                    <div class="cart_bt">
+                                        <?php if (isset($_SESSION['username'])): ?>
+                                            <a href="#" class="add-to-cart" 
+                                               data-product-id="<?php echo $row['product_id']; ?>" 
+                                               data-product-name="<?php echo htmlspecialchars($row['name']); ?>" 
+                                               data-product-price="<?php echo $row['price']; ?>" 
+                                               data-image-path="<?php echo htmlspecialchars($row['image_path']); ?>" 
+                                               data-packaging="<?php echo htmlspecialchars($row['packaging']); ?>">
+                                               <i class="fas fa-cart-plus me-2"></i>Add To Cart
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="login.php" class="login-to-order">
+                                                <i class="fas fa-sign-in-alt me-2"></i>Login to Order
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                    <?php } ?>
+                <?php else: ?>
+                    <div class="col-md-12">
+                        <div class="no-results">
+                            <i class="fas fa-search fa-4x"></i>
+                            <h4>No products found</h4>
+                            <p>We couldn't find any products matching your criteria. Try adjusting your filters.</p>
+                            <a href="ordering.php" class="btn btn-primary mt-3">
+                                <i class="fas fa-times me-2"></i>Clear all filters
+                            </a>
+                        </div>
                     </div>
-                <?php } ?>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Custom Popup Message -->
-<div id="customPopup" class="custom-popup">
+<div id="customPopup" class="custom-popup" role="alert" aria-live="assertive">
     <div class="popup-content">
         <span id="popupMessage"></span>
     </div>
@@ -529,19 +888,22 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                                 <div class="input-group-prepend">
                                                     <button class="btn btn-outline-secondary decrease-quantity" 
                                                             type="button" 
-                                                            data-product-id="${item.product_id}">
-                                                        <i class="fa fa-minus"></i>
+                                                            data-product-id="${item.product_id}"
+                                                            aria-label="Decrease quantity">
+                                                        <i class="fas fa-minus"></i>
                                                     </button>
                                                 </div>
                                                 <input type="text" 
                                                        class="form-control text-center quantity-input" 
                                                        value="${item.quantity}" 
-                                                       readonly>
+                                                       readonly
+                                                       aria-label="Quantity">
                                                 <div class="input-group-append">
                                                     <button class="btn btn-outline-secondary increase-quantity" 
                                                             type="button" 
-                                                            data-product-id="${item.product_id}">
-                                                        <i class="fa fa-plus"></i>
+                                                            data-product-id="${item.product_id}"
+                                                            aria-label="Increase quantity">
+                                                        <i class="fas fa-plus"></i>
                                                     </button>
                                                 </div>
                                             </div>
@@ -549,8 +911,9 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                         <td>₱${itemSubtotal.toFixed(2)}</td>
                                         <td>
                                             <button class="btn btn-sm btn-outline-danger remove-from-cart" 
-                                                    data-product-id="${item.product_id}">
-                                                <i class="fa fa-trash"></i>
+                                                    data-product-id="${item.product_id}"
+                                                    aria-label="Remove item">
+                                                <i class="fas fa-trash"></i>
                                             </button>
                                         </td>
                                     </tr>
