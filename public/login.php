@@ -8,6 +8,7 @@ echo "<script>console.log('Path: " . addslashes($path) . "');</script>";
 $fullUrl = "http://{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}";
 echo "<script>console.log('Full URL: " . addslashes($fullUrl) . "');</script>";
 
+define('BASE_PATH', '');
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Sanitize input
