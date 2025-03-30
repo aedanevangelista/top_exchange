@@ -3,8 +3,8 @@
 
 $host = 'localhost'; // Keep as localhost for Hostinger
 $dbname = 'u701062148_top_exchange'; // Your Hostinger database name
-$username = 'u701062148_top_exchange'; // Replace XXXXX with your Hostinger database username
-$password = 'FoodniAedanRyanSheilaJeff1'; // Replace with your Hostinger database password
+$username = 'u701062148_top_exchange'; // Your Hostinger database username
+$password = 'Aedanpogi123'; // Update with the correct password you provided earlier
 
 try {
     $conn = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
