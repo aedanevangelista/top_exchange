@@ -60,7 +60,7 @@ function showToast(message, type = 'success') {
 
 // Global function for fetching inventory
 function fetchInventory() {
-    $.getJSON('/top_exchange/backend/fetch_inventory.php', function(data) {
+    $.getJSON('/backend/fetch_inventory.php', function(data) {
         const inventory = $('.inventory');
         inventory.empty();
 
@@ -223,7 +223,7 @@ window.generatePONumber = function() {
     const username = $('#username').val();
     if (username) {
         $.ajax({
-            url: '/top_exchange/backend/get_next_po_number.php',
+            url: '/backend/get_next_po_number.php',
             type: 'POST',
             data: { username: username },
             success: function(response) {
@@ -320,7 +320,7 @@ window.changeStatus = function(status) {
     var poNumber = $('#statusModal').data('po_number');
     $.ajax({
         type: 'POST',
-        url: '/top_exchange/backend/update_order_status.php',
+        url: '/backend/update_order_status.php',
         data: { 
             po_number: poNumber, 
             status: status
@@ -514,7 +514,7 @@ $(document).ready(function() {
     });
 
     // Fetch categories for filter
-    $.getJSON('/top_exchange/backend/fetch_categories.php', function(categories) {
+    $.getJSON('/backend/fetch_categories.php', function(categories) {
         const filter = $('#inventoryFilter');
         filter.empty();
         filter.append('<option value="all">All Categories</option>');

@@ -19,7 +19,7 @@ function checkRole($pageName) {
 
     // Check if the user has permission to access the page
     if (!$pages || !str_contains($pages, $pageName)) {
-        header("Location: /top_exchange/public/pages/unauthorized.php");
+        header("Location: /public/pages/unauthorized.php");
         exit();
     }
 }

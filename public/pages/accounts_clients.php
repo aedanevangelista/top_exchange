@@ -44,7 +44,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
         exit;
     }
 
-    $user_upload_dir =  '/uploads/' . $username . '/';
+    $user_upload_dir = __DIR__ . '/uploads/' . $username . '/';
     if (!file_exists($user_upload_dir)) {
         mkdir($user_upload_dir, 0777, true);
     }
@@ -124,14 +124,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $stmt->close();
 
    
-    $user_upload_dir =  '/uploads/' . $username . '/';
+    $user_upload_dir = __DIR__ . '/uploads/' . $username . '/';
     if (!file_exists($user_upload_dir)) {
         mkdir($user_upload_dir, 0777, true);
     }
 
   
     $existing_business_proof = json_decode($_POST['existing_business_proof'], true) ?? [];
-    $old_upload_dir =  '/uploads/' . $old_username . '/';
+    $old_upload_dir = __DIR__ . '/uploads/' . $old_username . '/';
 
   
     if (isset($_FILES['business_proof']) && !empty($_FILES['business_proof']['name'][0])) {

@@ -90,7 +90,7 @@ try {
         $filename = 'product_image.' . $file_extension;
         
         if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
-            $product_image = '/top_exchange/uploads/products/' . $item_folder . '/' . $filename;
+            $product_image = '/uploads/products/' . $item_folder . '/' . $filename;
         } else {
             throw new Exception('Failed to upload image');
         }

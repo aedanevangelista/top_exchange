@@ -25,6 +25,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->close();
     $conn->close();
 
-    header("Location: /top_exchange/public/pages/manage_clients.php");
+    header("Location: /public/pages/manage_clients.php");
 }
 ?>
