@@ -40,7 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
     
     $product_image = $old_product_image;
     
-    $upload_dir = __DIR__ . '/../../uploads/products/';
+    $upload_dir = __DIR__ . '/uploads/products/';
     if (!file_exists($upload_dir)) {
         mkdir($upload_dir, 0777, true);
     }
