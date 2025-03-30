@@ -140,8 +140,10 @@ label {
     width: auto;
     background-color: black;
     color: white;
-    padding: 16px;
+    padding: 8px;
     text-align: center;
+    text-decoration: none;
+    font-size: 12px;
 }
 </style>
 
