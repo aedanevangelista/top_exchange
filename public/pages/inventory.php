@@ -45,62 +45,51 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         mkdir($upload_dir, 0777, true);
     }
     
-    // Replace lines 48-92 with this improved version
-if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
-    error_log("Processing image upload in edit mode: " . $_FILES['product_image']['name']);
-    
-    $allowed_types = ['image/jpeg', 'image/png'];
-    $max_size = 20 * 1024 * 1024; // 20MB
-    $file_type = $_FILES['product_image']['type'];
-    $file_size = $_FILES['product_image']['size'];
-    
-    if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-        // Create a sanitized folder name based on item description
-        $item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $item_description);
-        $item_dir = $upload_dir . $item_folder . '/';
+    if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
+        $allowed_types = ['image/jpeg', 'image/png'];
+        $max_size = 20 * 1024 * 1024;
+        $file_type = $_FILES['product_image']['type'];
+        $file_size = $_FILES['product_image']['size'];
         
-        // Make sure the directory exists
-        if (!file_exists($item_dir)) {
-            mkdir($item_dir, 0777, true);
-        }
-        
-        // If the item description changed, handle the old image folder
-        if ($old_item_description !== $item_description && !empty($old_product_image)) {
-            $old_item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $old_item_description);
-            $old_item_dir = $upload_dir . $old_item_folder . '/';
+        if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
+            $item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $item_description);
+            $item_dir = $upload_dir . $item_folder . '/';
             
-            if (file_exists($old_item_dir)) {
-                $old_files = array_diff(scandir($old_item_dir), array('.', '..'));
-                foreach ($old_files as $file) {
-                    @unlink($old_item_dir . $file);
-                }
+            if (!file_exists($item_dir)) {
+                mkdir($item_dir, 0777, true);
+            }
+            
+            if ($old_item_description != $item_description && !empty($old_product_image)) {
+                $old_item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $old_item_description);
+                $old_item_dir = $upload_dir . $old_item_folder . '/';
                 
-                if (count(array_diff(scandir($old_item_dir), array('.', '..'))) == 0) {
-                    @rmdir($old_item_dir);
+                if (file_exists($old_item_dir)) {
+                    $old_files = array_diff(scandir($old_item_dir), array('.', '..'));
+                    foreach ($old_files as $file) {
+                        @unlink($old_item_dir . $file);
+                    }
+                    
+                    if (count(array_diff(scandir($old_item_dir), array('.', '..'))) == 0) {
+                        @rmdir($old_item_dir);
+                    }
                 }
             }
-        }
-        
-        // Process the new image
-        $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
-        $filename = 'product_image_' . time() . '.' . $file_extension; // Add timestamp to avoid cache issues
-        $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
-        
-        if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
-            // Successfully uploaded the file, update the product_image variable
-            $product_image = $product_image_path;
-            error_log("Image uploaded successfully to: " . $item_dir . $filename);
+            
+            $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
+            $filename = 'product_image.' . $file_extension;
+            $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
+
+            if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
+                $product_image = $product_image_path;
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to upload image']);
+                exit;
+            }
         } else {
-            error_log("Failed to move uploaded file. Error: " . error_get_last()['message']);
-            echo json_encode(['success' => false, 'message' => 'Failed to upload image. Check server permissions.']);
+            echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
             exit;
         }
-    } else {
-        error_log("Invalid file type or size. Type: $file_type, Size: $file_size");
-        echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
-        exit;
     }
-}
     
     $stmt = $conn->prepare("UPDATE products SET category = ?, product_name = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, product_image = ? WHERE product_id = ?");
     $stmt->bind_param("ssssdissi", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $product_id);
@@ -635,6 +624,27 @@ $result = $conn->query($sql);
                 }
             });
             
+            // Auto-fill product_name when typing item_description in Add form
+            document.getElementById('item_description').addEventListener('input', function() {
+                // Only auto-fill if using the "new" product name option
+                if (document.getElementById('product_name').value === 'new') {
+                    const itemDesc = this.value;
+                    // Extract product name (text before the first parenthesis or the whole text if no parenthesis)
+                    const productName = itemDesc.split('(')[0].trim();
+                    document.getElementById('new_product_name').value = productName;
+                }
+            });
+            
+            // Auto-fill product_name when typing item_description in Edit form
+            document.getElementById('edit_item_description').addEventListener('input', function() {
+                // Only auto-fill if using the "new" product name option
+                if (document.getElementById('edit_product_name').value === 'new') {
+                    const itemDesc = this.value;
+                    // Extract product name (text before the first parenthesis or the whole text if no parenthesis)
+                    const productName = itemDesc.split('(')[0].trim();
+                    document.getElementById('edit_new_product_name').value = productName;
+                }
+            });
         });
 
         document.getElementById('add-product-form').addEventListener('submit', function(e) {
@@ -732,35 +742,22 @@ document.getElementById('edit-product-form').addEventListener('submit', function
         return;
     }
     
-    // Create a form data object
     const formData = new FormData(this);
-    
-    // Explicitly add the file if it exists
-    const fileInput = document.getElementById('edit_product_image');
-    if (fileInput.files.length > 0) {
-        // Log the file being uploaded to console for debugging
-        console.log("File selected for upload:", fileInput.files[0].name);
-        formData.append('product_image', fileInput.files[0]);
-    }
     
     // Clear previous error messages
     document.getElementById('editProductError').textContent = '';
     
-    // Show a loading message
-    document.getElementById('editProductError').textContent = 'Updating product...';
-    
     fetch(window.location.href, {
         method: "POST",
         body: formData
-        // Do NOT set Content-Type header when sending FormData - browser will set it with correct boundary
     })
     .then(response => {
         return response.text().then(text => {
             try {
-                // Log the raw response for debugging
-                console.log("Raw server response:", text);
+                // Try to parse as JSON
                 return JSON.parse(text);
             } catch (e) {
+                // If parsing fails, log the raw response and throw an error
                 console.error("Invalid JSON response:", text);
                 throw new Error("Server returned invalid response: " + text.substring(0, 50) + "...");
             }
@@ -798,91 +795,92 @@ document.getElementById('edit-product-form').addEventListener('submit', function
             document.getElementById('editProductModal').style.display = 'none';
         }
 
-        function editProduct(productId) {
-            fetch(`../pages/api/get_product.php?id=${productId}`)
-                .then(response => {
-                    return response.text().then(text => {
-                        try {
-                            return JSON.parse(text);
-                        } catch (e) {
-                            console.error("Invalid JSON response:", text);
-                            throw new Error("Server returned invalid response");
-                        }
-                    });
-                })
-                .then(product => {
-                    // Set form values
-                    document.getElementById('edit_product_id').value = product.product_id;
-                    
-                    // Set category
-                    const categorySelect = document.getElementById('edit_category');
-                    if (product.category) {
-                        // Check if category exists in options
-                        let categoryExists = false;
-                        for (let i = 0; i < categorySelect.options.length; i++) {
-                            if (categorySelect.options[i].value === product.category) {
-                                categoryExists = true;
-                                break;
-                            }
-                        }
-                        
-                        if (categoryExists) {
-                            categorySelect.value = product.category;
-                        } else {
-                            categorySelect.value = 'new';
-                            document.getElementById('edit-new-category-container').style.display = 'block';
-                            document.getElementById('edit_new_category').value = product.category;
-                        }
+        // Replace the editProduct function (around line 798) with this improved version
+    function editProduct(productId) {
+        fetch(`../pages/api/get_product.php?id=${productId}`)
+            .then(response => {
+                return response.text().then(text => {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error("Invalid JSON response:", text);
+                        throw new Error("Server returned invalid response");
                     }
-                    
-                    // Set product name
-                    const productNameSelect = document.getElementById('edit_product_name');
-                    if (product.product_name) {
-                        // Check if product name exists in dropdown options
-                        let productNameExists = false;
-                        for (let i = 0; i < productNameSelect.options.length; i++) {
-                            if (productNameSelect.options[i].value === product.product_name) {
-                                productNameExists = true;
-                                break;
-                            }
-                        }
-                        
-                        if (productNameExists) {
-                            productNameSelect.value = product.product_name;
-                            document.getElementById('edit-new-product-name-container').style.display = 'none';
-                        } else {
-                            productNameSelect.value = 'new';
-                            document.getElementById('edit-new-product-name-container').style.display = 'block';
-                            document.getElementById('edit_new_product_name').value = product.product_name;
-                        }
-                    }
-                    
-                    // Set other form fields - explicit check for null/undefined with fallback to empty string
-                    document.getElementById('edit_item_description').value = product.item_description || '';
-                    document.getElementById('edit_packaging').value = product.packaging || '';
-                    document.getElementById('edit_price').value = product.price || 0;
-                    document.getElementById('edit_stock_quantity').value = product.stock_quantity || 0;
-                    document.getElementById('edit_additional_description').value = product.additional_description || '';
-                    
-                    // Show current image if it exists
-                    document.getElementById('current-image-container').innerHTML = '';
-                    if (product.product_image) {
-                        const imgContainer = document.getElementById('current-image-container');
-                        imgContainer.innerHTML = `
-                            <p>Current Image:</p>
-                            <img src="${product.product_image}" alt="Current product image" style="max-width: 100px; max-height: 100px; margin-bottom: 10px; object-fit: cover; border-radius: 4px;">
-                        `;
-                    }
-                    
-                    // Show the modal
-                    document.getElementById('editProductModal').style.display = 'flex';
-                    document.getElementById('editProductError').textContent = '';
-                })
-                .catch(error => {
-                    toastr.error("Error fetching product details: " + error.message, { timeOut: 3000, closeButton: true });
-                    console.error("Error fetching product details:", error);
                 });
-        }
+            })
+            .then(product => {
+                // Set form values
+                document.getElementById('edit_product_id').value = product.product_id;
+                
+                // Set category
+                const categorySelect = document.getElementById('edit_category');
+                if (product.category) {
+                    // Check if category exists in options
+                    let categoryExists = false;
+                    for (let i = 0; i < categorySelect.options.length; i++) {
+                        if (categorySelect.options[i].value === product.category) {
+                            categoryExists = true;
+                            break;
+                        }
+                    }
+                    
+                    if (categoryExists) {
+                        categorySelect.value = product.category;
+                    } else {
+                        categorySelect.value = 'new';
+                        document.getElementById('edit-new-category-container').style.display = 'block';
+                        document.getElementById('edit_new_category').value = product.category;
+                    }
+                }
+                
+                // Set product name
+                const productNameSelect = document.getElementById('edit_product_name');
+                if (product.product_name) {
+                    // Check if product name exists in dropdown options
+                    let productNameExists = false;
+                    for (let i = 0; i < productNameSelect.options.length; i++) {
+                        if (productNameSelect.options[i].value === product.product_name) {
+                            productNameExists = true;
+                            break;
+                        }
+                    }
+                    
+                    if (productNameExists) {
+                        productNameSelect.value = product.product_name;
+                        document.getElementById('edit-new-product-name-container').style.display = 'none';
+                    } else {
+                        productNameSelect.value = 'new';
+                        document.getElementById('edit-new-product-name-container').style.display = 'block';
+                        document.getElementById('edit_new_product_name').value = product.product_name;
+                    }
+                }
+                
+                // Set other form fields - explicit check for null/undefined with fallback to empty string
+                document.getElementById('edit_item_description').value = product.item_description || '';
+                document.getElementById('edit_packaging').value = product.packaging || '';
+                document.getElementById('edit_price').value = product.price || 0;
+                document.getElementById('edit_stock_quantity').value = product.stock_quantity || 0;
+                document.getElementById('edit_additional_description').value = product.additional_description || '';
+                
+                // Show current image if it exists
+                document.getElementById('current-image-container').innerHTML = '';
+                if (product.product_image) {
+                    const imgContainer = document.getElementById('current-image-container');
+                    imgContainer.innerHTML = `
+                        <p>Current Image:</p>
+                        <img src="${product.product_image}" alt="Current product image" style="max-width: 100px; max-height: 100px; margin-bottom: 10px; object-fit: cover; border-radius: 4px;">
+                    `;
+                }
+                
+                // Show the modal
+                document.getElementById('editProductModal').style.display = 'flex';
+                document.getElementById('editProductError').textContent = '';
+            })
+            .catch(error => {
+                toastr.error("Error fetching product details: " + error.message, { timeOut: 3000, closeButton: true });
+                console.error("Error fetching product details:", error);
+            });
+    }
 
         function updateStock(productId, action) {
             const amount = document.getElementById(`adjust-${productId}`).value;
