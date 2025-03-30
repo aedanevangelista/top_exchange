@@ -29,37 +29,40 @@ $max_price = isset($_GET['max_price']) ? $_GET['max_price'] : '';
 // Function to get the base product name (remove variant identifiers)
 function getBaseProductName($productName) {
     // Remove variant identifiers like (A), (B), etc.
-    return preg_replace('/\s*\([A-Z]\)$/', '', $productName);
+    return preg_replace('/\s*\([A-Z][^)]*\)$/', '', $productName);
 }
 
 // Build the SQL query to get products
-$sql = "SELECT product_id, item_description AS name, price, product_image AS image_path, packaging, category FROM products WHERE 1=1";
+$sql = "SELECT p.product_id, p.product_name, p.item_description, p.price, p.product_image AS image_path, p.packaging, p.category 
+        FROM products p 
+        WHERE 1=1";
 $params = [];
 $types = '';
 
 // Add filters to the query
 if (!empty($category)) {
-    $sql .= " AND category = ?";
+    $sql .= " AND p.category = ?";
     $params[] = $category;
     $types .= 's';
 }
 
 if (!empty($search)) {
-    $sql .= " AND (item_description LIKE ? OR category LIKE ?)";
+    $sql .= " AND (p.item_description LIKE ? OR p.category LIKE ? OR p.product_name LIKE ?)";
     $search_term = "%$search%";
     $params[] = $search_term;
     $params[] = $search_term;
-    $types .= 'ss';
+    $params[] = $search_term;
+    $types .= 'sss';
 }
 
 if (!empty($min_price) && is_numeric($min_price)) {
-    $sql .= " AND price >= ?";
+    $sql .= " AND p.price >= ?";
     $params[] = $min_price;
     $types .= 'd';
 }
 
 if (!empty($max_price) && is_numeric($max_price)) {
-    $sql .= " AND price <= ?";
+    $sql .= " AND p.price <= ?";
     $params[] = $max_price;
     $types .= 'd';
 }
@@ -77,20 +80,22 @@ $result = $stmt->get_result();
 // Group products by their base name to handle variants
 $groupedProducts = [];
 while ($product = $result->fetch_assoc()) {
-    $baseName = getBaseProductName($product['name']);
-    if (!isset($groupedProducts[$baseName])) {
-        $groupedProducts[$baseName] = [
+    if (empty($product['product_name'])) {
+        // Use item_description as product_name if product_name is empty
+        $product['product_name'] = getBaseProductName($product['item_description']);
+    }
+    
+    // Use product_name as the grouping key
+    $productName = $product['product_name'];
+    
+    if (!isset($groupedProducts[$productName])) {
+        $groupedProducts[$productName] = [
             'main_product' => $product,
             'variants' => []
         ];
-    }
-    
-    // If this is not the first product we've seen with this base name, it's a variant
-    if ($product['name'] !== $baseName) {
-        $groupedProducts[$baseName]['variants'][] = $product;
     } else {
-        // If the product name exactly matches the base name, update the main product
-        $groupedProducts[$baseName]['main_product'] = $product;
+        // Add as a variant
+        $groupedProducts[$productName]['variants'][] = $product;
     }
 }
 
@@ -297,6 +302,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         .cream_img {
             height: 200px;
             overflow: hidden;
+            position: relative;
         }
         
         .cream_img img {
@@ -682,7 +688,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         <div class="cream_section_2">
             <div class="row">
                 <?php if (!empty($groupedProducts)): ?>
-                    <?php foreach ($groupedProducts as $baseName => $productGroup) { 
+                    <?php foreach ($groupedProducts as $productName => $productGroup) { 
                         $mainProduct = $productGroup['main_product'];
                         $variants = $productGroup['variants'];
                         $hasVariants = !empty($variants);
@@ -690,14 +696,14 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                         <div class="col-md-6 col-lg-4 mb-4">
                             <div class="cream_box">
                                 <div class="cream_img">
-                                    <img src="<?php echo htmlspecialchars($mainProduct['image_path']); ?>" alt="<?php echo htmlspecialchars($mainProduct['name']); ?>" id="product-image-<?php echo $mainProduct['product_id']; ?>">   
+                                    <img src="<?php echo htmlspecialchars($mainProduct['image_path'] ?? 'images/default-product.jpg'); ?>" alt="<?php echo htmlspecialchars($productName); ?>" id="product-image-<?php echo $mainProduct['product_id']; ?>">
                                     <div class="price_text" id="product-price-<?php echo $mainProduct['product_id']; ?>">
                                         ₱<?php echo isset($mainProduct['price']) ? number_format($mainProduct['price'], 2) : '0.00'; ?>
                                     </div>
                                 </div>
                                 <div class="cream_box_content">
                                     <h6 class="strawberry_text">
-                                        <?php echo htmlspecialchars($baseName); ?>
+                                        <?php echo htmlspecialchars($productName); ?>
                                     </h6>
                                     <p class="cream_text" id="product-packaging-<?php echo $mainProduct['product_id']; ?>">
                                         <i class="fas fa-box me-2"></i>Packaging: <?php echo isset($mainProduct['packaging']) ? htmlspecialchars($mainProduct['packaging']) : 'N/A'; ?>
@@ -707,19 +713,21 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                     <div class="variant-selector">
                                         <label for="variant-select-<?php echo $mainProduct['product_id']; ?>">Select Variant:</label>
                                         <select id="variant-select-<?php echo $mainProduct['product_id']; ?>" class="form-select variant-dropdown" 
-                                                data-main-product-id="<?php echo $mainProduct['product_id']; ?>"
-                                                data-main-price="<?php echo $mainProduct['price']; ?>"
-                                                data-main-packaging="<?php echo htmlspecialchars($mainProduct['packaging']); ?>"
-                                                data-main-image="<?php echo htmlspecialchars($mainProduct['image_path']); ?>">
-                                            <option value="<?php echo $mainProduct['product_id']; ?>" selected>
-                                                <?php echo htmlspecialchars($mainProduct['name']); ?> - ₱<?php echo number_format($mainProduct['price'], 2); ?>
+                                                data-product-container="product-container-<?php echo $mainProduct['product_id']; ?>">
+                                            <option value="<?php echo $mainProduct['product_id']; ?>" 
+                                                    data-price="<?php echo $mainProduct['price']; ?>"
+                                                    data-packaging="<?php echo htmlspecialchars($mainProduct['packaging']); ?>"
+                                                    data-image="<?php echo htmlspecialchars($mainProduct['image_path'] ?? 'images/default-product.jpg'); ?>"
+                                                    data-name="<?php echo htmlspecialchars($mainProduct['item_description']); ?>" selected>
+                                                <?php echo htmlspecialchars($mainProduct['item_description']); ?> - ₱<?php echo number_format($mainProduct['price'], 2); ?>
                                             </option>
                                             <?php foreach ($variants as $variant): ?>
                                             <option value="<?php echo $variant['product_id']; ?>" 
                                                     data-price="<?php echo $variant['price']; ?>"
                                                     data-packaging="<?php echo htmlspecialchars($variant['packaging']); ?>"
-                                                    data-image="<?php echo htmlspecialchars($variant['image_path']); ?>">
-                                                <?php echo htmlspecialchars($variant['name']); ?> - ₱<?php echo number_format($variant['price'], 2); ?>
+                                                    data-image="<?php echo htmlspecialchars($variant['image_path'] ?? 'images/default-product.jpg'); ?>"
+                                                    data-name="<?php echo htmlspecialchars($variant['item_description']); ?>">
+                                                <?php echo htmlspecialchars($variant['item_description']); ?> - ₱<?php echo number_format($variant['price'], 2); ?>
                                             </option>
                                             <?php endforeach; ?>
                                         </select>
@@ -730,9 +738,9 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                         <?php if (isset($_SESSION['username'])): ?>
                                             <a href="#" class="add-to-cart" 
                                                 data-product-id="<?php echo $mainProduct['product_id']; ?>" 
-                                                data-product-name="<?php echo htmlspecialchars($mainProduct['name']); ?>" 
+                                                data-product-name="<?php echo htmlspecialchars($mainProduct['item_description']); ?>" 
                                                 data-product-price="<?php echo $mainProduct['price']; ?>" 
-                                                data-image-path="<?php echo htmlspecialchars($mainProduct['image_path']); ?>" 
+                                                data-image-path="<?php echo htmlspecialchars($mainProduct['image_path'] ?? 'images/default-product.jpg'); ?>" 
                                                 data-packaging="<?php echo htmlspecialchars($mainProduct['packaging']); ?>"
                                                 id="add-to-cart-<?php echo $mainProduct['product_id']; ?>">
                                                 <i class="fas fa-cart-plus me-2"></i>Add To Cart
