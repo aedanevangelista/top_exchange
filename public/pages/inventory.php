@@ -45,51 +45,58 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         mkdir($upload_dir, 0777, true);
     }
     
-    if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
-        $allowed_types = ['image/jpeg', 'image/png'];
-        $max_size = 20 * 1024 * 1024;
-        $file_type = $_FILES['product_image']['type'];
-        $file_size = $_FILES['product_image']['size'];
+if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
+    $allowed_types = ['image/jpeg', 'image/png'];
+    $max_size = 20 * 1024 * 1024;
+    $file_type = $_FILES['product_image']['type'];
+    $file_size = $_FILES['product_image']['size'];
+    
+    if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
+        $item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $item_description);
+        $item_dir = $upload_dir . $item_folder . '/';
         
-        if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-            $item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $item_description);
-            $item_dir = $upload_dir . $item_folder . '/';
+        if (!file_exists($item_dir)) {
+            mkdir($item_dir, 0777, true);
+        }
+        
+        if ($old_item_description != $item_description && !empty($old_product_image)) {
+            $old_item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $old_item_description);
+            $old_item_dir = $upload_dir . $old_item_folder . '/';
             
-            if (!file_exists($item_dir)) {
-                mkdir($item_dir, 0777, true);
-            }
-            
-            if ($old_item_description != $item_description && !empty($old_product_image)) {
-                $old_item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $old_item_description);
-                $old_item_dir = $upload_dir . $old_item_folder . '/';
+            if (file_exists($old_item_dir)) {
+                $old_files = array_diff(scandir($old_item_dir), array('.', '..'));
+                foreach ($old_files as $file) {
+                    @unlink($old_item_dir . $file);
+                }
                 
-                if (file_exists($old_item_dir)) {
-                    $old_files = array_diff(scandir($old_item_dir), array('.', '..'));
-                    foreach ($old_files as $file) {
-                        @unlink($old_item_dir . $file);
-                    }
-                    
-                    if (count(array_diff(scandir($old_item_dir), array('.', '..'))) == 0) {
-                        @rmdir($old_item_dir);
-                    }
+                if (count(array_diff(scandir($old_item_dir), array('.', '..'))) == 0) {
+                    @rmdir($old_item_dir);
                 }
             }
-            
-            $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
-            $filename = 'product_image.' . $file_extension;
-            $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
+        }
 
-            if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
-                $product_image = $product_image_path;
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to upload image']);
-                exit;
+        if (file_exists($item_dir)) {
+            $existing_files = array_diff(scandir($item_dir), array('.', '..'));
+            foreach ($existing_files as $file) {
+                @unlink($item_dir . $file);
             }
+        }
+        
+        $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
+        $filename = 'product_image.' . $file_extension;
+        $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
+
+        if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
+            $product_image = $product_image_path;
         } else {
-            echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
+            echo json_encode(['success' => false, 'message' => 'Failed to upload image']);
             exit;
         }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
+        exit;
     }
+}
     
     $stmt = $conn->prepare("UPDATE products SET category = ?, product_name = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, product_image = ? WHERE product_id = ?");
     $stmt->bind_param("ssssdissi", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $product_id);
