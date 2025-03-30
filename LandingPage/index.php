@@ -1028,7 +1028,7 @@ p {
                                     <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '/LandingPage/ordering.php' : '/LandingPage/login.php'; ?>">Shop Now</a></div>
                                 </div>
                                 <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
-                                    <div class="banner_img"><img src="/LandingPage/images/Siomai.png" alt="Delicious Siomai"></div>
+                                    <div class="banner_img"><img src="/LandingPage/images/Sioma1.png" alt="Delicious Siomai"></div>
                                 </div>
                             </div>
                         </div>
