@@ -138,12 +138,13 @@ label {
 
 .backHome{
     width: auto;
-    background-color: black;
+    background-color: gray;
     color: white;
     padding: 8px;
     text-align: center;
     text-decoration: none;
     font-size: 12px;
+    border-radius: 5px;
 }
 </style>
 
