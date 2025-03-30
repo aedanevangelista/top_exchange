@@ -25,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     }
 
     if (empty($form_errors)) {
-        // Since we're using mysqli in our updated db_connection.php, we need to adapt the queries
         // Check if the user exists in the accounts table (for admins, managers, etc.)
         $stmt = $conn->prepare("SELECT * FROM accounts WHERE username = ?");
         $stmt->bind_param("s", $email);
@@ -34,10 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         $user = $result->fetch_assoc();
 
         if ($user && password_verify($password, $user['password'])) {
-            // Login successful for admin/manager accounts
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = $user['role'];
+            // Login successful for admin/manager accounts - but we'll use client variables
+            $_SESSION['client_user_id'] = $user['id'];
+            $_SESSION['client_username'] = $user['username'];
+            $_SESSION['client_role'] = $user['role'];
 
             // Redirect based on role
             if ($user['role'] === 'Admin') {
@@ -58,10 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 // Check the account status
                 $status = $client['status'];
                 if ($status === 'Active') {
-                    // Login successful for active clients
-                    $_SESSION['user_id'] = $client['id'];
-                    $_SESSION['username'] = $client['username'];
-                    $_SESSION['role'] = 'Client';
+                    // Login successful for active clients - use client specific variables
+                    $_SESSION['client_user_id'] = $client['id'];
+                    $_SESSION['client_username'] = $client['username'];
+                    $_SESSION['client_role'] = 'Client';
                     header('Location: ordering.php');
                     exit();
                 } elseif ($status === 'Pending') {
