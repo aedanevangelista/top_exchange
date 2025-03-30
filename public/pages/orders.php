@@ -155,7 +155,7 @@ if ($result && $result->num_rows > 0) {
     <div id="addOrderOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-plus"></i> Add New Order</h2>
-            <form id="addOrderForm" method="POST" class="order-form" action="/top_exchange/backend/add_order.php">
+            <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
                     <select id="username" name="username" required onchange="generatePONumber()">
@@ -356,6 +356,6 @@ if ($result && $result->num_rows > 0) {
         </div>
     </div>
 
-    <script src="/top_exchange/public/js/orders.js"></script>
+    <script src="/public/js/orders.js"></script>
 </body>
 </html>
