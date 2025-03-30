@@ -84,6 +84,8 @@ font-weight: 800;
     color: white;
 }
 
+a:visited{ color: white }
+
 body {
     font-family: 'Tahoma';
     background-color: #ffffff;
