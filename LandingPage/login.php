@@ -252,7 +252,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
             padding: 8px;
             text-align: center;
             text-decoration: none;
-            font-size: 4px;
+            font-size: 2px;
         }
 
         .backHome a {
