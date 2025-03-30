@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "../backend/db_connection.php"; // Ensure correct path
+include "../backend/db_connection.php";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Sanitize input
@@ -46,7 +46,7 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link rel="stylesheet" href="/public_html/public/css/login.css">
+    <link rel="stylesheet" href="../public/css/login.css">
 </head>
 <body>
     <div class="login-container">
