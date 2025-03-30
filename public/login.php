@@ -49,15 +49,15 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <!-- Updated CSS path to use absolute path from domain root -->
+    <title>Admin Login</title>
+    <!-- Fixed CSS path to use relative path -->
     <link rel="stylesheet" href="css/login.css">
 </head>
 <body>
     <div class="login-container">
         <div class="form-content">
             <div class="formHeading">
-                <span class="h3">WELCOME BACK test 👋</span> <br/>
+                <span class="h3">ADMIN LOGIN 👋</span> <br/>
                 <span class="excerptOne">Enter your username and password to continue.</span>
             </div>
 
@@ -68,8 +68,8 @@ $conn->close();
                 <?php unset($_SESSION['error']); ?>
             <?php endif; ?>
 
-            <!-- Updated form action to use absolute path -->
-            <form class="loginForm" action="/login.php" method="POST">
+            <!-- Updated form action to use relative path -->
+            <form class="loginForm" action="login.php" method="POST">
                 <label>Username</label>
                 <input type="text" name="username" placeholder="Enter your username" required>
                 <br/>
@@ -80,9 +80,10 @@ $conn->close();
 
                 <button type="submit" class="button">Sign in</button>
             </form>
+            
+            <a href="../LandingPage/index.php">Back to Home</a>
         </div>
     </div>
-    <!-- Updated JavaScript path to use absolute path from domain root -->
-    <script src="js/login.js"></script>
+    <!-- Removed reference to non-existent JS file -->
 </body>
 </html>
