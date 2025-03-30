@@ -2,7 +2,7 @@
 // login.php
 
 session_start();
-require 'db_connection.php';
+require 'db_connection.php'; // This file should now have the correct credentials
 
 $error_message = '';
 $success_message = '';
@@ -25,11 +25,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     }
 
     if (empty($form_errors)) {
+        // Since we're using mysqli in our updated db_connection.php, we need to adapt the queries
         // Check if the user exists in the accounts table (for admins, managers, etc.)
-        $stmt = $conn->prepare("SELECT * FROM accounts WHERE username = :email");
-        $stmt->bindParam(':email', $email);
+        $stmt = $conn->prepare("SELECT * FROM accounts WHERE username = ?");
+        $stmt->bind_param("s", $email);
         $stmt->execute();
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $result = $stmt->get_result();
+        $user = $result->fetch_assoc();
 
         if ($user && password_verify($password, $user['password'])) {
             // Login successful for admin/manager accounts
@@ -46,10 +48,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             exit();
         } else {
             // Check if the user exists in the clients_accounts table (for clients)
-            $stmt = $conn->prepare("SELECT * FROM clients_accounts WHERE email = :email");
-            $stmt->bindParam(':email', $email);
+            $stmt = $conn->prepare("SELECT * FROM clients_accounts WHERE email = ?");
+            $stmt->bind_param("s", $email);
             $stmt->execute();
-            $client = $stmt->fetch(PDO::FETCH_ASSOC);
+            $result = $stmt->get_result();
+            $client = $result->fetch_assoc();
 
             if ($client && password_verify($password, $client['password'])) {
                 // Check the account status
@@ -102,10 +105,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
         $form_errors['email'] = "Invalid email format";
     } else {
         // Check if email already exists
-        $stmt = $conn->prepare("SELECT id FROM clients_accounts WHERE email = :email");
-        $stmt->bindParam(':email', $email);
+        $stmt = $conn->prepare("SELECT id FROM clients_accounts WHERE email = ?");
+        $stmt->bind_param("s", $email);
         $stmt->execute();
-        if ($stmt->rowCount() > 0) {
+        $result = $stmt->get_result();
+        if ($result->num_rows > 0) {
             $form_errors['email'] = "Email already registered";
         }
     }
@@ -166,18 +170,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
         }
 
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        $status = 'Pending';
 
-        // Insert new client
-        $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (:username, :password, :email, :phone, :region, :city, :company, :company_address, :business_proof, 'Pending')");
-        $stmt->bindParam(':username', $username);
-        $stmt->bindParam(':password', $hashed_password);
-        $stmt->bindParam(':email', $email);
-        $stmt->bindParam(':phone', $phone);
-        $stmt->bindParam(':region', $region);
-        $stmt->bindParam(':city', $city);
-        $stmt->bindParam(':company', $company);
-        $stmt->bindParam(':company_address', $company_address);
-        $stmt->bindParam(':business_proof', $business_proof_json);
+        // Insert new client using mysqli
+        $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("ssssssssss", $username, $hashed_password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json, $status);
 
         if ($stmt->execute()) {
             $success_message = "Sign up successful! Your account is pending approval.";
