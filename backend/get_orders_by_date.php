@@ -2,13 +2,6 @@
 session_start();
 include "/backend/db_connection.php";
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Not authenticated']);
-    exit;
-}
-
 // Get date parameter
 $date = isset($_GET['date']) ? $_GET['date'] : null;
 
