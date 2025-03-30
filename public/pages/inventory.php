@@ -45,6 +45,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         mkdir($upload_dir, 0777, true);
     }
     
+// Replace the image upload handling code (around lines 48-92) with this improved version
 if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
     $allowed_types = ['image/jpeg', 'image/png'];
     $max_size = 20 * 1024 * 1024;
@@ -52,47 +53,102 @@ if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
     $file_size = $_FILES['product_image']['size'];
     
     if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
+        // Create proper folder path based on product variant
         $item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $item_description);
         $item_dir = $upload_dir . $item_folder . '/';
         
+        // Create the directory if it doesn't exist
         if (!file_exists($item_dir)) {
             mkdir($item_dir, 0777, true);
         }
         
+        // Step 1: Handle item description change (if the product variant name changed)
         if ($old_item_description != $item_description && !empty($old_product_image)) {
             $old_item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $old_item_description);
             $old_item_dir = $upload_dir . $old_item_folder . '/';
             
             if (file_exists($old_item_dir)) {
+                error_log("Cleaning up old folder: " . $old_item_dir);
                 $old_files = array_diff(scandir($old_item_dir), array('.', '..'));
                 foreach ($old_files as $file) {
-                    @unlink($old_item_dir . $file);
+                    if (file_exists($old_item_dir . $file)) {
+                        if (unlink($old_item_dir . $file)) {
+                            error_log("Successfully deleted old file: " . $old_item_dir . $file);
+                        } else {
+                            error_log("Failed to delete old file: " . $old_item_dir . $file);
+                        }
+                    }
                 }
                 
+                // Try to remove old directory if empty
                 if (count(array_diff(scandir($old_item_dir), array('.', '..'))) == 0) {
-                    @rmdir($old_item_dir);
+                    if (rmdir($old_item_dir)) {
+                        error_log("Successfully removed old directory: " . $old_item_dir);
+                    } else {
+                        error_log("Failed to remove old directory: " . $old_item_dir);
+                    }
                 }
-            }
-        }
-
-        if (file_exists($item_dir)) {
-            $existing_files = array_diff(scandir($item_dir), array('.', '..'));
-            foreach ($existing_files as $file) {
-                @unlink($item_dir . $file);
             }
         }
         
+        // Step 2: CLEAN UP EXISTING FILES - Make sure this happens BEFORE trying to upload
+        if (file_exists($item_dir)) {
+            error_log("Cleaning up current folder before new upload: " . $item_dir);
+            $existing_files = array_diff(scandir($item_dir), array('.', '..'));
+            
+            // Log what we found
+            error_log("Found " . count($existing_files) . " existing files to remove");
+            
+            // Remove each file with proper error handling
+            foreach ($existing_files as $file) {
+                if (file_exists($item_dir . $file)) {
+                    if (unlink($item_dir . $file)) {
+                        error_log("Successfully deleted file: " . $item_dir . $file);
+                    } else {
+                        error_log("Failed to delete file: " . $item_dir . $file . " - Error: " . error_get_last()['message']);
+                    }
+                }
+            }
+            
+            // Double-check that files were actually deleted
+            $remaining_files = array_diff(scandir($item_dir), array('.', '..'));
+            if (count($remaining_files) > 0) {
+                error_log("Warning: Some files could not be deleted. Remaining files: " . implode(", ", $remaining_files));
+            } else {
+                error_log("All files successfully deleted from directory");
+            }
+        }
+        
+        // Step 3: Now that cleanup is done, proceed with the upload
         $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
         $filename = 'product_image.' . $file_extension;
         $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
-
-        if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
+        $target_file_path = $item_dir . $filename;
+        
+        // Add a small delay to ensure file system operations are complete
+        usleep(100000); // 0.1 second delay
+        
+        error_log("Attempting to upload new image to: " . $target_file_path);
+        
+        if (move_uploaded_file($_FILES['product_image']['tmp_name'], $target_file_path)) {
+            error_log("Successfully uploaded new image");
             $product_image = $product_image_path;
+            
+            // Verify the file was actually created
+            if (file_exists($target_file_path)) {
+                error_log("Verified file exists: " . $target_file_path . " (size: " . filesize($target_file_path) . " bytes)");
+            } else {
+                error_log("Warning: File doesn't exist after move_uploaded_file reported success!");
+            }
         } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to upload image']);
+            $upload_error = error_get_last();
+            error_log("Failed to upload image. Error: " . ($upload_error ? $upload_error['message'] : 'Unknown error'));
+            error_log("Upload details - tmp_name: " . $_FILES['product_image']['tmp_name'] . ", target: " . $target_file_path);
+            echo json_encode(['success' => false, 'message' => 'Failed to upload image. Please try again.']);
             exit;
         }
     } else {
+        error_log("Invalid file type or size. Type: $file_type, Size: $file_size bytes");
         echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
         exit;
     }
