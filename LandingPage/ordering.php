@@ -12,8 +12,8 @@ if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
-// Connect to MySQL
-$conn = new mysqli("localhost", "root", "", "top_exchange");
+// Connect to MySQL with corrected credentials
+$conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
 
 // Check connection
 if ($conn->connect_error) {
@@ -316,7 +316,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                             </p>
                             <div class="cart_bt">
                                 <?php if (isset($_SESSION['username'])): ?>
-                                    <a href="#" class="add-to-cart" data-product-id="<?php echo $row['product_id']; ?>" data-product-name="<?php echo htmlspecialchars($row['name']); ?>" data-product-price="<?php echo $row['price']; ?>" data-image-path="<?php echo htmlspecialchars($row['image_path']); ?>" data-packaging="<?php echo htmlspecialchars($row['packaging']); ?>">Add To Cart</a>
+                                    <a href="#" class="add-to-cart" data-product-id="<?php echo $row['product_id']; ?>" data-product-name="<?php echo htmlspecialchars($row['name']); ?>" data-product-price="<?php echo $row['price']; ?>" data-image-path="<?php echo htmlspecialchars($row['image_path']); ?>" data-packaging="<?php echo htmlspecialchars($row['packaging']); ?>">Add to Cart</a>
                                 <?php else: ?>
                                     <a href="login.php" class="login-to-order">Login to Order</a>
                                 <?php endif; ?>
