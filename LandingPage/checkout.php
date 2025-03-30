@@ -14,10 +14,7 @@ if (empty($_SESSION['cart'])) {
 }
 
 // Connect to database
-$conn = new mysqli("151.106.122.5", "u701062148_top_exchange", "CreamLine123", "u701062148_top_exchange");
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+include_once('db_connection.php'); // Use the shared connection file instead of hard-coding
 
 // Process checkout form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
