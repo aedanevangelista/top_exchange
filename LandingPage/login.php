@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
                 $fileName = uniqid() . '_' . basename($_FILES['business_proof']['name'][$key]);
                 $uploadFilePath = $uploadDir . $fileName;
                 if (move_uploaded_file($tmp_name, $uploadFilePath)) {
-                    $business_proof[] = '/u701062148_top_exchange/uploads/' . $username . '/' . $fileName;
+                    $business_proof[] = '/uploads/' . $username . '/' . $fileName;
                 }
             }
             
@@ -172,8 +172,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['signup'])) {
         $status = 'Pending';
 
         // Insert new client using mysqli
-        $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
-        $stmt->bind_param("sssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json);
+        $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, business_proof = ? WHERE id = ?");
+        $stmt->bind_param("sssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json, $id);
 
         if ($stmt->execute()) {
             $success_message = "Sign up successful! Your account is pending approval.";
