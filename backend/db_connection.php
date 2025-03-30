@@ -1,18 +1,18 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
+ini_set('display_errors', 1); // Changed from 0 to 1 temporarily
 
 try {
     $servername = "localhost";
-    $username = "u701062148_top_exchange"; // Your Hostinger database username
-    $password = "YOUR_HOSTINGER_PASSWORD"; // Replace with your actual Hostinger password
-    $dbname = "u701062148_top_exchange"; // Your Hostinger database name
+    $username = "u701062148_top_exchange";
+    $password = "YOUR_HOSTINGER_PASSWORD"; // Make sure this is your actual Hostinger password
+    $dbname = "u701062148_top_exchange";
 
     $conn = new mysqli($servername, $username, $password, $dbname);
 
     // Check connection
     if ($conn->connect_error) {
-        throw new Exception("Connection failed: " . $conn->connect_error);
+        throw new Exception("Connection failed: " . $conn->connect_error . " (Error No: " . $conn->connect_errno . ")");
     }
 
     // Set charset
@@ -23,15 +23,7 @@ try {
 } catch (Exception $e) {
     error_log($e->getMessage());
     
-    // Only return JSON response for AJAX requests
-    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
-        strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
-        header('Content-Type: application/json');
-        echo json_encode(['error' => 'Database connection error']);
-        exit;
-    } else {
-        // For regular page loads, show error message
-        die("Database connection failed. Please try again later.");
-    }
+    // Show the actual error message temporarily
+    die("Database connection failed: " . $e->getMessage());
 }
 ?>
