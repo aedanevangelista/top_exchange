@@ -29,13 +29,13 @@ if (!isset($_SESSION['cart'])) {
     <meta name="description" content="Top Food Exchange Corp. - Premium Filipino food products since 1998. Quality siopao, siomai, noodles, and sauces.">
     <meta name="author" content="Top Food Exchange Corp.">
     <!-- bootstrap css -->
-    <link rel="stylesheet" type="text/css" href="../LandingPageTEFC/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="../LandingPage/css/bootstrap.min.css">
     <!-- style css -->
-    <link rel="stylesheet" type="text/css" href="../LandingPageTEFC/css/style.css">
+    <link rel="stylesheet" type="text/css" href="../LandingPage/css/style.css">
     <!-- Responsive-->
-    <link rel="stylesheet" href="../LandingPageTEFC/css/responsive.css">
+    <link rel="stylesheet" href="../LandingPage/css/responsive.css">
     <!-- fevicon -->
-    <link rel="icon" href="../LandingPageTEFC/images/fevicon.png" type="image/gif" />
+    <link rel="icon" href="../LandingPage/images/fevicon.png" type="image/gif" />
     <!-- font css -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
     <!-- fontawesome -->
@@ -501,7 +501,7 @@ if (!isset($_SESSION['cart'])) {
     <div class="header_section">
         <div class="container">
             <nav class="navbar navbar-expand-lg navbar-light bg-light">
-                <a class="navbar-brand" href="index.php"><img src="../LandingPageTEFC/images/resized_food_corp_logo.png" alt="Top Food Exchange Corp. Logo"></a>
+                <a class="navbar-brand" href="index.php"><img src="../LandingPage/images/resized_food_corp_logo.png" alt="Top Food Exchange Corp. Logo"></a>
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
@@ -511,13 +511,13 @@ if (!isset($_SESSION['cart'])) {
                             <a class="nav-link" href="index.php">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="../LandingPageTEFC/about.php">About</a>
+                            <a class="nav-link" href="../LandingPage/about.php">About</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="../LandingPageTEFC/ordering.php">Products</a>
+                            <a class="nav-link" href="../LandingPage/ordering.php">Products</a>
                         </li>        
                         <li class="nav-item">
-                            <a class="nav-link" href="../LandingPageTEFC/contact.php">Contact Us</a>
+                            <a class="nav-link" href="../LandingPage/contact.php">Contact Us</a>
                         </li>
                     </ul>
                     <form class="form-inline my-2 my-lg-0">
@@ -527,11 +527,11 @@ if (!isset($_SESSION['cart'])) {
                                     <span style="color: #222222;"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
                                     <span id="cart-count" class="badge badge-danger"><?php echo array_sum(array_column($_SESSION['cart'], 'quantity')); ?></span>
                                 </a>
-                                <a href="../LandingPageTEFC/logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>) 
+                                <a href="../LandingPage/logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>) 
                                     <span style="color: #222222;"><i class="fa fa-sign-out" aria-hidden="true"></i></span>
                                 </a>
                             <?php else: ?>
-                                <a href="../LandingPageTEFC/login.php">Login 
+                                <a href="../LandingPage/login.php">Login 
                                     <span style="color: #222222;"><i class="fa fa-user" aria-hidden="true"></i></span>
                                 </a>
                             <?php endif; ?>
@@ -684,10 +684,10 @@ if (!isset($_SESSION['cart'])) {
                                 <div class="col-sm-6">
                                     <h1 class="banner_taital" data-aos="fade-down">Premium Siopao</h1>
                                     <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Experience the authentic taste of our handcrafted siopao, made with premium ingredients and traditional recipes passed down through generations. Perfectly steamed buns with flavorful fillings that will delight your taste buds.</p>
-                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPageTEFC/ordering.php' : '../LandingPageTEFC/login.php'; ?>">Order Now</a></div>
+                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>">Order Now</a></div>
                                 </div>
                                 <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
-                                    <div class="banner_img"><img src="../LandingPageTEFC/images/Siopao.png" alt="Premium Siopao"></div>
+                                    <div class="banner_img"><img src="../LandingPage/images/Siopao.png" alt="Premium Siopao"></div>
                                 </div>
                             </div>
                         </div>
@@ -696,10 +696,10 @@ if (!isset($_SESSION['cart'])) {
                                 <div class="col-sm-6">
                                     <h1 class="banner_taital" data-aos="fade-down">Delicious Siomai</h1>
                                     <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our signature siomai combines premium pork with special seasonings, wrapped in thin, delicate wrappers that create the perfect texture. A customer favorite that keeps them coming back for more.</p>
-                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPageTEFC/ordering.php' : '../LandingPageTEFC/login.php'; ?>">Order Now</a></div>
+                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>">Order Now</a></div>
                                 </div>
                                 <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
-                                    <div class="banner_img"><img src="../LandingPageTEFC/images/Siomai.png" alt="Delicious Siomai"></div>
+                                    <div class="banner_img"><img src="../LandingPage/images/Siomai.png" alt="Delicious Siomai"></div>
                                 </div>
                             </div>
                         </div>
@@ -708,10 +708,10 @@ if (!isset($_SESSION['cart'])) {
                                 <div class="col-sm-6">
                                     <h1 class="banner_taital" data-aos="fade-down">Flavorful Sauces</h1>
                                     <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our special blend of sauces enhances every bite. Made from premium ingredients and secret recipes, our sauces will elevate your dishes to the next level of deliciousness.</p>
-                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPageTEFC/ordering.php' : '../LandingPageTEFC/login.php'; ?>">Order Now</a></div>
+                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>">Order Now</a></div>
                                 </div>
                                 <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
-                                    <div class="banner_img"><img src="../LandingPageTEFC/images/Sauces.png" alt="Flavorful Sauces"></div>
+                                    <div class="banner_img"><img src="../LandingPage/images/Sauces.png" alt="Flavorful Sauces"></div>
                                 </div>
                             </div>
                         </div>
@@ -720,10 +720,10 @@ if (!isset($_SESSION['cart'])) {
                                 <div class="col-sm-6">
                                     <h1 class="banner_taital" data-aos="fade-down">Quality Noodles</h1>
                                     <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Made from the finest ingredients, our noodles maintain perfect texture and absorb flavors beautifully. The foundation of countless delicious Filipino noodle dishes loved by all.</p>
-                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPageTEFC/ordering.php' : '../LandingPageTEFClogin.php'; ?>">Order Now</a></div>
+                                    <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPagelogin.php'; ?>">Order Now</a></div>
                                 </div>
                                 <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
-                                    <div class="banner_img"><img src="../LandingPageTEFC/images/Noodles.png" alt="Quality Noodles"></div>
+                                    <div class="banner_img"><img src="../LandingPage/images/Noodles.png" alt="Quality Noodles"></div>
                                 </div>
                             </div>
                         </div>
@@ -789,13 +789,13 @@ if (!isset($_SESSION['cart'])) {
         <div class="container">
             <div class="row">
                 <div class="col-md-6" data-aos="fade-right">
-                    <div class="about_img"><img src="../LandingPageTEFC/images/about_image_1.png" alt="About Top Food Exchange Corp." class="img-fluid"></div>
+                    <div class="about_img"><img src="../LandingPage/images/about_image_1.png" alt="About Top Food Exchange Corp." class="img-fluid"></div>
                 </div>
                 <div class="col-md-6" data-aos="fade-left">
                     <h1 class="about_taital">Top Exchange Food Corp.</h1>
-                    <p class="about_text"><strong>Top Exchange Food Corporation (TEFC)</strong> is a top-tier broad line food service supply integrator based in the Philippines. The company began in <strong>1998</strong> as a private enterprise that focused on the compelling need of the local food industry for stability, quality, and value.</p>
+                    <p class="about_text"><strong>Top Exchange Food Corporation ()</strong> is a top-tier broad line food service supply integrator based in the Philippines. The company began in <strong>1998</strong> as a private enterprise that focused on the compelling need of the local food industry for stability, quality, and value.</p>
                     <p class="about_text">Today, we continue to meet this need with the help of various partners in our international network of supply resources, providing high-quality Filipino food products to restaurants, cafeterias, and food businesses across the country.</p>
-                    <div class="read_bt_1" data-aos="fade-up" data-aos-delay="400"><a href="../LandingPageTEFC/about.php">Read More</a></div>
+                    <div class="read_bt_1" data-aos="fade-up" data-aos-delay="400"><a href="../LandingPage/about.php">Read More</a></div>
                 </div>
             </div>
         </div>
@@ -829,14 +829,14 @@ if (!isset($_SESSION['cart'])) {
                                 <i class="fas fa-star"></i>
                                 <span class="ml-2">(128 reviews)</span>
                             </div>
-                            <a href="<?php echo isset($_SESSION['username']) ? '../LandingPageTEFC/ordering.php' : '../LandingPageTEFC/login.php'; ?>" class="product-btn">Add to Cart</a>
+                            <a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>" class="product-btn">Add to Cart</a>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="400">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="../LandingPageTEFC/images/sharksfin-product.jpg" alt="Special Sharksfin Dumpling">
+                            <img src="../LandingPage/images/sharksfin-product.jpg" alt="Special Sharksfin Dumpling">
                             <span class="product-badge">POPULAR</span>
                         </div>
                         <div class="product-body">
@@ -851,14 +851,14 @@ if (!isset($_SESSION['cart'])) {
                                 <i class="fas fa-star-half-alt"></i>
                                 <span class="ml-2">(96 reviews)</span>
                             </div>
-                            <a href="<?php echo isset($_SESSION['username']) ? '../LandingPageTEFC/ordering.php' : '../LandingPageTEFC/login.php'; ?>" class="product-btn">Add to Cart</a>
+                            <a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>" class="product-btn">Add to Cart</a>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="600">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="../LandingPageTEFC/images/wanton-product.jpg" alt="Wanton Regular">
+                            <img src="../LandingPage/images/wanton-product.jpg" alt="Wanton Regular">
                         </div>
                         <div class="product-body">
                             <div class="product-price">₱315</div>
@@ -872,7 +872,7 @@ if (!isset($_SESSION['cart'])) {
                                 <i class="far fa-star"></i>
                                 <span class="ml-2">(87 reviews)</span>
                             </div>
-                            <a href="<?php echo isset($_SESSION['username']) ? '../LandingPageTEFC/ordering.php' : '../LandingPageTEFC/login.php'; ?>" class="product-btn">Add to Cart</a>
+                            <a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>" class="product-btn">Add to Cart</a>
                         </div>
                     </div>
                 </div>
@@ -881,7 +881,7 @@ if (!isset($_SESSION['cart'])) {
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="../LandingPageTEFC/images/egg-noodles-product.jpg" alt="Dried Egg Noodles">
+                            <img src="../LandingPage/images/egg-noodles-product.jpg" alt="Dried Egg Noodles">
                         </div>
                         <div class="product-body">
                             <div class="product-price">₱185</div>
@@ -895,14 +895,14 @@ if (!isset($_SESSION['cart'])) {
                                 <i class="fas fa-star-half-alt"></i>
                                 <span class="ml-2">(112 reviews)</span>
                             </div>
-                            <a href="<?php echo isset($_SESSION['username']) ? '../LandingPageTEFC/ordering.php' : '../LandingPageTEFC/login.php'; ?>" class="product-btn">Add to Cart</a>
+                            <a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>" class="product-btn">Add to Cart</a>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="400">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="../LandingPageTEFC/images/pancit-product.jpg" alt="Pancit Canton">
+                            <img src="../LandingPage/images/pancit-product.jpg" alt="Pancit Canton">
                             <span class="product-badge">NEW</span>
                         </div>
                         <div class="product-body">
@@ -917,14 +917,14 @@ if (!isset($_SESSION['cart'])) {
                                 <i class="fas fa-star"></i>
                                 <span class="ml-2">(64 reviews)</span>
                             </div>
-                            <a href="<?php echo isset($_SESSION['username']) ? '../LandingPageTEFC/ordering.php' : '../LandingPageTEFC/login.php'; ?>" class="product-btn">Add to Cart</a>
+                            <a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>" class="product-btn">Add to Cart</a>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="600">
                     <div class="product-card">
                         <div class="product-img">
-                            <img src="../LandingPageTEFC/images/siopao-product.jpg" alt="Asado Siopao">
+                            <img src="../LandingPage/images/siopao-product.jpg" alt="Asado Siopao">
                         </div>
                         <div class="product-body">
                             <div class="product-price">₱280</div>
@@ -938,12 +938,12 @@ if (!isset($_SESSION['cart'])) {
                                 <i class="far fa-star"></i>
                                 <span class="ml-2">(143 reviews)</span>
                             </div>
-                            <a href="<?php echo isset($_SESSION['username']) ? '../LandingPageTEFC/ordering.php' : '../LandingPageTEFC/login.php'; ?>" class="product-btn">Add to Cart</a>
+                            <a href="<?php echo isset($_SESSION['username']) ? '../LandingPage/ordering.php' : '../LandingPage/login.php'; ?>" class="product-btn">Add to Cart</a>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="seemore_bt mt-5" data-aos="fade-up"><a href="../LandingPageTEFC/ordering.php">View All Products</a></div>
+            <div class="seemore_bt mt-5" data-aos="fade-up"><a href="../LandingPage/ordering.php">View All Products</a></div>
         </div>
     </div>
     
@@ -966,14 +966,14 @@ if (!isset($_SESSION['cart'])) {
                 </div>
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="400">
                     <div class="testimonial-card">
-                        <p class="testimonial-text">"The asado siopao from TEFC is our bestseller! The flavor is perfect, and the texture is always consistent. Highly recommended for food businesses."</p>
+                        <p class="testimonial-text">"The asado siopao from  is our bestseller! The flavor is perfect, and the texture is always consistent. Highly recommended for food businesses."</p>
                         <div class="testimonial-author">Juan Dela Cruz</div>
                         <div class="testimonial-position">Manager, Kainan sa Kanto</div>
                     </div>
                 </div>
                 <div class="col-md-4" data-aos="fade-up" data-aos-delay="600">
                     <div class="testimonial-card">
-                        <p class="testimonial-text">"We switched to TEFC's noodles last year and never looked back. The quality is superior, and their delivery is always on time."</p>
+                        <p class="testimonial-text">"We switched to 's noodles last year and never looked back. The quality is superior, and their delivery is always on time."</p>
                         <div class="testimonial-author">Liza Tan</div>
                         <div class="testimonial-position">Chef, Lutong Bahay Restaurant</div>
                     </div>
@@ -1016,16 +1016,16 @@ if (!isset($_SESSION['cart'])) {
     <!-- copyright section end -->
     
     <!-- Javascript files-->
-    <script src="../LandingPageTEFC/js/jquery.min.js"></script>
-    <script src="../LandingPageTEFC/js/popper.min.js"></script>
-    <script src="../LandingPageTEFC/js/bootstrap.bundle.min.js"></script>
-    <script src="../LandingPageTEFC/js/jquery-3.0.0.min.js"></script>
-    <script src="../LandingPageTEFC/js/plugin.js"></script>
+    <script src="../LandingPage/js/jquery.min.js"></script>
+    <script src="../LandingPage/js/popper.min.js"></script>
+    <script src="../LandingPage/js/bootstrap.bundle.min.js"></script>
+    <script src="../LandingPage/js/jquery-3.0.0.min.js"></script>
+    <script src="../LandingPage/js/plugin.js"></script>
     <!-- AOS Animation -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <!-- sidebar -->
-    <script src="../LandingPageTEFC/js/jquery.mCustomScrollbar.concat.min.js"></script>
-    <script src="../LandingPageTEFC/js/custom.js"></script>
+    <script src="../LandingPage/js/jquery.mCustomScrollbar.concat.min.js"></script>
+    <script src="../LandingPage/js/custom.js"></script>
     
     <script>
         // Initialize AOS animation - This should always run
@@ -1095,7 +1095,7 @@ if (!isset($_SESSION['cart'])) {
         // Function to update cart item quantity
         function updateCartItemQuantity(productId, change) {
             $.ajax({
-                url: '../LandingPageTEFC/update_cart_item.php',
+                url: '../LandingPage/update_cart_item.php',
                 type: 'POST',
                 dataType: 'json',
                 data: {
@@ -1121,7 +1121,7 @@ if (!isset($_SESSION['cart'])) {
         // Function to remove cart item
         function removeCartItem(productId) {
             $.ajax({
-                url: '../LandingPageTEFC/remove_cart_item.php',
+                url: '../LandingPage/remove_cart_item.php',
                 type: 'POST',
                 dataType: 'json',
                 data: {
@@ -1146,7 +1146,7 @@ if (!isset($_SESSION['cart'])) {
         // Function to update the cart modal
         function updateCartModal() {
             $.ajax({
-                url: '../LandingPageTEFC/fetch_cart_items.php',
+                url: '../LandingPage/fetch_cart_items.php',
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
@@ -1169,7 +1169,7 @@ if (!isset($_SESSION['cart'])) {
                                 cartItemsHtml += `
                                     <tr>
                                         <td>
-                                            <img src="${item.image_path || '../LandingPageTEFC/images/default-product.jpg'}" 
+                                            <img src="${item.image_path || '../LandingPage/images/default-product.jpg'}" 
                                                  alt="${item.name}" 
                                                  style="width: 80px; height: 80px; object-fit: cover;">
                                         </td>
@@ -1253,7 +1253,7 @@ if (!isset($_SESSION['cart'])) {
                 const specialInstructions = $('#special-instructions').val();
                 sessionStorage.setItem('specialInstructions', specialInstructions);
                 $('#cartModal').modal('hide');
-                window.location.href = '../LandingPageTEFC/checkout.php';
+                window.location.href = '../LandingPage/checkout.php';
             });
 
             // Update cart modal when it's shown
