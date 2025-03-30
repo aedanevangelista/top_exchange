@@ -366,7 +366,7 @@ function truncate($text, $max = 15) {
             <table class="accounts-table">
                 <thead>
                     <tr>
-                        <th>Username1</th>
+                        <th>Username</th>
                         <th>Email</th>
                         <th>Phone</th>
                         <th>Region</th>
