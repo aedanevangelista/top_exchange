@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: Mar 29, 2025 at 07:07 AM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
+-- Host: 127.0.0.1:3306
+-- Generation Time: Mar 30, 2025 at 11:36 AM
+-- Server version: 10.11.10-MariaDB-log
+-- PHP Version: 7.2.34
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `top_exchange`
+-- Database: `u701062148_top_exchange`
 --
 
 -- --------------------------------------------------------
@@ -46,7 +46,8 @@ INSERT INTO `accounts` (`id`, `username`, `password`, `created_at`, `role`, `sta
 (58, 'aedan', '123', '2025-03-05 23:23:25', 'aed', 'Active'),
 (60, 'Manager', '123', '2025-03-05 23:27:49', 'Manager', 'Archived'),
 (61, 'Accountant', '123', '2025-03-05 23:27:55', 'Accountant', 'Archived'),
-(62, 'Ryan', '123', '2025-03-09 07:14:07', 'Admin', 'Archived');
+(62, 'Ryan', '123', '2025-03-09 07:14:07', 'Admin', 'Archived'),
+(68, 'Test', 'tanginamo', '2025-03-30 08:44:21', 'Secretary', 'Active');
 
 -- --------------------------------------------------------
 
@@ -100,9 +101,9 @@ CREATE TABLE `clients_accounts` (
 --
 
 INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company`, `company_address`, `business_proof`, `status`, `balance`, `created_at`) VALUES
-(3, 'Jeff Santonia', '$2y$10$dwjDK/6QbkEF.qBuozhjneWerFL6jY4qyZ8hchngxdbNZ3k/u80vm', 'jeffsantonia@gmail.com', '1236969420', 'Munoz', 'Quezon City', 'Jeff Company', 'Jeff City', '[\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/3.png\",\"\\/top_exchange\\/uploads\\/Jeff Santonia\\/4.png\"]', 'Active', 473812.00, '2025-03-09 14:12:20'),
-(4, 'joe', '$2y$10$0kM1rjCbnDXkL4/.BSrvEuVCSMjLN/ICY5KeSmzJ0wQ0aPQEsyQwe', 'joemama@gmail.com', '123123123', 'Metro Manila', 'QC', 'Joe Mama Corp', 'Joe mama address', '[\"\\/top_exchange\\/uploads\\/joe\\/audience2.png\"]', 'Inactive', 0.00, '2025-03-20 16:08:02'),
-(5, 'asdas', '$2y$10$dMplMlvggRnx7M8ln/AjfOkQHL.Ulbj8W.tU7nvAs2KkCGbXZJkge', 'asdsas@g.com', 'asdasdasd', 'asdasas', 'dasasd', 'asdas', 'asdasdas', '[\"\\/top_exchange\\/uploads\\/asdas\\/audience.png\",\"\\/top_exchange\\/uploads\\/asdas\\/audience2.png\",\"\\/top_exchange\\/uploads\\/asdas\\/file copie.png\"]', 'Inactive', 0.00, '2025-03-20 16:09:21'),
+(3, 'Jeff Santonia', '$2y$10$dwjDK/6QbkEF.qBuozhjneWerFL6jY4qyZ8hchngxdbNZ3k/u80vm', 'jeffsantonia@gmail.com', '1236969420', 'Munoz', 'Quezon City', 'Jeff Company', 'Jeff City', '[\"\\/uploads\\/Jeff Santonia\\/3.png\",\"\\/uploads\\/Jeff Santonia\\/4.png\"]', 'Active', 473812.00, '2025-03-09 14:12:20'),
+(4, 'joe', '$2y$10$0kM1rjCbnDXkL4/.BSrvEuVCSMjLN/ICY5KeSmzJ0wQ0aPQEsyQwe', 'joemama@gmail.com', '123123123', 'Metro Manila', 'QC', 'Joe Mama Corp', 'Joe mama address', '[\"\\/uploads\\/joe\\/audience2.png\"]', 'Inactive', 0.00, '2025-03-20 16:08:02'),
+(5, 'asdas', '$2y$10$dMplMlvggRnx7M8ln/AjfOkQHL.Ulbj8W.tU7nvAs2KkCGbXZJkge', 'asdsas@g.com', 'asdasdasd', 'asdasas', 'dasasd', 'asdas', 'asdasdas', '[\"\\/uploads\\/asdas\\/audience.png\",\"\\/uploads\\/asdas\\/audience2.png\",\"\\/uploads\\/asdas\\/file copie.png\"]', 'Inactive', 0.00, '2025-03-20 16:09:21'),
 (7, 'Boters', '$2y$10$g8CvqtZ45IFW8QiCk1V4/OoeNq0LJT4sZlshs.WFrGQpX/hwbdsFa', 'jefferson_santonia@yahoo.com', '09185585149', 'asd', 'asd', '', '', '[]', 'Active', 0.00, '2025-03-27 12:36:22');
 
 -- --------------------------------------------------------
@@ -124,7 +125,8 @@ CREATE TABLE `customers` (
 INSERT INTO `customers` (`customer_id`, `customer_name`, `created_at`) VALUES
 (1, 'Solaire Entertainment City', '2025-02-18 04:23:50'),
 (2, 'Tiger', '2025-02-18 04:23:50'),
-(3, 'City of Dreams', '2025-02-18 04:23:50');
+(3, 'City of Dreams', '2025-02-18 04:23:50'),
+(19, '123', '2025-03-30 07:53:41');
 
 -- --------------------------------------------------------
 
@@ -241,23 +243,15 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_date`, `delivery_address`, `orders`, `total_amount`, `status`, `contact_number`, `special_instructions`, `payment_method`, `subtotal`, `delivery_fee`) VALUES
-(17, 'aedan-1', 'aedan', '2024-03-20', '2024-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 1625.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
-(18, 'Jeff Santonia-1', 'Jeff Santonia', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":6,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Small)\",\"packaging\":\"15pcs/pack\",\"price\":205,\"quantity\":10}]', 2050.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
-(19, 'aedan-2', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
-(20, 'aedan-3', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":10}]', 3250.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
-(21, 'aedan-4', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":12}]', 3900.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
-(22, 'aedan-5', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":5,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs/pack\",\"price\":250,\"quantity\":2}]', 500.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
-(23, 'Jeff Santonia-2', 'Jeff Santonia', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":4}]', 1120.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
-(24, 'Jeff Santonia-3', 'Jeff Santonia', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 1625.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
-(25, 'aedan-6', 'aedan', '2025-03-20', '2025-03-21', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 1625.00, 'Active', NULL, NULL, NULL, 0.00, 0.00),
-(26, 'aedan-7', 'aedan', '2025-03-21', '2025-03-28', NULL, '[{\"product_id\":73,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"shumai\",\"packaging\":123,\"price\":123,\"quantity\":5}]', 615.00, 'Active', NULL, NULL, NULL, 0.00, 0.00),
-(27, 'asdasd-1', 'asdasd', '2025-03-21', '2025-03-24', NULL, '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Active', NULL, NULL, NULL, 0.00, 0.00),
-(28, 'Jeff Santonia-4', 'Jeff Santonia', '2025-02-19', '2025-02-26', NULL, '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":55}]', 15400.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
-(29, 'Jeff Santonia-5', 'Jeff Santonia', '2025-03-24', '2025-03-26', NULL, '[{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":55}]', 17875.00, 'Active', NULL, NULL, NULL, 0.00, 0.00),
 (30, 'Jeff Santonia-6', 'Jeff Santonia', '2025-03-24', '2025-03-26', 'Siomai Jeff Address 123', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
 (31, 'Jeff Santonia-7', 'Jeff Santonia', '2025-03-24', '2025-03-26', 'Jeff City', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Active', NULL, NULL, NULL, 0.00, 0.00),
-(32, 'admin-1', 'admin', '2025-03-27', '2025-03-28', 'asddsa', '[{\"product_id\":2,\"category\":\"\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs\\/pack\",\"price\":\"325.00\",\"quantity\":1},{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":1},{\"product_id\":1,\"category\":\"\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"280.00\",\"quantity\":1}]', 875.00, 'Pending', '09185585149', '', 'Cash on Delivery', 875.00, 0.00),
-(33, 'Boters-1', 'Boters', '2025-03-27', '2025-03-28', 'ASADS', '[{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":1},{\"product_id\":2,\"category\":\"\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs\\/pack\",\"price\":\"325.00\",\"quantity\":1},{\"product_id\":1,\"category\":\"\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"280.00\",\"quantity\":1}]', 875.00, 'Pending', '09185585149', '', 'Cash on Delivery', 875.00, 0.00);
+(32, 'admin-1', 'admin', '2025-03-27', '2025-03-28', 'asddsa', '[{\"product_id\":2,\"category\":\"\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs\\/pack\",\"price\":\"325.00\",\"quantity\":1},{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":1},{\"product_id\":1,\"category\":\"\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"280.00\",\"quantity\":1}]', 875.00, 'Active', '09185585149', '', 'Cash on Delivery', 875.00, 0.00),
+(33, 'Boters-1', 'Boters', '2025-03-27', '2025-03-28', 'ASADS', '[{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":1},{\"product_id\":2,\"category\":\"\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs\\/pack\",\"price\":\"325.00\",\"quantity\":1},{\"product_id\":1,\"category\":\"\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"280.00\",\"quantity\":1}]', 875.00, 'Active', '09185585149', '', 'Cash on Delivery', 875.00, 0.00),
+(34, 'Boters-2', 'Boters', '2025-03-29', '2025-03-30', '1231', '[{\"product_id\":2,\"category\":\"\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs\\/pack\",\"price\":\"325.00\",\"quantity\":1},{\"product_id\":20,\"category\":\"\",\"item_description\":\"Beef Siomai\",\"packaging\":\"20pcs\\/pack\",\"price\":\"250.00\",\"quantity\":1}]', 575.00, 'Active', '09185585149', '', 'Cash on Delivery', 575.00, 0.00),
+(35, 'Boters-3', 'Boters', '2025-03-29', '2025-03-30', 'sadsad', '[{\"product_id\":2,\"category\":\"\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs\\/pack\",\"price\":\"325.00\",\"quantity\":1},{\"product_id\":19,\"category\":\"\",\"item_description\":\"Chicken Siomai\",\"packaging\":\"30pcs\\/pack\",\"price\":\"300.00\",\"quantity\":1},{\"product_id\":20,\"category\":\"\",\"item_description\":\"Beef Siomai\",\"packaging\":\"20pcs\\/pack\",\"price\":\"250.00\",\"quantity\":1}]', 875.00, 'Pending', '09185585149', '', 'Cash on Delivery', 875.00, 0.00),
+(36, 'Boters-4', 'Boters', '2025-03-30', '2025-03-31', '123123', '[{\"product_id\":2,\"category\":\"\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs\\/pack\",\"price\":\"325.00\",\"quantity\":1}]', 375.00, 'Pending', '09185585149', '', 'Cash on Delivery', 325.00, 50.00),
+(37, 'admin-2', 'admin', '2025-03-30', '2025-03-31', '2A Alibangbang Street', '[{\"product_id\":1,\"category\":\"\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"280.00\",\"quantity\":5}]', 1400.00, 'Completed', '09275689754', '', 'Cash on Delivery', 1400.00, 0.00),
+(38, 'admin-3', 'admin', '2025-03-30', '2025-03-31', '69C Bansalangin Street', '[{\"product_id\":1,\"category\":\"\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"280.00\",\"quantity\":1},{\"product_id\":2,\"category\":\"\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs\\/pack\",\"price\":\"325.00\",\"quantity\":1},{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":1},{\"product_id\":4,\"category\":\"\",\"item_description\":\"Asado Siopao (B Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"235.00\",\"quantity\":1},{\"product_id\":5,\"category\":\"\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs\\/pack\",\"price\":\"250.00\",\"quantity\":1},{\"product_id\":6,\"category\":\"\",\"item_description\":\"Asado Siopao (B Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"205.00\",\"quantity\":1},{\"product_id\":7,\"category\":\"\",\"item_description\":\"Bola Bola Siopao (Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"310.00\",\"quantity\":1},{\"product_id\":8,\"category\":\"\",\"item_description\":\"Bola Bola Siopao (Med)\",\"packaging\":\"10pcs\\/pack\",\"price\":\"350.00\",\"quantity\":1},{\"product_id\":9,\"category\":\"\",\"item_description\":\"Bola Bola Siopao (Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"290.00\",\"quantity\":1},{\"product_id\":15,\"category\":\"\",\"item_description\":\"Special Pork Siomai\",\"packaging\":\"30pcs\\/pack\",\"price\":\"240.00\",\"quantity\":1},{\"product_id\":16,\"category\":\"\",\"item_description\":\"Regular Sharksfin Dumpling\",\"packaging\":\"30pcs\\/pack\",\"price\":\"180.00\",\"quantity\":1},{\"product_id\":17,\"category\":\"\",\"item_description\":\"Special Sharksfin Dumpling\",\"packaging\":\"30pcs\\/pack\",\"price\":\"260.00\",\"quantity\":1},{\"product_id\":18,\"category\":\"\",\"item_description\":\"Kutchay Dumpling\",\"packaging\":\"30pcs\\/pack\",\"price\":\"275.00\",\"quantity\":1},{\"product_id\":19,\"category\":\"\",\"item_description\":\"Chicken Siomai\",\"packaging\":\"30pcs\\/pack\",\"price\":\"300.00\",\"quantity\":1},{\"product_id\":20,\"category\":\"\",\"item_description\":\"Beef Siomai\",\"packaging\":\"20pcs\\/pack\",\"price\":\"250.00\",\"quantity\":1},{\"product_id\":21,\"category\":\"\",\"item_description\":\"Premium Pork Siomai (A)\",\"packaging\":\"20pcs\\/pack\",\"price\":\"280.00\",\"quantity\":1},{\"product_id\":22,\"category\":\"\",\"item_description\":\"Premium Pork Siomai w\\/ Shrimp (A)\",\"packaging\":\"20pcs\\/pack\",\"price\":\"310.00\",\"quantity\":1},{\"product_id\":23,\"category\":\"\",\"item_description\":\"Premium Sharksfin Dumpling\",\"packaging\":\"20pcs\\/pack\",\"price\":\"300.00\",\"quantity\":1},{\"product_id\":26,\"category\":\"\",\"item_description\":\"Japanese Pork Siomai (A)\",\"packaging\":\"20pcs\\/pack\",\"price\":\"325.00\",\"quantity\":1},{\"product_id\":27,\"category\":\"\",\"item_description\":\"Polonchay Dumpling (Min 6 Packs) (A)\",\"packaging\":\"12pcs\\/pack\",\"price\":\"310.00\",\"quantity\":1},{\"product_id\":28,\"category\":\"\",\"item_description\":\"Polonchay Dumpling (Min 6 Packs) (B)\",\"packaging\":\"20pcs\\/pack\",\"price\":\"470.00\",\"quantity\":1},{\"product_id\":29,\"category\":\"\",\"item_description\":\"Polonchay Dumpling w\\/ Shrimp (Min 6 Packs) (A)\",\"packaging\":\"12pcs\\/pack\",\"price\":\"330.00\",\"quantity\":1},{\"product_id\":30,\"category\":\"\",\"item_description\":\"Polonchay Dumpling w\\/ Shrimp (Min 6 Packs) (B)\",\"packaging\":\"20pcs\\/pack\",\"price\":\"530.00\",\"quantity\":1},{\"product_id\":31,\"category\":\"\",\"item_description\":\"Beancurd Roll (A)\",\"packaging\":\"12pcs\\/pack\",\"price\":\"310.00\",\"quantity\":1},{\"product_id\":32,\"category\":\"\",\"item_description\":\"Beancurd Roll (B)\",\"packaging\":\"20pcs\\/pack\",\"price\":\"500.00\",\"quantity\":1},{\"product_id\":33,\"category\":\"\",\"item_description\":\"Pork Gyoza Dumpling (A)\",\"packaging\":\"20pcs\\/pack\",\"price\":\"390.00\",\"quantity\":1},{\"product_id\":34,\"category\":\"\",\"item_description\":\"Shanghai Dumpling (A)\",\"packaging\":\"20pcs\\/pack\",\"price\":\"255.00\",\"quantity\":1},{\"product_id\":35,\"category\":\"\",\"item_description\":\"Siao Long Pao\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":1},{\"product_id\":36,\"category\":\"\",\"item_description\":\"Wanton Regular\",\"packaging\":\"20pcs\\/pack\",\"price\":\"315.00\",\"quantity\":1},{\"product_id\":37,\"category\":\"\",\"item_description\":\"Sesame Butchi Ball\",\"packaging\":\"12pcs\\/pack\",\"price\":\"185.00\",\"quantity\":1},{\"product_id\":38,\"category\":\"\",\"item_description\":\"Machang (Hong Kong)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"250.00\",\"quantity\":1},{\"product_id\":39,\"category\":\"\",\"item_description\":\"Machang w\\/ Chestnut (Min 6 Packs)\",\"packaging\":\"1pc\",\"price\":\"110.00\",\"quantity\":1},{\"product_id\":40,\"category\":\"\",\"item_description\":\"Pork Rib Taosi\",\"packaging\":\"500g\",\"price\":\"200.00\",\"quantity\":1},{\"product_id\":41,\"category\":\"\",\"item_description\":\"Pork Spring Roll\",\"packaging\":\"20pcs\\/pack\",\"price\":\"320.00\",\"quantity\":1},{\"product_id\":42,\"category\":\"\",\"item_description\":\"Chicken Feet\",\"packaging\":\"500g\",\"price\":\"200.00\",\"quantity\":1},{\"product_id\":44,\"category\":\"\",\"item_description\":\"Radish Cake 1kg\",\"packaging\":\"1kg\",\"price\":\"300.00\",\"quantity\":1},{\"product_id\":45,\"category\":\"\",\"item_description\":\"Pumpkin Cake 1.5kg\",\"packaging\":\"1.5kg\",\"price\":\"370.00\",\"quantity\":1},{\"product_id\":46,\"category\":\"\",\"item_description\":\"Pumpkin Cake 1kg\",\"packaging\":\"1kg\",\"price\":\"300.00\",\"quantity\":1},{\"product_id\":47,\"category\":\"\",\"item_description\":\"Vegetable Dumpling (A)\",\"packaging\":\"12pcs\\/pack\",\"price\":\"190.00\",\"quantity\":1},{\"product_id\":48,\"category\":\"\",\"item_description\":\"Vegetable Dumpling (B)\",\"packaging\":\"20pcs\\/pack\",\"price\":\"300.00\",\"quantity\":1},{\"product_id\":49,\"category\":\"\",\"item_description\":\"Vegetable Spring Roll (A)\",\"packaging\":\"12pcs\\/pack\",\"price\":\"230.00\",\"quantity\":1},{\"product_id\":50,\"category\":\"\",\"item_description\":\"Vegetable Spring Roll (B)\",\"packaging\":\"20pcs\\/pack\",\"price\":\"360.00\",\"quantity\":1},{\"product_id\":51,\"category\":\"\",\"item_description\":\"Chili Sauce (A)\",\"packaging\":\"1.5kg\\/cntr\",\"price\":\"590.00\",\"quantity\":1},{\"product_id\":52,\"category\":\"\",\"item_description\":\"Chili Sauce (B)\",\"packaging\":\"220g\\/btl\",\"price\":\"160.00\",\"quantity\":1},{\"product_id\":53,\"category\":\"\",\"item_description\":\"Seafood XO Sauce\",\"packaging\":\"220g\\/btl\",\"price\":\"320.00\",\"quantity\":1},{\"product_id\":54,\"category\":\"\",\"item_description\":\"Lemon Sauce (A)\",\"packaging\":\"420g\\/btl\",\"price\":\"135.00\",\"quantity\":1},{\"product_id\":55,\"category\":\"\",\"item_description\":\"Sweet & Sour Sauce (A)\",\"packaging\":\"420g\\/btl\",\"price\":\"135.00\",\"quantity\":1},{\"product_id\":56,\"category\":\"\",\"item_description\":\"Beef Fillet Sauce\",\"packaging\":\"420g\\/btl\",\"price\":\"150.00\",\"quantity\":1},{\"product_id\":57,\"category\":\"\",\"item_description\":\"Lemon Sauce (B)\",\"packaging\":\"3.5kg\\/Gal\",\"price\":\"620.00\",\"quantity\":1},{\"product_id\":58,\"category\":\"\",\"item_description\":\"Sweet & Sour Sauce (B)\",\"packaging\":\"3.5kg\\/Gal\",\"price\":\"620.00\",\"quantity\":1},{\"product_id\":59,\"category\":\"\",\"item_description\":\"Asado Marinated (Char Siu)\",\"packaging\":\"1kg\",\"price\":\"400.00\",\"quantity\":1},{\"product_id\":60,\"category\":\"\",\"item_description\":\"Asado Cooked (Char Siu)\",\"packaging\":\"1kg\",\"price\":\"700.00\",\"quantity\":1},{\"product_id\":61,\"category\":\"\",\"item_description\":\"Pancit Canton\",\"packaging\":\"2kg\\/pack\",\"price\":\"350.00\",\"quantity\":1},{\"product_id\":62,\"category\":\"\",\"item_description\":\"Dried Egg Noodles\",\"packaging\":\"1kg\\/pack\",\"price\":\"185.00\",\"quantity\":1},{\"product_id\":63,\"category\":\"\",\"item_description\":\"Hongkong Noodles (Yellow\\/White)\",\"packaging\":\"1kg\\/pack\",\"price\":\"185.00\",\"quantity\":1},{\"product_id\":64,\"category\":\"\",\"item_description\":\"Shanghai Noodles (Yellow\\/White)\",\"packaging\":\"2kg\\/pack\",\"price\":\"360.00\",\"quantity\":1},{\"product_id\":65,\"category\":\"\",\"item_description\":\"Hofan Noodles (Minimum 6 packs)\",\"packaging\":\"1kg\\/pack\",\"price\":\"170.00\",\"quantity\":1},{\"product_id\":66,\"category\":\"\",\"item_description\":\"Ramen Noodles\",\"packaging\":\"1kg\\/pack\",\"price\":\"195.00\",\"quantity\":1},{\"product_id\":67,\"category\":\"\",\"item_description\":\"Spinach Noodles (Minimum 6 packs)\",\"packaging\":\"1kg\\/pack\",\"price\":\"195.00\",\"quantity\":1},{\"product_id\":69,\"category\":\"\",\"item_description\":\"Wanton Wrapper (Yellow\\/White)\",\"packaging\":\"250g\\/pack\",\"price\":\"70.00\",\"quantity\":1},{\"product_id\":70,\"category\":\"\",\"item_description\":\"Beancurd Wrapper\",\"packaging\":\"1kg\\/pack\",\"price\":\"1600.00\",\"quantity\":1},{\"product_id\":71,\"category\":\"\",\"item_description\":\"Spring Roll Wrapper\",\"packaging\":\"25pcs\\/pack\",\"price\":\"90.00\",\"quantity\":1},{\"product_id\":72,\"category\":\"\",\"item_description\":\"Gyoza Wrapper (Minimum 10 Packs)\",\"packaging\":\"250g\\/pack\",\"price\":\"70.00\",\"quantity\":1}]', 19530.00, 'Rejected', '09876543210', '', 'GCash', 19530.00, 0.00);
 
 -- --------------------------------------------------------
 
@@ -386,51 +380,51 @@ INSERT INTO `products` (`product_id`, `category`, `product_name`, `item_descript
 (11, 'Siopao', 'Cuaopao', 'Cuaopao', '10pcs/pack', 125.00, 0, NULL, NULL),
 (12, 'Siopao', 'Minibun Mantao', 'Minibun Mantao', '12pcs/pack', 115.00, 0, NULL, NULL),
 (13, 'Siopao', 'Egg Custard Pao', 'Egg Custard Pao (Min 10 packs)', '8pcs/pack', 150.00, 0, NULL, NULL),
-(14, 'Dimsum & Dumplings', 'Regular Pork Siomai', 'Regular Pork Siomai', '30pcs/pack', 145.00, 0, '', '/top_exchange/uploads/products/Regular_Pork_Siomai/product_image.png'),
-(15, 'Dimsum & Dumplings', 'Special Pork Siomai', 'Special Pork Siomai', '30pcs/pack', 240.00, 0, '', '/top_exchange/uploads/products/Special_Pork_Siomai/product_image.png'),
-(16, 'Dimsum & Dumplings', 'Regular Sharksfin Dumpling', 'Regular Sharksfin Dumpling', '30pcs/pack', 180.00, 0, '', '/top_exchange/uploads/products/Regular_Sharksfin_Dumpling/product_image.png'),
-(17, 'Dimsum & Dumplings', 'Special Sharksfin Dumpling', 'Special Sharksfin Dumpling', '30pcs/pack', 260.00, 0, '', '/top_exchange/uploads/products/Special_Sharksfin_Dumpling/product_image.png'),
-(18, 'Dimsum & Dumplings', 'Kutchay Dumpling', 'Kutchay Dumpling', '30pcs/pack', 275.00, 0, '', '/top_exchange/uploads/products/Kutchay_Dumpling/product_image.png'),
-(19, 'Dimsum & Dumplings', 'Chicken Siomai', 'Chicken Siomai', '30pcs/pack', 300.00, 0, '0', '/top_exchange/uploads/products/Chicken_Siomai/product_image.png'),
-(20, 'Dimsum & Dumplings', 'Beef Siomai', 'Beef Siomai', '20pcs/pack', 250.00, 0, '0', '/top_exchange/uploads/products/Beef_Siomai/product_image.png'),
-(21, 'Dimsum & Dumplings', 'Premium Pork Siomai', 'Premium Pork Siomai (A)', '20pcs/pack', 280.00, 0, '', '/top_exchange/uploads/products/Premium_Pork_Siomai__A_/product_image.png'),
-(22, 'Dimsum & Dumplings', 'Premium Pork Siomai w/ Shrimp', 'Premium Pork Siomai w/ Shrimp (A)', '20pcs/pack', 310.00, 0, '', '/top_exchange/uploads/products/Premium_Pork_Siomai_w__Shrimp__A_/product_image.png'),
-(23, 'Dimsum & Dumplings', 'Premium Sharksfin Dumpling', 'Premium Sharksfin Dumpling', '20pcs/pack', 300.00, 0, '', '/top_exchange/uploads/products/Premium_Sharksfin_Dumpling/product_image.png'),
-(24, 'Dimsum & Dumplings', 'Hakaw', 'Hakaw (Shrimp Dumpling) (A)', '12pcs/pack', 300.00, 0, '0', '/top_exchange/uploads/products/Hakaw__Shrimp_Dumpling___A_/product_image.png'),
-(25, 'Dimsum & Dumplings', 'Hakaw', 'Hakaw (Shrimp Dumpling) (B)', '20pcs/pack', 480.00, 0, '0', '/top_exchange/uploads/products/Hakaw__Shrimp_Dumpling___B_/product_image.png'),
-(26, 'Dimsum & Dumplings', 'Japanese Pork Siomai', 'Japanese Pork Siomai (A)', '20pcs/pack', 325.00, 0, '', '/top_exchange/uploads/products/Japanese_Pork_Siomai__A_/product_image.png'),
-(27, 'Dimsum & Dumplings', 'Polonchay Dumpling', 'Polonchay Dumpling (Min 6 Packs) (A)', '12pcs/pack', 310.00, 0, '', '/top_exchange/uploads/products/Polonchay_Dumpling__Min_6_Packs___A_/product_image.png'),
-(28, 'Dimsum & Dumplings', 'Polonchay Dumpling', 'Polonchay Dumpling (Min 6 Packs) (B)', '20pcs/pack', 470.00, 0, '', '/top_exchange/uploads/products/Polonchay_Dumpling__Min_6_Packs___B_/product_image.png'),
-(29, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (A)', '12pcs/pack', 330.00, 0, '', '/top_exchange/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___A_/product_image.png'),
-(30, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (B)', '20pcs/pack', 530.00, 0, '', '/top_exchange/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___B_/product_image.png'),
-(31, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 685, '0', '/top_exchange/uploads/products/Beancurd_Roll__A_/product_image.png'),
-(32, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (B)', '20pcs/pack', 500.00, 0, '0', '/top_exchange/uploads/products/Beancurd_Roll__B_/product_image.png'),
-(33, 'Dimsum & Dumplings', 'Pork Gyoza Dumpling', 'Pork Gyoza Dumpling (A)', '20pcs/pack', 390.00, 0, '', '/top_exchange/uploads/products/Pork_Gyoza_Dumpling__A_/product_image.png'),
-(34, 'Dimsum & Dumplings', 'Shanghai Dumpling', 'Shanghai Dumpling (A)', '20pcs/pack', 255.00, 0, '', '/top_exchange/uploads/products/Shanghai_Dumpling__A_/product_image.png'),
-(35, 'Dimsum & Dumplings', 'Siao Long Pao', 'Siao Long Pao', '15pcs/pack', 270.00, 0, '', '/top_exchange/uploads/products/Siao_Long_Pao/product_image.png'),
-(36, 'Dimsum & Dumplings', 'Wanton Regular', 'Wanton Regular', '20pcs/pack', 315.00, 0, '', '/top_exchange/uploads/products/Wanton_Regular/product_image.png'),
-(37, 'Dimsum & Dumplings', 'Sesame Butchi Ball', 'Sesame Butchi Ball', '12pcs/pack', 185.00, 0, '', '/top_exchange/uploads/products/Sesame_Butchi_Ball/product_image.png'),
-(38, 'Dimsum & Dumplings', 'Machang', 'Machang (Hong Kong)', '6pcs/pack', 250.00, 0, '', '/top_exchange/uploads/products/Machang__Hong_Kong_/product_image.png'),
-(39, 'Dimsum & Dumplings', 'Machang w/ Chestnut', 'Machang w/ Chestnut (Min 6 Packs)', '1pc', 110.00, 0, '', '/top_exchange/uploads/products/Machang_w__Chestnut__Min_6_Packs_/product_image.png'),
-(40, 'Dimsum & Dumplings', 'Pork Rib Taosi', 'Pork Rib Taosi', '500g', 200.00, 0, '', '/top_exchange/uploads/products/Pork_Rib_Taosi/product_image.png'),
-(41, 'Dimsum & Dumplings', 'Pork Spring Roll', 'Pork Spring Roll', '20pcs/pack', 320.00, 0, '', '/top_exchange/uploads/products/Pork_Spring_Roll/product_image.png'),
-(42, 'Dimsum & Dumplings', 'Chicken Feet', 'Chicken Feet', '500g', 200.00, 0, '0', '/top_exchange/uploads/products/Chicken_Feet/product_image.png'),
-(43, 'Dimsum & Dumplings', 'Radish Cake 1.5kg', 'Radish Cake 1.5kg', '1.5kg', 370.00, 0, '', '/top_exchange/uploads/products/Radish_Cake_1_5kg/product_image.png'),
-(44, 'Dimsum & Dumplings', 'Radish Cake 1kg', 'Radish Cake 1kg', '1kg', 300.00, 0, '', '/top_exchange/uploads/products/Radish_Cake_1kg/product_image.png'),
-(45, 'Dimsum & Dumplings', 'Pumpkin Cake 1.5kg', 'Pumpkin Cake 1.5kg', '1.5kg', 370.00, 0, '', '/top_exchange/uploads/products/Pumpkin_Cake_1_5kg/product_image.png'),
-(46, 'Dimsum & Dumplings', 'Pumpkin Cake 1kg', 'Pumpkin Cake 1kg', '1kg', 300.00, 0, '', '/top_exchange/uploads/products/Pumpkin_Cake_1kg/product_image.png'),
-(47, 'Healthy Dimsum', 'Vegetable Dumpling', 'Vegetable Dumpling (A)', '12pcs/pack', 190.00, 0, '', '/top_exchange/uploads/products/Vegetable_Dumpling__A_/product_image.png'),
-(48, 'Healthy Dimsum', 'Vegetable Dumpling', 'Vegetable Dumpling (B)', '20pcs/pack', 300.00, 0, '', '/top_exchange/uploads/products/Vegetable_Dumpling__B_/product_image.png'),
-(49, 'Healthy Dimsum', 'Vegetable Spring Roll', 'Vegetable Spring Roll (A)', '12pcs/pack', 230.00, 0, '', '/top_exchange/uploads/products/Vegetable_Spring_Roll__A_/product_image.png'),
-(50, 'Healthy Dimsum', 'Vegetable Spring Roll', 'Vegetable Spring Roll (B)', '20pcs/pack', 360.00, 0, '', '/top_exchange/uploads/products/Vegetable_Spring_Roll__B_/product_image.png'),
-(51, 'Sauces', 'Chili Sauce', 'Chili Sauce (A)', '1.5kg/cntr', 590.00, 0, '0', '/top_exchange/uploads/products/Chili_Sauce__A_/product_image.png'),
-(52, 'Sauces', 'Chili Sauce', 'Chili Sauce (B)', '220g/btl', 160.00, 0, '', '/top_exchange/uploads/products/Chili_Sauce__B_/product_image.png'),
-(53, 'Sauces', 'Seafood XO Sauce', 'Seafood XO Sauce', '220g/btl', 320.00, 0, '', '/top_exchange/uploads/products/Seafood_XO_Sauce/product_image.png'),
-(54, 'Sauces', 'Lemon Sauce', 'Lemon Sauce (A)', '420g/btl', 135.00, 0, '', '/top_exchange/uploads/products/Lemon_Sauce__A_/product_image.png'),
-(55, 'Sauces', 'Sweet & Sour Sauce', 'Sweet & Sour Sauce (A)', '420g/btl', 135.00, 0, '', '/top_exchange/uploads/products/Sweet___Sour_Sauce__A_/product_image.png'),
+(14, 'Dimsum & Dumplings', 'Regular Pork Siomai', 'Regular Pork Siomai', '30pcs/pack', 145.00, 0, '', '/uploads/products/Regular_Pork_Siomai/product_image.png'),
+(15, 'Dimsum & Dumplings', 'Special Pork Siomai', 'Special Pork Siomai', '30pcs/pack', 240.00, 0, '', '/uploads/products/Special_Pork_Siomai/product_image.png'),
+(16, 'Dimsum & Dumplings', 'Regular Sharksfin Dumpling', 'Regular Sharksfin Dumpling', '30pcs/pack', 180.00, 0, '', '/uploads/products/Regular_Sharksfin_Dumpling/product_image.png'),
+(17, 'Dimsum & Dumplings', 'Special Sharksfin Dumpling', 'Special Sharksfin Dumpling', '30pcs/pack', 260.00, 0, '', '/uploads/products/Special_Sharksfin_Dumpling/product_image.png'),
+(18, 'Dimsum & Dumplings', 'Kutchay Dumpling', 'Kutchay Dumpling', '30pcs/pack', 275.00, 0, '', '/uploads/products/Kutchay_Dumpling/product_image.png'),
+(19, 'Dimsum & Dumplings', 'Chicken Siomai', 'Chicken Siomai', '30pcs/pack', 300.00, 0, '0', '/uploads/products/Chicken_Siomai/product_image.png'),
+(20, 'Dimsum & Dumplings', 'Beef Siomai', 'Beef Siomai', '20pcs/pack', 250.00, 0, '0', '/uploads/products/Beef_Siomai/product_image.png'),
+(21, 'Dimsum & Dumplings', 'Premium Pork Siomai', 'Premium Pork Siomai (A)', '20pcs/pack', 280.00, 0, '', '/uploads/products/Premium_Pork_Siomai__A_/product_image.png'),
+(22, 'Dimsum & Dumplings', 'Premium Pork Siomai w/ Shrimp', 'Premium Pork Siomai w/ Shrimp (A)', '20pcs/pack', 310.00, 0, '', '/uploads/products/Premium_Pork_Siomai_w__Shrimp__A_/product_image.png'),
+(23, 'Dimsum & Dumplings', 'Premium Sharksfin Dumpling', 'Premium Sharksfin Dumpling', '20pcs/pack', 300.00, 0, '', '/uploads/products/Premium_Sharksfin_Dumpling/product_image.png'),
+(24, 'Dimsum & Dumplings', 'Hakaw', 'Hakaw (Shrimp Dumpling) (A)', '12pcs/pack', 300.00, 0, '0', '/uploads/products/Hakaw__Shrimp_Dumpling___A_/product_image.png'),
+(25, 'Dimsum & Dumplings', 'Hakaw', 'Hakaw (Shrimp Dumpling) (B)', '20pcs/pack', 480.00, 0, '0', '/uploads/products/Hakaw__Shrimp_Dumpling___B_/product_image.png'),
+(26, 'Dimsum & Dumplings', 'Japanese Pork Siomai', 'Japanese Pork Siomai (A)', '20pcs/pack', 325.00, 0, '', '/uploads/products/Japanese_Pork_Siomai__A_/product_image.png'),
+(27, 'Dimsum & Dumplings', 'Polonchay Dumpling', 'Polonchay Dumpling (Min 6 Packs) (A)', '12pcs/pack', 310.00, 0, '', '/uploads/products/Polonchay_Dumpling__Min_6_Packs___A_/product_image.png'),
+(28, 'Dimsum & Dumplings', 'Polonchay Dumpling', 'Polonchay Dumpling (Min 6 Packs) (B)', '20pcs/pack', 470.00, 0, '', '/uploads/products/Polonchay_Dumpling__Min_6_Packs___B_/product_image.png'),
+(29, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (A)', '12pcs/pack', 330.00, 0, '', '/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___A_/product_image.png'),
+(30, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (B)', '20pcs/pack', 530.00, 0, '', '/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___B_/product_image.png'),
+(31, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 690, '0', '/uploads/products/Beancurd_Roll__A_/product_image.png'),
+(32, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (B)', '20pcs/pack', 500.00, 1, '0', '/uploads/products/Beancurd_Roll__B_/product_image.png'),
+(33, 'Dimsum & Dumplings', 'Pork Gyoza Dumpling', 'Pork Gyoza Dumpling (A)', '20pcs/pack', 390.00, 0, '', '/uploads/products/Pork_Gyoza_Dumpling__A_/product_image.png'),
+(34, 'Dimsum & Dumplings', 'Shanghai Dumpling', 'Shanghai Dumpling (A)', '20pcs/pack', 255.00, 0, '', '/uploads/products/Shanghai_Dumpling__A_/product_image.png'),
+(35, 'Dimsum & Dumplings', 'Siao Long Pao', 'Siao Long Pao', '15pcs/pack', 270.00, 0, '', '/uploads/products/Siao_Long_Pao/product_image.png'),
+(36, 'Dimsum & Dumplings', 'Wanton Regular', 'Wanton Regular', '20pcs/pack', 315.00, 0, '', '/uploads/products/Wanton_Regular/product_image.png'),
+(37, 'Dimsum & Dumplings', 'Sesame Butchi Ball', 'Sesame Butchi Ball', '12pcs/pack', 185.00, 0, '', '/uploads/products/Sesame_Butchi_Ball/product_image.png'),
+(38, 'Dimsum & Dumplings', 'Machang', 'Machang (Hong Kong)', '6pcs/pack', 250.00, 0, '', '/uploads/products/Machang__Hong_Kong_/product_image.png'),
+(39, 'Dimsum & Dumplings', 'Machang w/ Chestnut', 'Machang w/ Chestnut (Min 6 Packs)', '1pc', 110.00, 0, '', '/uploads/products/Machang_w__Chestnut__Min_6_Packs_/product_image.png'),
+(40, 'Dimsum & Dumplings', 'Pork Rib Taosi', 'Pork Rib Taosi', '500g', 200.00, 0, '', '/uploads/products/Pork_Rib_Taosi/product_image.png'),
+(41, 'Dimsum & Dumplings', 'Pork Spring Roll', 'Pork Spring Roll', '20pcs/pack', 320.00, 0, '', '/uploads/products/Pork_Spring_Roll/product_image.png'),
+(42, 'Dimsum & Dumplings', 'Chicken Feet', 'Chicken Feet', '500g', 200.00, 0, '0', '/uploads/products/Chicken_Feet/product_image.png'),
+(43, 'Dimsum & Dumplings', 'Radish Cake 1.5kg', 'Radish Cake 1.5kg', '1.5kg', 370.00, 0, '', '/uploads/products/Radish_Cake_1_5kg/product_image.png'),
+(44, 'Dimsum & Dumplings', 'Radish Cake 1kg', 'Radish Cake 1kg', '1kg', 300.00, 0, '', '/uploads/products/Radish_Cake_1kg/product_image.png'),
+(45, 'Dimsum & Dumplings', 'Pumpkin Cake 1.5kg', 'Pumpkin Cake 1.5kg', '1.5kg', 370.00, 0, '', '/uploads/products/Pumpkin_Cake_1_5kg/product_image.png'),
+(46, 'Dimsum & Dumplings', 'Pumpkin Cake 1kg', 'Pumpkin Cake 1kg', '1kg', 300.00, 0, '', '/uploads/products/Pumpkin_Cake_1kg/product_image.png'),
+(47, 'Healthy Dimsum', 'Vegetable Dumpling', 'Vegetable Dumpling (A)', '12pcs/pack', 190.00, 0, '', '/uploads/products/Vegetable_Dumpling__A_/product_image.png'),
+(48, 'Healthy Dimsum', 'Vegetable Dumpling', 'Vegetable Dumpling (B)', '20pcs/pack', 300.00, 0, '', '/uploads/products/Vegetable_Dumpling__B_/product_image.png'),
+(49, 'Healthy Dimsum', 'Vegetable Spring Roll', 'Vegetable Spring Roll (A)', '12pcs/pack', 230.00, 0, '', '/uploads/products/Vegetable_Spring_Roll__A_/product_image.png'),
+(50, 'Healthy Dimsum', 'Vegetable Spring Roll', 'Vegetable Spring Roll (B)', '20pcs/pack', 360.00, 0, '', '/uploads/products/Vegetable_Spring_Roll__B_/product_image.png'),
+(51, 'Sauces', 'Chili Sauce', 'Chili Sauce (A)', '1.5kg/cntr', 590.00, 0, '0', '/uploads/products/Chili_Sauce__A_/product_image.png'),
+(52, 'Sauces', 'Chili Sauce', 'Chili Sauce (B)', '220g/btl', 160.00, 0, '', '/uploads/products/Chili_Sauce__B_/product_image.png'),
+(53, 'Sauces', 'Seafood XO Sauce', 'Seafood XO Sauce', '220g/btl', 320.00, 0, '', '/uploads/products/Seafood_XO_Sauce/product_image.png'),
+(54, 'Sauces', 'Lemon Sauce', 'Lemon Sauce (A)', '420g/btl', 135.00, 0, '', '/uploads/products/Lemon_Sauce__A_/product_image.png'),
+(55, 'Sauces', 'Sweet & Sour Sauce', 'Sweet & Sour Sauce (A)', '420g/btl', 135.00, 0, '', '/uploads/products/Sweet___Sour_Sauce__A_/product_image.png'),
 (56, 'Sauces', 'Beef Fillet Sauce', 'Beef Fillet Sauce', '420g/btl', 150.00, 0, NULL, NULL),
-(57, 'Sauces', 'Lemon Sauce', 'Lemon Sauce (B)', '3.5kg/Gal', 620.00, 0, '', '/top_exchange/uploads/products/Lemon_Sauce__B_/product_image.png'),
-(58, 'Sauces', 'Sweet & Sour Sauce', 'Sweet & Sour Sauce (B)', '3.5kg/Gal', 620.00, 0, '', '/top_exchange/uploads/products/Sweet___Sour_Sauce__B_/product_image.png'),
+(57, 'Sauces', 'Lemon Sauce', 'Lemon Sauce (B)', '3.5kg/Gal', 620.00, 0, '', '/uploads/products/Lemon_Sauce__B_/product_image.png'),
+(58, 'Sauces', 'Sweet & Sour Sauce', 'Sweet & Sour Sauce (B)', '3.5kg/Gal', 620.00, 0, '', '/uploads/products/Sweet___Sour_Sauce__B_/product_image.png'),
 (59, 'Marinated Items', 'Asado Marinated', 'Asado Marinated (Char Siu)', '1kg', 400.00, 0, NULL, NULL),
 (60, 'Marinated Items', 'Asado Cooked', 'Asado Cooked (Char Siu)', '1kg', 700.00, 0, NULL, NULL),
 (61, 'Noodles & Wrappers', 'Pancit Canton', 'Pancit Canton', '2kg/pack', 350.00, 0, NULL, NULL),
@@ -577,7 +571,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
 
 --
 -- AUTO_INCREMENT for table `balance_history`
@@ -595,7 +589,7 @@ ALTER TABLE `clients_accounts`
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `monthly_payments`
@@ -607,7 +601,7 @@ ALTER TABLE `monthly_payments`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `pages`
