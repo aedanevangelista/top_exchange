@@ -10,6 +10,14 @@ if (!isset($_SESSION['admin_user_id'])) {
     exit();
 }
 
+// Check if user has permission for Inventory
+try {
+    checkRole('Inventory');
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'message' => 'You do not have permission to manage inventory']);
+    exit();
+}
+
 if (!isset($_POST['name']) || !isset($_POST['stock_quantity'])) {
     echo json_encode(['success' => false, 'message' => 'Missing required fields']);
     exit();
@@ -40,9 +48,9 @@ $stmt->close();
 // Insert new material
 $stmt = $conn->prepare("INSERT INTO raw_materials (name, stock_quantity) VALUES (?, ?)");
 $stmt->bind_param("sd", $name, $stock_quantity);
-$stmt->execute();
+$success = $stmt->execute();
 
-if ($stmt->affected_rows > 0) {
+if ($success) {
     echo json_encode(['success' => true, 'message' => 'Material added successfully']);
 } else {
     echo json_encode(['success' => false, 'message' => 'Failed to add material: ' . $conn->error]);
