@@ -173,6 +173,16 @@ if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
     exit;
 }
 
+// Fetch raw materials for ingredients dropdown
+$raw_materials_sql = "SELECT material_id, name FROM raw_materials ORDER BY name";
+$raw_materials = $conn->query($raw_materials_sql);
+$raw_materials_list = [];
+if ($raw_materials->num_rows > 0) {
+    while ($row = $raw_materials->fetch_assoc()) {
+        $raw_materials_list[] = $row;
+    }
+}
+
 $sql = "SELECT DISTINCT category FROM products ORDER BY category";
 $categories = $conn->query($sql);
 
@@ -350,6 +360,93 @@ $result = $conn->query($sql);
         .product-name {
             font-weight: bold;
         }
+        
+        .view-ingredients-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+            display: inline-flex;
+            align-items: center;
+            font-size: 12px;
+        }
+        
+        .view-ingredients-btn i {
+            margin-right: 5px;
+        }
+        
+        .view-ingredients-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .edit-btn {
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .edit-btn i {
+            margin-right: 5px;
+        }
+        
+        .ingredients-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .ingredients-table th, 
+        .ingredients-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .ingredients-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        .add-ingredient-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .add-ingredient-btn i {
+            margin-right: 5px;
+        }
+        
+        .remove-ingredient-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .ingredient-quantity {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .ingredient-select {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
     </style>
 </head>
 
@@ -427,17 +524,19 @@ $result = $conn->query($sql);
                             
                             echo "</td>
                                     <td class='additional-desc'>" . htmlspecialchars($row['additional_description'] ?? '') . "</td>
-                                        <td class='adjust-stock'>
-                                            <button class='add-btn' onclick='updateStock({$row['product_id']}, \"add\")'>Add</button>
-                                            <input type='number' id='adjust-{$row['product_id']}' min='1' value='1'>
-                                            <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\")'>Remove</button>
-                                        </td>
-                                        <td>
+                                    <td class='adjust-stock'>
+                                        <button class='add-btn' onclick='updateStock({$row['product_id']}, \"add\")'>Add</button>
+                                        <input type='number' id='adjust-{$row['product_id']}' min='1' value='1'>
+                                        <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\")'>Remove</button>
+                                    </td>
+                                    <td>
+                                        <button class='view-ingredients-btn' onclick='viewIngredients({$row['product_id']})'>
+                                            <i class='fas fa-list'></i> View Ingredients
+                                        </button>
                                         <button class='edit-btn' onclick='editProduct({$row['product_id']})'>
-                                                <i class='fas fa-edit'></i> Edit
-                                            </button>
-                                        </td>
- 
+                                            <i class='fas fa-edit'></i> Edit
+                                        </button>
+                                    </td>
                                 </tr>";
                         }
                     } else {
@@ -598,6 +697,44 @@ $result = $conn->query($sql);
             </div>
         </div>
 
+        <!-- Ingredients Modal -->
+        <div id="ingredientsModal" class="overlay" style="display: none;">
+            <div class="overlay-content">
+                <h2><i class="fas fa-list"></i> <span id="ingredients-product-name"></span> - Ingredients</h2>
+                <div id="ingredientsError" class="error-message"></div>
+                
+                <form id="ingredients-form">
+                    <input type="hidden" id="ingredients_product_id">
+                    
+                    <table class="ingredients-table" id="ingredients-table">
+                        <thead>
+                            <tr>
+                                <th>Ingredient</th>
+                                <th>Quantity (grams)</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ingredients-tbody">
+                            <!-- Rows will be added dynamically -->
+                        </tbody>
+                    </table>
+                    
+                    <button type="button" class="add-ingredient-btn" onclick="addIngredientRow()">
+                        <i class="fas fa-plus"></i> Add Ingredient
+                    </button>
+                    
+                    <div class="form-buttons">
+                        <button type="button" class="cancel-btn" onclick="closeIngredientsModal()">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="button" class="save-btn" onclick="saveIngredients()">
+                            <i class="fas fa-save"></i> Save Ingredients
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div id="myModal" class="modal">
             <span class="close" onclick="closeModal()">&times;</span>
             <img class="modal-content" id="img01">
@@ -608,6 +745,9 @@ $result = $conn->query($sql);
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script>
+        // Store raw materials for the ingredients dropdown
+        const rawMaterials = <?php echo json_encode($raw_materials_list); ?>;
+        
         toastr.options = {
             "positionClass": "toast-bottom-right",
             "opacity": 1
@@ -689,136 +829,136 @@ $result = $conn->query($sql);
         });
 
         document.getElementById('add-product-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const categorySelect = document.getElementById('category');
-    let category = categorySelect.value;
-    
-    if (category === 'new') {
-        category = document.getElementById('new_category').value;
-        if (!category.trim()) {
-            document.getElementById('addProductError').textContent = 'Please enter a new category name.';
-            return;
-        }
-    }
-    
-    const productNameSelect = document.getElementById('product_name');
-    let product_name = productNameSelect.value;
-    
-    if (product_name === 'new') {
-        product_name = document.getElementById('new_product_name').value;
-        if (!product_name.trim()) {
-            document.getElementById('addProductError').textContent = 'Please enter a new product name.';
-            return;
-        }
-    }
-    
-    const item_description = document.getElementById('item_description').value;
-    const packaging = document.getElementById('packaging').value;
-    const price = document.getElementById('price').value;
-    const additional_description = document.getElementById('additional_description').value;
-    
-    const formData = new FormData();
-    formData.append('category', category);
-    formData.append('product_name', product_name);
-    formData.append('item_description', item_description);
-    formData.append('packaging', packaging);
-    formData.append('price', price);
-    formData.append('additional_description', additional_description);
-    formData.append('stock_quantity', 0);
-    
-    const product_image = document.getElementById('product_image').files[0];
-    if (product_image) {
-        formData.append('product_image', product_image);
-    }
-    
-    // Clear previous error messages
-    document.getElementById('addProductError').textContent = '';
-    
-    fetch("../../backend/add_product.php", {
-        method: "POST",
-        body: formData
-    })
-    .then(response => {
-        return response.text().then(text => {
-            try {
-                // Try to parse as JSON
-                return JSON.parse(text);
-            } catch (e) {
-                // If parsing fails, log the raw response and throw an error
-                console.error("Invalid JSON response:", text);
-                throw new Error("Server returned invalid response: " + text.substring(0, 50) + "...");
+            e.preventDefault();
+            
+            const categorySelect = document.getElementById('category');
+            let category = categorySelect.value;
+            
+            if (category === 'new') {
+                category = document.getElementById('new_category').value;
+                if (!category.trim()) {
+                    document.getElementById('addProductError').textContent = 'Please enter a new category name.';
+                    return;
+                }
             }
+            
+            const productNameSelect = document.getElementById('product_name');
+            let product_name = productNameSelect.value;
+            
+            if (product_name === 'new') {
+                product_name = document.getElementById('new_product_name').value;
+                if (!product_name.trim()) {
+                    document.getElementById('addProductError').textContent = 'Please enter a new product name.';
+                    return;
+                }
+            }
+            
+            const item_description = document.getElementById('item_description').value;
+            const packaging = document.getElementById('packaging').value;
+            const price = document.getElementById('price').value;
+            const additional_description = document.getElementById('additional_description').value;
+            
+            const formData = new FormData();
+            formData.append('category', category);
+            formData.append('product_name', product_name);
+            formData.append('item_description', item_description);
+            formData.append('packaging', packaging);
+            formData.append('price', price);
+            formData.append('additional_description', additional_description);
+            formData.append('stock_quantity', 0);
+            
+            const product_image = document.getElementById('product_image').files[0];
+            if (product_image) {
+                formData.append('product_image', product_image);
+            }
+            
+            // Clear previous error messages
+            document.getElementById('addProductError').textContent = '';
+            
+            fetch("../../backend/add_product.php", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => {
+                return response.text().then(text => {
+                    try {
+                        // Try to parse as JSON
+                        return JSON.parse(text);
+                    } catch (e) {
+                        // If parsing fails, log the raw response and throw an error
+                        console.error("Invalid JSON response:", text);
+                        throw new Error("Server returned invalid response: " + text.substring(0, 50) + "...");
+                    }
+                });
+            })
+            .then(data => {
+                if (data.success) {
+                    toastr.success(data.message, { timeOut: 3000, closeButton: true });
+                    closeAddProductModal();
+                    window.location.reload();
+                } else {
+                    document.getElementById('addProductError').textContent = data.message || 'An unknown error occurred';
+                }
+            })
+            .catch(error => {
+                toastr.error(error.message, { timeOut: 3000, closeButton: true });
+                document.getElementById('addProductError').textContent = error.message;
+                console.error("Error:", error);
+            });
         });
-    })
-    .then(data => {
-        if (data.success) {
-            toastr.success(data.message, { timeOut: 3000, closeButton: true });
-            closeAddProductModal();
-            window.location.reload();
-        } else {
-            document.getElementById('addProductError').textContent = data.message || 'An unknown error occurred';
-        }
-    })
-    .catch(error => {
-        toastr.error(error.message, { timeOut: 3000, closeButton: true });
-        document.getElementById('addProductError').textContent = error.message;
-        console.error("Error:", error);
-    });
-});
 
-// Similar updates for the edit form submission handler
-document.getElementById('edit-product-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const categorySelect = document.getElementById('edit_category');
-    if (categorySelect.value === 'new' && !document.getElementById('edit_new_category').value.trim()) {
-        document.getElementById('editProductError').textContent = 'Please enter a new category name.';
-        return;
-    }
-    
-    const productNameSelect = document.getElementById('edit_product_name');
-    if (productNameSelect.value === 'new' && !document.getElementById('edit_new_product_name').value.trim()) {
-        document.getElementById('editProductError').textContent = 'Please enter a new product name.';
-        return;
-    }
-    
-    const formData = new FormData(this);
-    
-    // Clear previous error messages
-    document.getElementById('editProductError').textContent = '';
-    
-    fetch(window.location.href, {
-        method: "POST",
-        body: formData
-    })
-    .then(response => {
-        return response.text().then(text => {
-            try {
-                // Try to parse as JSON
-                return JSON.parse(text);
-            } catch (e) {
-                // If parsing fails, log the raw response and throw an error
-                console.error("Invalid JSON response:", text);
-                throw new Error("Server returned invalid response: " + text.substring(0, 50) + "...");
+        // Similar updates for the edit form submission handler
+        document.getElementById('edit-product-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const categorySelect = document.getElementById('edit_category');
+            if (categorySelect.value === 'new' && !document.getElementById('edit_new_category').value.trim()) {
+                document.getElementById('editProductError').textContent = 'Please enter a new category name.';
+                return;
             }
+            
+            const productNameSelect = document.getElementById('edit_product_name');
+            if (productNameSelect.value === 'new' && !document.getElementById('edit_new_product_name').value.trim()) {
+                document.getElementById('editProductError').textContent = 'Please enter a new product name.';
+                return;
+            }
+            
+            const formData = new FormData(this);
+            
+            // Clear previous error messages
+            document.getElementById('editProductError').textContent = '';
+            
+            fetch(window.location.href, {
+                method: "POST",
+                body: formData
+            })
+            .then(response => {
+                return response.text().then(text => {
+                    try {
+                        // Try to parse as JSON
+                        return JSON.parse(text);
+                    } catch (e) {
+                        // If parsing fails, log the raw response and throw an error
+                        console.error("Invalid JSON response:", text);
+                        throw new Error("Server returned invalid response: " + text.substring(0, 50) + "...");
+                    }
+                });
+            })
+            .then(data => {
+                if (data.success) {
+                    toastr.success(data.message, { timeOut: 3000, closeButton: true });
+                    closeEditProductModal();
+                    window.location.reload();
+                } else {
+                    document.getElementById('editProductError').textContent = data.message || 'An unknown error occurred';
+                }
+            })
+            .catch(error => {
+                toastr.error(error.message, { timeOut: 3000, closeButton: true });
+                document.getElementById('editProductError').textContent = error.message;
+                console.error("Error:", error);
+            });
         });
-    })
-    .then(data => {
-        if (data.success) {
-            toastr.success(data.message, { timeOut: 3000, closeButton: true });
-            closeEditProductModal();
-            window.location.reload();
-        } else {
-            document.getElementById('editProductError').textContent = data.message || 'An unknown error occurred';
-        }
-    })
-    .catch(error => {
-        toastr.error(error.message, { timeOut: 3000, closeButton: true });
-        document.getElementById('editProductError').textContent = error.message;
-        console.error("Error:", error);
-    });
-});
 
         function openAddProductForm() {
             document.getElementById('addProductModal').style.display = 'flex';
@@ -836,7 +976,11 @@ document.getElementById('edit-product-form').addEventListener('submit', function
             document.getElementById('editProductModal').style.display = 'none';
         }
 
-        // Replace the editProduct function (around line 798) with this improved version
+        function closeIngredientsModal() {
+            document.getElementById('ingredientsModal').style.display = 'none';
+        }
+
+        // Replace the editProduct function with this improved version
         function editProduct(productId) {
             fetch(`../pages/api/get_product.php?id=${productId}`)
                 .then(response => {
@@ -923,6 +1067,132 @@ document.getElementById('edit-product-form').addEventListener('submit', function
                 });
         }
 
+        function viewIngredients(productId) {
+            fetch(`../pages/api/get_product_ingredients.php?id=${productId}`)
+                .then(response => {
+                    return response.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch (e) {
+                            console.error("Invalid JSON response:", text);
+                            throw new Error("Server returned invalid response");
+                        }
+                    });
+                })
+                .then(product => {
+                    // Set product name in the modal title
+                    document.getElementById('ingredients-product-name').textContent = product.item_description;
+                    
+                    // Set product ID for form submission
+                    document.getElementById('ingredients_product_id').value = product.product_id;
+                    
+                    // Clear previous ingredients table
+                    const tbody = document.getElementById('ingredients-tbody');
+                    tbody.innerHTML = '';
+                    
+                    // Add ingredient rows
+                    if (product.ingredients && product.ingredients.length > 0) {
+                        product.ingredients.forEach(ingredient => {
+                            addIngredientRow(ingredient[0], ingredient[1]);
+                        });
+                    } else {
+                        // Add an empty row if no ingredients
+                        addIngredientRow();
+                    }
+                    
+                    // Display the ingredients modal
+                    document.getElementById('ingredientsModal').style.display = 'flex';
+                    document.getElementById('ingredientsError').textContent = '';
+                })
+                .catch(error => {
+                    toastr.error("Error fetching ingredients: " + error.message, { timeOut: 3000, closeButton: true });
+                    console.error("Error fetching ingredients:", error);
+                });
+        }
+
+        function addIngredientRow(ingredientName = '', quantity = '') {
+            const tbody = document.getElementById('ingredients-tbody');
+            const row = document.createElement('tr');
+            
+            // Create ingredient select dropdown
+            let selectHtml = `<select class="ingredient-select">
+                                <option value="">Select Ingredient</option>`;
+                                
+            rawMaterials.forEach(material => {
+                const selected = material.name === ingredientName ? 'selected' : '';
+                selectHtml += `<option value="${material.name}" ${selected}>${material.name}</option>`;
+            });
+            
+            selectHtml += '</select>';
+            
+            // Add row content
+            row.innerHTML = `
+                <td>${selectHtml}</td>
+                <td><input type="number" class="ingredient-quantity" min="0" step="1" value="${quantity}"></td>
+                <td><button type="button" class="remove-ingredient-btn" onclick="removeIngredientRow(this)"><i class="fas fa-trash"></i></button></td>
+            `;
+            
+            tbody.appendChild(row);
+        }
+
+        function removeIngredientRow(button) {
+            const row = button.closest('tr');
+            row.remove();
+        }
+
+        function saveIngredients() {
+            const productId = document.getElementById('ingredients_product_id').value;
+            const rows = document.querySelectorAll('#ingredients-tbody tr');
+            const ingredients = [];
+            
+            rows.forEach(row => {
+                const ingredientSelect = row.querySelector('.ingredient-select');
+                const quantityInput = row.querySelector('.ingredient-quantity');
+                
+                const ingredientName = ingredientSelect.value;
+                const quantity = parseInt(quantityInput.value);
+                
+                if (ingredientName && !isNaN(quantity)) {
+                    ingredients.push([ingredientName, quantity]);
+                }
+            });
+            
+            // Clear previous error messages
+            document.getElementById('ingredientsError').textContent = '';
+            
+            fetch("../pages/api/update_ingredients.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    product_id: productId, 
+                    ingredients: ingredients 
+                })
+            })
+            .then(response => {
+                return response.text().then(text => {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error("Invalid JSON response:", text);
+                        throw new Error("Server returned invalid response");
+                    }
+                });
+            })
+            .then(data => {
+                if (data.success) {
+                    toastr.success(data.message, { timeOut: 3000, closeButton: true });
+                    closeIngredientsModal();
+                } else {
+                    document.getElementById('ingredientsError').textContent = data.message || 'An unknown error occurred';
+                }
+            })
+            .catch(error => {
+                toastr.error("Error updating ingredients: " + error.message, { timeOut: 3000, closeButton: true });
+                document.getElementById('ingredientsError').textContent = error.message;
+                console.error("Error updating ingredients:", error);
+            });
+        }
+
         function updateStock(productId, action) {
             const amount = document.getElementById(`adjust-${productId}`).value;
 
@@ -981,6 +1251,7 @@ document.getElementById('edit-product-form').addEventListener('submit', function
         window.addEventListener('click', function(e) {
             const addProductModal = document.getElementById('addProductModal');
             const editProductModal = document.getElementById('editProductModal');
+            const ingredientsModal = document.getElementById('ingredientsModal');
             const imgModal = document.getElementById('myModal');
             
             if (e.target === addProductModal) {
@@ -989,6 +1260,10 @@ document.getElementById('edit-product-form').addEventListener('submit', function
             
             if (e.target === editProductModal) {
                 closeEditProductModal();
+            }
+            
+            if (e.target === ingredientsModal) {
+                closeIngredientsModal();
             }
             
             if (e.target === imgModal) {
