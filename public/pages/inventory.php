@@ -536,9 +536,9 @@ $result = $conn->query($sql);
                                     </button>
                                 </td>
                                 <td class='adjust-stock'>
-                                    <button class='add-btn' onclick='updateStock({$row['product_id']}, \"add\")'>Add</button>
+                                    <button class='add-btn' onclick='updateStock({$row['product_id']}, \"add\")'>+</button>
                                     <input type='number' id='adjust-{$row['product_id']}' min='1' value='1'>
-                                    <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\")'>Remove</button>
+                                    <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\")'>-</button>
                                 </td>
                                 <td>
                                     <button class='edit-btn' onclick='editProduct({$row['product_id']})'>
