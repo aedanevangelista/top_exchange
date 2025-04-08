@@ -366,14 +366,12 @@ $result = $conn->query($sql);
             color: white;
             border: none;
             padding: 5px 10px;
-            border-radius: 50%; /* Circular border radius */
+            border-radius: 80px; /* Circular border radius */
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             font-size: 12px;
-            width: 36px;
-            height: 36px;
         }
 
         .view-ingredients-btn i {
