@@ -1,59 +1,67 @@
 <?php
 session_start();
-require_once "db_connection.php"; // Use require_once instead of include
+include "../db_connection.php";
 
-header('Content-Type: application/json'); // Add this line
-
-// Ensure the user is logged in for security
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'error' => 'Unauthorized access.']);
-    exit;
+// Check if user is logged in
+if (!isset($_SESSION['admin_user_id'])) {
+    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
+    exit();
 }
 
-// Check if request method is POST
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'error' => 'Invalid request method.']);
-    exit;
-}
-
-// Retrieve and sanitize form data
-$po_number = isset($_POST['po_number']) ? trim($_POST['po_number']) : '';
-$status = isset($_POST['status']) ? trim($_POST['status']) : '';
-
-// Validate inputs
-if (empty($po_number) || empty($status)) {
-    echo json_encode(['success' => false, 'error' => 'Missing required fields.']);
-    exit;
-}
-
-// Update allowed statuses to match your frontend
-$allowedStatuses = ['Active', 'Rejected', 'Pending', 'Completed'];
-if (!in_array($status, $allowedStatuses)) {
-    echo json_encode(['success' => false, 'error' => 'Invalid status value.']);
-    exit;
-}
-
-try {
-    // Prepare the SQL statement to update the status
-    $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE po_number = ?");
-    if ($stmt === false) {
-        throw new Exception($conn->error);
+// Verify request method and required data
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && isset($_POST['status'])) {
+    $order_id = $_POST['order_id'];
+    $status = $_POST['status'];
+    $username = $_POST['username'] ?? $_SESSION['admin_username'];
+    $timestamp = $_POST['timestamp'] ?? date('Y-m-d H:i:s');
+    
+    // Validate status (only allow Active or Rejected)
+    if ($status !== 'Active' && $status !== 'Rejected') {
+        echo json_encode(['success' => false, 'message' => 'Invalid status value']);
+        exit();
     }
-
-    // Bind parameters (s = string)
-    $stmt->bind_param("ss", $status, $po_number);
-
-    // Execute the statement
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true]);
+    
+    // First verify the order exists and is in 'Pending' status
+    $check_sql = "SELECT * FROM orders WHERE id = ? AND status = 'Pending'";
+    $check_stmt = $conn->prepare($check_sql);
+    $check_stmt->bind_param("i", $order_id);
+    $check_stmt->execute();
+    $result = $check_stmt->get_result();
+    
+    if ($result->num_rows === 0) {
+        echo json_encode(['success' => false, 'message' => 'Order not found or not in Pending status']);
+        $check_stmt->close();
+        exit();
+    }
+    $check_stmt->close();
+    
+    // Update order status
+    $update_sql = "UPDATE orders SET status = ? WHERE id = ?";
+    $update_stmt = $conn->prepare($update_sql);
+    $update_stmt->bind_param("si", $status, $order_id);
+    
+    if ($update_stmt->execute()) {
+        // Log the status change in order_status_history table if it exists
+        $order_data = $result->fetch_assoc();
+        
+        // Check if order_status_history table exists (you can create this if needed)
+        $table_check = $conn->query("SHOW TABLES LIKE 'order_status_history'");
+        if ($table_check->num_rows > 0) {
+            $log_sql = "INSERT INTO order_status_history (order_id, po_number, old_status, new_status, changed_by, changed_at) 
+                        VALUES (?, ?, 'Pending', ?, ?, ?)";
+            $log_stmt = $conn->prepare($log_sql);
+            $log_stmt->bind_param("issss", $order_id, $order_data['po_number'], $status, $username, $timestamp);
+            $log_stmt->execute();
+            $log_stmt->close();
+        }
+        
+        $update_stmt->close();
+        echo json_encode(['success' => true, 'message' => 'Order status updated successfully']);
     } else {
-        throw new Exception('Database update failed.');
+        $update_stmt->close();
+        echo json_encode(['success' => false, 'message' => 'Failed to update order status: ' . $conn->error]);
     }
-
-    // Close the statement
-    $stmt->close();
-} catch (Exception $e) {
-    error_log($e->getMessage());
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+} else {
+    echo json_encode(['success' => false, 'message' => 'Invalid request parameters']);
 }
 ?>
