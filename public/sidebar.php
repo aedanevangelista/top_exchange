@@ -119,10 +119,21 @@ $allowedPages = array_map('trim', explode(',', $pages));
                 </div>
             <?php endif; ?>
 
+            <!-- Inventory Menu with Submenus -->
             <?php if (in_array('Inventory', $allowedPages)): ?>
-                <a href="/public/pages/inventory.php" class="menu-item">
-                    <i class="fas fa-box"></i> Inventory
-                </a>
+                <div class="submenu">
+                    <span class="menu-item no-hover">
+                        <i class="fas fa-box"></i> Inventory
+                    </span>
+                    <div class="submenu-items">
+                        <a href="/public/pages/inventory.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Finished Products
+                        </a>
+                        <a href="/public/pages/raw_materials.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Raw Materials
+                        </a>
+                    </div>
+                </div>
             <?php endif; ?>
         </div>
     </div>
