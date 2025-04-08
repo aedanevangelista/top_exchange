@@ -343,6 +343,11 @@ $result = $conn->query($sql);
             background-color: #f44336;
             color: white;
         }
+
+        .cancel-btn:hover {
+            background-color:rgb(155, 18, 8);
+            color: white;
+        }
         
         .error-message {
             color: red;
