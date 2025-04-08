@@ -2,460 +2,274 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Orders');
-
-if (!isset($_SESSION['admin_user_id'])) {
-    header("Location: /public/login.php");
-    exit();
-}
+checkRole('Orders'); // Ensure the user has access to the Orders page
 
 // Get current user information
 $username = $_SESSION['admin_username'] ?? 'System';
 $currentDateTime = date('Y-m-d H:i:s');
 
-// Fetch pending orders
-$sql = "SELECT o.*, c.username, c.company FROM orders o 
-        LEFT JOIN clients_accounts c ON o.username = c.username 
-        WHERE o.status = 'Pending'
-        ORDER BY o.order_date DESC";
-$result = $conn->query($sql);
-?>
+// Fetch only pending orders
+$orders = []; // Initialize $orders as an empty array
+$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status FROM orders WHERE status = 'Pending' ORDER BY delivery_date ASC";
 
+$stmt = $conn->prepare($sql);
+$stmt->execute();
+$result = $stmt->get_result();
+if ($result && $result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $orders[] = $row;
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pending Orders</title>
-    <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="/css/orders.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-    <style>
-        /* Main container styles */
-        .main-content {
-            padding: 20px;
-        }
-        
-        .header-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        
-        .header-section h1 {
-            font-size: 24px;
-            color: #333;
-            margin: 0;
-            display: flex;
-            align-items: center;
-        }
-        
-        .header-section h1 i {
-            margin-right: 10px;
-            color: #ff9800;
-        }
-        
-        .timestamp {
-            font-size: 14px;
-            color: #666;
-            text-align: right;
-            line-height: 1.5;
-        }
-        
-        /* Status badge styles */
-        .status-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .status-pending {
-            background-color: #ffc107;
-            color: #000;
-        }
-        
-        /* Orders container */
-        .orders-container {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        /* Table styles */
-        .orders-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .orders-table th, 
-        .orders-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .orders-table th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-            color: #333;
-        }
-        
-        .orders-table tr:hover {
-            background-color: #f5f5f5;
-        }
-        
-        .orders-table tr:last-child td {
-            border-bottom: none;
-        }
-        
-        /* Action buttons */
-        .action-buttons {
-            display: flex;
-            gap: 5px;
-        }
-        
-        .action-btn {
-            padding: 5px 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-        }
-        
-        .action-btn i {
-            margin-right: 5px;
-        }
-        
-        .view-btn {
-            background-color: #2196F3;
-            color: white;
-        }
-        
-        .view-btn:hover {
-            background-color: #0b7dda;
-        }
-        
-        .change-status-btn {
-            background-color: #ff9800;
-            color: white;
-        }
-        
-        .change-status-btn:hover {
-            background-color: #e68a00;
-        }
-        
-        .print-btn {
-            background-color: #4CAF50;
-            color: white;
-        }
-        
-        .print-btn:hover {
-            background-color: #45a049;
-        }
-        
-        /* Modal styles */
-        .status-modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-        
-        .status-modal-content {
-            background-color: white;
-            margin: 15% auto;
-            padding: 25px;
-            border-radius: 8px;
-            width: 400px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            position: relative;
-        }
-        
-        .status-modal-content h3 {
-            color: #333;
-            margin-top: 0;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .close-modal {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            font-size: 24px;
-            color: #aaa;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        
-        .close-modal:hover {
-            color: #333;
-        }
-        
-        .status-options {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 20px;
-        }
-        
-        .status-btn {
-            padding: 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-        
-        .status-btn i {
-            margin-right: 8px;
-        }
-        
-        .status-active {
-            background-color: #4CAF50;
-            color: white;
-        }
-        
-        .status-active:hover {
-            background-color: #45a049;
-        }
-        
-        .status-reject {
-            background-color: #f44336;
-            color: white;
-        }
-        
-        .status-reject:hover {
-            background-color: #d32f2f;
-        }
-        
-        /* Empty state */
-        .no-orders {
-            text-align: center;
-            padding: 40px 20px;
-            color: #666;
-        }
-        
-        .no-orders i {
-            font-size: 48px;
-            color: #ccc;
-            margin-bottom: 15px;
-            display: block;
-        }
-        
-        .no-orders h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            color: #333;
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .header-section {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .timestamp {
-                margin-top: 10px;
-                text-align: left;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-                gap: 5px;
-            }
-            
-            .action-btn {
-                width: 100%;
-            }
-            
-            .status-modal-content {
-                width: 90%;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <link rel="stylesheet" href="/css/toast.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
-    
     <div class="main-content">
-        <div class="header-section">
-            <h1><i class="fas fa-clock"></i> Pending Orders</h1>
+        <div class="orders-header">
+            <h1>Pending Orders</h1>
             <div class="timestamp">
-                Current Date and Time (UTC): <?php echo date('Y-m-d H:i:s'); ?><br>
+                Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): <?php echo date('Y-m-d H:i:s'); ?><br>
                 Current User's Login: <?php echo htmlspecialchars($_SESSION['admin_username']); ?>
             </div>
         </div>
-
-        <div class="orders-container">
-            <?php if ($result->num_rows > 0): ?>
-                <table class="orders-table">
-                    <thead>
-                        <tr>
-                            <th>PO Number</th>
-                            <th>Client</th>
-                            <th>Order Date</th>
-                            <th>Delivery Date</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php while($row = $result->fetch_assoc()): ?>
+        <div class="orders-table-container">
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>PO Number</th>
+                        <th>Username</th>
+                        <th>Order Date</th>
+                        <th>Delivery Date</th>
+                        <th>Delivery Address</th>
+                        <th>Orders</th>
+                        <th>Total Amount</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (count($orders) > 0): ?>
+                        <?php foreach ($orders as $order): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($row['po_number']); ?></td>
-                                <td><?php echo htmlspecialchars($row['company'] ? $row['company'] : $row['username']); ?></td>
-                                <td><?php echo htmlspecialchars($row['order_date']); ?></td>
-                                <td><?php echo htmlspecialchars($row['delivery_date']); ?></td>
-                                <td>₱<?php echo number_format($row['total_amount'], 2); ?></td>
-                                <td><span class="status-badge status-pending">Pending</span></td>
+                                <td><?= htmlspecialchars($order['po_number']) ?></td>
+                                <td><?= htmlspecialchars($order['username']) ?></td>
+                                <td><?= htmlspecialchars($order['order_date']) ?></td>
+                                <td><?= htmlspecialchars($order['delivery_date']) ?></td>
+                                <td><?= htmlspecialchars($order['delivery_address']) ?></td>
+                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
+                                <i class="fas fa-clipboard-list"></i>    
+                                View Orders</button></td>
+                                <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
-                                    <div class="action-buttons">
-                                        <button class="action-btn view-btn" onclick="viewOrderDetails('<?php echo $row['id']; ?>')">
-                                            <i class="fas fa-eye"></i> View
-                                        </button>
-                                        <button class="action-btn change-status-btn" onclick="openStatusModal('<?php echo $row['id']; ?>')">
-                                            <i class="fas fa-exchange-alt"></i> Change Status
-                                        </button>
-                                        <button class="action-btn print-btn" onclick="printOrder('<?php echo $row['id']; ?>')">
-                                            <i class="fas fa-print"></i> Print
-                                        </button>
-                                    </div>
+                                    <span class="status-badge status-pending">Pending</span>
+                                </td>
+                                <td class="action-buttons">
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
+                                    <i class="fas fa-exchange-alt"></i> Change Status
+                                </button>
                                 </td>
                             </tr>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="9" class="no-orders">No pending orders found.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Order Details Modal -->
+    <div id="orderDetailsModal" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2><i class="fas fa-box-open"></i> Order Details</h2>
+            <div class="order-details-container">
+                <table class="order-details-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Product</th>
+                            <th>Packaging</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderDetailsBody">
+                        <!-- Order details will be populated here -->
                     </tbody>
                 </table>
-            <?php else: ?>
-                <div class="no-orders">
-                    <i class="fas fa-info-circle"></i>
-                    <h3>No Pending Orders</h3>
-                    <p>There are currently no orders with pending status.</p>
-                </div>
-            <?php endif; ?>
-        </div>
-        
-        <!-- Status Change Modal -->
-        <div id="statusModal" class="status-modal">
-            <div class="status-modal-content">
-                <span class="close-modal" onclick="closeStatusModal()">&times;</span>
-                <h3>Change Order Status</h3>
-                <p>Select a new status for this order:</p>
-                <input type="hidden" id="orderId" value="">
-                <div class="status-options">
-                    <button class="status-btn status-active" onclick="changeStatus('Active')">
-                        <i class="fas fa-check-circle"></i> Approve (Active)
-                    </button>
-                    <button class="status-btn status-reject" onclick="changeStatus('Rejected')">
-                        <i class="fas fa-times-circle"></i> Reject
-                    </button>
-                </div>
+            </div>
+            <div class="form-buttons" style="margin-top: 20px;">
+                <button type="button" class="back-btn" onclick="closeOrderDetailsModal()">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
             </div>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <!-- Modified Status Modal (Only Accept/Reject options) -->
+    <div id="statusModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Change Status</h2>
+            <p id="statusMessage"></p>
+            <div class="status-buttons">
+                <button onclick="changeStatus('Active')" class="modal-status-btn active">
+                    <i class="fas fa-check"></i> Accept
+                </button>
+                <button onclick="changeStatus('Rejected')" class="modal-status-btn reject">
+                    <i class="fas fa-ban"></i> Reject
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeStatusModal()" class="modal-cancel-btn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Configure toastr
-        toastr.options = {
-            "closeButton": true,
-            "positionClass": "toast-bottom-right",
-            "showDuration": "300",
-            "hideDuration": "1000",
-            "timeOut": "5000",
-            "extendedTimeOut": "1000",
-            "showMethod": "fadeIn",
-            "hideMethod": "fadeOut"
-        };
-        
-        // Open order details in a new page
-        function viewOrderDetails(orderId) {
-            window.location.href = `/public/pages/order_details.php?id=${orderId}`;
+        // Configure toast notifications
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                    <div class="message">${message}</div>
+                </div>
+                <i class="fas fa-times close" onclick="this.parentElement.remove()"></i>
+            `;
+            document.getElementById('toast-container').appendChild(toast);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => {
+                    toast.remove();
+                }, 500);
+            }, 5000);
         }
         
-        // Open status change modal
-        function openStatusModal(orderId) {
-            document.getElementById('orderId').value = orderId;
+        // Function to filter orders by status
+        function filterByStatus() {
+            const status = document.getElementById('statusFilter').value;
+            window.location.href = `/public/pages/pending_orders.php${status ? '?status=' + status : ''}`;
+        }
+        
+        // Variables to store current PO number and username
+        let currentPO = '';
+        let currentUsername = '';
+        
+        // Function to open status change modal
+        function openStatusModal(poNumber, username) {
+            currentPO = poNumber;
+            currentUsername = username;
+            
+            document.getElementById('statusMessage').textContent = `Change status for order ${poNumber} (${username})`;
             document.getElementById('statusModal').style.display = 'block';
         }
         
-        // Close status change modal
+        // Function to close status modal
         function closeStatusModal() {
             document.getElementById('statusModal').style.display = 'none';
         }
         
-        // Change order status
+        // Function to change order status
         function changeStatus(newStatus) {
-            const orderId = document.getElementById('orderId').value;
+            if (!currentPO) return;
             
             // Send AJAX request to update status
-            $.ajax({
-                url: '/backend/update_order_status.php',
-                type: 'POST',
-                data: {
-                    order_id: orderId,
-                    status: newStatus,
-                    timestamp: '<?php echo $currentDateTime; ?>',
-                    username: '<?php echo $username; ?>'
+            fetch('/backend/update_order_status.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                success: function(response) {
-                    try {
-                        const data = JSON.parse(response);
-                        if (data.success) {
-                            toastr.success('Order status updated successfully');
-                            // Reload page after short delay
-                            setTimeout(() => {
-                                location.reload();
-                            }, 1500);
-                        } else {
-                            toastr.error('Error: ' + data.message);
-                        }
-                    } catch (e) {
-                        toastr.error('Invalid response from server');
-                    }
-                    closeStatusModal();
-                },
-                error: function() {
-                    toastr.error('Error communicating with server');
-                    closeStatusModal();
+                body: `po_number=${encodeURIComponent(currentPO)}&status=${encodeURIComponent(newStatus)}&timestamp=${encodeURIComponent('<?php echo $currentDateTime; ?>')}&username=${encodeURIComponent('<?php echo $username; ?>')}`,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(`Order status updated to ${newStatus}`, 'success');
+                    // Reload page after a short delay
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showToast(data.message || 'Error updating status', 'error');
                 }
+                closeStatusModal();
+            })
+            .catch(error => {
+                showToast('Error communicating with server', 'error');
+                console.error('Error:', error);
+                closeStatusModal();
             });
         }
         
-        // Print order function
-        function printOrder(orderId) {
-            window.open(`/public/pages/print_order.php?id=${orderId}`, '_blank');
-        }
-        
-        // Close modal if clicked outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('statusModal');
-            if (event.target == modal) {
-                closeStatusModal();
+        // Function to view order details
+        function viewOrderDetails(ordersJSON) {
+            try {
+                const orders = JSON.parse(ordersJSON);
+                const tbody = document.getElementById('orderDetailsBody');
+                tbody.innerHTML = '';
+                
+                orders.forEach(order => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${order.category || ''}</td>
+                        <td>${order.item_description || ''}</td>
+                        <td>${order.packaging || ''}</td>
+                        <td>PHP ${parseFloat(order.price).toFixed(2)}</td>
+                        <td>${order.quantity || '0'}</td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+                
+                document.getElementById('orderDetailsModal').style.display = 'block';
+            } catch (e) {
+                showToast('Error parsing order details', 'error');
+                console.error('Error parsing order details:', e);
             }
         }
+        
+        // Function to close order details modal
+        function closeOrderDetailsModal() {
+            document.getElementById('orderDetailsModal').style.display = 'none';
+        }
+        
+        // Close modals if user clicks outside
+        window.onclick = function(event) {
+            const statusModal = document.getElementById('statusModal');
+            const orderDetailsModal = document.getElementById('orderDetailsModal');
+            
+            if (event.target === statusModal) {
+                closeStatusModal();
+            }
+            
+            if (event.target === orderDetailsModal) {
+                closeOrderDetailsModal();
+            }
+        };
     </script>
 </body>
 </html>
