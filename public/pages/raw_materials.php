@@ -141,19 +141,15 @@ $result = $conn->query($sql);
         }
         
         .adjust-stock input {
-            width: 80px;
+            width: 60px;
             text-align: center;
-            padding: 6px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
         }
         
         .add-btn, .remove-btn {
-            padding: 6px 12px;
+            padding: 5px 10px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            transition: all 0.2s;
         }
         
         .add-btn {
@@ -161,56 +157,9 @@ $result = $conn->query($sql);
             color: white;
         }
         
-        .add-btn:hover {
-            background-color: #45a049;
-        }
-        
         .remove-btn {
             background-color: #f44336;
             color: white;
-        }
-        
-        .remove-btn:hover {
-            background-color: #d32f2f;
-        }
-        
-        .edit-btn {
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .edit-btn:hover {
-            background-color: #0b7dda;
-        }
-        
-        .inventory-table th, .inventory-table td {
-            padding: 12px 15px;
-        }
-        
-        .inventory-table th {
-            background-color: #f2f2f2;
-        }
-        
-        .inventory-header {
-            margin-bottom: 30px;
-        }
-        
-        .add-product-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background-color: #4CAF50;
-            padding: 10px 15px;
-            font-size: 16px;
-        }
-        
-        .add-product-btn i {
-            font-size: 18px;
         }
     </style>
 </head>
@@ -321,9 +270,7 @@ $result = $conn->query($sql);
     <script>
         toastr.options = {
             "positionClass": "toast-bottom-right",
-            "opacity": 1,
-            "timeOut": 3000,
-            "closeButton": true
+            "opacity": 1
         };
 
         function searchMaterials() {
@@ -372,7 +319,7 @@ $result = $conn->query($sql);
                     document.getElementById('editMaterialError').textContent = '';
                 })
                 .catch(error => {
-                    toastr.error("Error fetching material details: " + error.message);
+                    toastr.error("Error fetching material details: " + error.message, { timeOut: 3000, closeButton: true });
                     console.error("Error fetching material details:", error);
                 });
         }
@@ -402,13 +349,13 @@ $result = $conn->query($sql);
             .then(data => {
                 if (data.success) {
                     document.getElementById(`stock-${materialId}`).textContent = Number(data.new_stock).toFixed(2);
-                    toastr.success(data.message);
+                    toastr.success(data.message, { timeOut: 3000, closeButton: true });
                 } else {
-                    toastr.error(data.message);
+                    toastr.error(data.message, { timeOut: 3000, closeButton: true });
                 }
             })
             .catch(error => {
-                toastr.error("Error updating stock: " + error.message);
+                toastr.error("Error updating stock: " + error.message, { timeOut: 3000, closeButton: true });
                 console.error("Error updating stock:", error);
             });
         }
@@ -446,7 +393,7 @@ $result = $conn->query($sql);
             })
             .then(data => {
                 if (data.success) {
-                    toastr.success(data.message);
+                    toastr.success(data.message, { timeOut: 3000, closeButton: true });
                     closeAddMaterialModal();
                     window.location.reload();
                 } else {
@@ -454,7 +401,7 @@ $result = $conn->query($sql);
                 }
             })
             .catch(error => {
-                toastr.error(error.message);
+                toastr.error(error.message, { timeOut: 3000, closeButton: true });
                 document.getElementById('addMaterialError').textContent = error.message;
                 console.error("Error:", error);
             });
@@ -495,7 +442,7 @@ $result = $conn->query($sql);
             })
             .then(data => {
                 if (data.success) {
-                    toastr.success(data.message);
+                    toastr.success(data.message, { timeOut: 3000, closeButton: true });
                     closeEditMaterialModal();
                     window.location.reload();
                 } else {
@@ -503,7 +450,7 @@ $result = $conn->query($sql);
                 }
             })
             .catch(error => {
-                toastr.error(error.message);
+                toastr.error(error.message, { timeOut: 3000, closeButton: true });
                 document.getElementById('editMaterialError').textContent = error.message;
                 console.error("Error:", error);
             });
