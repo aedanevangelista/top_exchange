@@ -44,17 +44,25 @@ $allowedPages = array_map('trim', explode(',', $pages));
                 </a>
             <?php endif; ?>
             
+            <!-- Production Menu with Submenu for Delivery Calendar (formerly Forecast) -->
             <?php if (in_array('Forecast', $allowedPages)): ?>
-                <a href="/public/pages/forecast.php" class="menu-item">
-                    <i class="fas fa-chart-line"></i> Forecast
-                </a>
-            <?php endif; ?>
-
-            <!-- Transactions Menu with Submenus -->
-            <?php if (in_array('Transactions', $allowedPages) || in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item no-hover">
-                        <i class="fas fa-exchange-alt"></i> Transactions
+                        <i class="fas fa-industry"></i> Production
+                    </span>
+                    <div class="submenu-items">
+                        <a href="/public/pages/forecast.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Delivery Calendar
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Ordering Menu with Submenus for Orders and Order History -->
+            <?php if (in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages)): ?>
+                <div class="submenu">
+                    <span class="menu-item no-hover">
+                        <i class="fas fa-shopping-cart"></i> Ordering
                     </span>
                     <div class="submenu-items">
                         <?php if (in_array('Orders', $allowedPages)): ?>
@@ -66,12 +74,21 @@ $allowedPages = array_map('trim', explode(',', $pages));
                             <a href="/public/pages/order_history.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Order History
                             </a>
-                        <?php if (in_array('Payment History', $allowedPages)): ?>
-                            <a href="/public/pages/payment_history.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Payment History
-                            </a>
                         <?php endif; ?>
-                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Payments Menu with Submenu for Payment History -->
+            <?php if (in_array('Payment History', $allowedPages)): ?>
+                <div class="submenu">
+                    <span class="menu-item no-hover">
+                        <i class="fas fa-money-bill-wave"></i> Payments
+                    </span>
+                    <div class="submenu-items">
+                        <a href="/public/pages/payment_history.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Payment History
+                        </a>
                     </div>
                 </div>
             <?php endif; ?>
