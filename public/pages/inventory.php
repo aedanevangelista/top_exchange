@@ -362,24 +362,26 @@ $result = $conn->query($sql);
         }
         
         .view-ingredients-btn {
-            background-color: #2196F3;
+            background-color: #555555; /* Dark gray color */
             color: white;
             border: none;
             padding: 5px 10px;
-            border-radius: 4px;
+            border-radius: 50%; /* Circular border radius */
             cursor: pointer;
-            margin-right: 5px;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             font-size: 12px;
+            width: 36px;
+            height: 36px;
         }
-        
+
         .view-ingredients-btn i {
-            margin-right: 5px;
+            margin-right: 2px;
         }
-        
+
         .view-ingredients-btn:hover {
-            background-color: #0b7dda;
+            background-color: #333333; /* Darker gray on hover */
         }
         
         .edit-btn {
@@ -492,6 +494,7 @@ $result = $conn->query($sql);
                         <th>Stock Level</th>
                         <th>Image</th>
                         <th>Additional Description</th>
+                        <th>Ingredients</th>
                         <th>Adjust Stock</th>
                         <th>Actions</th>
                     </tr>
@@ -508,36 +511,38 @@ $result = $conn->query($sql);
                                                data-additional-description='" . htmlspecialchars($row['additional_description'] ?? '') . "'";
                             
                             echo "<tr $data_attributes>
-                                    <td>{$row['category']}</td>
-                                    <td class='product-name'>" . htmlspecialchars($row['product_name'] ?? '') . "</td>
-                                    <td>{$row['item_description']}</td>
-                                    <td>{$row['packaging']}</td>
-                                    <td>₱" . number_format($row['price'], 2) . "</td>
-                                    <td id='stock-{$row['product_id']}'>{$row['stock_quantity']}</td>
-                                    <td class='product-image-cell'>";
-                            
-                            if (!empty($row['product_image'])) {
-                                echo "<img src='" . htmlspecialchars($row['product_image']) . "' alt='Product Image' class='product-img' onclick='openModal(this)'>";
-                            } else {
-                                echo "<div class='no-image'>No image</div>";
-                            }
-                            
-                            echo "</td>
-                                    <td class='additional-desc'>" . htmlspecialchars($row['additional_description'] ?? '') . "</td>
-                                    <td class='adjust-stock'>
-                                        <button class='add-btn' onclick='updateStock({$row['product_id']}, \"add\")'>Add</button>
-                                        <input type='number' id='adjust-{$row['product_id']}' min='1' value='1'>
-                                        <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\")'>Remove</button>
-                                    </td>
-                                    <td>
-                                        <button class='view-ingredients-btn' onclick='viewIngredients({$row['product_id']})'>
-                                            <i class='fas fa-list'></i> View Ingredients
-                                        </button>
-                                        <button class='edit-btn' onclick='editProduct({$row['product_id']})'>
-                                            <i class='fas fa-edit'></i> Edit
-                                        </button>
-                                    </td>
-                                </tr>";
+                                <td>{$row['category']}</td>
+                                <td class='product-name'>" . htmlspecialchars($row['product_name'] ?? '') . "</td>
+                                <td>{$row['item_description']}</td>
+                                <td>{$row['packaging']}</td>
+                                <td>₱" . number_format($row['price'], 2) . "</td>
+                                <td id='stock-{$row['product_id']}'>{$row['stock_quantity']}</td>
+                                <td class='product-image-cell'>";
+                                
+                        if (!empty($row['product_image'])) {
+                            echo "<img src='" . htmlspecialchars($row['product_image']) . "' alt='Product Image' class='product-img' onclick='openModal(this)'>";
+                        } else {
+                            echo "<div class='no-image'>No image</div>";
+                        }
+
+                        echo "</td>
+                                <td class='additional-desc'>" . htmlspecialchars($row['additional_description'] ?? '') . "</td>
+                                <td>
+                                    <button class='view-ingredients-btn' onclick='viewIngredients({$row['product_id']})'>
+                                        <i class='fas fa-list'></i> View
+                                    </button>
+                                </td>
+                                <td class='adjust-stock'>
+                                    <button class='add-btn' onclick='updateStock({$row['product_id']}, \"add\")'>Add</button>
+                                    <input type='number' id='adjust-{$row['product_id']}' min='1' value='1'>
+                                    <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\")'>Remove</button>
+                                </td>
+                                <td>
+                                    <button class='edit-btn' onclick='editProduct({$row['product_id']})'>
+                                        <i class='fas fa-edit'></i> Edit
+                                    </button>
+                                </td>
+                            </tr>";
                         }
                     } else {
                         echo "<tr><td colspan='10'>No products found.</td></tr>";
