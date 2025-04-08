@@ -32,47 +32,138 @@ $result = $conn->query($sql);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
-        .order-card {
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            background-color: #f9f9f9;
+        /* Main container styles */
+        .main-content {
+            padding: 20px;
         }
         
-        .order-header {
+        .header-section {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #eee;
+            align-items: center;
+            margin-bottom: 20px;
             padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
         }
         
-        .order-details {
-            margin-bottom: 15px;
+        .header-section h1 {
+            font-size: 24px;
+            color: #333;
+            margin: 0;
+            display: flex;
+            align-items: center;
         }
         
-        .order-items {
-            margin-top: 15px;
+        .header-section h1 i {
+            margin-right: 10px;
+            color: #ff9800;
         }
         
-        .item-card {
-            border: 1px solid #eee;
-            border-radius: 5px;
-            padding: 10px;
-            margin-bottom: 10px;
-            background-color: white;
+        .timestamp {
+            font-size: 14px;
+            color: #666;
+            text-align: right;
+            line-height: 1.5;
         }
         
-        .status-pending {
-            background-color: #ffc107;
-            color: #000;
+        /* Status badge styles */
+        .status-badge {
+            display: inline-block;
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: bold;
         }
         
+        .status-pending {
+            background-color: #ffc107;
+            color: #000;
+        }
+        
+        /* Orders container */
+        .orders-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        /* Table styles */
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .orders-table th, 
+        .orders-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .orders-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .orders-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .orders-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* Action buttons */
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .action-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .action-btn i {
+            margin-right: 5px;
+        }
+        
+        .view-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .view-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .change-status-btn {
+            background-color: #ff9800;
+            color: white;
+        }
+        
+        .change-status-btn:hover {
+            background-color: #e68a00;
+        }
+        
+        .print-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .print-btn:hover {
+            background-color: #45a049;
+        }
+        
+        /* Modal styles */
         .status-modal {
             display: none;
             position: fixed;
@@ -87,25 +178,56 @@ $result = $conn->query($sql);
         .status-modal-content {
             background-color: white;
             margin: 15% auto;
-            padding: 20px;
-            border-radius: 5px;
-            width: 300px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            padding: 25px;
+            border-radius: 8px;
+            width: 400px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        
+        .status-modal-content h3 {
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+            color: #aaa;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .close-modal:hover {
+            color: #333;
         }
         
         .status-options {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             margin-top: 20px;
         }
         
         .status-btn {
-            padding: 8px;
+            padding: 10px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .status-btn i {
+            margin-right: 8px;
         }
         
         .status-active {
@@ -113,46 +235,63 @@ $result = $conn->query($sql);
             color: white;
         }
         
+        .status-active:hover {
+            background-color: #45a049;
+        }
+        
         .status-reject {
             background-color: #f44336;
             color: white;
         }
         
-        .close-modal {
-            float: right;
-            cursor: pointer;
-            font-size: 20px;
+        .status-reject:hover {
+            background-color: #d32f2f;
         }
         
-        .action-btn {
-            padding: 5px 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 5px;
-        }
-        
-        .view-btn {
-            background-color: #2196F3;
-            color: white;
-        }
-        
-        .change-status-btn {
-            background-color: #ff9800;
-            color: white;
-        }
-        
-        .print-btn {
-            background-color: #4CAF50;
-            color: white;
-        }
-        
+        /* Empty state */
         .no-orders {
             text-align: center;
-            padding: 20px;
-            background-color: #f5f5f5;
-            border-radius: 5px;
-            margin-top: 20px;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        .no-orders i {
+            font-size: 48px;
+            color: #ccc;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .no-orders h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .header-section {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .timestamp {
+                margin-top: 10px;
+                text-align: left;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .action-btn {
+                width: 100%;
+            }
+            
+            .status-modal-content {
+                width: 90%;
+            }
         }
     </style>
 </head>
@@ -170,61 +309,47 @@ $result = $conn->query($sql);
 
         <div class="orders-container">
             <?php if ($result->num_rows > 0): ?>
-                <?php while($row = $result->fetch_assoc()): 
-                    $orders = json_decode($row['orders'], true);
-                ?>
-                    <div class="order-card">
-                        <div class="order-header">
-                            <div>
-                                <h3>PO #<?php echo htmlspecialchars($row['po_number']); ?></h3>
-                                <span class="status-pending">Pending</span>
-                            </div>
-                            <div>
-                                <button class="action-btn view-btn" onclick="viewOrderDetails('<?php echo $row['id']; ?>')">
-                                    <i class="fas fa-eye"></i> View
-                                </button>
-                                <button class="action-btn change-status-btn" onclick="openStatusModal('<?php echo $row['id']; ?>')">
-                                    <i class="fas fa-exchange-alt"></i> Change Status
-                                </button>
-                                <button class="action-btn print-btn" onclick="printOrder('<?php echo $row['id']; ?>')">
-                                    <i class="fas fa-print"></i> Print
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="order-details">
-                            <p><strong>Client:</strong> <?php echo htmlspecialchars($row['company'] ? $row['company'] : $row['username']); ?></p>
-                            <p><strong>Order Date:</strong> <?php echo htmlspecialchars($row['order_date']); ?></p>
-                            <p><strong>Delivery Date:</strong> <?php echo htmlspecialchars($row['delivery_date']); ?></p>
-                            <p><strong>Total Amount:</strong> ₱<?php echo number_format($row['total_amount'], 2); ?></p>
-                        </div>
-                        
-                        <div class="order-items">
-                            <h4>Order Items:</h4>
-                            <?php 
-                            if (is_array($orders)) {
-                                foreach(array_slice($orders, 0, 2) as $item): 
-                            ?>
-                                <div class="item-card">
-                                    <p><strong><?php echo htmlspecialchars($item['item_description']); ?></strong></p>
-                                    <p>Quantity: <?php echo $item['quantity']; ?> x ₱<?php echo number_format($item['price'], 2); ?></p>
-                                </div>
-                            <?php 
-                                endforeach;
-                                
-                                if (count($orders) > 2) {
-                                    echo "<p>+" . (count($orders) - 2) . " more items</p>";
-                                }
-                            } else {
-                                echo "<p>No items found</p>";
-                            }
-                            ?>
-                        </div>
-                    </div>
-                <?php endwhile; ?>
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>PO Number</th>
+                            <th>Client</th>
+                            <th>Order Date</th>
+                            <th>Delivery Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php while($row = $result->fetch_assoc()): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($row['po_number']); ?></td>
+                                <td><?php echo htmlspecialchars($row['company'] ? $row['company'] : $row['username']); ?></td>
+                                <td><?php echo htmlspecialchars($row['order_date']); ?></td>
+                                <td><?php echo htmlspecialchars($row['delivery_date']); ?></td>
+                                <td>₱<?php echo number_format($row['total_amount'], 2); ?></td>
+                                <td><span class="status-badge status-pending">Pending</span></td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="action-btn view-btn" onclick="viewOrderDetails('<?php echo $row['id']; ?>')">
+                                            <i class="fas fa-eye"></i> View
+                                        </button>
+                                        <button class="action-btn change-status-btn" onclick="openStatusModal('<?php echo $row['id']; ?>')">
+                                            <i class="fas fa-exchange-alt"></i> Change Status
+                                        </button>
+                                        <button class="action-btn print-btn" onclick="printOrder('<?php echo $row['id']; ?>')">
+                                            <i class="fas fa-print"></i> Print
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
             <?php else: ?>
                 <div class="no-orders">
-                    <i class="fas fa-info-circle" style="font-size: 48px; color: #ccc;"></i>
+                    <i class="fas fa-info-circle"></i>
                     <h3>No Pending Orders</h3>
                     <p>There are currently no orders with pending status.</p>
                 </div>
