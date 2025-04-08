@@ -10,7 +10,7 @@ if (!isset($_SESSION['admin_user_id'])) {
 }
 
 // Fetch raw materials
-$sql = "SELECT material_id, name, stock_quantity, updated_at FROM raw_materials ORDER BY name";
+$sql = "SELECT material_id, name, stock_quantity FROM raw_materials ORDER BY name";
 $result = $conn->query($sql);
 ?>
 
@@ -40,12 +40,49 @@ $result = $conn->query($sql);
         
         .overlay-content {
             background-color: white;
-            padding: 20px;
-            border-radius: 5px;
+            padding: 30px;
+            border-radius: 8px;
             width: 80%;
-            max-width: 600px;
+            max-width: 500px;
             max-height: 90vh;
             overflow-y: auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .overlay-content h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .overlay-content h2 i {
+            margin-right: 10px;
+            color: #4CAF50;
+        }
+        
+        .overlay-content label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .overlay-content input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .overlay-content input:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
         }
         
         .form-buttons {
@@ -56,10 +93,12 @@ $result = $conn->query($sql);
         }
         
         .save-btn, .cancel-btn {
-            padding: 8px 15px;
+            padding: 10px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
         }
         
         .save-btn {
@@ -67,14 +106,31 @@ $result = $conn->query($sql);
             color: white;
         }
         
+        .save-btn:hover {
+            background-color: #45a049;
+        }
+        
         .cancel-btn {
             background-color: #f44336;
             color: white;
         }
         
+        .cancel-btn:hover {
+            background-color: #d32f2f;
+        }
+        
         .error-message {
-            color: red;
-            margin-bottom: 10px;
+            color: #f44336;
+            margin-bottom: 20px;
+            font-size: 14px;
+            background-color: rgba(244, 67, 54, 0.1);
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .error-message:not(:empty) {
+            display: block;
         }
         
         .adjust-stock {
@@ -85,15 +141,19 @@ $result = $conn->query($sql);
         }
         
         .adjust-stock input {
-            width: 60px;
+            width: 80px;
             text-align: center;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
         
         .add-btn, .remove-btn {
-            padding: 5px 10px;
+            padding: 6px 12px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            transition: all 0.2s;
         }
         
         .add-btn {
@@ -101,9 +161,56 @@ $result = $conn->query($sql);
             color: white;
         }
         
+        .add-btn:hover {
+            background-color: #45a049;
+        }
+        
         .remove-btn {
             background-color: #f44336;
             color: white;
+        }
+        
+        .remove-btn:hover {
+            background-color: #d32f2f;
+        }
+        
+        .edit-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .edit-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .inventory-table th, .inventory-table td {
+            padding: 12px 15px;
+        }
+        
+        .inventory-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .inventory-header {
+            margin-bottom: 30px;
+        }
+        
+        .add-product-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: #4CAF50;
+            padding: 10px 15px;
+            font-size: 16px;
+        }
+        
+        .add-product-btn i {
+            font-size: 18px;
         }
     </style>
 </head>
@@ -129,10 +236,8 @@ $result = $conn->query($sql);
             <table class="inventory-table">
                 <thead>
                     <tr>
-                        <th>Material ID</th>
                         <th>Material Name</th>
                         <th>Stock Quantity (grams)</th>
-                        <th>Last Updated</th>
                         <th>Adjust Stock</th>
                         <th>Actions</th>
                     </tr>
@@ -142,10 +247,8 @@ $result = $conn->query($sql);
                     if ($result->num_rows > 0) {
                         while ($row = $result->fetch_assoc()) {
                             echo "<tr data-material-id='{$row['material_id']}' data-name='{$row['name']}'>
-                                    <td>{$row['material_id']}</td>
                                     <td>{$row['name']}</td>
                                     <td id='stock-{$row['material_id']}'>" . number_format($row['stock_quantity'], 2) . "</td>
-                                    <td>" . date('Y-m-d H:i:s', strtotime($row['updated_at'])) . "</td>
                                     <td class='adjust-stock'>
                                         <button class='add-btn' onclick='updateStock({$row['material_id']}, \"add\")'>Add</button>
                                         <input type='number' id='adjust-{$row['material_id']}' min='1' value='100'>
@@ -159,7 +262,7 @@ $result = $conn->query($sql);
                                 </tr>";
                         }
                     } else {
-                        echo "<tr><td colspan='6'>No materials found</td></tr>";
+                        echo "<tr><td colspan='4'>No materials found</td></tr>";
                     }
                     ?>
                 </tbody>
@@ -218,7 +321,9 @@ $result = $conn->query($sql);
     <script>
         toastr.options = {
             "positionClass": "toast-bottom-right",
-            "opacity": 1
+            "opacity": 1,
+            "timeOut": 3000,
+            "closeButton": true
         };
 
         function searchMaterials() {
@@ -267,7 +372,7 @@ $result = $conn->query($sql);
                     document.getElementById('editMaterialError').textContent = '';
                 })
                 .catch(error => {
-                    toastr.error("Error fetching material details: " + error.message, { timeOut: 3000, closeButton: true });
+                    toastr.error("Error fetching material details: " + error.message);
                     console.error("Error fetching material details:", error);
                 });
         }
@@ -297,13 +402,13 @@ $result = $conn->query($sql);
             .then(data => {
                 if (data.success) {
                     document.getElementById(`stock-${materialId}`).textContent = Number(data.new_stock).toFixed(2);
-                    toastr.success(data.message, { timeOut: 3000, closeButton: true });
+                    toastr.success(data.message);
                 } else {
-                    toastr.error(data.message, { timeOut: 3000, closeButton: true });
+                    toastr.error(data.message);
                 }
             })
             .catch(error => {
-                toastr.error("Error updating stock: " + error.message, { timeOut: 3000, closeButton: true });
+                toastr.error("Error updating stock: " + error.message);
                 console.error("Error updating stock:", error);
             });
         }
@@ -341,7 +446,7 @@ $result = $conn->query($sql);
             })
             .then(data => {
                 if (data.success) {
-                    toastr.success(data.message, { timeOut: 3000, closeButton: true });
+                    toastr.success(data.message);
                     closeAddMaterialModal();
                     window.location.reload();
                 } else {
@@ -349,7 +454,7 @@ $result = $conn->query($sql);
                 }
             })
             .catch(error => {
-                toastr.error(error.message, { timeOut: 3000, closeButton: true });
+                toastr.error(error.message);
                 document.getElementById('addMaterialError').textContent = error.message;
                 console.error("Error:", error);
             });
@@ -390,7 +495,7 @@ $result = $conn->query($sql);
             })
             .then(data => {
                 if (data.success) {
-                    toastr.success(data.message, { timeOut: 3000, closeButton: true });
+                    toastr.success(data.message);
                     closeEditMaterialModal();
                     window.location.reload();
                 } else {
@@ -398,7 +503,7 @@ $result = $conn->query($sql);
                 }
             })
             .catch(error => {
-                toastr.error(error.message, { timeOut: 3000, closeButton: true });
+                toastr.error(error.message);
                 document.getElementById('editMaterialError').textContent = error.message;
                 console.error("Error:", error);
             });
