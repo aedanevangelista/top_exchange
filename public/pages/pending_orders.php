@@ -2,7 +2,7 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Orders'); // Ensure the user has access to the Orders page
+checkRole('Pending Orders'); // Ensure the user has access to the Pending Orders page
 
 // Fetch active clients for the dropdown
 $clients = [];
@@ -19,30 +19,14 @@ while ($stmt->fetch()) {
 }
 $stmt->close();
 
-// Handle status filter
-$status_filter = $_GET['status'] ?? '';
-
-// Fetch orders for display in the table
+// Fetch only pending orders for display in the table
 $orders = []; // Initialize $orders as an empty array
-$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status FROM orders WHERE status != 'Completed'";
-if (!empty($status_filter)) {
-    $sql .= " AND status = ?";
-}
+$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status FROM orders WHERE status = 'Pending'";
 
-// Modified ORDER BY clause to prioritize status (Active, Pending, Rejected) and then delivery_date (ascending)
-$sql .= " ORDER BY 
-          CASE 
-              WHEN status = 'Active' THEN 1 
-              WHEN status = 'Pending' THEN 2 
-              WHEN status = 'Rejected' THEN 3 
-              ELSE 4 
-          END, 
-          delivery_date ASC";
+// Order by delivery_date ascending
+$sql .= " ORDER BY delivery_date ASC";
 
 $stmt = $conn->prepare($sql);
-if (!empty($status_filter)) {
-    $stmt->bind_param("s", $status_filter);
-}
 $stmt->execute();
 $result = $stmt->get_result();
 if ($result && $result->num_rows > 0) {
@@ -56,7 +40,7 @@ if ($result && $result->num_rows > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orders Management</title>
+    <title>Pending Orders</title>
     <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="/css/toast.css">
@@ -69,16 +53,8 @@ if ($result && $result->num_rows > 0) {
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="orders-header">
-            <h1>Orders Management</h1>
-            <div class="filter-section">
-                <label for="statusFilter">Filter by Status:</label>
-                <select id="statusFilter" onchange="filterByStatus()">
-                    <option value="">All</option>
-                    <option value="Active" <?= $status_filter == 'Active' ? 'selected' : '' ?>>Active</option>
-                    <option value="Pending" <?= $status_filter == 'Pending' ? 'selected' : '' ?>>Pending</option>
-                    <option value="Rejected" <?= $status_filter == 'Rejected' ? 'selected' : '' ?>>Rejected</option>
-                </select>
-            </div>
+            <h1>Pending Orders Management</h1>
+            <!-- Removed filter section since we only show pending orders -->
             <button onclick="openAddOrderForm()" class="add-order-btn">
                 <i class="fas fa-plus"></i> Add New Order
             </button>
@@ -112,24 +88,7 @@ if ($result && $result->num_rows > 0) {
                                 View Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
-                                    <?php
-                                    $statusClass = '';
-                                    switch($order['status']) {
-                                        case 'Pending':
-                                            $statusClass = 'status-pending';
-                                            break;
-                                        case 'Active':
-                                            $statusClass = 'status-active';
-                                            break;
-                                        case 'Rejected':
-                                            $statusClass = 'status-rejected';
-                                            break;
-                                        case 'Completed':
-                                            $statusClass = 'status-completed';
-                                            break;
-                                    }
-                                    ?>
-                                    <span class="status-badge <?= $statusClass ?>"><?= htmlspecialchars($order['status']) ?></span>
+                                    <span class="status-badge status-pending"><?= htmlspecialchars($order['status']) ?></span>
                                 </td>
                                 <td class="action-buttons">
                                 <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
@@ -140,7 +99,7 @@ if ($result && $result->num_rows > 0) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="no-orders">No orders found.</td>
+                            <td colspan="9" class="no-orders">No pending orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -302,31 +261,30 @@ if ($result && $result->num_rows > 0) {
             </div>
         </div>
     </div>
+    
+    <!-- Modified Status Modal - Removed Pending and Complete buttons -->
     <div id="statusModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <h2>Change Status</h2>
-        <p id="statusMessage"></p>
-        <div class="status-buttons">
-            <button onclick="changeStatus('Active')" class="modal-status-btn active">
-                <i class="fas fa-check"></i> Active
-            </button>
-            <button onclick="changeStatus('Rejected')" class="modal-status-btn reject">
-                <i class="fas fa-ban"></i> Reject
-            </button>
-            <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
-                <i class="fas fa-clock"></i> Pending
-            </button>
-            <button onclick="changeStatus('Completed')" class="modal-status-btn complete">
-                <i class="fas fa-check-circle"></i> Complete
-            </button>
-        </div>
-        <div class="modal-footer">
-            <button onclick="closeStatusModal()" class="modal-cancel-btn">
-                <i class="fas fa-times"></i> Cancel
-            </button>
+        <div class="modal-content">
+            <h2>Change Status</h2>
+            <p id="statusMessage"></p>
+            <div class="status-buttons">
+                <button onclick="changeStatus('Active')" class="modal-status-btn active">
+                    <i class="fas fa-check"></i> Active
+                </button>
+                <button onclick="changeStatus('Rejected')" class="modal-status-btn reject">
+                    <i class="fas fa-ban"></i> Reject
+                </button>
+                <button onclick="changeStatus('Cancelled')" class="modal-status-btn cancel">
+                    <i class="fas fa-times-circle"></i> Cancel
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeStatusModal()" class="modal-cancel-btn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
         </div>
     </div>
-</div>
 
     <!-- Order Details Modal -->
     <div id="orderDetailsModal" class="overlay" style="display: none;">
