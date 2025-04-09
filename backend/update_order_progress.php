@@ -18,17 +18,30 @@ if (!isset($data['po_number']) || !isset($data['completed_items']) || !isset($da
 $po_number = $data['po_number'];
 $completed_items = json_encode($data['completed_items']);
 $progress = intval($data['progress']);
+$auto_complete = isset($data['auto_complete']) ? $data['auto_complete'] : false;
 
-// Update the order progress
-$stmt = $conn->prepare("UPDATE orders SET completed_items = ?, progress = ? WHERE po_number = ?");
-$stmt->bind_param("sis", $completed_items, $progress, $po_number);
-$result = $stmt->execute();
-$stmt->close();
+$conn->begin_transaction();
 
-if ($result) {
+try {
+    // Update the order progress
+    $stmt = $conn->prepare("UPDATE orders SET completed_items = ?, progress = ? WHERE po_number = ?");
+    $stmt->bind_param("sis", $completed_items, $progress, $po_number);
+    $stmt->execute();
+    $stmt->close();
+    
+    // If progress is 100%, automatically update status to Completed
+    if ($auto_complete && $progress === 100) {
+        $stmt = $conn->prepare("UPDATE orders SET status = 'Completed' WHERE po_number = ?");
+        $stmt->bind_param("s", $po_number);
+        $stmt->execute();
+        $stmt->close();
+    }
+    
+    $conn->commit();
     echo json_encode(['success' => true]);
-} else {
-    echo json_encode(['success' => false, 'message' => 'Failed to update order progress']);
+} catch (Exception $e) {
+    $conn->rollback();
+    echo json_encode(['success' => false, 'message' => 'Failed to update order progress: ' . $e->getMessage()]);
 }
 exit;
 ?>

@@ -95,6 +95,46 @@ if ($result && $result->num_rows > 0) {
         .completed-item {
             background-color: #d4edda !important;
         }
+        
+        .form-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .save-progress-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .save-progress-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .back-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .back-btn:hover {
+            background-color: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -201,12 +241,12 @@ if ($result && $result->num_rows > 0) {
                     </tbody>
                 </table>
             </div>
-            <div class="form-buttons" style="margin-top: 20px;">
-                <button type="button" class="save-progress-btn" onclick="saveProgressChanges()">
-                    <i class="fas fa-save"></i> Save Progress
-                </button>
+            <div class="form-buttons">
                 <button type="button" class="back-btn" onclick="closeOrderDetailsModal()">
                     <i class="fas fa-arrow-left"></i> Back
+                </button>
+                <button type="button" class="save-progress-btn" onclick="saveProgressChanges()">
+                    <i class="fas fa-save"></i> Save Progress
                 </button>
             </div>
         </div>
@@ -317,7 +357,7 @@ if ($result && $result->num_rows > 0) {
                             <td>${item.quantity}</td>
                             <td>
                                 <input type="checkbox" class="item-status-checkbox" data-index="${index}" 
-                                    ${isCompleted ? 'checked' : ''}>
+                                    ${isCompleted ? 'checked' : ''} onchange="updateRowStyle(this)">
                             </td>
                         `;
                         orderDetailsBody.appendChild(row);
@@ -332,6 +372,15 @@ if ($result && $result->num_rows > 0) {
                 showToast('Error: ' + error, 'error');
                 console.error('Error fetching order details:', error);
             });
+        }
+
+        function updateRowStyle(checkbox) {
+            const row = checkbox.closest('tr');
+            if (checkbox.checked) {
+                row.classList.add('completed-item');
+            } else {
+                row.classList.remove('completed-item');
+            }
         }
 
         function closeOrderDetailsModal() {
@@ -353,6 +402,9 @@ if ($result && $result->num_rows > 0) {
                 ? Math.round((newCompletedItems.length / currentOrderItems.length) * 100) 
                 : 0;
             
+            // Determine if the order should be completed automatically
+            const shouldComplete = progressPercentage === 100;
+            
             // Send AJAX request to update progress
             fetch('/backend/update_order_progress.php', {
                 method: 'POST',
@@ -362,13 +414,18 @@ if ($result && $result->num_rows > 0) {
                 body: JSON.stringify({
                     po_number: currentPoNumber,
                     completed_items: newCompletedItems,
-                    progress: progressPercentage
+                    progress: progressPercentage,
+                    auto_complete: shouldComplete
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showToast('Progress updated successfully', 'success');
+                    if (shouldComplete) {
+                        showToast('Order completed successfully!', 'success');
+                    } else {
+                        showToast('Progress updated successfully', 'success');
+                    }
                     // Reload the page after a short delay
                     setTimeout(() => {
                         window.location.reload();
