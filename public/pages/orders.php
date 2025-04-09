@@ -22,20 +22,19 @@ $stmt->close();
 // Handle status filter
 $status_filter = $_GET['status'] ?? '';
 
-// Fetch orders for display in the table
+// Modified query to only show Active and Rejected orders
 $orders = []; // Initialize $orders as an empty array
-$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status FROM orders WHERE status != 'Completed'";
+$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status FROM orders WHERE status IN ('Active', 'Rejected')";
 if (!empty($status_filter)) {
     $sql .= " AND status = ?";
 }
 
-// Modified ORDER BY clause to prioritize status (Active, Pending, Rejected) and then delivery_date (ascending)
+// Modified ORDER BY clause to prioritize status (Active, then Rejected) and then delivery_date (ascending)
 $sql .= " ORDER BY 
           CASE 
               WHEN status = 'Active' THEN 1 
-              WHEN status = 'Pending' THEN 2 
-              WHEN status = 'Rejected' THEN 3 
-              ELSE 4 
+              WHEN status = 'Rejected' THEN 2 
+              ELSE 3 
           END, 
           delivery_date ASC";
 
@@ -75,13 +74,10 @@ if ($result && $result->num_rows > 0) {
                 <select id="statusFilter" onchange="filterByStatus()">
                     <option value="">All</option>
                     <option value="Active" <?= $status_filter == 'Active' ? 'selected' : '' ?>>Active</option>
-                    <option value="Pending" <?= $status_filter == 'Pending' ? 'selected' : '' ?>>Pending</option>
                     <option value="Rejected" <?= $status_filter == 'Rejected' ? 'selected' : '' ?>>Rejected</option>
                 </select>
             </div>
-            <button onclick="openAddOrderForm()" class="add-order-btn">
-                <i class="fas fa-plus"></i> Add New Order
-            </button>
+            <!-- Removed "Add New Order" button -->
         </div>
         <div class="orders-table-container">
             <table class="orders-table">
@@ -115,17 +111,11 @@ if ($result && $result->num_rows > 0) {
                                     <?php
                                     $statusClass = '';
                                     switch($order['status']) {
-                                        case 'Pending':
-                                            $statusClass = 'status-pending';
-                                            break;
                                         case 'Active':
                                             $statusClass = 'status-active';
                                             break;
                                         case 'Rejected':
                                             $statusClass = 'status-rejected';
-                                            break;
-                                        case 'Completed':
-                                            $statusClass = 'status-completed';
                                             break;
                                     }
                                     ?>
@@ -151,7 +141,7 @@ if ($result && $result->num_rows > 0) {
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- Overlay Form for Adding New Order -->
+    <!-- Overlay Form for Adding New Order - Keep for JavaScript functionality but hidden -->
     <div id="addOrderOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-plus"></i> Add New Order</h2>
@@ -302,6 +292,7 @@ if ($result && $result->num_rows > 0) {
             </div>
         </div>
     </div>
+    
     <div id="statusModal" class="modal" style="display: none;">
     <div class="modal-content">
         <h2>Change Status</h2>
