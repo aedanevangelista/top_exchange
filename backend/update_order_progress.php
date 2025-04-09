@@ -2,7 +2,7 @@
 session_start();
 include "../backend/db_connection.php";
 include "../backend/check_role.php";
-checkApiRole('Orders');
+checkRole('Orders'); // Ensure the user has access to the Orders page
 
 header('Content-Type: application/json');
 

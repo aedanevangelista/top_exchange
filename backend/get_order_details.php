@@ -1,48 +1,42 @@
 <?php
+session_start();
+include "../backend/db_connection.php";
+include "../backend/check_role.php";
+checkRole('Orders'); // Ensure the user has access to the Orders page
+
 header('Content-Type: application/json');
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
 
-try {
-    require_once "../db_connection.php";
-
-    $poNumber = $_GET['po_number'] ?? '';
-    $username = $_GET['username'] ?? '';
-
-    if (empty($poNumber) || empty($username)) {
-        throw new Exception('PO Number and username are required');
-    }
-
-    $sql = "SELECT orders, total_amount 
-            FROM orders 
-            WHERE po_number = ? AND username = ?";
-
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ss", $poNumber, $username);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows === 0) {
-        throw new Exception('Order not found');
-    }
-
-    $row = $result->fetch_assoc();
-    $orderItems = json_decode($row['orders'], true);
-
-    echo json_encode([
-        'success' => true,
-        'data' => [
-            'items' => $orderItems,
-            'total_amount' => floatval($row['total_amount'])
-        ]
-    ]);
-
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => true,
-        'message' => 'Error loading order details: ' . $e->getMessage()
-    ]);
+if (!isset($_GET['po_number'])) {
+    echo json_encode(['success' => false, 'message' => 'PO number is required']);
+    exit;
 }
+
+$po_number = $_GET['po_number'];
+
+// Fetch the order data with orders and completed_items
+$stmt = $conn->prepare("SELECT orders, completed_items FROM orders WHERE po_number = ?");
+$stmt->bind_param("s", $po_number);
+$stmt->execute();
+$result = $stmt->get_result();
+$row = $result->fetch_assoc();
+$stmt->close();
+
+if (!$row) {
+    echo json_encode(['success' => false, 'message' => 'Order not found']);
+    exit;
+}
+
+$orderItems = json_decode($row['orders'], true);
+$completedItems = [];
+
+if (!empty($row['completed_items'])) {
+    $completedItems = json_decode($row['completed_items'], true);
+}
+
+echo json_encode([
+    'success' => true,
+    'orderItems' => $orderItems,
+    'completedItems' => $completedItems
+]);
+exit;
 ?>

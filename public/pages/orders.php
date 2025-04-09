@@ -91,6 +91,10 @@ if ($result && $result->num_rows > 0) {
             width: 100%;
             text-align: center;
         }
+        
+        .completed-item {
+            background-color: #d4edda !important;
+        }
     </style>
 </head>
 <body>
@@ -131,13 +135,16 @@ if ($result && $result->num_rows > 0) {
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td>
                                     <div class="progress-bar-container">
-                                        <div class="progress-bar" style="width: <?= $order['progress'] ?>%"></div>
-                                        <div class="progress-text"><?= $order['progress'] ?>%</div>
+                                        <div class="progress-bar" style="width: <?= $order['progress'] ?? 0 ?>%"></div>
+                                        <div class="progress-text"><?= $order['progress'] ?? 0 ?>%</div>
                                     </div>
                                 </td>
-                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
-                                <i class="fas fa-clipboard-list"></i>    
-                                View Order Status</button></td>
+                                <td>
+                                    <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
+                                        <i class="fas fa-clipboard-list"></i>    
+                                        View Order Status
+                                    </button>
+                                </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
                                     <?php
@@ -154,9 +161,9 @@ if ($result && $result->num_rows > 0) {
                                     <span class="status-badge <?= $statusClass ?>"><?= htmlspecialchars($order['status']) ?></span>
                                 </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
-                                    <i class="fas fa-exchange-alt"></i> Change Status
-                                </button>
+                                    <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
+                                        <i class="fas fa-exchange-alt"></i> Change Status
+                                    </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -281,50 +288,49 @@ if ($result && $result->num_rows > 0) {
             });
         }
 
-        function viewOrderDetails(poNumber, orderData) {
+        function viewOrderDetails(poNumber) {
             currentPoNumber = poNumber;
-            // Fetch order details and completed items
-            fetch(`/backend/get_order_progress.php?po_number=${poNumber}`)
+            
+            // Fetch the order data and completion status
+            fetch(`/backend/get_order_details.php?po_number=${poNumber}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    completedItems = data.completed_items || [];
-                    const orders = JSON.parse(orderData);
-                    currentOrderItems = orders;
-                    populateOrderDetails(orders, completedItems);
+                    currentOrderItems = data.orderItems;
+                    completedItems = data.completedItems || [];
+                    
+                    const orderDetailsBody = document.getElementById('orderDetailsBody');
+                    orderDetailsBody.innerHTML = '';
+                    
+                    currentOrderItems.forEach((item, index) => {
+                        const isCompleted = completedItems.includes(index);
+                        const row = document.createElement('tr');
+                        if (isCompleted) {
+                            row.classList.add('completed-item');
+                        }
+                        
+                        row.innerHTML = `
+                            <td>${item.category}</td>
+                            <td>${item.item_description}</td>
+                            <td>${item.packaging}</td>
+                            <td>PHP ${parseFloat(item.price).toFixed(2)}</td>
+                            <td>${item.quantity}</td>
+                            <td>
+                                <input type="checkbox" class="item-status-checkbox" data-index="${index}" 
+                                    ${isCompleted ? 'checked' : ''}>
+                            </td>
+                        `;
+                        orderDetailsBody.appendChild(row);
+                    });
+                    
                     document.getElementById('orderDetailsModal').style.display = 'flex';
                 } else {
-                    showToast('Error retrieving order progress: ' + data.message, 'error');
+                    showToast('Error: ' + data.message, 'error');
                 }
             })
             .catch(error => {
                 showToast('Error: ' + error, 'error');
-            });
-        }
-
-        function populateOrderDetails(orders, completedItems) {
-            const orderDetailsBody = document.getElementById('orderDetailsBody');
-            orderDetailsBody.innerHTML = '';
-            
-            orders.forEach((order, index) => {
-                const isCompleted = completedItems.includes(index);
-                const row = document.createElement('tr');
-                if (isCompleted) {
-                    row.style.backgroundColor = '#d4edda'; // Green background for completed items
-                }
-                
-                row.innerHTML = `
-                    <td>${order.category}</td>
-                    <td>${order.item_description}</td>
-                    <td>${order.packaging}</td>
-                    <td>PHP ${parseFloat(order.price).toFixed(2)}</td>
-                    <td>${order.quantity}</td>
-                    <td>
-                        <input type="checkbox" class="item-status-checkbox" data-index="${index}" 
-                            ${isCompleted ? 'checked' : ''}>
-                    </td>
-                `;
-                orderDetailsBody.appendChild(row);
+                console.error('Error fetching order details:', error);
             });
         }
 
@@ -394,7 +400,5 @@ if ($result && $result->num_rows > 0) {
             }, 5000);
         }
     </script>
-
-    <script src="/js/orders.js"></script>
 </body>
 </html>
