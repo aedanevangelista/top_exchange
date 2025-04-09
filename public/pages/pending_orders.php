@@ -311,6 +311,80 @@ if ($result && $result->num_rows > 0) {
         </div>
     </div>
 
-    <script src="/js/orders.js"></script>
+    <script src="/js/orders.js">
+        let currentPoNumber = '';
+
+    function openStatusModal(poNumber, username) {
+        currentPoNumber = poNumber;
+        document.getElementById('statusMessage').textContent = `Change order-status for ${poNumber} (${username})`;
+        document.getElementById('statusModal').style.display = 'flex';
+    }
+
+    function closeStatusModal() {
+        document.getElementById('statusModal').style.display = 'none';
+    }
+
+    function changeStatus(status) {
+        // Create form data
+        const formData = new FormData();
+        formData.append('po_number', currentPoNumber);
+        formData.append('status', status);
+
+        // Send AJAX request to update status
+        fetch('/backend/update_order_status.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                showToast(`Changed status for ${currentPoNumber} to ${status}.`, 'success');
+                
+                // Wait a moment for the toast to be visible before reloading
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                // Show error message
+                showToast('Failed to change status: ' + (data.error || 'Unknown error'), 'error');
+            }
+            closeStatusModal();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Failed to change status. Please try again.', 'error');
+            closeStatusModal();
+        });
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                <div class="message">${message}</div>
+            </div>
+            <i class="fas fa-times close" onclick="this.parentElement.remove()"></i>
+        `;
+        document.getElementById('toast-container').appendChild(toast);
+        
+        // Automatically remove the toast after 5 seconds
+        setTimeout(() => {
+            toast.remove();
+        }, 5000);
+    }
+
+    // Add a toast container if not already present
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!document.getElementById('toast-container')) {
+            const toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container';
+            document.body.appendChild(toastContainer);
+        }
+    });
+    </script>
 </body>
 </html>
