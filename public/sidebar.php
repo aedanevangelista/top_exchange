@@ -58,8 +58,8 @@ $allowedPages = array_map('trim', explode(',', $pages));
                 </div>
             <?php endif; ?>
 
-            <!-- Ordering Menu with Submenus for Orders and Order History -->
-            <?php if (in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages)): ?>
+            <!-- Ordering Menu with Submenus for Orders, Pending Orders, and Order History -->
+            <?php if (in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages) || in_array('Pending Orders', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item no-hover">
                         <i class="fas fa-shopping-cart"></i> Ordering
@@ -68,6 +68,11 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <?php if (in_array('Orders', $allowedPages)): ?>
                             <a href="/public/pages/orders.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Orders
+                            </a>
+                        <?php endif; ?>
+                        <?php if (in_array('Pending Orders', $allowedPages)): ?>
+                            <a href="/public/pages/pending_orders.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> Pending Orders
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Order History', $allowedPages)): ?>
