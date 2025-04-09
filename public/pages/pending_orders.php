@@ -274,9 +274,6 @@ if ($result && $result->num_rows > 0) {
                 <button onclick="changeStatus('Rejected')" class="modal-status-btn reject">
                     <i class="fas fa-ban"></i> Reject
                 </button>
-                <button onclick="changeStatus('Cancelled')" class="modal-status-btn cancel">
-                    <i class="fas fa-times-circle"></i> Cancel
-                </button>
             </div>
             <div class="modal-footer">
                 <button onclick="closeStatusModal()" class="modal-cancel-btn">
