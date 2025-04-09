@@ -85,9 +85,9 @@ if ($result && $result->num_rows > 0) {
                     <tr>
                         <th>PO Number</th>
                         <th>Username</th>
-                        <th>Order Date</th>
+                        <!-- Removed Order Date column -->
                         <th>Delivery Date</th>
-                        <th>Delivery Address</th>
+                        <!-- Removed Delivery Address column -->
                         <th>Orders</th>
                         <th>Total Amount</th>
                         <th>Status</th>
@@ -100,12 +100,12 @@ if ($result && $result->num_rows > 0) {
                             <tr>
                                 <td><?= htmlspecialchars($order['po_number']) ?></td>
                                 <td><?= htmlspecialchars($order['username']) ?></td>
-                                <td><?= htmlspecialchars($order['order_date']) ?></td>
+                                <!-- Removed Order Date column data -->
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
-                                <td><?= htmlspecialchars($order['delivery_address']) ?></td>
+                                <!-- Removed Delivery Address column data -->
                                 <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
                                 <i class="fas fa-clipboard-list"></i>    
-                                View Orders</button></td>
+                                View Order Status</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
                                     <?php
@@ -130,7 +130,7 @@ if ($result && $result->num_rows > 0) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="no-orders">No orders found.</td>
+                            <td colspan="7" class="no-orders">No orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
