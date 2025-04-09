@@ -24,7 +24,7 @@ $status_filter = $_GET['status'] ?? '';
 
 // Modified query to only show Active and Rejected orders
 $orders = []; // Initialize $orders as an empty array
-$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status FROM orders WHERE status IN ('Active', 'Rejected')";
+$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status, progress FROM orders WHERE status IN ('Active', 'Rejected')";
 if (!empty($status_filter)) {
     $sql .= " AND status = ?";
 }
@@ -63,6 +63,35 @@ if ($result && $result->num_rows > 0) {
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <style>
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            height: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .progress-text {
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            position: absolute;
+            width: 100%;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
@@ -85,9 +114,8 @@ if ($result && $result->num_rows > 0) {
                     <tr>
                         <th>PO Number</th>
                         <th>Username</th>
-                        <!-- Removed Order Date column -->
                         <th>Delivery Date</th>
-                        <!-- Removed Delivery Address column -->
+                        <th>Progress</th>
                         <th>Orders</th>
                         <th>Total Amount</th>
                         <th>Status</th>
@@ -100,10 +128,14 @@ if ($result && $result->num_rows > 0) {
                             <tr>
                                 <td><?= htmlspecialchars($order['po_number']) ?></td>
                                 <td><?= htmlspecialchars($order['username']) ?></td>
-                                <!-- Removed Order Date column data -->
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
-                                <!-- Removed Delivery Address column data -->
-                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
+                                <td>
+                                    <div class="progress-bar-container">
+                                        <div class="progress-bar" style="width: <?= $order['progress'] ?>%"></div>
+                                        <div class="progress-text"><?= $order['progress'] ?>%</div>
+                                    </div>
+                                </td>
+                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
                                 <i class="fas fa-clipboard-list"></i>    
                                 View Order Status</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
@@ -130,7 +162,7 @@ if ($result && $result->num_rows > 0) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="7" class="no-orders">No orders found.</td>
+                            <td colspan="8" class="no-orders">No orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -141,185 +173,7 @@ if ($result && $result->num_rows > 0) {
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- Overlay Form for Adding New Order - Keep for JavaScript functionality but hidden -->
-    <div id="addOrderOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <h2><i class="fas fa-plus"></i> Add New Order</h2>
-            <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
-                <div class="left-section">
-                    <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber()">
-                        <option value="" disabled selected>Select User</option>
-                        <?php foreach ($clients as $client): ?>
-                            <option value="<?= htmlspecialchars($client) ?>" data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"><?= htmlspecialchars($client) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <label for="order_date">Order Date:</label>
-                    <input type="text" id="order_date" name="order_date" readonly>
-                    <label for="delivery_date">Delivery Date:</label>
-                    <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
-                    
-                    <!-- New Delivery Address selection -->
-                    <label for="delivery_address_type">Delivery Address:</label>
-                    <select id="delivery_address_type" name="delivery_address_type" onchange="toggleDeliveryAddress()">
-                        <option value="company">Company Address</option>
-                        <option value="custom">Custom Address</option>
-                    </select>
-                    
-                    <div id="company_address_container">
-                        <input type="text" id="company_address" name="company_address" readonly placeholder="Company address will appear here">
-                    </div>
-                    
-                    <div id="custom_address_container" style="display: none;">
-                        <textarea id="custom_address" name="custom_address" rows="3" placeholder="Enter delivery address"></textarea>
-                    </div>
-                    
-                    <input type="hidden" name="delivery_address" id="delivery_address">
-                    
-                    <div class="centered-button">
-                        <button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()">
-                            <i class="fas fa-box-open"></i> Select Products
-                        </button>
-                    </div>
-                    <div class="order-summary">
-                        <h3>Order Summary</h3>
-                        <table class="summary-table">
-                            <thead>
-                                <tr>
-                                    <th>Category</th>
-                                    <th>Product</th>
-                                    <th>Packaging</th>
-                                    <th>Price</th>
-                                    <th>Quantity</th>
-                                </tr>
-                            </thead>
-                            <tbody id="summaryBody">
-                                <!-- Summary will be populated here -->
-                            </tbody>
-                        </table>
-                        <div class="summary-total">
-                            Total: <span class="summary-total-amount">PHP 0.00</span>
-                        </div>
-                    </div>
-                    <input type="hidden" name="po_number" id="po_number">
-                    <input type="hidden" name="orders" id="orders">
-                    <input type="hidden" name="total_amount" id="total_amount">
-                </div>
-                <div class="form-buttons">
-
-                    <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Inventory Overlay for Selecting Products -->
-    <div id="inventoryOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <div class="overlay-header">
-                <h2 class="overlay-title"><i class="fas fa-box-open"></i> Select Products</h2>
-                <button class="cart-btn" onclick="window.openCartModal()">
-                    <i class="fas fa-shopping-cart"></i> View Cart
-                </button>
-            </div>
-            <input type="text" id="inventorySearch" placeholder="Search products...">
-            <select id="inventoryFilter">
-                <option value="all">All Categories</option>
-                <!-- Populate with categories dynamically -->
-            </select>
-            <div class="inventory-table-container">
-                <table class="inventory-table">
-                    <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th>Product</th>
-                            <th>Packaging</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="inventory">
-                        <!-- Inventory list will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-            <div class="form-buttons" style="margin-top: 20px;">
-                <button type="button" class="cancel-btn" onclick="closeInventoryOverlay()">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-                <button type="button" class="done-btn" onclick="closeInventoryOverlay()">
-                    <i class="fas fa-check"></i> Done
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Cart Modal for Viewing Selected Products -->
-    <div id="cartModal" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <h2><i class="fas fa-shopping-cart"></i> Selected Products</h2>
-            <div class="cart-table-container">
-                <table class="cart-table">
-                    <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th>Product</th>
-                            <th>Packaging</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                        </tr>
-                    </thead>
-                    <tbody class="cart">
-                        <!-- Selected products list will be populated here -->
-                    </tbody>
-                </table>
-                <div class="no-products" style="display: none;">No products in the cart.</div>
-            </div>
-            <div class="cart-total" style="text-align: right; margin-bottom: 20px;">
-                Total: <span class="total-amount">PHP 0.00</span>
-            </div>
-            <div class="form-buttons" style="margin-top: 20px;">
-                <button type="button" class="back-btn" onclick="closeCartModal()">
-                    <i class="fas fa-arrow-left"></i> Back
-                </button>
-                <button type="button" class="save-cart-btn" onclick="saveCartChanges()">
-                    <i class="fas fa-save"></i> Save
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="statusModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <h2>Change Status</h2>
-        <p id="statusMessage"></p>
-        <div class="status-buttons">
-            <button onclick="changeStatus('Active')" class="modal-status-btn active">
-                <i class="fas fa-check"></i> Active
-            </button>
-            <button onclick="changeStatus('Rejected')" class="modal-status-btn reject">
-                <i class="fas fa-ban"></i> Reject
-            </button>
-            <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
-                <i class="fas fa-clock"></i> Pending
-            </button>
-            <button onclick="changeStatus('Completed')" class="modal-status-btn complete">
-                <i class="fas fa-check-circle"></i> Complete
-            </button>
-        </div>
-        <div class="modal-footer">
-            <button onclick="closeStatusModal()" class="modal-cancel-btn">
-                <i class="fas fa-times"></i> Cancel
-            </button>
-        </div>
-    </div>
-</div>
-
-    <!-- Order Details Modal -->
+    <!-- Order Details Modal with Progress Tracking -->
     <div id="orderDetailsModal" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-box-open"></i> Order Details</h2>
@@ -332,6 +186,7 @@ if ($result && $result->num_rows > 0) {
                             <th>Packaging</th>
                             <th>Price</th>
                             <th>Quantity</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="orderDetailsBody">
@@ -340,12 +195,205 @@ if ($result && $result->num_rows > 0) {
                 </table>
             </div>
             <div class="form-buttons" style="margin-top: 20px;">
+                <button type="button" class="save-progress-btn" onclick="saveProgressChanges()">
+                    <i class="fas fa-save"></i> Save Progress
+                </button>
                 <button type="button" class="back-btn" onclick="closeOrderDetailsModal()">
                     <i class="fas fa-arrow-left"></i> Back
                 </button>
             </div>
         </div>
     </div>
+    
+    <!-- Status Modal -->
+    <div id="statusModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Change Status</h2>
+            <p id="statusMessage"></p>
+            <div class="status-buttons">
+                <button onclick="changeStatus('Active')" class="modal-status-btn active">
+                    <i class="fas fa-check"></i> Active
+                </button>
+                <button onclick="changeStatus('Rejected')" class="modal-status-btn reject">
+                    <i class="fas fa-ban"></i> Reject
+                </button>
+                <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
+                    <i class="fas fa-clock"></i> Pending
+                </button>
+                <button onclick="changeStatus('Completed')" class="modal-status-btn complete">
+                    <i class="fas fa-check-circle"></i> Complete
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeStatusModal()" class="modal-cancel-btn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentPoNumber = '';
+        let currentOrderItems = [];
+        let completedItems = [];
+
+        function filterByStatus() {
+            const status = document.getElementById('statusFilter').value;
+            window.location.href = `/public/pages/orders.php${status ? '?status=' + status : ''}`;
+        }
+
+        function openStatusModal(poNumber, username) {
+            currentPoNumber = poNumber;
+            document.getElementById('statusMessage').textContent = `Change status for order ${poNumber} (${username})`;
+            document.getElementById('statusModal').style.display = 'flex';
+        }
+
+        function closeStatusModal() {
+            document.getElementById('statusModal').style.display = 'none';
+        }
+
+        function changeStatus(status) {
+            // Send AJAX request to update status
+            fetch('/backend/update_order_status.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `po_number=${currentPoNumber}&status=${status}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Status updated successfully', 'success');
+                    // Reload the page after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('Error updating status: ' + data.message, 'error');
+                }
+                closeStatusModal();
+            })
+            .catch(error => {
+                showToast('Error updating status: ' + error, 'error');
+                closeStatusModal();
+            });
+        }
+
+        function viewOrderDetails(poNumber, orderData) {
+            currentPoNumber = poNumber;
+            // Fetch order details and completed items
+            fetch(`/backend/get_order_progress.php?po_number=${poNumber}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    completedItems = data.completed_items || [];
+                    const orders = JSON.parse(orderData);
+                    currentOrderItems = orders;
+                    populateOrderDetails(orders, completedItems);
+                    document.getElementById('orderDetailsModal').style.display = 'flex';
+                } else {
+                    showToast('Error retrieving order progress: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error: ' + error, 'error');
+            });
+        }
+
+        function populateOrderDetails(orders, completedItems) {
+            const orderDetailsBody = document.getElementById('orderDetailsBody');
+            orderDetailsBody.innerHTML = '';
+            
+            orders.forEach((order, index) => {
+                const isCompleted = completedItems.includes(index);
+                const row = document.createElement('tr');
+                if (isCompleted) {
+                    row.style.backgroundColor = '#d4edda'; // Green background for completed items
+                }
+                
+                row.innerHTML = `
+                    <td>${order.category}</td>
+                    <td>${order.item_description}</td>
+                    <td>${order.packaging}</td>
+                    <td>PHP ${parseFloat(order.price).toFixed(2)}</td>
+                    <td>${order.quantity}</td>
+                    <td>
+                        <input type="checkbox" class="item-status-checkbox" data-index="${index}" 
+                            ${isCompleted ? 'checked' : ''}>
+                    </td>
+                `;
+                orderDetailsBody.appendChild(row);
+            });
+        }
+
+        function closeOrderDetailsModal() {
+            document.getElementById('orderDetailsModal').style.display = 'none';
+        }
+
+        function saveProgressChanges() {
+            const checkboxes = document.querySelectorAll('.item-status-checkbox');
+            const newCompletedItems = [];
+            
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    newCompletedItems.push(parseInt(checkbox.getAttribute('data-index')));
+                }
+            });
+            
+            // Calculate progress percentage
+            const progressPercentage = currentOrderItems.length > 0 
+                ? Math.round((newCompletedItems.length / currentOrderItems.length) * 100) 
+                : 0;
+            
+            // Send AJAX request to update progress
+            fetch('/backend/update_order_progress.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    po_number: currentPoNumber,
+                    completed_items: newCompletedItems,
+                    progress: progressPercentage
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Progress updated successfully', 'success');
+                    // Reload the page after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('Error updating progress: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error: ' + error, 'error');
+            });
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                    <div class="message">${message}</div>
+                </div>
+                <i class="fas fa-times close" onclick="this.parentElement.remove()"></i>
+            `;
+            document.getElementById('toast-container').appendChild(toast);
+            
+            // Automatically remove the toast after 5 seconds
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+    </script>
 
     <script src="/js/orders.js"></script>
 </body>

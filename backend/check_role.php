@@ -35,3 +35,36 @@ function checkRole($pageName) {
         exit();
     }
 }
+
+function checkApiRole($requiredPage) {
+    // Determine which session context we're in
+    if (isset($_SESSION['admin_user_id'])) {
+        $role = $_SESSION['admin_role'] ?? '';
+    } else if (isset($_SESSION['client_user_id'])) {
+        $role = $_SESSION['client_role'] ?? '';
+    } else {
+        $role = $_SESSION['role'] ?? '';
+    }
+
+    global $conn;
+    
+    // Check if the user has access to the required page
+    $stmt = $conn->prepare("SELECT pages FROM roles WHERE role_name = ? AND status = 'active'");
+    $stmt->bind_param("s", $role);
+    $stmt->execute();
+    $stmt->bind_result($pages);
+    $stmt->fetch();
+    $stmt->close();
+    
+    // Convert pages to an array and trim whitespace
+    $allowedPages = array_map('trim', explode(',', $pages));
+    
+    if (!in_array($requiredPage, $allowedPages)) {
+        echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
+        exit;
+    }
+    
+    return true;
+}
+
+?>
