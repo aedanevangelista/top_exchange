@@ -355,16 +355,18 @@ if ($result && $result->num_rows > 0) {
                     // Get the next scheduled delivery date
                     const nextDeliveryDate = getNextDeliveryDate(mostRecentDeliveryDate);
                     
+                    // Get the delivery date AFTER the next one (skip the nearest)
+                    const nextNextDeliveryDate = getNextDeliveryDate(nextDeliveryDate);
+                    
                     // For the selected date to be valid:
                     // 1. It must be a delivery day
-                    // 2. It must be after the most recent delivery date
-                    // 3. It must be the next delivery date or later
+                    // 2. It must be at least the delivery date AFTER the nearest one
                     
-                    // Compare if the date is at least the next delivery date
-                    const isAfterNextDeliveryDate = dateOnly >= nextDeliveryDate;
+                    // Compare if the date is at least the next-next delivery date
+                    const isAfterNextNextDeliveryDate = dateOnly >= nextNextDeliveryDate;
                     
                     // Return [isSelectable, cssClass, tooltip]
-                    return [isDeliveryDay && isAfterNextDeliveryDate, isDeliveryDay ? 'delivery-day' : ''];
+                    return [isDeliveryDay && isAfterNextNextDeliveryDate, isDeliveryDay ? 'delivery-day' : ''];
                 }
             });
             
@@ -440,6 +442,14 @@ if ($result && $result->num_rows > 0) {
                 return nextDate;
             }
             
+            // Function to get the next NEXT delivery date (skipping the nearest one)
+            function getNextNextDeliveryDate(date) {
+                // First get the next delivery date
+                const nextDeliveryDate = getNextDeliveryDate(date);
+                // Then get the delivery date after that one
+                return getNextDeliveryDate(nextDeliveryDate);
+            }
+            
             // Add some custom styling for delivery days
             $("<style>")
                 .prop("type", "text/css")
@@ -459,7 +469,7 @@ if ($result && $result->num_rows > 0) {
             $("#addOrderForm").on("submit", function(e) {
                 const deliveryDate = new Date($("#delivery_date").val());
                 
-                // Create Date objects for today and tomorrow
+                // Create Date objects for today
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 
@@ -469,12 +479,15 @@ if ($result && $result->num_rows > 0) {
                 // Get the next scheduled delivery date
                 const nextDeliveryDate = getNextDeliveryDate(mostRecentDeliveryDate);
                 
-                // Check if the selected date is at least the next delivery date
-                if (deliveryDate < nextDeliveryDate) {
+                // Get the delivery date AFTER the next one (skip the nearest)
+                const nextNextDeliveryDate = getNextDeliveryDate(nextDeliveryDate);
+                
+                // Check if the selected date is at least the next-next delivery date
+                if (deliveryDate < nextNextDeliveryDate) {
                     e.preventDefault();
                     
-                    const nextDeliveryDateStr = $.datepicker.formatDate('yy-mm-dd', nextDeliveryDate);
-                    showToast(`Delivery date must be the next available delivery date (${nextDeliveryDateStr}) or later.`, "error");
+                    const nextNextDeliveryDateStr = $.datepicker.formatDate('yy-mm-dd', nextNextDeliveryDate);
+                    showToast(`Delivery date must be at least the second upcoming delivery date (${nextNextDeliveryDateStr}) or later.`, "error");
                     return false;
                 }
                 
