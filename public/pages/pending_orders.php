@@ -328,10 +328,25 @@ if ($result && $result->num_rows > 0) {
             $("#order_date").datepicker("setDate", new Date());
             
             // Define your delivery days (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
-            // Based on your example, deliveries happen on days 2 (Tuesday) and 4 (Thursday)
-            const deliveryDays = [2, 4]; // Tuesday and Thursday
+            // Based on your example, deliveries happen on days 1 (Monday) and 3 (Wednesday)
+            const deliveryDays = [1, 3]; // Monday and Wednesday
             
-            // Initialize delivery date picker with custom delivery days
+            // Define the first upcoming and second upcoming delivery days
+            // This will be used to show only second and later delivery dates
+            // First, get today's date and the upcoming delivery dates
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Calculate the first next delivery date (April 14, which should be disabled)
+            // and the second next delivery date (April 16, which should be the first selectable)
+            const firstNextDelivery = getNextDeliveryDate(today);
+            const secondNextDelivery = getNextDeliveryDate(new Date(firstNextDelivery));
+            
+            console.log('Today:', today);
+            console.log('First next delivery:', firstNextDelivery);
+            console.log('Second next delivery:', secondNextDelivery);
+            
+            // Initialize the delivery date picker with specific options
             $("#delivery_date").datepicker({
                 dateFormat: 'yy-mm-dd',
                 beforeShowDay: function(date) {
@@ -341,73 +356,21 @@ if ($result && $result->num_rows > 0) {
                     // Check if this day is in our delivery days array
                     const isDeliveryDay = deliveryDays.includes(dayOfWeek);
                     
-                    // Create a date object for today
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    
                     // For comparing dates only (ignoring time)
                     const dateOnly = new Date(date);
                     dateOnly.setHours(0, 0, 0, 0);
                     
-                    // Get the most recent delivery date based on the current date
-                    const mostRecentDeliveryDate = getMostRecentDeliveryDate(today);
+                    // Check if this date is at least the SECOND upcoming delivery date
+                    // This is the key part - we're comparing with secondNextDelivery, not firstNextDelivery
+                    const isAfterSecondNextDelivery = dateOnly >= secondNextDelivery;
                     
-                    // Get the next scheduled delivery date
-                    const nextDeliveryDate = getNextDeliveryDate(mostRecentDeliveryDate);
-                    
-                    // Get the delivery date AFTER the next one (skip the nearest)
-                    const nextNextDeliveryDate = getNextDeliveryDate(nextDeliveryDate);
-                    
-                    // For the selected date to be valid:
-                    // 1. It must be a delivery day
-                    // 2. It must be at least the delivery date AFTER the nearest one
-                    
-                    // Compare if the date is at least the next-next delivery date
-                    const isAfterNextNextDeliveryDate = dateOnly >= nextNextDeliveryDate;
+                    // Debug - log the date being checked and whether it's selectable
+                    // console.log(dateOnly, 'isDeliveryDay:', isDeliveryDay, 'isAfterSecondNextDelivery:', isAfterSecondNextDelivery);
                     
                     // Return [isSelectable, cssClass, tooltip]
-                    return [isDeliveryDay && isAfterNextNextDeliveryDate, isDeliveryDay ? 'delivery-day' : ''];
+                    return [isDeliveryDay && isAfterSecondNextDelivery, isDeliveryDay ? 'delivery-day' : ''];
                 }
             });
-            
-            // Function to get the most recent delivery date based on today
-            function getMostRecentDeliveryDate(today) {
-                // Clone the date object to avoid modifying the original
-                const date = new Date(today);
-                const currentDay = date.getDay();
-                
-                // Sort delivery days to find the closest previous one
-                const sortedDays = [...deliveryDays].sort((a, b) => a - b);
-                
-                // Find the most recent delivery day
-                let recentDeliveryDay = null;
-                
-                // Check if today is a delivery day
-                if (sortedDays.includes(currentDay)) {
-                    // If today is a delivery day, it's the most recent
-                    recentDeliveryDay = currentDay;
-                } else {
-                    // Find the most recent delivery day before today
-                    for (let i = sortedDays.length - 1; i >= 0; i--) {
-                        if (sortedDays[i] < currentDay) {
-                            recentDeliveryDay = sortedDays[i];
-                            break;
-                        }
-                    }
-                    
-                    // If no delivery day was found before today, use the last one in the week (wrap around)
-                    if (recentDeliveryDay === null) {
-                        recentDeliveryDay = sortedDays[sortedDays.length - 1];
-                        // Adjust the date to previous week
-                        date.setDate(date.getDate() - (7 - (sortedDays[sortedDays.length - 1] - currentDay)));
-                    } else {
-                        // Adjust the date to the recent delivery day
-                        date.setDate(date.getDate() - (currentDay - recentDeliveryDay));
-                    }
-                }
-                
-                return date;
-            }
             
             // Function to get the next delivery date after a given date
             function getNextDeliveryDate(date) {
@@ -442,14 +405,6 @@ if ($result && $result->num_rows > 0) {
                 return nextDate;
             }
             
-            // Function to get the next NEXT delivery date (skipping the nearest one)
-            function getNextNextDeliveryDate(date) {
-                // First get the next delivery date
-                const nextDeliveryDate = getNextDeliveryDate(date);
-                // Then get the delivery date after that one
-                return getNextDeliveryDate(nextDeliveryDate);
-            }
-            
             // Add some custom styling for delivery days
             $("<style>")
                 .prop("type", "text/css")
@@ -473,21 +428,18 @@ if ($result && $result->num_rows > 0) {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 
-                // Get the most recent delivery date
-                const mostRecentDeliveryDate = getMostRecentDeliveryDate(today);
+                // Get the next delivery date
+                const firstNextDelivery = getNextDeliveryDate(today);
                 
-                // Get the next scheduled delivery date
-                const nextDeliveryDate = getNextDeliveryDate(mostRecentDeliveryDate);
+                // Get the second next delivery date
+                const secondNextDelivery = getNextDeliveryDate(new Date(firstNextDelivery));
                 
-                // Get the delivery date AFTER the next one (skip the nearest)
-                const nextNextDeliveryDate = getNextDeliveryDate(nextDeliveryDate);
-                
-                // Check if the selected date is at least the next-next delivery date
-                if (deliveryDate < nextNextDeliveryDate) {
+                // Check if the selected date is at least the second next delivery date
+                if (deliveryDate < secondNextDelivery) {
                     e.preventDefault();
                     
-                    const nextNextDeliveryDateStr = $.datepicker.formatDate('yy-mm-dd', nextNextDeliveryDate);
-                    showToast(`Delivery date must be at least the second upcoming delivery date (${nextNextDeliveryDateStr}) or later.`, "error");
+                    const secondNextDeliveryStr = $.datepicker.formatDate('yy-mm-dd', secondNextDelivery);
+                    showToast(`Delivery date must be at least ${secondNextDeliveryStr} or later.`, "error");
                     return false;
                 }
                 
