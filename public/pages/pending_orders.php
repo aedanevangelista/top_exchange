@@ -311,80 +311,129 @@ if ($result && $result->num_rows > 0) {
         </div>
     </div>
 
-    <script src="/js/orders.js">
+    <script src="/js/orders.js"></script>
+    
+    <!-- Add custom script to restrict delivery date selection -->
+    <script>
+        $(document).ready(function() {
+            // Initialize datepickers
+            $("#order_date").datepicker({
+                dateFormat: 'yy-mm-dd',
+                maxDate: 0 // Can't select future dates for order date
+            });
+            
+            // Set order date to current date
+            $("#order_date").datepicker("setDate", new Date());
+            
+            // Initialize delivery date picker with minimum date set to tomorrow
+            $("#delivery_date").datepicker({
+                dateFormat: 'yy-mm-dd',
+                minDate: 1, // Set minimum date to tomorrow (1 day from now)
+                beforeShow: function(input, inst) {
+                    // Additional validation if needed
+                    let tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    $(this).datepicker('option', 'minDate', tomorrow);
+                }
+            });
+            
+            // Add validation for form submission
+            $("#addOrderForm").on("submit", function(e) {
+                const deliveryDate = new Date($("#delivery_date").val());
+                const currentDate = new Date();
+                
+                // Set hours to 0 to compare just the dates
+                currentDate.setHours(0, 0, 0, 0);
+                deliveryDate.setHours(0, 0, 0, 0);
+                
+                // Calculate the difference in days
+                const diffTime = deliveryDate - currentDate;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays <= 0) {
+                    e.preventDefault();
+                    showToast("Delivery date must be at least tomorrow or later.", "error");
+                    return false;
+                }
+                
+                return true;
+            });
+        });
+        
+        // Existing functions from the original code
         let currentPoNumber = '';
 
-    function openStatusModal(poNumber, username) {
-        currentPoNumber = poNumber;
-        document.getElementById('statusMessage').textContent = `Change order-status for ${poNumber} (${username})`;
-        document.getElementById('statusModal').style.display = 'flex';
-    }
-
-    function closeStatusModal() {
-        document.getElementById('statusModal').style.display = 'none';
-    }
-
-    function changeStatus(status) {
-        // Create form data
-        const formData = new FormData();
-        formData.append('po_number', currentPoNumber);
-        formData.append('status', status);
-
-        // Send AJAX request to update status
-        fetch('/backend/update_order_status.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Show success message
-                showToast(`Changed status for ${currentPoNumber} to ${status}.`, 'success');
-                
-                // Wait a moment for the toast to be visible before reloading
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            } else {
-                // Show error message
-                showToast('Failed to change status: ' + (data.error || 'Unknown error'), 'error');
-            }
-            closeStatusModal();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('Failed to change status. Please try again.', 'error');
-            closeStatusModal();
-        });
-    }
-
-    function showToast(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.innerHTML = `
-            <div class="toast-content">
-                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
-                <div class="message">${message}</div>
-            </div>
-            <i class="fas fa-times close" onclick="this.parentElement.remove()"></i>
-        `;
-        document.getElementById('toast-container').appendChild(toast);
-        
-        // Automatically remove the toast after 5 seconds
-        setTimeout(() => {
-            toast.remove();
-        }, 5000);
-    }
-
-    // Add a toast container if not already present
-    document.addEventListener('DOMContentLoaded', function() {
-        if (!document.getElementById('toast-container')) {
-            const toastContainer = document.createElement('div');
-            toastContainer.id = 'toast-container';
-            toastContainer.className = 'toast-container';
-            document.body.appendChild(toastContainer);
+        function openStatusModal(poNumber, username) {
+            currentPoNumber = poNumber;
+            document.getElementById('statusMessage').textContent = `Change order-status for ${poNumber} (${username})`;
+            document.getElementById('statusModal').style.display = 'flex';
         }
-    });
+
+        function closeStatusModal() {
+            document.getElementById('statusModal').style.display = 'none';
+        }
+
+        function changeStatus(status) {
+            // Create form data
+            const formData = new FormData();
+            formData.append('po_number', currentPoNumber);
+            formData.append('status', status);
+
+            // Send AJAX request to update status
+            fetch('/backend/update_order_status.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    showToast(`Changed status for ${currentPoNumber} to ${status}.`, 'success');
+                    
+                    // Wait a moment for the toast to be visible before reloading
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    // Show error message
+                    showToast('Failed to change status: ' + (data.error || 'Unknown error'), 'error');
+                }
+                closeStatusModal();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Failed to change status. Please try again.', 'error');
+                closeStatusModal();
+            });
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                    <div class="message">${message}</div>
+                </div>
+                <i class="fas fa-times close" onclick="this.parentElement.remove()"></i>
+            `;
+            document.getElementById('toast-container').appendChild(toast);
+            
+            // Automatically remove the toast after 5 seconds
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+
+        // Add a toast container if not already present
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!document.getElementById('toast-container')) {
+                const toastContainer = document.createElement('div');
+                toastContainer.id = 'toast-container';
+                toastContainer.className = 'toast-container';
+                document.body.appendChild(toastContainer);
+            }
+        });
     </script>
 </body>
 </html>
