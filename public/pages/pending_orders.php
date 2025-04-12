@@ -185,6 +185,8 @@ if ($result && $result->num_rows > 0) {
         </div>
     </div>
 
+    <!-- Rest of the HTML content remains unchanged... -->
+
     <!-- Inventory Overlay for Selecting Products -->
     <div id="inventoryOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
@@ -325,34 +327,162 @@ if ($result && $result->num_rows > 0) {
             // Set order date to current date
             $("#order_date").datepicker("setDate", new Date());
             
-            // Initialize delivery date picker with minimum date set to tomorrow
+            // Define your delivery days (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+            // Based on your example, deliveries happen on days 2 (Tuesday) and 4 (Thursday)
+            const deliveryDays = [2, 4]; // Tuesday and Thursday
+            
+            // Initialize delivery date picker with custom delivery days
             $("#delivery_date").datepicker({
                 dateFormat: 'yy-mm-dd',
-                minDate: 1, // Set minimum date to tomorrow (1 day from now)
-                beforeShow: function(input, inst) {
-                    // Additional validation if needed
-                    let tomorrow = new Date();
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    $(this).datepicker('option', 'minDate', tomorrow);
+                beforeShowDay: function(date) {
+                    // Get the day of the week (0-6)
+                    const dayOfWeek = date.getDay();
+                    
+                    // Check if this day is in our delivery days array
+                    const isDeliveryDay = deliveryDays.includes(dayOfWeek);
+                    
+                    // Create a date object for today
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    // For comparing dates only (ignoring time)
+                    const dateOnly = new Date(date);
+                    dateOnly.setHours(0, 0, 0, 0);
+                    
+                    // Get the most recent delivery date based on the current date
+                    const mostRecentDeliveryDate = getMostRecentDeliveryDate(today);
+                    
+                    // Get the next scheduled delivery date
+                    const nextDeliveryDate = getNextDeliveryDate(mostRecentDeliveryDate);
+                    
+                    // For the selected date to be valid:
+                    // 1. It must be a delivery day
+                    // 2. It must be after the most recent delivery date
+                    // 3. It must be the next delivery date or later
+                    
+                    // Compare if the date is at least the next delivery date
+                    const isAfterNextDeliveryDate = dateOnly >= nextDeliveryDate;
+                    
+                    // Return [isSelectable, cssClass, tooltip]
+                    return [isDeliveryDay && isAfterNextDeliveryDate, isDeliveryDay ? 'delivery-day' : ''];
                 }
             });
+            
+            // Function to get the most recent delivery date based on today
+            function getMostRecentDeliveryDate(today) {
+                // Clone the date object to avoid modifying the original
+                const date = new Date(today);
+                const currentDay = date.getDay();
+                
+                // Sort delivery days to find the closest previous one
+                const sortedDays = [...deliveryDays].sort((a, b) => a - b);
+                
+                // Find the most recent delivery day
+                let recentDeliveryDay = null;
+                
+                // Check if today is a delivery day
+                if (sortedDays.includes(currentDay)) {
+                    // If today is a delivery day, it's the most recent
+                    recentDeliveryDay = currentDay;
+                } else {
+                    // Find the most recent delivery day before today
+                    for (let i = sortedDays.length - 1; i >= 0; i--) {
+                        if (sortedDays[i] < currentDay) {
+                            recentDeliveryDay = sortedDays[i];
+                            break;
+                        }
+                    }
+                    
+                    // If no delivery day was found before today, use the last one in the week (wrap around)
+                    if (recentDeliveryDay === null) {
+                        recentDeliveryDay = sortedDays[sortedDays.length - 1];
+                        // Adjust the date to previous week
+                        date.setDate(date.getDate() - (7 - (sortedDays[sortedDays.length - 1] - currentDay)));
+                    } else {
+                        // Adjust the date to the recent delivery day
+                        date.setDate(date.getDate() - (currentDay - recentDeliveryDay));
+                    }
+                }
+                
+                return date;
+            }
+            
+            // Function to get the next delivery date after a given date
+            function getNextDeliveryDate(date) {
+                // Clone the date object to avoid modifying the original
+                const nextDate = new Date(date);
+                const currentDay = nextDate.getDay();
+                
+                // Sort delivery days to find the next one
+                const sortedDays = [...deliveryDays].sort((a, b) => a - b);
+                
+                // Find the next delivery day
+                let nextDeliveryDay = null;
+                
+                // Find the next delivery day after the current one
+                for (let i = 0; i < sortedDays.length; i++) {
+                    if (sortedDays[i] > currentDay) {
+                        nextDeliveryDay = sortedDays[i];
+                        break;
+                    }
+                }
+                
+                // If no delivery day was found after the current day, use the first one in the next week
+                if (nextDeliveryDay === null) {
+                    nextDeliveryDay = sortedDays[0];
+                    // Adjust the date to next week
+                    nextDate.setDate(nextDate.getDate() + (7 - currentDay + nextDeliveryDay));
+                } else {
+                    // Adjust the date to the next delivery day
+                    nextDate.setDate(nextDate.getDate() + (nextDeliveryDay - currentDay));
+                }
+                
+                return nextDate;
+            }
+            
+            // Add some custom styling for delivery days
+            $("<style>")
+                .prop("type", "text/css")
+                .html(`
+                    .delivery-day a.ui-state-default {
+                        background-color: #e6f7ff !important;
+                        font-weight: bold !important;
+                    }
+                    .ui-datepicker-current-day a.ui-state-default {
+                        background-color: #4aa3df !important;
+                        color: white !important;
+                    }
+                `)
+                .appendTo("head");
             
             // Add validation for form submission
             $("#addOrderForm").on("submit", function(e) {
                 const deliveryDate = new Date($("#delivery_date").val());
-                const currentDate = new Date();
                 
-                // Set hours to 0 to compare just the dates
-                currentDate.setHours(0, 0, 0, 0);
-                deliveryDate.setHours(0, 0, 0, 0);
+                // Create Date objects for today and tomorrow
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
                 
-                // Calculate the difference in days
-                const diffTime = deliveryDate - currentDate;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                // Get the most recent delivery date
+                const mostRecentDeliveryDate = getMostRecentDeliveryDate(today);
                 
-                if (diffDays <= 0) {
+                // Get the next scheduled delivery date
+                const nextDeliveryDate = getNextDeliveryDate(mostRecentDeliveryDate);
+                
+                // Check if the selected date is at least the next delivery date
+                if (deliveryDate < nextDeliveryDate) {
                     e.preventDefault();
-                    showToast("Delivery date must be at least tomorrow or later.", "error");
+                    
+                    const nextDeliveryDateStr = $.datepicker.formatDate('yy-mm-dd', nextDeliveryDate);
+                    showToast(`Delivery date must be the next available delivery date (${nextDeliveryDateStr}) or later.`, "error");
+                    return false;
+                }
+                
+                // Check if the selected date is a valid delivery day
+                const dayOfWeek = deliveryDate.getDay();
+                if (!deliveryDays.includes(dayOfWeek)) {
+                    e.preventDefault();
+                    showToast("Selected date is not a valid delivery day.", "error");
                     return false;
                 }
                 
