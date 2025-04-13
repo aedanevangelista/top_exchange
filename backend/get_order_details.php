@@ -13,8 +13,8 @@ if (!isset($_GET['po_number'])) {
 
 $po_number = $_GET['po_number'];
 
-// Fetch the order data with orders, completed_items and the new item_progress_data
-$stmt = $conn->prepare("SELECT orders, completed_items, item_progress_data FROM orders WHERE po_number = ?");
+// Fetch the order data including the new quantity_progress_data field
+$stmt = $conn->prepare("SELECT orders, completed_items, quantity_progress_data FROM orders WHERE po_number = ?");
 $stmt->bind_param("s", $po_number);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -28,21 +28,21 @@ if (!$row) {
 
 $orderItems = json_decode($row['orders'], true);
 $completedItems = [];
-$itemProgressData = [];
+$quantityProgressData = [];
 
 if (!empty($row['completed_items'])) {
     $completedItems = json_decode($row['completed_items'], true);
 }
 
-if (!empty($row['item_progress_data'])) {
-    $itemProgressData = json_decode($row['item_progress_data'], true);
+if (!empty($row['quantity_progress_data'])) {
+    $quantityProgressData = json_decode($row['quantity_progress_data'], true);
 }
 
 echo json_encode([
     'success' => true,
     'orderItems' => $orderItems,
     'completedItems' => $completedItems,
-    'itemProgressData' => $itemProgressData
+    'quantityProgressData' => $quantityProgressData
 ]);
 exit;
 ?>
