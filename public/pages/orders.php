@@ -135,6 +135,38 @@ if ($result && $result->num_rows > 0) {
         .back-btn:hover {
             background-color: #5a6268;
         }
+        
+        .item-progress-select {
+            width: 100%;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        
+        .item-progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            height: 8px;
+            margin-top: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .item-progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .in-progress {
+            background-color: #fff3cd !important;
+        }
+        
+        .not-started {
+            background-color: #f8f9fa !important;
+        }
     </style>
 </head>
 <body>
@@ -234,6 +266,7 @@ if ($result && $result->num_rows > 0) {
                             <th>Price</th>
                             <th>Quantity</th>
                             <th>Status</th>
+                            <th>Progress</th>
                         </tr>
                     </thead>
                     <tbody id="orderDetailsBody">
@@ -283,7 +316,7 @@ if ($result && $result->num_rows > 0) {
         // Global variables
         let currentPoNumber = '';
         let currentOrderItems = [];
-        let completedItems = [];
+        let itemProgressData = []; // Store progress data for each item
 
         function filterByStatus() {
             const status = document.getElementById('statusFilter').value;
@@ -337,16 +370,27 @@ if ($result && $result->num_rows > 0) {
             .then(data => {
                 if (data.success) {
                     currentOrderItems = data.orderItems;
-                    completedItems = data.completedItems || [];
+                    itemProgressData = data.itemProgressData || [];
                     
                     const orderDetailsBody = document.getElementById('orderDetailsBody');
                     orderDetailsBody.innerHTML = '';
                     
                     currentOrderItems.forEach((item, index) => {
-                        const isCompleted = completedItems.includes(index);
+                        // Get completion status (backward compatibility)
+                        const isCompleted = data.completedItems && data.completedItems.includes(index);
+                        // Get item progress (if available) or set default
+                        const itemProgress = itemProgressData[index] ? 
+                                            itemProgressData[index].progress : 
+                                            (isCompleted ? 100 : 0);
                         const row = document.createElement('tr');
-                        if (isCompleted) {
+                        
+                        // Set row class based on progress
+                        if (itemProgress === 100) {
                             row.classList.add('completed-item');
+                        } else if (itemProgress > 0) {
+                            row.classList.add('in-progress');
+                        } else {
+                            row.classList.add('not-started');
                         }
                         
                         row.innerHTML = `
@@ -356,8 +400,18 @@ if ($result && $result->num_rows > 0) {
                             <td>PHP ${parseFloat(item.price).toFixed(2)}</td>
                             <td>${item.quantity}</td>
                             <td>
-                                <input type="checkbox" class="item-status-checkbox" data-index="${index}" 
-                                    ${isCompleted ? 'checked' : ''} onchange="updateRowStyle(this)">
+                                <select class="item-progress-select" data-index="${index}" onchange="updateItemProgress(this)">
+                                    <option value="0" ${itemProgress === 0 ? 'selected' : ''}>Not Started</option>
+                                    <option value="25" ${itemProgress === 25 ? 'selected' : ''}>In Progress (25%)</option>
+                                    <option value="50" ${itemProgress === 50 ? 'selected' : ''}>Halfway (50%)</option>
+                                    <option value="75" ${itemProgress === 75 ? 'selected' : ''}>Nearly Done (75%)</option>
+                                    <option value="100" ${itemProgress === 100 ? 'selected' : ''}>Completed (100%)</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="item-progress-bar-container">
+                                    <div class="item-progress-bar" style="width: ${itemProgress}%"></div>
+                                </div>
                             </td>
                         `;
                         orderDetailsBody.appendChild(row);
@@ -374,13 +428,30 @@ if ($result && $result->num_rows > 0) {
             });
         }
 
-        function updateRowStyle(checkbox) {
-            const row = checkbox.closest('tr');
-            if (checkbox.checked) {
+        function updateItemProgress(selectElement) {
+            const progress = parseInt(selectElement.value);
+            const index = parseInt(selectElement.getAttribute('data-index'));
+            const row = selectElement.closest('tr');
+            
+            // Update progress bar
+            const progressBar = row.querySelector('.item-progress-bar');
+            progressBar.style.width = progress + '%';
+            
+            // Update row style based on progress
+            row.classList.remove('completed-item', 'in-progress', 'not-started');
+            if (progress === 100) {
                 row.classList.add('completed-item');
+            } else if (progress > 0) {
+                row.classList.add('in-progress');
             } else {
-                row.classList.remove('completed-item');
+                row.classList.add('not-started');
             }
+            
+            // Update progress data
+            if (!itemProgressData[index]) {
+                itemProgressData[index] = {};
+            }
+            itemProgressData[index].progress = progress;
         }
 
         function closeOrderDetailsModal() {
@@ -388,22 +459,34 @@ if ($result && $result->num_rows > 0) {
         }
 
         function saveProgressChanges() {
-            const checkboxes = document.querySelectorAll('.item-status-checkbox');
-            const newCompletedItems = [];
+            // Calculate overall progress as average of all items
+            let totalProgress = 0;
+            const completedItems = [];
             
-            checkboxes.forEach(checkbox => {
-                if (checkbox.checked) {
-                    newCompletedItems.push(parseInt(checkbox.getAttribute('data-index')));
+            // Collect all progress data from dropdowns
+            const selectElements = document.querySelectorAll('.item-progress-select');
+            selectElements.forEach(select => {
+                const index = parseInt(select.getAttribute('data-index'));
+                const progress = parseInt(select.value);
+                
+                if (!itemProgressData[index]) {
+                    itemProgressData[index] = {};
                 }
+                itemProgressData[index].progress = progress;
+                
+                // For backward compatibility
+                if (progress === 100) {
+                    completedItems.push(index);
+                }
+                
+                totalProgress += progress;
             });
             
-            // Calculate progress percentage
-            const progressPercentage = currentOrderItems.length > 0 
-                ? Math.round((newCompletedItems.length / currentOrderItems.length) * 100) 
-                : 0;
+            // Calculate overall percentage
+            const overallProgress = Math.round(totalProgress / currentOrderItems.length);
             
             // Determine if the order should be completed automatically
-            const shouldComplete = progressPercentage === 100;
+            const shouldComplete = overallProgress === 100;
             
             // Send AJAX request to update progress
             fetch('/backend/update_order_progress.php', {
@@ -413,8 +496,9 @@ if ($result && $result->num_rows > 0) {
                 },
                 body: JSON.stringify({
                     po_number: currentPoNumber,
-                    completed_items: newCompletedItems,
-                    progress: progressPercentage,
+                    completed_items: completedItems,  // For backward compatibility
+                    item_progress_data: itemProgressData,  // New detailed progress data
+                    progress: overallProgress,
                     auto_complete: shouldComplete
                 })
             })

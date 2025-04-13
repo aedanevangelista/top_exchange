@@ -10,22 +10,27 @@ header('Content-Type: application/json');
 $json = file_get_contents('php://input');
 $data = json_decode($json, true);
 
-if (!isset($data['po_number']) || !isset($data['completed_items']) || !isset($data['progress'])) {
+if (!isset($data['po_number']) || !isset($data['progress'])) {
     echo json_encode(['success' => false, 'message' => 'Missing required fields']);
     exit;
 }
 
 $po_number = $data['po_number'];
-$completed_items = json_encode($data['completed_items']);
 $progress = intval($data['progress']);
 $auto_complete = isset($data['auto_complete']) ? $data['auto_complete'] : false;
+
+// For backward compatibility
+$completed_items = isset($data['completed_items']) ? json_encode($data['completed_items']) : '[]';
+
+// New detailed progress tracking
+$item_progress_data = isset($data['item_progress_data']) ? json_encode($data['item_progress_data']) : '[]';
 
 $conn->begin_transaction();
 
 try {
-    // Update the order progress
-    $stmt = $conn->prepare("UPDATE orders SET completed_items = ?, progress = ? WHERE po_number = ?");
-    $stmt->bind_param("sis", $completed_items, $progress, $po_number);
+    // Update the order progress with both legacy and new fields
+    $stmt = $conn->prepare("UPDATE orders SET completed_items = ?, item_progress_data = ?, progress = ? WHERE po_number = ?");
+    $stmt->bind_param("ssis", $completed_items, $item_progress_data, $progress, $po_number);
     $stmt->execute();
     $stmt->close();
     
