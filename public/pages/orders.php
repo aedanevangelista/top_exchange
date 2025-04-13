@@ -227,6 +227,65 @@ if ($result && $result->num_rows > 0) {
         .order-details-table thead th {
             box-shadow: 0 1px 0 0 #dee2e6; /* Add bottom border that doesn't move */
         }
+        
+        /* Styles for item progress bar */
+        .item-progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            height: 12px;
+            margin-top: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .item-progress-bar {
+            height: 100%;
+            background-color: #17a2b8;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .item-progress-text {
+            display: block;
+            font-size: 11px;
+            margin-top: 3px;
+            color: #6c757d;
+            text-align: center;
+        }
+        
+        .status-cell {
+            min-width: 120px;
+        }
+        
+        /* Progress contribution text */
+        .contribution-text {
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 3px;
+            display: block;
+            text-align: center;
+        }
+        
+        /* Progress percentage info */
+        .item-progress-info {
+            margin-top: 5px;
+            padding: 5px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            font-size: 12px;
+        }
+        
+        .progress-info-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .progress-info-value {
+            color: #28a745;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -331,6 +390,14 @@ if ($result && $result->num_rows > 0) {
                         <!-- Order details will be populated here -->
                     </tbody>
                 </table>
+                <!-- Overall progress info -->
+                <div class="item-progress-info" id="overall-progress-info" style="margin-top: 10px;">
+                    <div class="progress-info-label">Overall Order Progress:</div>
+                    <div class="progress-bar-container" style="margin-top: 5px;">
+                        <div class="progress-bar" id="overall-progress-bar" style="width: 0%"></div>
+                        <div class="progress-text" id="overall-progress-text">0%</div>
+                    </div>
+                </div>
             </div>
             <div class="form-buttons">
                 <button type="button" class="back-btn" onclick="closeOrderDetailsModal()">
@@ -376,6 +443,9 @@ if ($result && $result->num_rows > 0) {
         let currentOrderItems = [];
         let completedItems = [];
         let quantityProgressData = {};
+        let itemProgressPercentages = {};
+        let itemContributions = {}; // How much each item contributes to the total
+        let overallProgress = 0;
 
         function filterByStatus() {
             const status = document.getElementById('statusFilter').value;
@@ -431,13 +501,44 @@ if ($result && $result->num_rows > 0) {
                     currentOrderItems = data.orderItems;
                     completedItems = data.completedItems || [];
                     quantityProgressData = data.quantityProgressData || {};
+                    itemProgressPercentages = data.itemProgressPercentages || {};
                     
                     const orderDetailsBody = document.getElementById('orderDetailsBody');
                     orderDetailsBody.innerHTML = '';
                     
+                    // Calculate item contributions to overall progress
+                    const totalItems = currentOrderItems.length;
+                    const contributionPerItem = totalItems > 0 ? (100 / totalItems) : 0;
+                    
+                    // Track overall progress
+                    overallProgress = 0;
+                    
                     currentOrderItems.forEach((item, index) => {
                         const isCompleted = completedItems.includes(index);
                         const itemQuantity = parseInt(item.quantity) || 0;
+                        
+                        // Store contribution percentage
+                        itemContributions[index] = contributionPerItem;
+                        
+                        // Calculate item progress percentage based on units
+                        let unitCompletedCount = 0;
+                        if (quantityProgressData[index]) {
+                            for (let i = 0; i < itemQuantity; i++) {
+                                if (quantityProgressData[index][i] === true) {
+                                    unitCompletedCount++;
+                                }
+                            }
+                        }
+                        
+                        // Calculate unit progress percentage
+                        const unitProgress = itemQuantity > 0 ? (unitCompletedCount / itemQuantity) * 100 : 0;
+                        
+                        // Calculate contribution to overall progress (what this item adds to overall)
+                        const contributionToOverall = (unitProgress / 100) * contributionPerItem;
+                        overallProgress += contributionToOverall;
+                        
+                        // Store item progress
+                        itemProgressPercentages[index] = unitProgress;
                         
                         // Create main row for the item
                         const mainRow = document.createElement('tr');
@@ -453,7 +554,7 @@ if ($result && $result->num_rows > 0) {
                             <td>${item.packaging}</td>
                             <td>PHP ${parseFloat(item.price).toFixed(2)}</td>
                             <td>${item.quantity}</td>
-                            <td>
+                            <td class="status-cell">
                                 <div style="display: flex; align-items: center; justify-content: space-between">
                                     <input type="checkbox" class="item-status-checkbox" data-index="${index}" 
                                         ${isCompleted ? 'checked' : ''} onchange="updateRowStyle(this)">
@@ -461,6 +562,13 @@ if ($result && $result->num_rows > 0) {
                                         <i class="fas fa-list-ol"></i> Units
                                     </button>
                                 </div>
+                                <div class="item-progress-bar-container">
+                                    <div class="item-progress-bar" id="item-progress-bar-${index}" style="width: ${unitProgress}%"></div>
+                                </div>
+                                <span class="item-progress-text" id="item-progress-text-${index}">${Math.round(unitProgress)}% Complete</span>
+                                <span class="contribution-text" id="contribution-text-${index}">
+                                    (${Math.round(contributionToOverall)}% of total)
+                                </span>
                             </td>
                         `;
                         orderDetailsBody.appendChild(mainRow);
@@ -519,6 +627,9 @@ if ($result && $result->num_rows > 0) {
                         }
                     });
                     
+                    // Update overall progress display
+                    updateOverallProgressDisplay();
+                    
                     document.getElementById('orderDetailsModal').style.display = 'flex';
                 } else {
                     showToast('Error: ' + data.message, 'error');
@@ -528,6 +639,17 @@ if ($result && $result->num_rows > 0) {
                 showToast('Error: ' + error, 'error');
                 console.error('Error fetching order details:', error);
             });
+        }
+
+        function updateOverallProgressDisplay() {
+            const overallProgressBar = document.getElementById('overall-progress-bar');
+            const overallProgressText = document.getElementById('overall-progress-text');
+            
+            // Round to nearest whole number
+            const roundedProgress = Math.round(overallProgress);
+            
+            overallProgressBar.style.width = `${roundedProgress}%`;
+            overallProgressText.textContent = `${roundedProgress}%`;
         }
 
         function toggleQuantityProgress(itemIndex) {
@@ -569,39 +691,78 @@ if ($result && $result->num_rows > 0) {
             // Update the progress data
             quantityProgressData[itemIndex][unitIndex] = isChecked;
             
-            // Check if all units are completed
-            updateItemStatusBasedOnUnits(itemIndex);
+            // Update item progress and contribution to overall
+            updateItemProgress(itemIndex);
+            
+            // Update overall progress
+            updateOverallProgress();
         }
 
-        function updateItemStatusBasedOnUnits(itemIndex) {
+        function updateItemProgress(itemIndex) {
             const item = currentOrderItems[itemIndex];
             const itemQuantity = parseInt(item.quantity) || 0;
             
             if (itemQuantity === 0) return;
             
             // Count completed units
-            let allUnitsCompleted = true;
+            let completedUnits = 0;
             for (let i = 0; i < itemQuantity; i++) {
-                if (!quantityProgressData[itemIndex] || !quantityProgressData[itemIndex][i]) {
-                    allUnitsCompleted = false;
-                    break;
+                if (quantityProgressData[itemIndex] && quantityProgressData[itemIndex][i]) {
+                    completedUnits++;
                 }
             }
             
+            // Calculate unit progress percentage
+            const unitProgress = (completedUnits / itemQuantity) * 100;
+            itemProgressPercentages[itemIndex] = unitProgress;
+            
+            // Calculate contribution to overall progress
+            const contributionToOverall = (unitProgress / 100) * itemContributions[itemIndex];
+            
+            // Update item progress display
+            const progressBar = document.getElementById(`item-progress-bar-${itemIndex}`);
+            const progressText = document.getElementById(`item-progress-text-${itemIndex}`);
+            const contributionText = document.getElementById(`contribution-text-${itemIndex}`);
+            
+            progressBar.style.width = `${unitProgress}%`;
+            progressText.textContent = `${Math.round(unitProgress)}% Complete`;
+            contributionText.textContent = `(${Math.round(contributionToOverall)}% of total)`;
+            
+            // Check if all units are complete to update item checkbox
+            updateItemStatusBasedOnUnits(itemIndex, completedUnits === itemQuantity);
+        }
+
+        function updateOverallProgress() {
+            // Calculate overall progress from all items
+            let newOverallProgress = 0;
+            
+            Object.keys(itemProgressPercentages).forEach(itemIndex => {
+                const itemProgress = itemProgressPercentages[itemIndex];
+                const itemContribution = itemContributions[itemIndex];
+                newOverallProgress += (itemProgress / 100) * itemContribution;
+            });
+            
+            overallProgress = newOverallProgress;
+            updateOverallProgressDisplay();
+            
+            return Math.round(overallProgress);
+        }
+
+        function updateItemStatusBasedOnUnits(itemIndex, allComplete) {
             // Update the main item checkbox based on unit completion
             const mainCheckbox = document.querySelector(`.item-status-checkbox[data-index="${itemIndex}"]`);
             const mainRow = document.querySelector(`tr[data-item-index="${itemIndex}"]`);
             
-            if (allUnitsCompleted) {
+            if (allComplete) {
                 mainCheckbox.checked = true;
                 mainRow.classList.add('completed-item');
-                if (!completedItems.includes(itemIndex)) {
-                    completedItems.push(itemIndex);
+                if (!completedItems.includes(parseInt(itemIndex))) {
+                    completedItems.push(parseInt(itemIndex));
                 }
             } else {
                 mainCheckbox.checked = false;
                 mainRow.classList.remove('completed-item');
-                const completedIndex = completedItems.indexOf(itemIndex);
+                const completedIndex = completedItems.indexOf(parseInt(itemIndex));
                 if (completedIndex > -1) {
                     completedItems.splice(completedIndex, 1);
                 }
@@ -628,8 +789,11 @@ if ($result && $result->num_rows > 0) {
                 quantityProgressData[itemIndex][i] = true;
             }
             
-            // Update the main item checkbox
-            updateItemStatusBasedOnUnits(itemIndex);
+            // Update item progress
+            updateItemProgress(itemIndex);
+            
+            // Update overall progress
+            updateOverallProgress();
         }
 
         function updateRowStyle(checkbox) {
@@ -660,6 +824,18 @@ if ($result && $result->num_rows > 0) {
                     unitRow.classList.add('completed');
                 });
                 
+                // Set item progress to 100%
+                itemProgressPercentages[index] = 100;
+                
+                // Update item display
+                const progressBar = document.getElementById(`item-progress-bar-${index}`);
+                const progressText = document.getElementById(`item-progress-text-${index}`);
+                const contributionText = document.getElementById(`contribution-text-${index}`);
+                
+                progressBar.style.width = '100%';
+                progressText.textContent = '100% Complete';
+                contributionText.textContent = `(${Math.round(itemContributions[index])}% of total)`;
+                
             } else {
                 row.classList.remove('completed-item');
                 const completedIndex = completedItems.indexOf(index);
@@ -683,7 +859,22 @@ if ($result && $result->num_rows > 0) {
                     const unitRow = checkbox.closest('tr');
                     unitRow.classList.remove('completed');
                 });
+                
+                // Set item progress to 0%
+                itemProgressPercentages[index] = 0;
+                
+                // Update item display
+                const progressBar = document.getElementById(`item-progress-bar-${index}`);
+                const progressText = document.getElementById(`item-progress-text-${index}`);
+                const contributionText = document.getElementById(`contribution-text-${index}`);
+                
+                progressBar.style.width = '0%';
+                progressText.textContent = '0% Complete';
+                contributionText.textContent = '(0% of total)';
             }
+            
+            // Update overall progress
+            updateOverallProgress();
         }
 
         function closeOrderDetailsModal() {
@@ -692,9 +883,7 @@ if ($result && $result->num_rows > 0) {
 
         function saveProgressChanges() {
             // Calculate overall progress percentage
-            const progressPercentage = currentOrderItems.length > 0 
-                ? Math.round((completedItems.length / currentOrderItems.length) * 100) 
-                : 0;
+            const progressPercentage = updateOverallProgress();
             
             // Determine if the order should be completed automatically
             const shouldComplete = progressPercentage === 100;
@@ -709,6 +898,7 @@ if ($result && $result->num_rows > 0) {
                     po_number: currentPoNumber,
                     completed_items: completedItems,
                     quantity_progress_data: quantityProgressData,
+                    item_progress_percentages: itemProgressPercentages,
                     progress: progressPercentage,
                     auto_complete: shouldComplete
                 })
