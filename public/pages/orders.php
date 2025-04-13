@@ -96,6 +96,14 @@ if ($result && $result->num_rows > 0) {
             background-color: #d4edda !important;
         }
         
+        /* Fix for hover color on green rows */
+        .completed-item:hover, 
+        tr.completed-item:hover td,
+        tr.unit-item.completed:hover,
+        tr.unit-item.completed:hover td {
+            background-color: #c3e6cb !important;
+        }
+        
         .form-buttons {
             display: flex;
             justify-content: space-between;
@@ -161,7 +169,7 @@ if ($result && $result->num_rows > 0) {
         }
         
         .unit-item.completed {
-            background-color: #d4edda;
+            background-color: #d4edda !important;
         }
         
         .unit-item td {
@@ -198,6 +206,26 @@ if ($result && $result->num_rows > 0) {
         .item-header-row {
             background-color: #f8f9fa !important;
             border-bottom: 2px solid #dee2e6;
+        }
+        
+        /* Add scrolling to the order details container */
+        .order-details-container {
+            max-height: 70vh; /* 70% of viewport height */
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding-right: 5px;
+        }
+        
+        /* Make sure the header stays visible */
+        .order-details-table thead {
+            position: sticky;
+            top: 0;
+            background-color: #fff;
+            z-index: 10;
+        }
+        
+        .order-details-table thead th {
+            box-shadow: 0 1px 0 0 #dee2e6; /* Add bottom border that doesn't move */
         }
     </style>
 </head>
