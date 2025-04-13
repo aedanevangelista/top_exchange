@@ -137,33 +137,6 @@ if ($result && $result->num_rows > 0) {
         }
         
         /* New styles for quantity tracking */
-        .item-progress-container {
-            margin-top: 5px;
-            display: none; /* Hidden by default */
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 10px;
-        }
-        
-        .quantity-progress-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 5px;
-        }
-        
-        .quantity-progress-table th, 
-        .quantity-progress-table td {
-            padding: 6px;
-            border: 1px solid #dee2e6;
-            text-align: center;
-        }
-        
-        .quantity-progress-table th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-        }
-        
         .toggle-item-progress {
             background-color: #007bff;
             color: white;
@@ -179,34 +152,21 @@ if ($result && $result->num_rows > 0) {
             background-color: #0069d9;
         }
         
-        .quantity-item-completed {
+        .unit-row {
+            display: none;
+        }
+        
+        .unit-item {
+            background-color: #f8f9fa;
+        }
+        
+        .unit-item.completed {
             background-color: #d4edda;
         }
         
-        .quantity-checkbox-cell {
-            text-align: center;
-        }
-        
-        .quantity-checkbox {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-        }
-        
-        .item-progress-bar-container {
-            width: 100%;
-            background-color: #e0e0e0;
-            border-radius: 4px;
-            height: 10px;
-            margin-top: 5px;
-            position: relative;
-        }
-        
-        .item-progress-bar {
-            height: 100%;
-            background-color: #17a2b8;
-            border-radius: 4px;
-            transition: width 0.5s ease;
+        .unit-item td {
+            padding-left: 20px; /* Indent to show hierarchy */
+            border-top: 1px dashed #dee2e6;
         }
         
         .select-all-units {
@@ -224,8 +184,20 @@ if ($result && $result->num_rows > 0) {
             background-color: #218838;
         }
         
-        .toggle-row {
-            background-color: #f8f9fa;
+        .units-divider {
+            border-top: 2px solid #6c757d;
+            margin-top: -1px;
+        }
+        
+        .unit-number-cell {
+            width: 70px;
+            font-weight: bold;
+            color: #6c757d;
+        }
+        
+        .item-header-row {
+            background-color: #f8f9fa !important;
+            border-bottom: 2px solid #dee2e6;
         }
     </style>
 </head>
@@ -437,14 +409,17 @@ if ($result && $result->num_rows > 0) {
                     
                     currentOrderItems.forEach((item, index) => {
                         const isCompleted = completedItems.includes(index);
+                        const itemQuantity = parseInt(item.quantity) || 0;
                         
                         // Create main row for the item
-                        const row = document.createElement('tr');
+                        const mainRow = document.createElement('tr');
+                        mainRow.className = 'item-header-row';
                         if (isCompleted) {
-                            row.classList.add('completed-item');
+                            mainRow.classList.add('completed-item');
                         }
+                        mainRow.dataset.itemIndex = index;
                         
-                        row.innerHTML = `
+                        mainRow.innerHTML = `
                             <td>${item.category}</td>
                             <td>${item.item_description}</td>
                             <td>${item.packaging}</td>
@@ -460,59 +435,60 @@ if ($result && $result->num_rows > 0) {
                                 </div>
                             </td>
                         `;
-                        orderDetailsBody.appendChild(row);
-
-                        // Create collapsible row for quantity tracking
-                        const detailRow = document.createElement('tr');
-                        detailRow.id = `quantity-details-${index}`;
-                        detailRow.className = 'toggle-row';
-                        detailRow.style.display = 'none';
+                        orderDetailsBody.appendChild(mainRow);
                         
-                        const itemQuantity = parseInt(item.quantity) || 0;
-                        let unitProgressData = [];
+                        // Add a divider row
+                        const dividerRow = document.createElement('tr');
+                        dividerRow.className = 'units-divider';
+                        dividerRow.id = `units-divider-${index}`;
+                        dividerRow.style.display = 'none';
+                        dividerRow.innerHTML = `<td colspan="6"></td>`;
+                        orderDetailsBody.appendChild(dividerRow);
                         
-                        // Get saved progress data for this item if it exists
-                        if (quantityProgressData[index]) {
-                            unitProgressData = quantityProgressData[index];
-                        } else {
-                            // Initialize empty array for all units
-                            for (let i = 0; i < itemQuantity; i++) {
-                                unitProgressData.push(false);
+                        // Create rows for individual units
+                        for (let i = 0; i < itemQuantity; i++) {
+                            // Check if this unit is completed
+                            const isUnitCompleted = quantityProgressData[index] && 
+                                                    quantityProgressData[index][i] === true;
+                            
+                            const unitRow = document.createElement('tr');
+                            unitRow.className = `unit-row unit-item unit-for-item-${index}`;
+                            unitRow.style.display = 'none';
+                            if (isUnitCompleted) {
+                                unitRow.classList.add('completed');
                             }
+                            
+                            unitRow.innerHTML = `
+                                <td>${item.category}</td>
+                                <td>${item.item_description}</td>
+                                <td>${item.packaging}</td>
+                                <td>PHP ${parseFloat(item.price).toFixed(2)}</td>
+                                <td class="unit-number-cell">Unit ${i+1}</td>
+                                <td>
+                                    <input type="checkbox" class="unit-status-checkbox" 
+                                        data-item-index="${index}" 
+                                        data-unit-index="${i}" 
+                                        ${isUnitCompleted ? 'checked' : ''} 
+                                        onchange="updateUnitStatus(this)">
+                                </td>
+                            `;
+                            orderDetailsBody.appendChild(unitRow);
                         }
                         
-                        // Calculate what percentage of units are complete
-                        const completedUnits = unitProgressData.filter(unit => unit === true).length;
-                        const unitProgressPercent = itemQuantity > 0 ? Math.round((completedUnits / itemQuantity) * 100) : 0;
-                        
-                        // Create the quantity progress content
-                        const detailCell = document.createElement('td');
-                        detailCell.colSpan = 6;
-                        detailCell.innerHTML = `
-                            <div class="item-progress-container" id="item-progress-${index}">
-                                <h4>Progress Tracking for ${item.item_description} <span>(${completedUnits} of ${itemQuantity} units complete)</span></h4>
-                                <button type="button" class="select-all-units" onclick="selectAllUnits(${index}, ${itemQuantity})">
-                                    Select All Units
-                                </button>
-                                <div class="item-progress-bar-container">
-                                    <div class="item-progress-bar" style="width: ${unitProgressPercent}%"></div>
-                                </div>
-                                <table class="quantity-progress-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Unit #</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="quantity-progress-body-${index}">
-                                        ${generateQuantityProgressRows(index, itemQuantity, unitProgressData)}
-                                    </tbody>
-                                </table>
-                            </div>
-                        `;
-                        
-                        detailRow.appendChild(detailCell);
-                        orderDetailsBody.appendChild(detailRow);
+                        // Add an action row with a "Select All" button
+                        if (itemQuantity > 0) {
+                            const actionRow = document.createElement('tr');
+                            actionRow.className = `unit-row unit-action-row unit-for-item-${index}`;
+                            actionRow.style.display = 'none';
+                            actionRow.innerHTML = `
+                                <td colspan="6" style="text-align: right; padding: 10px;">
+                                    <button type="button" class="select-all-units" onclick="selectAllUnits(${index}, ${itemQuantity})">
+                                        <i class="fas fa-check-square"></i> Select All Units
+                                    </button>
+                                </td>
+                            `;
+                            orderDetailsBody.appendChild(actionRow);
+                        }
                     });
                     
                     document.getElementById('orderDetailsModal').style.display = 'flex';
@@ -526,95 +502,77 @@ if ($result && $result->num_rows > 0) {
             });
         }
 
-        function generateQuantityProgressRows(itemIndex, quantity, progressData) {
-            let rows = '';
-            for (let i = 0; i < quantity; i++) {
-                const isUnitCompleted = progressData[i] === true;
-                rows += `
-                    <tr class="${isUnitCompleted ? 'quantity-item-completed' : ''}">
-                        <td>Unit ${i + 1}</td>
-                        <td class="quantity-checkbox-cell">
-                            <input type="checkbox" class="quantity-checkbox" 
-                                data-item-index="${itemIndex}" 
-                                data-unit-index="${i}" 
-                                ${isUnitCompleted ? 'checked' : ''}
-                                onchange="updateUnitProgress(this)">
-                        </td>
-                    </tr>
-                `;
-            }
-            return rows;
-        }
-
-        function toggleQuantityProgress(index) {
-            const detailsRow = document.getElementById(`quantity-details-${index}`);
-            detailsRow.style.display = detailsRow.style.display === 'none' ? 'table-row' : 'none';
-        }
-
-        function selectAllUnits(itemIndex, quantity) {
-            // Select all checkboxes for this item
-            const checkboxes = document.querySelectorAll(`.quantity-checkbox[data-item-index="${itemIndex}"]`);
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = true;
-                updateUnitProgress(checkbox);
+        function toggleQuantityProgress(itemIndex) {
+            const unitRows = document.querySelectorAll(`.unit-for-item-${itemIndex}`);
+            const dividerRow = document.getElementById(`units-divider-${itemIndex}`);
+            const isVisible = unitRows[0].style.display !== 'none';
+            
+            // Toggle divider
+            dividerRow.style.display = isVisible ? 'none' : 'table-row';
+            
+            // Toggle unit rows
+            unitRows.forEach(row => {
+                row.style.display = isVisible ? 'none' : 'table-row';
             });
         }
 
-        function updateUnitProgress(checkbox) {
+        function updateUnitStatus(checkbox) {
             const itemIndex = parseInt(checkbox.getAttribute('data-item-index'));
             const unitIndex = parseInt(checkbox.getAttribute('data-unit-index'));
-            const isCompleted = checkbox.checked;
+            const isChecked = checkbox.checked;
             
-            // Update row styling
-            const row = checkbox.closest('tr');
-            if (isCompleted) {
-                row.classList.add('quantity-item-completed');
+            // Update unit row style
+            const unitRow = checkbox.closest('tr');
+            if (isChecked) {
+                unitRow.classList.add('completed');
             } else {
-                row.classList.remove('quantity-item-completed');
+                unitRow.classList.remove('completed');
             }
             
-            // Initialize the item's progress data if not already present
+            // Initialize the quantityProgressData structure if needed
             if (!quantityProgressData[itemIndex]) {
                 quantityProgressData[itemIndex] = [];
-                const quantity = parseInt(currentOrderItems[itemIndex].quantity) || 0;
-                for (let i = 0; i < quantity; i++) {
+                const itemQuantity = parseInt(currentOrderItems[itemIndex].quantity) || 0;
+                for (let i = 0; i < itemQuantity; i++) {
                     quantityProgressData[itemIndex].push(false);
                 }
             }
             
             // Update the progress data
-            quantityProgressData[itemIndex][unitIndex] = isCompleted;
+            quantityProgressData[itemIndex][unitIndex] = isChecked;
             
-            // Update the progress bar
-            updateItemProgressBar(itemIndex);
+            // Check if all units are completed
+            updateItemStatusBasedOnUnits(itemIndex);
         }
 
-        function updateItemProgressBar(itemIndex) {
-            const itemQuantity = parseInt(currentOrderItems[itemIndex].quantity) || 0;
+        function updateItemStatusBasedOnUnits(itemIndex) {
+            const item = currentOrderItems[itemIndex];
+            const itemQuantity = parseInt(item.quantity) || 0;
+            
             if (itemQuantity === 0) return;
             
             // Count completed units
-            const completedUnits = quantityProgressData[itemIndex].filter(unit => unit === true).length;
-            const progressPercent = Math.round((completedUnits / itemQuantity) * 100);
+            let allUnitsCompleted = true;
+            for (let i = 0; i < itemQuantity; i++) {
+                if (!quantityProgressData[itemIndex] || !quantityProgressData[itemIndex][i]) {
+                    allUnitsCompleted = false;
+                    break;
+                }
+            }
             
-            // Update the progress bar
-            const progressBar = document.querySelector(`#item-progress-${itemIndex} .item-progress-bar`);
-            progressBar.style.width = `${progressPercent}%`;
-            
-            // Update the header text
-            const progressHeader = document.querySelector(`#item-progress-${itemIndex} h4 span`);
-            progressHeader.textContent = `(${completedUnits} of ${itemQuantity} units complete)`;
-            
-            // If all units are complete, check the main checkbox
+            // Update the main item checkbox based on unit completion
             const mainCheckbox = document.querySelector(`.item-status-checkbox[data-index="${itemIndex}"]`);
-            if (completedUnits === itemQuantity) {
+            const mainRow = document.querySelector(`tr[data-item-index="${itemIndex}"]`);
+            
+            if (allUnitsCompleted) {
                 mainCheckbox.checked = true;
-                mainCheckbox.closest('tr').classList.add('completed-item');
+                mainRow.classList.add('completed-item');
+                if (!completedItems.includes(itemIndex)) {
+                    completedItems.push(itemIndex);
+                }
             } else {
                 mainCheckbox.checked = false;
-                mainCheckbox.closest('tr').classList.remove('completed-item');
-                
-                // If this item was in the completed items list, remove it
+                mainRow.classList.remove('completed-item');
                 const completedIndex = completedItems.indexOf(itemIndex);
                 if (completedIndex > -1) {
                     completedItems.splice(completedIndex, 1);
@@ -622,9 +580,34 @@ if ($result && $result->num_rows > 0) {
             }
         }
 
+        function selectAllUnits(itemIndex, quantity) {
+            // Get all unit checkboxes for this item
+            const unitCheckboxes = document.querySelectorAll(`.unit-status-checkbox[data-item-index="${itemIndex}"]`);
+            
+            // Check all unit checkboxes
+            unitCheckboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                const unitRow = checkbox.closest('tr');
+                unitRow.classList.add('completed');
+            });
+            
+            // Update the progress data
+            if (!quantityProgressData[itemIndex]) {
+                quantityProgressData[itemIndex] = [];
+            }
+            
+            for (let i = 0; i < quantity; i++) {
+                quantityProgressData[itemIndex][i] = true;
+            }
+            
+            // Update the main item checkbox
+            updateItemStatusBasedOnUnits(itemIndex);
+        }
+
         function updateRowStyle(checkbox) {
             const index = parseInt(checkbox.getAttribute('data-index'));
             const row = checkbox.closest('tr');
+            const itemQuantity = parseInt(currentOrderItems[index].quantity) || 0;
             
             if (checkbox.checked) {
                 row.classList.add('completed-item');
@@ -632,8 +615,7 @@ if ($result && $result->num_rows > 0) {
                     completedItems.push(index);
                 }
                 
-                // If checked, also mark all quantity items as complete
-                const itemQuantity = parseInt(currentOrderItems[index].quantity) || 0;
+                // Mark all units as completed
                 if (!quantityProgressData[index]) {
                     quantityProgressData[index] = [];
                 }
@@ -642,21 +624,37 @@ if ($result && $result->num_rows > 0) {
                     quantityProgressData[index][i] = true;
                 }
                 
-                // Update the quantity checkboxes
-                const quantityCheckboxes = document.querySelectorAll(`.quantity-checkbox[data-item-index="${index}"]`);
-                quantityCheckboxes.forEach(qCheckbox => {
-                    qCheckbox.checked = true;
-                    qCheckbox.closest('tr').classList.add('quantity-item-completed');
+                // Update unit checkboxes and row styles
+                const unitCheckboxes = document.querySelectorAll(`.unit-status-checkbox[data-item-index="${index}"]`);
+                unitCheckboxes.forEach(checkbox => {
+                    checkbox.checked = true;
+                    const unitRow = checkbox.closest('tr');
+                    unitRow.classList.add('completed');
                 });
                 
-                // Update progress bar
-                updateItemProgressBar(index);
             } else {
                 row.classList.remove('completed-item');
                 const completedIndex = completedItems.indexOf(index);
                 if (completedIndex > -1) {
                     completedItems.splice(completedIndex, 1);
                 }
+                
+                // Mark all units as not completed
+                if (!quantityProgressData[index]) {
+                    quantityProgressData[index] = [];
+                }
+                
+                for (let i = 0; i < itemQuantity; i++) {
+                    quantityProgressData[index][i] = false;
+                }
+                
+                // Update unit checkboxes and row styles
+                const unitCheckboxes = document.querySelectorAll(`.unit-status-checkbox[data-item-index="${index}"]`);
+                unitCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                    const unitRow = checkbox.closest('tr');
+                    unitRow.classList.remove('completed');
+                });
             }
         }
 
