@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Apr 08, 2025 at 04:27 PM
+-- Generation Time: Apr 13, 2025 at 07:14 AM
 -- Server version: 10.11.10-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -162,16 +162,21 @@ CREATE TABLE `orders` (
   `special_instructions` text DEFAULT NULL,
   `payment_method` varchar(50) DEFAULT NULL,
   `subtotal` decimal(10,2) DEFAULT 0.00,
-  `delivery_fee` decimal(10,2) DEFAULT 0.00
+  `delivery_fee` decimal(10,2) DEFAULT 0.00,
+  `progress` int(11) DEFAULT 0,
+  `completed_items` longtext DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_date`, `delivery_address`, `orders`, `total_amount`, `status`, `contact_number`, `special_instructions`, `payment_method`, `subtotal`, `delivery_fee`) VALUES
-(50, 'aedanevangelista-1', 'aedanevangelista', '2025-03-31', '2025-04-02', 'assdasdsad', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 3025.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00),
-(51, 'aedanevangelista-2', 'aedanevangelista', '2025-03-31', '2025-04-02', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":17,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Special Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":260,\"quantity\":5}]', 2700.00, 'Active', NULL, NULL, NULL, 0.00, 0.00);
+INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_date`, `delivery_address`, `orders`, `total_amount`, `status`, `contact_number`, `special_instructions`, `payment_method`, `subtotal`, `delivery_fee`, `progress`, `completed_items`) VALUES
+(50, 'aedanevangelista-1', 'aedanevangelista', '2025-03-31', '2025-04-02', 'assdasdsad', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 3025.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 0, NULL),
+(51, 'aedanevangelista-2', 'aedanevangelista', '2025-03-31', '2025-04-02', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":17,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Special Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":260,\"quantity\":5}]', 2700.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1]'),
+(52, 'aedanevangelista-3', 'aedanevangelista', '2025-04-09', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0]'),
+(53, 'aedanevangelista-4', 'aedanevangelista', '2025-04-10', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":55},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":4,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Large)\",\"packaging\":\"6pcs/pack\",\"price\":235,\"quantity\":5}]', 19550.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1,2,3]'),
+(54, 'aedanevangelista-5', 'aedanevangelista', '2025-04-12', '2025-04-14', 'No company address available', '[{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 4375.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -198,7 +203,9 @@ INSERT INTO `pages` (`page_id`, `page_name`, `file_path`) VALUES
 (6, 'User Roles', 'user_roles.php'),
 (7, 'Orders', 'orders.php'),
 (8, 'Order History', 'order_history.php'),
-(9, 'Payment History', 'payment_history.php');
+(9, 'Payment History', 'payment_history.php'),
+(12, 'Raw Materials', 'raw_materials.php'),
+(13, 'Pending Orders', 'pending_orders.php');
 
 -- --------------------------------------------------------
 
@@ -290,7 +297,7 @@ INSERT INTO `products` (`product_id`, `category`, `product_name`, `item_descript
 (28, 'Dimsum & Dumplings', 'Polonchay Dumpling', 'Polonchay Dumpling (Min 6 Packs) (B)', '20pcs/pack', 470.00, 0, '', '/uploads/products/Polonchay_Dumpling__Min_6_Packs___B_/product_image.png', '[[\"Minced Pork\", 400], [\"Soy Sauce\", 20], [\"Flour\", 60]]'),
 (29, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (A)', '12pcs/pack', 330.00, 0, '', '/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___A_/product_image.png', '[[\"Minced Pork\", 216], [\"Shrimp\", 48], [\"Soy Sauce\", 12], [\"Flour\", 36]]'),
 (30, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (B)', '20pcs/pack', 530.00, 0, '', '/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___B_/product_image.png', '[[\"Minced Pork\", 360], [\"Shrimp\", 80], [\"Soy Sauce\", 20], [\"Flour\", 60]]'),
-(31, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 685, '0', '/uploads/products/Beancurd_Roll__A_/product_image.png', '[[\"Minced Pork\", 264], [\"Soy Sauce\", 12], [\"Sugar\", 6], [\"Veg. Spring Roll (Ham)\", 36]]'),
+(31, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 685, '0', '/uploads/products/Beancurd_Roll__A_/product_image.png', '[[\"Minced Pork\",264],[\"Soy Sauce\",12],[\"Sugar\",6],[\"Veg. Spring Roll (Ham)\",36]]'),
 (32, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (B)', '20pcs/pack', 500.00, 0, '0', '/uploads/products/Beancurd_Roll__B_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Sugar\", 10], [\"Veg. Spring Roll (Ham)\", 60]]'),
 (33, 'Dimsum & Dumplings', 'Pork Gyoza Dumpling', 'Pork Gyoza Dumpling (A)', '20pcs/pack', 390.00, 0, '', '/uploads/products/Pork_Gyoza_Dumpling__A_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Crispy Powder\", 40], [\"Flour\", 60]]'),
 (34, 'Dimsum & Dumplings', 'Shanghai Dumpling', 'Shanghai Dumpling (A)', '20pcs/pack', 255.00, 0, '', '/uploads/products/Shanghai_Dumpling__A_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Sugar\", 10], [\"Flour\", 60]]'),
@@ -353,87 +360,87 @@ CREATE TABLE `raw_materials` (
 --
 
 INSERT INTO `raw_materials` (`material_id`, `name`, `stock_quantity`, `created_at`, `updated_at`) VALUES
-(1, 'Chicken Meat', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(2, 'Chicken Feet', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(3, 'Chicken Breading', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(4, 'Chicken Diced Seasoned', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(5, 'Chicken Lemon Seasoned', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(6, 'Chicken Leg Boneless', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(7, 'Chicken Leg Quarter', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(8, 'Chicken Marinated', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(9, 'Chicken Sliced Seasoned', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(10, 'Whole Chicken', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(11, 'Peking Duck', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(12, 'Pork Meat', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(13, 'Pork Belly (Skin On)', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(14, 'Pork Belly (Skinless)', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(15, 'Pork Chop Marinated', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(16, 'Pork Fat', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(17, 'Pork Pigue', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(18, 'Pork Rib Spicy Seasoned', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(19, 'Pork Ribs', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(20, 'Pork Sliced Seasoned', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(21, 'Pork Sweet & Sour Seasoned', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(22, 'Porkloin', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(23, 'Pork Spareribs', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(24, 'Minced Pork', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(25, 'Siao Long Pao (Ham)', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(26, 'Wanton (Ham)', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(27, 'Veg. Spring Roll (Ham)', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(28, 'Smoked Ham', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(29, 'Hakaav (Ham)', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(30, 'Beef Meat', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(31, 'Beef Cube Roll', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(32, 'Beef Forequarter / Brisket', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(33, 'Beef Knuckle', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(34, 'Beef Rum', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(35, 'Beef Short Plates', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(36, 'Beef Sliced Seasoned', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(37, 'Beef Tenderloin Seasoned', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(38, 'Shrimp', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(39, 'Crabstick', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(40, 'Scallop', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(41, 'Dried Japanese Scallop', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(42, 'Salted Fish', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(43, 'Hibi', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(44, 'Ebito', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(45, 'Squid Cube', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(46, 'Giant Squid / Cuttlefish', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(47, 'Cuttlefish Seasoned', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(48, 'Fish Fillet Seasoned', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(49, 'Cream Dory Fillet', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(50, 'Cream Dory Fish Skin', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(51, 'Tai Tai Fish', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(52, 'Soy Sauce', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(53, 'Japanese Soy Sauce', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(54, 'Hoisin Sauce', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(55, 'Star Anise', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(56, 'Butter (Anchor)', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(57, 'Margarine Buttercup (Buttercup)', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(58, 'Cheese Quickmelt (Magnolia)', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(59, 'Cheese Unsalted (Magnolia)', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(60, 'Cheese (Eden)', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(61, 'Dark Chocolate Bar', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(62, 'Flour', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(63, 'Sugar', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(64, 'Yeast', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(65, 'Baking Powder', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(66, 'Milk', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(67, 'Glutinous Rice', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(68, 'Chestnut', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(69, 'Tofu', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(70, 'Chili', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(71, 'Garlic', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(72, 'Lemon', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(73, 'Pineapple', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(74, 'Cornstarch', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(75, 'Vinegar', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(76, 'Dried Shrimp', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(77, 'Ketchup', 0.00, '2025-04-07 16:57:58', '2025-04-07 16:57:58'),
-(156, 'Oil', 0.00, '2025-04-07 17:57:32', '2025-04-07 17:57:32'),
-(157, 'Salt', 0.00, '2025-04-07 17:57:32', '2025-04-07 17:57:32'),
-(158, 'Sausana/Chinese', 0.00, '2025-04-07 17:57:32', '2025-04-07 17:57:32'),
-(159, 'Crispy Powder', 0.00, '2025-04-07 17:57:32', '2025-04-07 17:57:32');
+(1, 'Chicken Meat', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:10'),
+(2, 'Chicken Feet', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:04'),
+(3, 'Chicken Breading', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:03'),
+(4, 'Chicken Diced Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:04'),
+(5, 'Chicken Lemon Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:09'),
+(6, 'Chicken Leg Boneless', 400.00, '2025-04-07 16:57:58', '2025-04-08 16:43:07'),
+(7, 'Chicken Leg Quarter', 400.00, '2025-04-07 16:57:58', '2025-04-08 16:43:07'),
+(8, 'Chicken Marinated', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:09'),
+(9, 'Chicken Sliced Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:12'),
+(10, 'Whole Chicken', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:14'),
+(11, 'Peking Duck', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:41'),
+(12, 'Pork Meat', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:49'),
+(13, 'Pork Belly (Skin On)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:43'),
+(14, 'Pork Belly (Skinless)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:44'),
+(15, 'Pork Chop Marinated', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:45'),
+(16, 'Pork Fat', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:45'),
+(17, 'Pork Pigue', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:48'),
+(18, 'Pork Rib Spicy Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:49'),
+(19, 'Pork Ribs', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:50'),
+(20, 'Pork Sliced Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:51'),
+(21, 'Pork Sweet & Sour Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:53'),
+(22, 'Porkloin', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:55'),
+(23, 'Pork Spareribs', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:52'),
+(24, 'Minced Pork', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:38'),
+(25, 'Siao Long Pao (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:01'),
+(26, 'Wanton (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:13'),
+(27, 'Veg. Spring Roll (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:11'),
+(28, 'Smoked Ham', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:03'),
+(29, 'Hakaav (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:29'),
+(30, 'Beef Meat', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:52'),
+(31, 'Beef Cube Roll', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:48'),
+(32, 'Beef Forequarter / Brisket', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:49'),
+(33, 'Beef Knuckle', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:51'),
+(34, 'Beef Rum', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:53'),
+(35, 'Beef Short Plates', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:54'),
+(36, 'Beef Sliced Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:55'),
+(37, 'Beef Tenderloin Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:56'),
+(38, 'Shrimp', 400.00, '2025-04-07 16:57:58', '2025-04-08 16:44:00'),
+(39, 'Crabstick', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:16'),
+(40, 'Scallop', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:59'),
+(41, 'Dried Japanese Scallop', 400.00, '2025-04-07 16:57:58', '2025-04-08 16:43:21'),
+(42, 'Salted Fish', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:56'),
+(43, 'Hibi', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:30'),
+(44, 'Ebito', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:24'),
+(45, 'Squid Cube', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:04'),
+(46, 'Giant Squid / Cuttlefish', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:27'),
+(47, 'Cuttlefish Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:19'),
+(48, 'Fish Fillet Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:24'),
+(49, 'Cream Dory Fillet', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:15'),
+(50, 'Cream Dory Fish Skin', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:17'),
+(51, 'Tai Tai Fish', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:08'),
+(52, 'Soy Sauce', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:03'),
+(53, 'Japanese Soy Sauce', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:32'),
+(54, 'Hoisin Sauce', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:31'),
+(55, 'Star Anise', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:07'),
+(56, 'Butter (Anchor)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:57'),
+(57, 'Margarine Buttercup (Buttercup)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:35'),
+(58, 'Cheese Quickmelt (Magnolia)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:59'),
+(59, 'Cheese Unsalted (Magnolia)', 400.00, '2025-04-07 16:57:58', '2025-04-08 16:43:01'),
+(60, 'Cheese (Eden)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:58'),
+(61, 'Dark Chocolate Bar', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:19'),
+(62, 'Flour', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:25'),
+(63, 'Sugar', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:06'),
+(64, 'Yeast', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:15'),
+(65, 'Baking Powder', 399.50, '2025-04-07 16:57:58', '2025-04-08 16:42:48'),
+(66, 'Milk', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:36'),
+(67, 'Glutinous Rice', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:28'),
+(68, 'Chestnut', 400.00, '2025-04-07 16:57:58', '2025-04-08 16:43:02'),
+(69, 'Tofu', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:09'),
+(70, 'Chili', 400.00, '2025-04-07 16:57:58', '2025-04-09 17:15:27'),
+(71, 'Garlic', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:26'),
+(72, 'Lemon', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:34'),
+(73, 'Pineapple', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:41'),
+(74, 'Cornstarch', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:13'),
+(75, 'Vinegar', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:12'),
+(76, 'Dried Shrimp', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:22'),
+(77, 'Ketchup', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:33'),
+(156, 'Oil', 300.00, '2025-04-07 17:57:32', '2025-04-08 16:43:39'),
+(157, 'Salt', 300.00, '2025-04-07 17:57:32', '2025-04-08 16:43:56'),
+(158, 'Sausana/Chinese', 300.00, '2025-04-07 17:57:32', '2025-04-08 16:43:58'),
+(159, 'Crispy Powder', 300.00, '2025-04-07 17:57:32', '2025-04-08 16:43:18');
 
 -- --------------------------------------------------------
 
@@ -453,11 +460,11 @@ CREATE TABLE `roles` (
 --
 
 INSERT INTO `roles` (`role_id`, `role_name`, `status`, `pages`) VALUES
-(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory, Orders, Order History, Payment History, Forecast'),
-(2, 'Manager', 'active', 'Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, Forecast'),
-(3, 'Secretary', 'active', 'Customers, Dashboard, Inventory, Order History, Orders, Payment History'),
-(4, 'Accountant', 'active', 'Dashboard, Order History, Orders, Payment History'),
-(36, 'aed', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, User Roles');
+(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory, Orders, Order History, Payment History, Forecast, Raw Materials, Pending Orders'),
+(2, 'Manager', 'active', 'Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, Forecast, Raw Materials, Pending Orders'),
+(3, 'Secretary', 'active', 'Customers, Dashboard, Inventory, Order History, Orders, Payment History, Raw Materials, Pending Orders'),
+(4, 'Accountant', 'active', 'Dashboard, Order History, Orders, Payment History, Pending Orders'),
+(36, 'aed', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, User Roles, Raw Materials, Pending Orders');
 
 --
 -- Indexes for dumped tables
@@ -583,13 +590,13 @@ ALTER TABLE `monthly_payments`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
 
 --
 -- AUTO_INCREMENT for table `pages`
 --
 ALTER TABLE `pages`
-  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `payment_history`
@@ -613,7 +620,7 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `raw_materials`
 --
 ALTER TABLE `raw_materials`
-  MODIFY `material_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=160;
+  MODIFY `material_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=161;
 
 --
 -- AUTO_INCREMENT for table `roles`
