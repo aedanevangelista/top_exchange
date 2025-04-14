@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Apr 13, 2025 at 07:14 AM
+-- Generation Time: Apr 14, 2025 at 01:52 PM
 -- Server version: 10.11.10-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -164,19 +164,22 @@ CREATE TABLE `orders` (
   `subtotal` decimal(10,2) DEFAULT 0.00,
   `delivery_fee` decimal(10,2) DEFAULT 0.00,
   `progress` int(11) DEFAULT 0,
-  `completed_items` longtext DEFAULT NULL
+  `completed_items` longtext DEFAULT NULL,
+  `item_progress_data` longtext DEFAULT NULL,
+  `quantity_progress_data` longtext DEFAULT NULL,
+  `item_progress_percentages` longtext DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_date`, `delivery_address`, `orders`, `total_amount`, `status`, `contact_number`, `special_instructions`, `payment_method`, `subtotal`, `delivery_fee`, `progress`, `completed_items`) VALUES
-(50, 'aedanevangelista-1', 'aedanevangelista', '2025-03-31', '2025-04-02', 'assdasdsad', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 3025.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 0, NULL),
-(51, 'aedanevangelista-2', 'aedanevangelista', '2025-03-31', '2025-04-02', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":17,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Special Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":260,\"quantity\":5}]', 2700.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1]'),
-(52, 'aedanevangelista-3', 'aedanevangelista', '2025-04-09', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0]'),
-(53, 'aedanevangelista-4', 'aedanevangelista', '2025-04-10', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":55},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":4,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Large)\",\"packaging\":\"6pcs/pack\",\"price\":235,\"quantity\":5}]', 19550.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1,2,3]'),
-(54, 'aedanevangelista-5', 'aedanevangelista', '2025-04-12', '2025-04-14', 'No company address available', '[{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 4375.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL);
+INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_date`, `delivery_address`, `orders`, `total_amount`, `status`, `contact_number`, `special_instructions`, `payment_method`, `subtotal`, `delivery_fee`, `progress`, `completed_items`, `item_progress_data`, `quantity_progress_data`, `item_progress_percentages`) VALUES
+(50, 'aedanevangelista-1', 'aedanevangelista', '2025-03-31', '2025-04-02', 'assdasdsad', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 3025.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(51, 'aedanevangelista-2', 'aedanevangelista', '2025-03-31', '2025-04-02', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":17,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Special Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":260,\"quantity\":5}]', 2700.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1]', NULL, NULL, NULL),
+(52, 'aedanevangelista-3', 'aedanevangelista', '2025-04-09', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0]', NULL, NULL, NULL),
+(53, 'aedanevangelista-4', 'aedanevangelista', '2025-04-10', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":55},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":4,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Large)\",\"packaging\":\"6pcs/pack\",\"price\":235,\"quantity\":5}]', 19550.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1,2,3]', NULL, NULL, NULL),
+(54, 'aedanevangelista-5', 'aedanevangelista', '2025-04-12', '2025-04-14', 'No company address available', '[{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 4375.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 33, '[0]', '[{\"progress\":0},{\"progress\":0},{\"progress\":0}]', '[[true,true,true,true,true]]', '[100,0,0]');
 
 -- --------------------------------------------------------
 
