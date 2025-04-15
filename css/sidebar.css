@@ -32,7 +32,7 @@
 }
 
 .menu-title {
-    font-size: 14px;
+    font-size: 12px; /* Reduced by 2px */
     font-weight: bold;
     color: #aaa;
     margin-bottom: 10px; /* More gap before divider */
@@ -55,7 +55,7 @@ hr {
     background: none;
     border: none;
     color: white;
-    font-size: 15px;
+    font-size: 13px; /* Reduced by 2px */
     font-weight: 400;
     padding: 10px 15px; /* Adjusted padding */
     width: 100%;
@@ -100,7 +100,7 @@ hr {
     background: none;
     border: none;
     color: #ddd; /* Lighter color for differentiation */
-    font-size: 14px; /* Smaller font size */
+    font-size: 12px; /* Reduced by 2px */
     font-weight: 400;
     padding: 5px 10px; /* Adjusted padding */
     width: 100%;
@@ -133,7 +133,7 @@ hr {
     background: #333;
     padding: 14px;
     border-radius: 5px;
-    font-size: 14px;
+    font-size: 12px; /* Reduced by 2px */
     color: white;
     font-weight: bold;
     text-align: center;
@@ -144,7 +144,7 @@ hr {
 .logout-btn {
     background: #ff4444;
     padding: 14px;
-    font-size: 14px;
+    font-size: 12px; /* Reduced by 2px */
     font-weight: bold;
     color: white;
     text-align: center;
@@ -175,7 +175,7 @@ hr {
     align-items: center;
     gap: 12px; /* Consistent spacing */
     padding: 10px;
-    font-size: 15px;
+    font-size: 13px; /* Reduced by 2px */
     font-weight: 400;
     color: white;
     text-align: left;
@@ -188,7 +188,7 @@ hr {
 .menu-item i {
     width: 20px; /* Same width for all icons */
     text-align: center;
-    font-size: 16px;
+    font-size: 14px; /* Reduced by 2px */
 }
 
 /* Active and hover states */
