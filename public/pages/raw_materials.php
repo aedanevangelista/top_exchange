@@ -186,7 +186,7 @@ $result = $conn->query($sql);
                 <thead>
                     <tr>
                         <th>Material Name</th>
-                        <th>Stock Quantity (grams)</th>
+                        <th>Stock Quantity</th>
                         <th>Adjust Stock</th>
                         <th>Actions</th>
                     </tr>
@@ -197,7 +197,7 @@ $result = $conn->query($sql);
                         while ($row = $result->fetch_assoc()) {
                             echo "<tr data-material-id='{$row['material_id']}' data-name='{$row['name']}'>
                                     <td>{$row['name']}</td>
-                                    <td id='stock-{$row['material_id']}'>" . number_format($row['stock_quantity'], 2) . "</td>
+                                    <td id='stock-{$row['material_id']}'>" . formatWeight($row['stock_quantity']) . "</td>
                                     <td class='adjust-stock'>
                                         <button class='add-btn' onclick='updateStock({$row['material_id']}, \"add\")'>Add</button>
                                         <input type='number' id='adjust-{$row['material_id']}' min='1' value='100'>
@@ -212,6 +212,15 @@ $result = $conn->query($sql);
                         }
                     } else {
                         echo "<tr><td colspan='4'>No materials found</td></tr>";
+                    }
+                    
+                    // Function to format weight (grams to kg if applicable)
+                    function formatWeight($weightInGrams) {
+                        if ($weightInGrams >= 1000) {
+                            return number_format($weightInGrams / 1000, 2) . " kg";
+                        } else {
+                            return number_format($weightInGrams, 2) . " g";
+                        }
                     }
                     ?>
                 </tbody>
@@ -272,6 +281,15 @@ $result = $conn->query($sql);
             "positionClass": "toast-bottom-right",
             "opacity": 1
         };
+
+        // Helper function to format weight (g to kg if applicable)
+        function formatWeight(weightInGrams) {
+            if (weightInGrams >= 1000) {
+                return (weightInGrams / 1000).toFixed(2) + " kg";
+            } else {
+                return weightInGrams.toFixed(2) + " g";
+            }
+        }
 
         function searchMaterials() {
             const searchValue = document.getElementById('search-input').value.toLowerCase();
@@ -348,7 +366,8 @@ $result = $conn->query($sql);
             })
             .then(data => {
                 if (data.success) {
-                    document.getElementById(`stock-${materialId}`).textContent = Number(data.new_stock).toFixed(2);
+                    // Format the displayed stock with the appropriate unit
+                    document.getElementById(`stock-${materialId}`).textContent = formatWeight(Number(data.new_stock));
                     toastr.success(data.message, { timeOut: 3000, closeButton: true });
                 } else {
                     toastr.error(data.message, { timeOut: 3000, closeButton: true });
