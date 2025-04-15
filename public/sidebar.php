@@ -108,13 +108,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
         <!-- DATA Section -->
         <div class="menu-section">
             <span class="menu-title"><b>DATA</b></span>
-            <hr>
-            <?php if (in_array('Customers', $allowedPages)): ?>
-                <a href="/public/pages/customers.php" class="menu-item">
-                    <i class="fas fa-users"></i> Customers
-                </a>
-            <?php endif; ?>
-            
+            <hr>            
             <!-- Accounts Menu with Submenus -->
             <?php if (in_array('Accounts - Admin', $allowedPages) || in_array('Accounts - Clients', $allowedPages) || in_array('User Roles', $allowedPages)): ?>
                 <div class="submenu">
