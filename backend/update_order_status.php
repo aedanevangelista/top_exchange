@@ -1,7 +1,7 @@
 <?php
 // /backend/update_order_status.php
 session_start();
-include "../../backend/db_connection.php";
+include "db_connection.php";
 
 header('Content-Type: application/json');
 
