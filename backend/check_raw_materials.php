@@ -4,8 +4,8 @@ session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
 
-// Ensure user has appropriate access
-checkAccess();
+// Using your existing check_role function instead of our custom checkAccess
+checkRole('Pending Orders');
 
 header('Content-Type: application/json');
 
@@ -134,18 +134,5 @@ try {
         'success' => false,
         'message' => $e->getMessage()
     ]);
-}
-
-// Helper function to check access
-function checkAccess() {
-    // Check if the user is logged in
-    if (!isset($_SESSION['username']) || !isset($_SESSION['role'])) {
-        header('Content-Type: application/json');
-        echo json_encode([
-            'success' => false,
-            'message' => 'Unauthorized access'
-        ]);
-        exit;
-    }
 }
 ?>
