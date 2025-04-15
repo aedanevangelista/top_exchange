@@ -1,6 +1,5 @@
 <?php
 include 'db_connection.php';
-include 'deduct_raw_materials.php';
 
 header('Content-Type: application/json'); // Ensure JSON response
 
@@ -21,53 +20,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Invalid order data format');
         }
 
-        // Begin transaction
-        $conn->begin_transaction();
+        // Insert into orders table (now including delivery_address)
+        $insertOrder = $conn->prepare("
+            INSERT INTO orders (username, order_date, delivery_date, delivery_address, po_number, orders, total_amount, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')
+        ");
 
-        try {
-            // First deduct the raw materials
-            $deductionResult = deductRawMaterials($decoded_orders, $conn);
-            
-            if (!$deductionResult['success']) {
-                // If deduction fails, rollback and return the error
-                $conn->rollback();
-                throw new Exception($deductionResult['message']);
-            }
+        if ($insertOrder === false) {
+            throw new Exception('Failed to prepare statement: ' . $conn->error);
+        }
 
-            // If deduction is successful, proceed with order insertion
-            $insertOrder = $conn->prepare("
-                INSERT INTO orders (username, order_date, delivery_date, delivery_address, po_number, orders, total_amount, status) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')
-            ");
+        $insertOrder->bind_param("ssssssd", $username, $order_date, $delivery_date, $delivery_address, $po_number, $orders, $total_amount);
 
-            if ($insertOrder === false) {
-                throw new Exception('Failed to prepare statement: ' . $conn->error);
-            }
-
-            $insertOrder->bind_param("ssssssd", $username, $order_date, $delivery_date, $delivery_address, $po_number, $orders, $total_amount);
-
-            if (!$insertOrder->execute()) {
-                throw new Exception('Failed to execute statement: ' . $insertOrder->error);
-            }
-
-            $orderId = $conn->insert_id;
-            $insertOrder->close();
-            
-            // Commit the transaction
-            $conn->commit();
-
-            // Return success response
+        if ($insertOrder->execute()) {
             echo json_encode([
                 'success' => true,
-                'message' => 'Order successfully added and raw materials deducted!',
-                'order_id' => $orderId
+                'message' => 'Order successfully added!',
+                'order_id' => $conn->insert_id
             ]);
-
-        } catch (Exception $e) {
-            // Rollback the transaction on error
-            $conn->rollback();
-            throw $e;
+        } else {
+            throw new Exception('Failed to execute statement: ' . $insertOrder->error);
         }
+
+        $insertOrder->close();
 
     } catch (Exception $e) {
         http_response_code(500);
