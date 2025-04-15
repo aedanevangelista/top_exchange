@@ -48,6 +48,59 @@ if ($result && $result->num_rows > 0) {
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <style>
+        /* Additional CSS for the material shortage table */
+        .material-shortage-table-container {
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .material-shortage-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .material-shortage-table th, .material-shortage-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .material-shortage-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .shortage {
+            color: #ff0000;
+            font-weight: bold;
+        }
+        
+        /* CSS for material requirements display */
+        .material-requirements-container {
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .material-requirements-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .material-requirements-table th, .material-requirements-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .material-requirements-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .material-available {
+            color: #00aa00;
+            font-weight: bold;
+        }
+        .material-unavailable {
+            color: #ff0000;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
@@ -69,6 +122,7 @@ if ($result && $result->num_rows > 0) {
                         <th>Delivery Date</th>
                         <th>Delivery Address</th>
                         <th>Orders</th>
+                        <th>Raw Materials</th>
                         <th>Total Amount</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -86,6 +140,9 @@ if ($result && $result->num_rows > 0) {
                                 <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
                                 <i class="fas fa-clipboard-list"></i>    
                                 View Orders</button></td>
+                                <td><button class="view-materials-btn" onclick="showMaterialRequirements('<?= htmlspecialchars($order['orders']) ?>')">
+                                <i class="fas fa-cubes"></i>    
+                                View Materials</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
                                     <span class="status-badge status-pending"><?= htmlspecialchars($order['status']) ?></span>
@@ -99,7 +156,7 @@ if ($result && $result->num_rows > 0) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="no-orders">No pending orders found.</td>
+                            <td colspan="10" class="no-orders">No pending orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -179,7 +236,7 @@ if ($result && $result->num_rows > 0) {
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
-                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
+                    <button type="button" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
                 </div>
             </form>
         </div>

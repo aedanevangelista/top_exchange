@@ -522,4 +522,249 @@ $(document).ready(function() {
             filter.append(`<option value="${category}">${category}</option>`);
         });
     });
+
+    function checkRawMaterialAvailability() {
+    const orderData = {
+        orders: document.getElementById('orders').value
+    };
+
+    // Disable the save button during check
+    const saveBtn = document.querySelector('.save-btn');
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking materials...';
+
+    // AJAX request to check material availability
+    $.ajax({
+        url: '/backend/check_raw_materials_api.php',
+        type: 'POST',
+        data: orderData,
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                // Materials are available, continue with form submission
+                document.getElementById('addOrderForm').submit();
+            } else {
+                // Show material shortage notification
+                showMaterialShortageDialog(response.insufficientMaterials);
+                
+                // Re-enable the save button
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+            }
+        },
+        error: function(xhr, status, error) {
+            showToast('Error checking material availability: ' + error, 'error');
+            
+            // Re-enable the save button
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+        }
+    });
+}
+
+// Function to display material shortage in a dialog
+function showMaterialShortageDialog(insufficientMaterials) {
+    // Create the modal if it doesn't exist
+    if (!document.getElementById('materialShortageModal')) {
+        const modal = document.createElement('div');
+        modal.id = 'materialShortageModal';
+        modal.className = 'modal';
+        modal.style.display = 'none';
+        
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h2><i class="fas fa-exclamation-triangle"></i> Insufficient Raw Materials</h2>
+                <p>The following raw materials have insufficient quantities:</p>
+                <div class="material-shortage-table-container">
+                    <table class="material-shortage-table">
+                        <thead>
+                            <tr>
+                                <th>Material</th>
+                                <th>Available</th>
+                                <th>Required</th>
+                                <th>Shortage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="materialShortageBody">
+                            <!-- Will be populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="closeMaterialShortageModal()" class="modal-cancel-btn">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+    
+    // Populate the shortage details
+    const tableBody = document.getElementById('materialShortageBody');
+    tableBody.innerHTML = '';
+    
+    for (const material in insufficientMaterials) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${material}</td>
+            <td>${insufficientMaterials[material].available} g</td>
+            <td>${insufficientMaterials[material].required} g</td>
+            <td class="shortage">${insufficientMaterials[material].missing} g</td>
+        `;
+        tableBody.appendChild(row);
+    }
+    
+    // Show the modal
+    document.getElementById('materialShortageModal').style.display = 'block';
+}
+
+// Function to close the material shortage modal
+function closeMaterialShortageModal() {
+    document.getElementById('materialShortageModal').style.display = 'none';
+}
+
+// Override the form submission to first check material availability
+function prepareOrderData() {
+    // Get all selected products
+    const selectedProducts = [];
+    $('.cart tr').each(function() {
+        const productId = $(this).data('product-id');
+        const category = $(this).find('td:eq(0)').text();
+        const item_description = $(this).find('td:eq(1)').text();
+        const packaging = $(this).find('td:eq(2)').text();
+        const price = parseFloat($(this).find('td:eq(3)').text().replace('PHP ', ''));
+        const quantity = parseInt($(this).find('td:eq(4)').text());
+        
+        selectedProducts.push({
+            product_id: productId,
+            category: category,
+            item_description: item_description,
+            packaging: packaging,
+            price: price,
+            quantity: quantity
+        });
+    });
+    
+    // Set the orders input for the form
+    document.getElementById('orders').value = JSON.stringify(selectedProducts);
+    
+    // Calculate total
+    const totalAmount = selectedProducts.reduce((sum, product) => sum + (product.price * product.quantity), 0);
+    document.getElementById('total_amount').value = totalAmount.toFixed(2);
+    
+    // Get final delivery address
+    const deliveryAddressType = document.getElementById('delivery_address_type').value;
+    if (deliveryAddressType === 'company') {
+        document.getElementById('delivery_address').value = document.getElementById('company_address').value;
+    } else {
+        document.getElementById('delivery_address').value = document.getElementById('custom_address').value;
+    }
+    
+    // Instead of submitting the form, check material availability first
+    event.preventDefault();
+    checkRawMaterialAvailability();
+}
+
+// Add this function to show material details when viewing order details
+function showMaterialRequirements(ordersJson) {
+    // First convert the orders JSON string to an object
+    const orders = JSON.parse(ordersJson);
+    
+    // Get material details through AJAX
+    $.ajax({
+        url: '/backend/get_material_requirements.php',
+        type: 'POST',
+        data: { orders: ordersJson },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                // Create and show the materials modal
+                showMaterialRequirementsModal(response.materials, response.availableMaterials);
+            } else {
+                showToast('Error fetching material requirements: ' + response.message, 'error');
+            }
+        },
+        error: function(xhr, status, error) {
+            showToast('Error: ' + error, 'error');
+        }
+    });
+}
+
+// Function to show a modal with material requirements
+function showMaterialRequirementsModal(materials, availableMaterials) {
+    // Create the modal if it doesn't exist
+    if (!document.getElementById('materialRequirementsModal')) {
+        const modal = document.createElement('div');
+        modal.id = 'materialRequirementsModal';
+        modal.className = 'overlay';
+        modal.style.display = 'none';
+        
+        modal.innerHTML = `
+            <div class="overlay-content">
+                <h2><i class="fas fa-list-check"></i> Raw Materials Requirements</h2>
+                <div class="material-requirements-container">
+                    <table class="material-requirements-table">
+                        <thead>
+                            <tr>
+                                <th>Material</th>
+                                <th>Available</th>
+                                <th>Required</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="materialRequirementsBody">
+                            <!-- Will be populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="form-buttons" style="margin-top: 20px;">
+                    <button type="button" class="back-btn" onclick="closeMaterialRequirementsModal()">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+    
+    // Populate the requirements details
+    const tableBody = document.getElementById('materialRequirementsBody');
+    tableBody.innerHTML = '';
+    
+    for (const material in materials) {
+        const row = document.createElement('tr');
+        const required = materials[material].required;
+        const available = availableMaterials[material] ? availableMaterials[material].available : 0;
+        const status = available >= required ? 'Available' : 'Insufficient';
+        const statusClass = available >= required ? 'material-available' : 'material-unavailable';
+        
+        row.innerHTML = `
+            <td>${material}</td>
+            <td>${available} g</td>
+            <td>${required} g</td>
+            <td class="${statusClass}">${status}</td>
+        `;
+        tableBody.appendChild(row);
+    }
+    
+    // Show the modal
+    document.getElementById('materialRequirementsModal').style.display = 'block';
+}
+
+// Function to close the material requirements modal
+function closeMaterialRequirementsModal() {
+    document.getElementById('materialRequirementsModal').style.display = 'none';
+}
+
+// Add a new button to view orders that also shows material requirements
+function viewOrderDetailsWithMaterials(ordersJson) {
+    // First show the regular order details
+    viewOrderDetails(ordersJson);
+    
+    // Then show material requirements
+    showMaterialRequirements(ordersJson);
+}
 });
