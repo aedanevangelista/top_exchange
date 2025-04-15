@@ -232,13 +232,13 @@ $result = $conn->query($sql);
                                     <td>{$row['name']}</td>
                                     <td id='stock-{$row['material_id']}'>" . formatWeight($row['stock_quantity']) . "</td>
                                     <td class='adjust-stock'>
-                                        <button class='remove-btn' onclick='updateStock({$row['material_id']}, \"remove\")'>Remove</button>
+                                        <button class='add-btn' onclick='updateStock({$row['material_id']}, \"add\")'>Add</button>
                                         <input type='number' id='adjust-{$row['material_id']}' min='0.001' step='0.001' value='100'>
                                         <select id='unit-{$row['material_id']}'>
                                             <option value='g'>g</option>
                                             <option value='kg'>kg</option>
                                         </select>
-                                        <button class='add-btn' onclick='updateStock({$row['material_id']}, \"add\")'>Add</button>
+                                        <button class='remove-btn' onclick='updateStock({$row['material_id']}, \"remove\")'>Remove</button>
                                     </td>
                                     <td>
                                         <button class='edit-btn' onclick='editMaterial({$row['material_id']})'>
