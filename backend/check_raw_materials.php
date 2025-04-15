@@ -1,7 +1,7 @@
 <?php
 // /backend/check_raw_materials.php
 session_start();
-include "../../backend/db_connection.php";
+include "db_connection.php";
 
 // Basic error handling
 header('Content-Type: application/json');
