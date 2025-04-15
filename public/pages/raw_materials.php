@@ -143,6 +143,15 @@ $result = $conn->query($sql);
         .adjust-stock input {
             width: 60px;
             text-align: center;
+            margin-bottom: 0;
+        }
+        
+        .adjust-stock select {
+            width: 50px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
         }
         
         .add-btn, .remove-btn {
@@ -160,6 +169,30 @@ $result = $conn->query($sql);
         .remove-btn {
             background-color: #f44336;
             color: white;
+        }
+        
+        .quantity-input-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .quantity-input-group input {
+            flex: 1;
+            margin-bottom: 0;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        
+        .quantity-input-group select {
+            width: 70px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-left: none;
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
+            background-color: #f5f5f5;
+            font-size: 16px;
         }
     </style>
 </head>
@@ -200,7 +233,11 @@ $result = $conn->query($sql);
                                     <td id='stock-{$row['material_id']}'>" . formatWeight($row['stock_quantity']) . "</td>
                                     <td class='adjust-stock'>
                                         <button class='add-btn' onclick='updateStock({$row['material_id']}, \"add\")'>Add</button>
-                                        <input type='number' id='adjust-{$row['material_id']}' min='1' value='100'>
+                                        <input type='number' id='adjust-{$row['material_id']}' min='0.001' step='0.001' value='100'>
+                                        <select id='unit-{$row['material_id']}'>
+                                            <option value='g'>g</option>
+                                            <option value='kg'>kg</option>
+                                        </select>
                                         <button class='remove-btn' onclick='updateStock({$row['material_id']}, \"remove\")'>Remove</button>
                                     </td>
                                     <td>
@@ -236,8 +273,14 @@ $result = $conn->query($sql);
                     <label for="name">Material Name:</label>
                     <input type="text" id="name" name="name" required placeholder="Enter material name">
                     
-                    <label for="stock_quantity">Initial Stock Quantity (grams):</label>
-                    <input type="number" id="stock_quantity" name="stock_quantity" min="0" step="0.01" value="0" required>
+                    <label for="stock_quantity">Initial Stock Quantity:</label>
+                    <div class="quantity-input-group">
+                        <input type="number" id="stock_quantity" name="stock_quantity" min="0" step="0.001" value="0" required>
+                        <select id="stock_unit" name="stock_unit">
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                        </select>
+                    </div>
                     
                     <div class="form-buttons">
                         <button type="button" class="cancel-btn" onclick="closeAddMaterialModal()">
@@ -260,8 +303,14 @@ $result = $conn->query($sql);
                     <label for="edit_name">Material Name:</label>
                     <input type="text" id="edit_name" name="name" required placeholder="Enter material name">
                     
-                    <label for="edit_stock_quantity">Stock Quantity (grams):</label>
-                    <input type="number" id="edit_stock_quantity" name="stock_quantity" min="0" step="0.01" required>
+                    <label for="edit_stock_quantity">Stock Quantity:</label>
+                    <div class="quantity-input-group">
+                        <input type="number" id="edit_stock_quantity" name="stock_quantity" min="0" step="0.001" required>
+                        <select id="edit_stock_unit" name="stock_unit">
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                        </select>
+                    </div>
                     
                     <div class="form-buttons">
                         <button type="button" class="cancel-btn" onclick="closeEditMaterialModal()">
@@ -331,7 +380,15 @@ $result = $conn->query($sql);
                 .then(material => {
                     document.getElementById('edit_material_id').value = material.material_id;
                     document.getElementById('edit_name').value = material.name;
-                    document.getElementById('edit_stock_quantity').value = material.stock_quantity;
+                    
+                    // Determine if we should display in kg or g
+                    if (material.stock_quantity >= 1000) {
+                        document.getElementById('edit_stock_quantity').value = (material.stock_quantity / 1000).toFixed(3);
+                        document.getElementById('edit_stock_unit').value = 'kg';
+                    } else {
+                        document.getElementById('edit_stock_quantity').value = material.stock_quantity;
+                        document.getElementById('edit_stock_unit').value = 'g';
+                    }
                     
                     document.getElementById('editMaterialModal').style.display = 'flex';
                     document.getElementById('editMaterialError').textContent = '';
@@ -346,13 +403,31 @@ $result = $conn->query($sql);
             document.getElementById('editMaterialModal').style.display = 'none';
         }
 
-        function updateStock(materialId, action) {
-            const amount = document.getElementById(`adjust-${materialId}`).value;
+        function validateQuantityInput(value) {
+            return !isNaN(value) && value > 0;
+        }
 
+        function updateStock(materialId, action) {
+            const amountElement = document.getElementById(`adjust-${materialId}`);
+            const amount = parseFloat(amountElement.value);
+            const unit = document.getElementById(`unit-${materialId}`).value;
+            
+            if (!validateQuantityInput(amount)) {
+                toastr.error("Please enter a valid positive number", { timeOut: 3000, closeButton: true });
+                return;
+            }
+            
+            // Convert to grams if kg is selected
+            const amountInGrams = unit === 'kg' ? amount * 1000 : amount;
+            
             fetch("../pages/api/update_material_stock.php", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ material_id: materialId, action: action, amount: amount })
+                body: JSON.stringify({ 
+                    material_id: materialId, 
+                    action: action, 
+                    amount: amountInGrams
+                })
             })
             .then(response => {
                 return response.text().then(text => {
@@ -366,7 +441,6 @@ $result = $conn->query($sql);
             })
             .then(data => {
                 if (data.success) {
-                    // Format the displayed stock with the appropriate unit
                     document.getElementById(`stock-${materialId}`).textContent = formatWeight(Number(data.new_stock));
                     toastr.success(data.message, { timeOut: 3000, closeButton: true });
                 } else {
@@ -383,11 +457,22 @@ $result = $conn->query($sql);
             e.preventDefault();
             
             const name = document.getElementById('name').value;
-            const stockQuantity = document.getElementById('stock_quantity').value;
+            let stockQuantity = parseFloat(document.getElementById('stock_quantity').value);
+            const stockUnit = document.getElementById('stock_unit').value;
             
             if (!name.trim()) {
                 document.getElementById('addMaterialError').textContent = 'Please enter a material name.';
                 return;
+            }
+            
+            if (!validateQuantityInput(stockQuantity)) {
+                document.getElementById('addMaterialError').textContent = 'Please enter a valid positive number for stock quantity.';
+                return;
+            }
+            
+            // Convert to grams if kg is selected
+            if (stockUnit === 'kg') {
+                stockQuantity *= 1000;
             }
             
             const formData = new FormData();
@@ -431,11 +516,22 @@ $result = $conn->query($sql);
             
             const materialId = document.getElementById('edit_material_id').value;
             const name = document.getElementById('edit_name').value;
-            const stockQuantity = document.getElementById('edit_stock_quantity').value;
+            let stockQuantity = parseFloat(document.getElementById('edit_stock_quantity').value);
+            const stockUnit = document.getElementById('edit_stock_unit').value;
             
             if (!name.trim()) {
                 document.getElementById('editMaterialError').textContent = 'Please enter a material name.';
                 return;
+            }
+            
+            if (!validateQuantityInput(stockQuantity)) {
+                document.getElementById('editMaterialError').textContent = 'Please enter a valid positive number for stock quantity.';
+                return;
+            }
+            
+            // Convert to grams if kg is selected
+            if (stockUnit === 'kg') {
+                stockQuantity *= 1000;
             }
             
             const formData = new FormData();
