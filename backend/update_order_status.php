@@ -2,10 +2,8 @@
 // /backend/update_order_status.php
 session_start();
 include "../../backend/db_connection.php";
-include "../../backend/check_role.php";
 
-// Using your existing check_role function instead of our custom checkAccess
-checkRole('Pending Orders');
+// Removed role check requirement
 
 header('Content-Type: application/json');
 
