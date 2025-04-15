@@ -55,7 +55,7 @@ if ($result && $result->num_rows > 0) {
         <div class="orders-header">
             <h1>Pending Orders Management</h1>
             <!-- Removed filter section since we only show pending orders -->
-            <button onclick="window.openAddOrderForm()" class="add-order-btn">
+            <button onclick="openAddOrderForm()" class="add-order-btn">
                 <i class="fas fa-plus"></i> Add New Order
             </button>
         </div>
@@ -174,17 +174,13 @@ if ($result && $result->num_rows > 0) {
                     <input type="hidden" name="orders" id="orders">
                     <input type="hidden" name="total_amount" id="total_amount">
                 </div>
-                    <div class="form-buttons">
-                        <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>
-                        <button type="button" class="check-materials-btn" onclick="showMaterialRequirements()" style="background-color: #2196F3; color: white; margin-right: 10px;">
-                            <i class="fas fa-boxes"></i> Check Material Requirements
-                        </button>
-                        <button type="submit" class="save-btn" onclick="prepareOrderData()">
-                            <i class="fas fa-save"></i> Save
-                        </button>
-                    </div>
+                <div class="form-buttons">
+
+                    <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
+                </div>
             </form>
         </div>
     </div>
