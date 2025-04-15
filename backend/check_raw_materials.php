@@ -15,6 +15,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
         $insufficientMaterials = [];
+        $materialSummary = []; // Track all materials required
         
         foreach ($decoded_orders as $item) {
             // Get the product ingredients from the database
@@ -38,6 +39,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             $materialName = $ingredient[0];
                             $requiredAmount = $ingredient[1] * $quantity; // Amount per product * order quantity
                             
+                            // Track total required for this material
+                            if (!isset($materialSummary[$materialName])) {
+                                $materialSummary[$materialName] = [
+                                    'required' => 0,
+                                    'available' => 0,
+                                    'products' => []
+                                ];
+                            }
+                            
+                            $materialSummary[$materialName]['required'] += $requiredAmount;
+                            $materialSummary[$materialName]['products'][] = [
+                                'name' => $item['item_description'],
+                                'amount' => $requiredAmount
+                            ];
+                            
                             // Get current stock of the raw material
                             $materialStmt = $conn->prepare("SELECT stock_quantity FROM raw_materials WHERE name = ?");
                             $materialStmt->bind_param('s', $materialName);
@@ -46,13 +62,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             
                             if ($materialResult && $materialRow = $materialResult->fetch_assoc()) {
                                 $currentStock = $materialRow['stock_quantity'];
+                                $materialSummary[$materialName]['available'] = $currentStock;
                                 
                                 // Check if there's enough stock
-                                if ($currentStock < $requiredAmount) {
+                                if ($currentStock < $materialSummary[$materialName]['required']) {
                                     $insufficientMaterials[] = [
-                                        'product' => $item['item_description'],
                                         'material' => $materialName,
-                                        'required' => $requiredAmount,
+                                        'required' => $materialSummary[$materialName]['required'],
                                         'available' => $currentStock
                                     ];
                                 }
@@ -61,10 +77,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             } else {
                                 // Material not found
                                 $insufficientMaterials[] = [
-                                    'product' => $item['item_description'],
                                     'material' => $materialName,
+                                    'required' => $materialSummary[$materialName]['required'],
+                                    'available' => 0,
                                     'error' => 'Material not found in inventory'
                                 ];
+                                $materialSummary[$materialName]['available'] = 0;
                             }
                         }
                     }
@@ -78,12 +96,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             echo json_encode([
                 'success' => false,
                 'message' => 'Insufficient raw materials for some products',
-                'insufficient_materials' => $insufficientMaterials
+                'insufficient_materials' => $insufficientMaterials,
+                'material_summary' => $materialSummary
             ]);
         } else {
             echo json_encode([
                 'success' => true,
-                'message' => 'All raw materials are available in sufficient quantities'
+                'message' => 'All raw materials are available in sufficient quantities',
+                'material_summary' => $materialSummary
             ]);
         }
         
