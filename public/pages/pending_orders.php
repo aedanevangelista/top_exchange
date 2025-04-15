@@ -407,145 +407,196 @@ if ($result && $result->num_rows > 0) {
 
     <script src="/js/orders.js"></script>
     <script>
-        // Extended function to open status modal with raw materials check
-        window.openStatusModal = function(poNumber, username, ordersJson) {
-            $('#statusMessage').text('Change order-status for ' + poNumber);
-            $('#statusModal').data('po_number', poNumber).show();
-            
-            // Parse the orders JSON
-            try {
-                const orders = JSON.parse(ordersJson);
-                checkRawMaterials(orders, poNumber);
-            } catch (e) {
-                console.error('Error parsing order details:', e);
-                $('#rawMaterialsContainer').hide();
-                alert('Error checking raw materials');
-            }
-        };
+    // Extended function to open status modal with raw materials check
+    window.openStatusModal = function(poNumber, username, ordersJson) {
+        $('#statusMessage').text('Change order-status for ' + poNumber);
+        $('#statusModal').data('po_number', poNumber).show();
         
-        // Function to check raw materials availability
-        function checkRawMaterials(orders, poNumber) {
-            $.ajax({
-                url: '/backend/check_raw_materials.php',
-                type: 'POST',
-                data: { 
-                    orders: JSON.stringify(orders),
-                    po_number: poNumber
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        const materialsData = response.materials;
-                        const rawMaterialsBody = $('#rawMaterialsBody');
-                        const materialsStatus = $('#materialsStatus');
+        // Parse the orders JSON
+        try {
+            const orders = JSON.parse(ordersJson);
+            
+            // Show loading indicator in raw materials section
+            $('#rawMaterialsBody').html('<tr><td colspan="4" style="text-align:center;">Loading raw materials data...</td></tr>');
+            $('#materialsStatus').text('Checking raw materials availability...').removeClass('status-sufficient status-insufficient');
+            $('#rawMaterialsContainer').show();
+            
+            checkRawMaterials(orders, poNumber);
+        } catch (e) {
+            console.error('Error parsing order details:', e);
+            $('#rawMaterialsBody').html('<tr><td colspan="4" style="text-align:center;color:red;">Error parsing order data</td></tr>');
+            $('#materialsStatus').text('Unable to check raw materials. Error: ' + e.message)
+                .addClass('status-insufficient').removeClass('status-sufficient');
+            $('#activeStatusBtn').prop('disabled', true);
+        }
+    };
+    
+    // Function to check raw materials availability
+    function checkRawMaterials(orders, poNumber) {
+        $.ajax({
+            url: '/backend/check_raw_materials.php',
+            type: 'POST',
+            data: { 
+                orders: JSON.stringify(orders),
+                po_number: poNumber
+            },
+            dataType: 'json',
+            success: function(response) {
+                console.log('Raw materials response:', response); // Debug log
+                
+                if (response.success) {
+                    const materialsData = response.materials;
+                    const rawMaterialsBody = $('#rawMaterialsBody');
+                    const materialsStatus = $('#materialsStatus');
+                    
+                    rawMaterialsBody.empty();
+                    
+                    // Check if we have any materials data
+                    if (Object.keys(materialsData).length === 0) {
+                        rawMaterialsBody.html('<tr><td colspan="4" style="text-align:center;">No raw materials data available for these products</td></tr>');
+                        materialsStatus.text('No raw materials information found. You can proceed, but no materials will be deducted.')
+                            .removeClass('status-insufficient status-sufficient');
+                        $('#activeStatusBtn').prop('disabled', false);
+                        return;
+                    }
+                    
+                    let allSufficient = true;
+                    let insufficientMaterials = [];
+                    
+                    // Populate the materials table
+                    Object.keys(materialsData).forEach(material => {
+                        const data = materialsData[material];
+                        const isSufficient = data.available >= data.required;
                         
-                        rawMaterialsBody.empty();
-                        let allSufficient = true;
-                        
-                        // Populate the materials table
-                        Object.keys(materialsData).forEach(material => {
-                            const data = materialsData[material];
-                            const isSufficient = data.available >= data.required;
-                            
-                            if (!isSufficient) {
-                                allSufficient = false;
-                            }
-                            
-                            const row = `
-                                <tr>
-                                    <td>${material}</td>
-                                    <td>${data.available.toFixed(2)} g</td>
-                                    <td>${data.required.toFixed(2)} g</td>
-                                    <td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">
-                                        ${isSufficient ? 'Sufficient' : 'Insufficient'}
-                                    </td>
-                                </tr>
-                            `;
-                            rawMaterialsBody.append(row);
-                        });
-                        
-                        // Update status message and Active button state
-                        if (allSufficient) {
-                            materialsStatus.text('All raw materials are sufficient for this order.');
-                            materialsStatus.removeClass('status-insufficient').addClass('status-sufficient');
-                            $('#activeStatusBtn').prop('disabled', false);
-                        } else {
-                            materialsStatus.text('Insufficient raw materials. The order cannot proceed.');
-                            materialsStatus.removeClass('status-sufficient').addClass('status-insufficient');
-                            $('#activeStatusBtn').prop('disabled', true);
+                        if (!isSufficient) {
+                            allSufficient = false;
+                            insufficientMaterials.push(material);
                         }
                         
-                        $('#rawMaterialsContainer').show();
+                        const row = `
+                            <tr>
+                                <td>${material}</td>
+                                <td>${data.available.toFixed(2)} g</td>
+                                <td>${data.required.toFixed(2)} g</td>
+                                <td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">
+                                    ${isSufficient ? 'Sufficient' : 'Insufficient'}
+                                </td>
+                            </tr>
+                        `;
+                        rawMaterialsBody.append(row);
+                    });
+                    
+                    // Update status message and Active button state
+                    if (allSufficient) {
+                        materialsStatus.text('All raw materials are sufficient for this order.');
+                        materialsStatus.removeClass('status-insufficient').addClass('status-sufficient');
+                        $('#activeStatusBtn').prop('disabled', false);
                     } else {
-                        $('#rawMaterialsContainer').hide();
-                        alert('Error: ' + response.message);
+                        let message = 'Insufficient raw materials: ' + insufficientMaterials.join(', ');
+                        materialsStatus.text(message + '. The order cannot proceed.');
+                        materialsStatus.removeClass('status-sufficient').addClass('status-insufficient');
+                        $('#activeStatusBtn').prop('disabled', true);
                     }
-                },
-                error: function() {
-                    $('#rawMaterialsContainer').hide();
-                    alert('Error checking raw materials. Please try again.');
+                    
+                    // Display any warnings
+                    if (response.warning) {
+                        console.warn(response.warning);
+                    }
+                    
+                    // Display missing materials info
+                    if (response.missing_materials) {
+                        console.warn(response.missing_materials);
+                    }
+                    
+                } else {
+                    // Error in the response
+                    $('#rawMaterialsBody').html('<tr><td colspan="4" style="text-align:center;color:red;">Error checking raw materials</td></tr>');
+                    $('#materialsStatus').text('Error: ' + (response.message || 'Unknown error'))
+                        .addClass('status-insufficient').removeClass('status-sufficient');
+                    $('#activeStatusBtn').prop('disabled', true);
+                    
+                    console.error('Raw materials check error:', response.message);
                 }
-            });
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', status, error);
+                console.log('Response Text:', xhr.responseText);
+                
+                // Try to parse the response for more information
+                try {
+                    var errorDetails = JSON.parse(xhr.responseText);
+                    console.error('Error details:', errorDetails);
+                } catch (e) {
+                    console.error('Raw response:', xhr.responseText);
+                }
+                
+                $('#rawMaterialsBody').html('<tr><td colspan="4" style="text-align:center;color:red;">Error connecting to server</td></tr>');
+                $('#materialsStatus').text('Network error: ' + error)
+                    .addClass('status-insufficient').removeClass('status-sufficient');
+                $('#activeStatusBtn').prop('disabled', true);
+            }
+        });
+    }
+    
+    // Extended change status function to deduct raw materials
+    window.changeStatus = function(status) {
+        var poNumber = $('#statusModal').data('po_number');
+        
+        // If rejecting, no need to check materials
+        if (status === 'Rejected') {
+            updateOrderStatus(poNumber, status, false);
+            return;
         }
         
-        // Extended change status function to deduct raw materials
-        window.changeStatus = function(status) {
-            var poNumber = $('#statusModal').data('po_number');
-            
-            // If rejecting, no need to check materials
-            if (status === 'Rejected') {
-                updateOrderStatus(poNumber, status, false);
-                return;
-            }
-            
-            // If setting to Active, deduct materials
-            updateOrderStatus(poNumber, status, true);
-        };
-        
-        // Function to update order status and optionally deduct materials
-        function updateOrderStatus(poNumber, status, deductMaterials) {
-            $.ajax({
-                type: 'POST',
-                url: '/backend/update_order_status.php',
-                data: { 
-                    po_number: poNumber, 
-                    status: status,
-                    deduct_materials: deductMaterials
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        // Convert status to lowercase for consistency in toast types
-                        let toastType = status.toLowerCase();
-                        
-                        // Standardize status names for CSS classes
-                        if (toastType === 'completed') {
-                            toastType = 'complete';
-                        } else if (toastType === 'rejected') {
-                            toastType = 'reject';
-                        }
-                        
-                        let message = `Changed status for ${poNumber} to ${status}.`;
-                        if (deductMaterials && status === 'Active') {
-                            message = `Changed status for ${poNumber} to ${status}. Raw materials have been deducted.`;
-                        }
-                        
-                        showToast(message, toastType);
-                        
-                        // Wait a moment for the toast to be visible before reloading
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1500);
-                    } else {
-                        alert('Failed to change status: ' + (response.error || 'Unknown error'));
+        // If setting to Active, deduct materials
+        updateOrderStatus(poNumber, status, true);
+    };
+    
+    // Function to update order status and optionally deduct materials
+    function updateOrderStatus(poNumber, status, deductMaterials) {
+        $.ajax({
+            type: 'POST',
+            url: '/backend/update_order_status.php',
+            data: { 
+                po_number: poNumber, 
+                status: status,
+                deduct_materials: deductMaterials
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Convert status to lowercase for consistency in toast types
+                    let toastType = status.toLowerCase();
+                    
+                    // Standardize status names for CSS classes
+                    if (toastType === 'completed') {
+                        toastType = 'complete';
+                    } else if (toastType === 'rejected') {
+                        toastType = 'reject';
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error:', error);
-                    alert('Failed to change status. Please try again.');
+                    
+                    let message = `Changed status for ${poNumber} to ${status}.`;
+                    if (deductMaterials && status === 'Active') {
+                        message = `Changed status for ${poNumber} to ${status}. Raw materials have been deducted.`;
+                    }
+                    
+                    showToast(message, toastType);
+                    
+                    // Wait a moment for the toast to be visible before reloading
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    alert('Failed to change status: ' + (response.error || 'Unknown error'));
                 }
-            });
-        }
-    </script>
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', error);
+                console.log('Response Text:', xhr.responseText);
+                alert('Failed to change status. Please try again.');
+            }
+        });
+    }
+</script>
 </body>
 </html>

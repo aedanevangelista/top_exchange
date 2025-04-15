@@ -3,7 +3,9 @@
 session_start();
 include "../../backend/db_connection.php";
 
-// Removed role check requirement
+// Set error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 header('Content-Type: application/json');
 
@@ -11,7 +13,7 @@ header('Content-Type: application/json');
 if (!isset($_POST['orders']) || !isset($_POST['po_number'])) {
     echo json_encode([
         'success' => false,
-        'message' => 'Missing required data'
+        'message' => 'Missing required data: ' . json_encode($_POST)
     ]);
     exit;
 }
@@ -20,7 +22,7 @@ try {
     $orders = json_decode($_POST['orders'], true);
     
     if (!is_array($orders)) {
-        throw new Exception('Invalid orders data');
+        throw new Exception('Invalid orders data format: ' . $_POST['orders']);
     }
     
     $poNumber = $_POST['po_number'];
@@ -50,7 +52,8 @@ try {
     }
     
     // Bind product IDs to the query
-    $stmt->bind_param(str_repeat('i', count($productIds)), ...$productIds);
+    $bindParams = array_merge([str_repeat('i', count($productIds))], $productIds);
+    $stmt->bind_param(...$bindParams);
     $stmt->execute();
     $result = $stmt->get_result();
     
@@ -63,27 +66,66 @@ try {
     
     $stmt->close();
     
+    // If there are no products with ingredients, return empty result
+    if (empty($productIngredients)) {
+        echo json_encode([
+            'success' => true,
+            'materials' => [],
+            'message' => 'No ingredients found for these products'
+        ]);
+        exit;
+    }
+    
     // Calculate required materials
     $requiredMaterials = [];
+    $productsWithoutIngredients = [];
     
     foreach ($orders as $order) {
         $productId = $order['product_id'];
         $quantity = $order['quantity'];
         
-        if (isset($productIngredients[$productId]) && is_array($productIngredients[$productId]['ingredients'])) {
-            $ingredients = $productIngredients[$productId]['ingredients'];
-            
-            foreach ($ingredients as $ingredient) {
-                $materialName = $ingredient[0];
-                $materialAmount = $ingredient[1];
-                
-                if (!isset($requiredMaterials[$materialName])) {
-                    $requiredMaterials[$materialName] = 0;
-                }
-                
-                $requiredMaterials[$materialName] += $materialAmount * $quantity;
-            }
+        if (!isset($productIngredients[$productId])) {
+            // Product not found in database
+            $productsWithoutIngredients[] = $order['item_description'] ?? "Product ID: $productId";
+            continue;
         }
+        
+        $ingredients = $productIngredients[$productId]['ingredients'];
+        
+        if (!is_array($ingredients)) {
+            // Product has no ingredients data
+            $productsWithoutIngredients[] = $productIngredients[$productId]['name'];
+            continue;
+        }
+        
+        foreach ($ingredients as $ingredient) {
+            if (!is_array($ingredient) || count($ingredient) < 2) {
+                continue; // Skip invalid ingredient format
+            }
+            
+            $materialName = $ingredient[0];
+            $materialAmount = $ingredient[1];
+            
+            if (!isset($requiredMaterials[$materialName])) {
+                $requiredMaterials[$materialName] = 0;
+            }
+            
+            $requiredMaterials[$materialName] += $materialAmount * $quantity;
+        }
+    }
+    
+    // If no valid ingredients were found
+    if (empty($requiredMaterials)) {
+        $message = empty($productsWithoutIngredients) ? 
+            'No ingredients data found for any products' : 
+            'Missing ingredients data for products: ' . implode(', ', $productsWithoutIngredients);
+            
+        echo json_encode([
+            'success' => true,
+            'materials' => [],
+            'message' => $message
+        ]);
+        exit;
     }
     
     // Fetch available materials
@@ -99,7 +141,8 @@ try {
             throw new Exception('Prepare failed: ' . $conn->error);
         }
         
-        $stmt->bind_param(str_repeat('s', count($materialNames)), ...$materialNames);
+        $bindParams = array_merge([str_repeat('s', count($materialNames))], $materialNames);
+        $stmt->bind_param(...$bindParams);
         $stmt->execute();
         $result = $stmt->get_result();
         
@@ -112,9 +155,15 @@ try {
     
     // Prepare response data
     $materialsData = [];
+    $missingMaterials = [];
     
     foreach ($requiredMaterials as $material => $requiredAmount) {
-        $availableAmount = isset($availableMaterials[$material]) ? $availableMaterials[$material] : 0;
+        if (!isset($availableMaterials[$material])) {
+            $missingMaterials[] = $material;
+            $availableAmount = 0; // Material not found in database
+        } else {
+            $availableAmount = $availableMaterials[$material];
+        }
         
         $materialsData[$material] = [
             'available' => $availableAmount,
@@ -122,15 +171,26 @@ try {
         ];
     }
     
-    echo json_encode([
+    $responseData = [
         'success' => true,
         'materials' => $materialsData
-    ]);
+    ];
+    
+    if (!empty($productsWithoutIngredients)) {
+        $responseData['warning'] = 'Missing ingredients data for some products: ' . implode(', ', $productsWithoutIngredients);
+    }
+    
+    if (!empty($missingMaterials)) {
+        $responseData['missing_materials'] = 'Materials not found in inventory: ' . implode(', ', $missingMaterials);
+    }
+    
+    echo json_encode($responseData);
     
 } catch (Exception $e) {
     echo json_encode([
         'success' => false,
-        'message' => $e->getMessage()
+        'message' => 'Error: ' . $e->getMessage(),
+        'trace' => $e->getTraceAsString()
     ]);
 }
 ?>
