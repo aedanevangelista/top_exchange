@@ -55,7 +55,7 @@ if ($result && $result->num_rows > 0) {
         <div class="orders-header">
             <h1>Pending Orders Management</h1>
             <!-- Removed filter section since we only show pending orders -->
-            <button onclick="openAddOrderForm()" class="add-order-btn">
+            <button onclick="window.openAddOrderForm()" class="add-order-btn">
                 <i class="fas fa-plus"></i> Add New Order
             </button>
         </div>
