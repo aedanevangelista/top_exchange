@@ -1,6 +1,5 @@
 <?php
 include 'db_connection.php';
-include 'check_raw_materials.php'; // Include our new raw materials functionality
 
 header('Content-Type: application/json'); // Ensure JSON response
 
@@ -21,60 +20,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Invalid order data format');
         }
 
-        // Check raw material availability
-        $materialCheck = checkRawMaterialAvailability($conn, $orders);
-        if (!$materialCheck['success']) {
-            http_response_code(400); // Bad request
+        // Insert into orders table (now including delivery_address)
+        $insertOrder = $conn->prepare("
+            INSERT INTO orders (username, order_date, delivery_date, delivery_address, po_number, orders, total_amount, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')
+        ");
+
+        if ($insertOrder === false) {
+            throw new Exception('Failed to prepare statement: ' . $conn->error);
+        }
+
+        $insertOrder->bind_param("ssssssd", $username, $order_date, $delivery_date, $delivery_address, $po_number, $orders, $total_amount);
+
+        if ($insertOrder->execute()) {
             echo json_encode([
-                'success' => false,
-                'message' => $materialCheck['message'],
-                'insufficientMaterials' => $materialCheck['insufficientMaterials']
+                'success' => true,
+                'message' => 'Order successfully added!',
+                'order_id' => $conn->insert_id
             ]);
-            exit;
+        } else {
+            throw new Exception('Failed to execute statement: ' . $insertOrder->error);
         }
 
-        // Begin transaction to ensure data consistency
-        $conn->begin_transaction();
-
-        try {
-            // Insert into orders table (now including delivery_address)
-            $insertOrder = $conn->prepare("
-                INSERT INTO orders (username, order_date, delivery_date, delivery_address, po_number, orders, total_amount, status) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')
-            ");
-
-            if ($insertOrder === false) {
-                throw new Exception('Failed to prepare statement: ' . $conn->error);
-            }
-
-            $insertOrder->bind_param("ssssssd", $username, $order_date, $delivery_date, $delivery_address, $po_number, $orders, $total_amount);
-
-            if ($insertOrder->execute()) {
-                // Deduct raw materials
-                $materialDeduction = deductRawMaterials($conn, $orders);
-                if (!$materialDeduction['success']) {
-                    throw new Exception($materialDeduction['message']);
-                }
-                
-                // Commit the transaction
-                $conn->commit();
-                
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'Order successfully added!',
-                    'order_id' => $conn->insert_id,
-                    'materialsDeducted' => $materialDeduction['materials']
-                ]);
-            } else {
-                throw new Exception('Failed to execute statement: ' . $insertOrder->error);
-            }
-
-            $insertOrder->close();
-        } catch (Exception $e) {
-            // Rollback the transaction if any error occurs
-            $conn->rollback();
-            throw $e;
-        }
+        $insertOrder->close();
 
     } catch (Exception $e) {
         http_response_code(500);
