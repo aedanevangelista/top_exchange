@@ -594,7 +594,7 @@ body {
     background-color: #fefefe;
     padding: 25px;
     border-radius: 12px;
-    width: 400px;
+    width: 50%;
     text-align: center;
     animation: modalFadeIn 0.3s ease-in-out;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
