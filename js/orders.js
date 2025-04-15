@@ -455,6 +455,102 @@ $(document).ready(function() {
         }
     });
 
+function checkRawMaterialAvailability() {
+    if (selectedProducts.length === 0) {
+        return Promise.reject('Please add products to your order');
+    }
+
+    const orderData = JSON.stringify(selectedProducts);
+    
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: '/backend/check_raw_materials.php',
+            type: 'POST',
+            data: { orders: orderData },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    resolve();
+                } else {
+                    // Format the error message for display
+                    let errorMsg = response.message + ':\n\n';
+                    if (response.insufficient_materials && response.insufficient_materials.length > 0) {
+                        response.insufficient_materials.forEach(item => {
+                            errorMsg += `- ${item.product}: ${item.material} (Need: ${item.required}g, Available: ${item.available}g)\n`;
+                        });
+                    }
+                    reject(errorMsg);
+                }
+            },
+            error: function() {
+                reject('Error checking raw material availability. Please try again.');
+            }
+        });
+    });
+}
+
+// Update the form submission logic (around line 458)
+// Replace the existing form submission event handler with this:
+
+// Form submission
+$('#addOrderForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    if (selectedProducts.length === 0) {
+        alert('Please add products to your order');
+        return;
+    }
+
+    prepareOrderData();
+    
+    // Validate delivery address
+    const deliveryAddress = $('#delivery_address').val();
+    if (!deliveryAddress || deliveryAddress.trim() === '') {
+        alert('Please provide a delivery address');
+        return;
+    }
+    
+    // First check raw material availability
+    checkRawMaterialAvailability()
+        .then(() => {
+            // Show a toast notification when saving the order
+            const poNumber = $('#po_number').val();
+            const username = $('#username').val();
+            
+            if (poNumber && username) {
+                showToast(`The order: ${poNumber} is being processed for ${username}.`, 'info');
+            }
+
+            $.ajax({
+                url: $(this).attr('action'),
+                type: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        showToast(`The order: ${poNumber} has been created for ${username} and raw materials were deducted.`, 'success');
+                        // Wait a moment for the toast to be visible before reloading
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function(xhr) {
+                    let errorMessage = 'Error submitting order. Please try again.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    alert(errorMessage);
+                }
+            });
+        })
+        .catch(error => {
+            alert(error);
+        });
+});
+
     // Form submission
     $('#addOrderForm').on('submit', function(e) {
         e.preventDefault();
