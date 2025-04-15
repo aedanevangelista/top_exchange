@@ -1,58 +1,169 @@
 <?php
+// /backend/update_order_status.php
 session_start();
-require_once "db_connection.php";
-require_once "check_role.php"; // Include the check_role.php file
+include "../../backend/db_connection.php";
+include "../../backend/check_role.php";
+
+// Ensure user has appropriate access
+checkAccess();
 
 header('Content-Type: application/json');
 
-// Check if the user has permission to access Pending Orders
+if (!isset($_POST['po_number']) || !isset($_POST['status'])) {
+    echo json_encode([
+        'success' => false,
+        'error' => 'Missing required fields'
+    ]);
+    exit;
+}
+
+$poNumber = $_POST['po_number'];
+$status = $_POST['status'];
+$deductMaterials = isset($_POST['deduct_materials']) ? (bool)$_POST['deduct_materials'] : false;
+
+// Begin transaction
+$conn->begin_transaction();
+
 try {
-    // Use checkApiRole instead of a simple session check
-    checkApiRole('Pending Orders');
-    
-    // Check if request method is POST
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        echo json_encode(['success' => false, 'error' => 'Invalid request method.']);
-        exit;
+    // First get the order details
+    $stmt = $conn->prepare("SELECT orders FROM orders WHERE po_number = ?");
+    if ($stmt === false) {
+        throw new Exception("Prepare failed: " . $conn->error);
     }
     
-    // Retrieve and sanitize form data
-    $po_number = isset($_POST['po_number']) ? trim($_POST['po_number']) : '';
-    $status = isset($_POST['status']) ? trim($_POST['status']) : '';
+    $stmt->bind_param("s", $poNumber);
+    $stmt->execute();
+    $result = $stmt->get_result();
     
-    // Validate inputs
-    if (empty($po_number) || empty($status)) {
-        echo json_encode(['success' => false, 'error' => 'Missing required fields.']);
-        exit;
+    if ($result->num_rows === 0) {
+        throw new Exception("Order not found");
     }
     
-    // Update allowed statuses to match your frontend
-    $allowedStatuses = ['Active', 'Rejected', 'Pending', 'Completed', 'Cancelled'];
-    if (!in_array($status, $allowedStatuses)) {
-        echo json_encode(['success' => false, 'error' => 'Invalid status value.']);
-        exit;
-    }
+    $orderData = $result->fetch_assoc();
+    $orders = json_decode($orderData['orders'], true);
+    $stmt->close();
     
-    // Prepare the SQL statement to update the status
+    // Update order status
     $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE po_number = ?");
     if ($stmt === false) {
-        throw new Exception($conn->error);
+        throw new Exception("Prepare failed: " . $conn->error);
     }
     
-    // Bind parameters (s = string)
-    $stmt->bind_param("ss", $status, $po_number);
+    $stmt->bind_param("ss", $status, $poNumber);
+    $stmt->execute();
     
-    // Execute the statement
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true]);
-    } else {
-        throw new Exception('Database update failed.');
+    if ($stmt->affected_rows === 0) {
+        throw new Exception("Failed to update order status");
     }
     
-    // Close the statement
     $stmt->close();
+    
+    // If status is Active and deduct_materials is true, deduct raw materials
+    if ($status === 'Active' && $deductMaterials && is_array($orders)) {
+        // Calculate required materials from order
+        $requiredMaterials = calculateRequiredMaterials($conn, $orders);
+        
+        // Deduct materials from stock
+        foreach ($requiredMaterials as $material => $amount) {
+            $stmt = $conn->prepare("UPDATE raw_materials SET stock_quantity = stock_quantity - ? WHERE name = ?");
+            
+            if ($stmt === false) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+            
+            $stmt->bind_param("ds", $amount, $material);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+    
+    // Commit transaction
+    $conn->commit();
+    
+    echo json_encode([
+        'success' => true
+    ]);
+    
 } catch (Exception $e) {
-    error_log($e->getMessage());
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    // Rollback transaction on error
+    $conn->rollback();
+    
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage()
+    ]);
+}
+
+// Helper function to check access
+function checkAccess() {
+    // Check if the user is logged in
+    if (!isset($_SESSION['username']) || !isset($_SESSION['role'])) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'error' => 'Unauthorized access'
+        ]);
+        exit;
+    }
+}
+
+// Helper function to calculate required materials from orders
+function calculateRequiredMaterials($conn, $orders) {
+    $requiredMaterials = [];
+    
+    // Get product IDs
+    $productIds = array_map(function($order) {
+        return $order['product_id'];
+    }, $orders);
+    
+    if (empty($productIds)) {
+        return $requiredMaterials;
+    }
+    
+    // Create placeholder string for SQL query
+    $placeholders = str_repeat('?,', count($productIds) - 1) . '?';
+    
+    // Fetch products with ingredients
+    $stmt = $conn->prepare("SELECT product_id, ingredients FROM products WHERE product_id IN ($placeholders)");
+    
+    if ($stmt === false) {
+        throw new Exception('Prepare failed: ' . $conn->error);
+    }
+    
+    // Bind product IDs to the query
+    $types = str_repeat('i', count($productIds));
+    $stmt->bind_param($types, ...$productIds);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $productIngredients = [];
+    while ($row = $result->fetch_assoc()) {
+        $productIngredients[$row['product_id']] = json_decode($row['ingredients'], true);
+    }
+    
+    $stmt->close();
+    
+    // Calculate required materials for each order item
+    foreach ($orders as $order) {
+        $productId = $order['product_id'];
+        $quantity = $order['quantity'];
+        
+        if (isset($productIngredients[$productId]) && is_array($productIngredients[$productId])) {
+            $ingredients = $productIngredients[$productId];
+            
+            foreach ($ingredients as $ingredient) {
+                $materialName = $ingredient[0];
+                $materialAmount = $ingredient[1];
+                
+                if (!isset($requiredMaterials[$materialName])) {
+                    $requiredMaterials[$materialName] = 0;
+                }
+                
+                $requiredMaterials[$materialName] += $materialAmount * $quantity;
+            }
+        }
+    }
+    
+    return $requiredMaterials;
 }
 ?>
