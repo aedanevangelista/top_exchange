@@ -20,9 +20,4 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
     });
-    
-    // Remove no-hover class to ensure menu items are clickable
-    document.querySelectorAll(".menu-item.no-hover").forEach(item => {
-        item.classList.remove("no-hover");
-    });
 });
