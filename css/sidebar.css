@@ -201,29 +201,32 @@ hr {
     font-weight: bold;
 }
 
+
+/* Submenu styles - ensure this is properly added to your sidebar.css */
 .submenu-items {
-    display: none; /* Hide submenus by default */
+    display: none !important; /* Hide submenus by default with higher priority */
     flex-direction: column;
-    margin-left: 20px; /* Indentation */
+    margin-left: 20px;
     margin-top: 5px;
-    transition: all 0.3s ease; /* Smooth transition */
 }
 
-/* Class to show submenu when active */
+/* Class to show submenu when active - use !important to override any conflicting styles */
 .submenu-items.visible {
-    display: flex;
+    display: flex !important;
 }
 
 /* Change the cursor for menu items that have submenus */
 .submenu > .menu-item {
     cursor: pointer;
+    position: relative; /* Required for absolute positioning of the arrow */
 }
 
 /* Add an arrow indicator to menu items with submenus */
 .submenu > .menu-item::after {
     content: '▼';
     font-size: 10px;
-    margin-left: auto;
+    margin-left: 10px;
+    display: inline-block;
     transition: transform 0.3s ease;
 }
 
