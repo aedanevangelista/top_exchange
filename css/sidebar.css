@@ -1,4 +1,3 @@
-/* ================================ */
 /* Reset & General Styles */
 /* ================================ */
 * {
@@ -51,6 +50,7 @@ hr {
 .menu-item {
     display: flex;
     align-items: center;
+    justify-content: space-between; /* Distributes content to both ends */
     gap: 10px;
     background: none;
     border: none;
@@ -87,10 +87,20 @@ hr {
 }
 
 .submenu-items {
-    display: flex;
+    display: none;
     flex-direction: column;
     margin-left: 20px; /* Indentation */
     margin-top: 5px;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+.submenu-items.visible {
+    display: block;
+    max-height: 500px; /* Large enough to fit all submenu items */
+    opacity: 1;
 }
 
 .submenu-item {
@@ -112,6 +122,16 @@ hr {
 
 .submenu-item:hover {
     background: #444;
+}
+
+/* Dropdown arrow styling */
+.dropdown-arrow {
+    margin-left: 10px;
+    transition: transform 0.3s ease;
+}
+
+.dropdown-arrow.rotate {
+    transform: rotate(180deg);
 }
 
 /* ================================ */
@@ -136,101 +156,41 @@ hr {
     font-size: 12px; /* Reduced by 2px */
     color: white;
     font-weight: bold;
-    text-align: center;
-    width: 100%;
 }
 
-/* Logout Button Full Width */
+/* Logout Button */
 .logout-btn {
-    background: #ff4444;
-    padding: 14px;
-    font-size: 12px; /* Reduced by 2px */
-    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #c62828; /* Red logout button */
     color: white;
-    text-align: center;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.2s ease;
+    font-size: 13px; /* Reduced by 2px */
+    font-weight: 400;
+    padding: 10px 15px; /* Adjusted padding */
     width: 100%;
+    text-align: center;
+    justify-content: center; /* Center logout text */
+    cursor: pointer;
+    transition: background 0.2s ease-in-out;
+    border-radius: 4px;
+    margin-top: 10px; /* Add gap between account info and logout */
 }
 
 .logout-btn:hover {
-    background: #cc0000;
+    background: #b71c1c; /* Darker red on hover */
 }
 
-/* ================================ */
-/* Fix Content Layout */
-/* ================================ */
-.main-content {
-    margin-left: 250px; /* Prevent overlap */
-    padding: 20px;
+/* Make icons consistent size */
+.sidebar i {
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
 }
 
-/* ================================ */
-/* Sidebar Menu Items Alignment */
-/* ================================ */
-.menu-item {
+/* For dropdown menu items, need to structure differently */
+.menu-item > div {
     display: flex;
     align-items: center;
-    gap: 12px; /* Consistent spacing */
-    padding: 10px;
-    font-size: 13px; /* Reduced by 2px */
-    font-weight: 400;
-    color: white;
-    text-align: left;
-    border-radius: 4px;
-    transition: background 0.2s ease-in-out;
-    cursor: pointer;
-}
-
-/* Force consistent icon width for alignment */
-.menu-item i {
-    width: 20px; /* Same width for all icons */
-    text-align: center;
-    font-size: 14px; /* Reduced by 2px */
-}
-
-/* Active and hover states */
-.menu-item:hover {
-    background: #333;
-}
-
-.menu-item.active {
-    background-color: #383838;
-    font-weight: bold;
-}
-
-
-/* Submenu styles - ensure this is properly added to your sidebar.css */
-.submenu-items {
-    display: none !important; /* Hide submenus by default with higher priority */
-    flex-direction: column;
-    margin-left: 20px;
-    margin-top: 5px;
-}
-
-/* Class to show submenu when active - use !important to override any conflicting styles */
-.submenu-items.visible {
-    display: flex !important;
-}
-
-/* Change the cursor for menu items that have submenus */
-.submenu > .menu-item {
-    cursor: pointer;
-    position: relative; /* Required for absolute positioning of the arrow */
-}
-
-/* Add an arrow indicator to menu items with submenus */
-.submenu > .menu-item::after {
-    content: '▼';
-    font-size: 10px;
-    margin-left: 10px;
-    display: inline-block;
-    transition: transform 0.3s ease;
-}
-
-/* Rotate the arrow when submenu is visible */
-.submenu > .menu-item.active::after {
-    transform: rotate(180deg);
+    gap: 10px;
 }

@@ -32,32 +32,6 @@ $stmt->close();
 $allowedPages = array_map('trim', explode(',', $pages));
 ?>
 
-<style>
-/* Local styles for sidebar dropdown - keeps it self-contained */
-.submenu-items {
-    display: none;
-    margin-left: 20px;
-    margin-top: 5px;
-}
-
-.submenu-items.show {
-    display: block;
-}
-
-.dropdown-arrow {
-    float: right;
-    transition: transform 0.3s;
-}
-
-.dropdown-arrow.rotate {
-    transform: rotate(180deg);
-}
-
-.submenu > .menu-item {
-    cursor: pointer;
-}
-</style>
-
 <div class="sidebar">
     <div>
         <!-- MAIN MENU Section -->
@@ -66,7 +40,9 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <hr>
             <?php if (in_array('Dashboard', $allowedPages)): ?>
                 <a href="/public/pages/dashboard.php" class="menu-item">
-                    <i class="fas fa-home"></i> Dashboard
+                    <div>
+                        <i class="fas fa-home"></i> Dashboard
+                    </div>
                 </a>
             <?php endif; ?>
             
@@ -74,7 +50,9 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php if (in_array('Forecast', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
-                        <i class="fas fa-industry"></i> Production
+                        <div>
+                            <i class="fas fa-industry"></i> Production
+                        </div>
                         <span class="dropdown-arrow">▼</span>
                     </span>
                     <div class="submenu-items">
@@ -89,7 +67,9 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php if (in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages) || in_array('Pending Orders', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
-                        <i class="fas fa-shopping-cart"></i> Ordering
+                        <div>
+                            <i class="fas fa-shopping-cart"></i> Ordering
+                        </div>
                         <span class="dropdown-arrow">▼</span>
                     </span>
                     <div class="submenu-items">
@@ -116,7 +96,9 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php if (in_array('Payment History', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
-                        <i class="fas fa-money-bill-wave"></i> Payments
+                        <div>
+                            <i class="fas fa-money-bill-wave"></i> Payments
+                        </div>
                         <span class="dropdown-arrow">▼</span>
                     </span>
                     <div class="submenu-items">
@@ -129,7 +111,9 @@ $allowedPages = array_map('trim', explode(',', $pages));
 
             <?php if (in_array('Sales Data', $allowedPages)): ?>
                 <a href="/public/pages/sales.php" class="menu-item">
-                    <i class="fas fa-chart-bar"></i> Sales Data
+                    <div>
+                        <i class="fas fa-chart-bar"></i> Sales Data
+                    </div>
                 </a>
             <?php endif; ?>
         </div>
@@ -143,7 +127,9 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php if (in_array('Accounts - Admin', $allowedPages) || in_array('Accounts - Clients', $allowedPages) || in_array('User Roles', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
-                        <i class="fas fa-user"></i> Accounts
+                        <div>
+                            <i class="fas fa-user"></i> Accounts
+                        </div>
                         <span class="dropdown-arrow">▼</span>
                     </span>
                     <div class="submenu-items">
@@ -170,7 +156,9 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php if (in_array('Inventory', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
-                        <i class="fas fa-box"></i> Inventory
+                        <div>
+                            <i class="fas fa-box"></i> Inventory
+                        </div>
                         <span class="dropdown-arrow">▼</span>
                     </span>
                     <div class="submenu-items">
@@ -201,16 +189,50 @@ $allowedPages = array_map('trim', explode(',', $pages));
 </div>
 
 <script>
-// Simple toggle function directly in the sidebar file
+// Updated toggle function to close other open submenus and add animations
 function toggleSubmenu(element) {
-    // Toggle submenu visibility
-    const submenu = element.nextElementSibling;
-    if (submenu) {
-        submenu.classList.toggle('visible');  // Change 'show' to 'visible'
+    // First, close all other open submenus
+    const allOpenSubmenus = document.querySelectorAll('.submenu-items.visible');
+    const allActiveMenuItems = document.querySelectorAll('.menu-item.active');
+    const allRotatedArrows = document.querySelectorAll('.dropdown-arrow.rotate');
+    
+    // Get the submenu we're trying to toggle
+    const targetSubmenu = element.nextElementSibling;
+    
+    // Check if we're opening or closing this submenu
+    const isOpening = !targetSubmenu.classList.contains('visible');
+    
+    // If we're opening this one, close all others first
+    if (isOpening) {
+        // Close all other open submenus
+        allOpenSubmenus.forEach(menu => {
+            if (menu !== targetSubmenu) {
+                menu.classList.remove('visible');
+            }
+        });
+        
+        // Reset all other active menu items
+        allActiveMenuItems.forEach(item => {
+            if (item !== element) {
+                item.classList.remove('active');
+            }
+        });
+        
+        // Reset all other rotated arrows
+        allRotatedArrows.forEach(arrow => {
+            if (arrow !== element.querySelector('.dropdown-arrow')) {
+                arrow.classList.remove('rotate');
+            }
+        });
     }
     
     // Toggle active class on the menu item
-    element.classList.toggle('active');  // Add this line to match sidebar.js behavior
+    element.classList.toggle('active');
+    
+    // Toggle visibility of the submenu
+    if (targetSubmenu) {
+        targetSubmenu.classList.toggle('visible');
+    }
     
     // Rotate arrow
     const arrow = element.querySelector('.dropdown-arrow');
