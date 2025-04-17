@@ -200,3 +200,34 @@ hr {
     background-color: #383838;
     font-weight: bold;
 }
+
+.submenu-items {
+    display: none; /* Hide submenus by default */
+    flex-direction: column;
+    margin-left: 20px; /* Indentation */
+    margin-top: 5px;
+    transition: all 0.3s ease; /* Smooth transition */
+}
+
+/* Class to show submenu when active */
+.submenu-items.visible {
+    display: flex;
+}
+
+/* Change the cursor for menu items that have submenus */
+.submenu > .menu-item {
+    cursor: pointer;
+}
+
+/* Add an arrow indicator to menu items with submenus */
+.submenu > .menu-item::after {
+    content: '▼';
+    font-size: 10px;
+    margin-left: auto;
+    transition: transform 0.3s ease;
+}
+
+/* Rotate the arrow when submenu is visible */
+.submenu > .menu-item.active::after {
+    transform: rotate(180deg);
+}

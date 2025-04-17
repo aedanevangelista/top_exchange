@@ -47,7 +47,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <!-- Production Menu with Submenu for Delivery Calendar (formerly Forecast) -->
             <?php if (in_array('Forecast', $allowedPages)): ?>
                 <div class="submenu">
-                    <span class="menu-item no-hover">
+                    <span class="menu-item">
                         <i class="fas fa-industry"></i> Production
                     </span>
                     <div class="submenu-items">
@@ -61,7 +61,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <!-- Ordering Menu with Submenus for Orders, Pending Orders, and Order History -->
             <?php if (in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages) || in_array('Pending Orders', $allowedPages)): ?>
                 <div class="submenu">
-                    <span class="menu-item no-hover">
+                    <span class="menu-item">
                         <i class="fas fa-shopping-cart"></i> Ordering
                     </span>
                     <div class="submenu-items">
@@ -87,7 +87,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <!-- Payments Menu with Submenu for Payment History -->
             <?php if (in_array('Payment History', $allowedPages)): ?>
                 <div class="submenu">
-                    <span class="menu-item no-hover">
+                    <span class="menu-item">
                         <i class="fas fa-money-bill-wave"></i> Payments
                     </span>
                     <div class="submenu-items">
@@ -113,7 +113,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <!-- Accounts Menu with Submenus -->
             <?php if (in_array('Accounts - Admin', $allowedPages) || in_array('Accounts - Clients', $allowedPages) || in_array('User Roles', $allowedPages)): ?>
                 <div class="submenu">
-                    <span class="menu-item no-hover">
+                    <span class="menu-item">
                         <i class="fas fa-user"></i> Accounts
                     </span>
                     <div class="submenu-items">
@@ -139,7 +139,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <!-- Inventory Menu with Submenus -->
             <?php if (in_array('Inventory', $allowedPages)): ?>
                 <div class="submenu">
-                    <span class="menu-item no-hover">
+                    <span class="menu-item">
                         <i class="fas fa-box"></i> Inventory
                     </span>
                     <div class="submenu-items">
