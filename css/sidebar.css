@@ -87,19 +87,33 @@ hr {
 }
 
 .submenu-items {
-    display: none;
+    display: block;
     flex-direction: column;
     margin-left: 20px; /* Indentation */
-    margin-top: 5px;
+    margin-top: 0;
     overflow: hidden;
     max-height: 0;
-    transition: max-height 0.3s ease, opacity 0.3s ease;
     opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Smooth easing function */
+    pointer-events: none; /* Prevents clicking on hidden items */
 }
 
 .submenu-items.visible {
-    display: block;
-    max-height: 500px; /* Large enough to fit all submenu items */
+    max-height: 300px; /* Adjust based on your content */
+    opacity: 1;
+    margin-top: 5px;
+    pointer-events: all; /* Re-enables clicking */
+}
+
+/* Arrow Icon Styling */
+.menu-item .fa-chevron-down {
+    font-size: 12px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.8;
+}
+
+.menu-item.active .fa-chevron-down {
+    transform: rotate(180deg);
     opacity: 1;
 }
 

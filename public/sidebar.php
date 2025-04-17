@@ -32,6 +32,43 @@ $stmt->close();
 $allowedPages = array_map('trim', explode(',', $pages));
 ?>
 
+<style>
+/* Local styles for sidebar dropdown - keeps it self-contained */
+.submenu-items {
+    display: block;
+    flex-direction: column;
+    margin-left: 20px; /* Indentation */
+    margin-top: 0;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Smooth easing function */
+    pointer-events: none; /* Prevents clicking on hidden items */
+}
+
+.submenu-items.visible {
+    max-height: 300px; /* Adjust based on your content */
+    opacity: 1;
+    margin-top: 5px;
+    pointer-events: all; /* Re-enables clicking */
+}
+
+.menu-item .fa-chevron-down {
+    font-size: 12px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.8;
+}
+
+.menu-item.active .fa-chevron-down {
+    transform: rotate(180deg);
+    opacity: 1;
+}
+
+.submenu > .menu-item {
+    cursor: pointer;
+}
+</style>
+
 <div class="sidebar">
     <div>
         <!-- MAIN MENU Section -->
@@ -53,7 +90,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <div>
                             <i class="fas fa-industry"></i> Production
                         </div>
-                        <span class="dropdown-arrow">▼</span>
+                        <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
                         <a href="/public/pages/forecast.php" class="submenu-item">
@@ -70,7 +107,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <div>
                             <i class="fas fa-shopping-cart"></i> Ordering
                         </div>
-                        <span class="dropdown-arrow">▼</span>
+                        <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
                         <?php if (in_array('Orders', $allowedPages)): ?>
@@ -99,7 +136,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <div>
                             <i class="fas fa-money-bill-wave"></i> Payments
                         </div>
-                        <span class="dropdown-arrow">▼</span>
+                        <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
                         <a href="/public/pages/payment_history.php" class="submenu-item">
@@ -130,7 +167,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <div>
                             <i class="fas fa-user"></i> Accounts
                         </div>
-                        <span class="dropdown-arrow">▼</span>
+                        <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
                         <?php if (in_array('Accounts - Admin', $allowedPages)): ?>
@@ -159,7 +196,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <div>
                             <i class="fas fa-box"></i> Inventory
                         </div>
-                        <span class="dropdown-arrow">▼</span>
+                        <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
                         <a href="/public/pages/inventory.php" class="submenu-item">
@@ -189,12 +226,11 @@ $allowedPages = array_map('trim', explode(',', $pages));
 </div>
 
 <script>
-// Updated toggle function to close other open submenus and add animations
+// Updated toggle function with smoother animation handling
 function toggleSubmenu(element) {
     // First, close all other open submenus
     const allOpenSubmenus = document.querySelectorAll('.submenu-items.visible');
     const allActiveMenuItems = document.querySelectorAll('.menu-item.active');
-    const allRotatedArrows = document.querySelectorAll('.dropdown-arrow.rotate');
     
     // Get the submenu we're trying to toggle
     const targetSubmenu = element.nextElementSibling;
@@ -217,13 +253,6 @@ function toggleSubmenu(element) {
                 item.classList.remove('active');
             }
         });
-        
-        // Reset all other rotated arrows
-        allRotatedArrows.forEach(arrow => {
-            if (arrow !== element.querySelector('.dropdown-arrow')) {
-                arrow.classList.remove('rotate');
-            }
-        });
     }
     
     // Toggle active class on the menu item
@@ -231,13 +260,11 @@ function toggleSubmenu(element) {
     
     // Toggle visibility of the submenu
     if (targetSubmenu) {
-        targetSubmenu.classList.toggle('visible');
-    }
-    
-    // Rotate arrow
-    const arrow = element.querySelector('.dropdown-arrow');
-    if (arrow) {
-        arrow.classList.toggle('rotate');
+        if (isOpening) {
+            targetSubmenu.classList.add('visible');
+        } else {
+            targetSubmenu.classList.remove('visible');
+        }
     }
 }
 </script>
