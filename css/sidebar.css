@@ -194,3 +194,35 @@ hr {
     align-items: center;
     gap: 10px;
 }
+
+.main-content {
+    margin-left: 250px; /* Same as sidebar width */
+    padding: 20px;
+    width: calc(100% - 250px); /* Full width minus sidebar */
+    box-sizing: border-box;
+    overflow-x: auto; /* Allow horizontal scroll if needed */
+}
+
+.dashboard-container {
+    display: flex;
+    height: 100vh;
+    position: relative; /* Ensure proper positioning context */
+}
+
+/* For smaller screens, adjust as needed */
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px;
+    }
+    
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .sidebar.show {
+        transform: translateX(0);
+    }
+}
