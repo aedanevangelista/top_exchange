@@ -206,8 +206,11 @@ function toggleSubmenu(element) {
     // Toggle submenu visibility
     const submenu = element.nextElementSibling;
     if (submenu) {
-        submenu.classList.toggle('show');
+        submenu.classList.toggle('visible');  // Change 'show' to 'visible'
     }
+    
+    // Toggle active class on the menu item
+    element.classList.toggle('active');  // Add this line to match sidebar.js behavior
     
     // Rotate arrow
     const arrow = element.querySelector('.dropdown-arrow');
