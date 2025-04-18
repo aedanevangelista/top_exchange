@@ -84,9 +84,11 @@ $currentDateTime = date('Y-m-d H:i:s');
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-    <!-- Include jsPDF library for PDF generation -->
+    
+    <!-- Include jsPDF and AutoTable libraries with correct order -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    
     <style>
         body {
             background-color: #f5f7fa;
@@ -812,7 +814,7 @@ $currentDateTime = date('Y-m-d H:i:s');
                     <h2 class="modal-date-header" id="modalDate">Orders for Date</h2>
                 </div>
                 <div class="modal-header-right">
-                    <button class="print-btn" id="printOrdersBtn" onclick="generateProductsPDF()">
+                    <button class="print-btn" id="printOrdersBtn">
                         <i class="fas fa-print"></i> Print Products
                     </button>
                     <span class="close-btn" onclick="closeModal()">&times;</span>
@@ -828,15 +830,9 @@ $currentDateTime = date('Y-m-d H:i:s');
     <div id="printContainer" class="print-container"></div>
     
     <script>
-    // Initialize jsPDF
-    window.jspdf = window.jspdf || {};
-    window.jspdf.jsPDF = window.jsPDF.jsPDF;
-    
-    // Pass the PHP array of all categories to JavaScript
-    const allCategories = <?= json_encode($allCategories) ?>;
-    // Store the current date and order data
+    // Store the current date and order data globally
     let currentOrderDate = '';
-    let currentOrderData = [];
+    let currentOrderData = {};
     
     // Format number with commas and decimal places
     function formatNumber(num, decimals = 2) {
@@ -854,6 +850,12 @@ $currentDateTime = date('Y-m-d H:i:s');
     
     // Generate Products PDF with each department on a separate page
     function generateProductsPDF() {
+        // Make sure jsPDF is available
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            alert("PDF generation library not loaded properly. Please refresh the page and try again.");
+            return;
+        }
+        
         // Get formatted date for the filename and header
         const formattedDate = new Date(currentOrderDate).toLocaleDateString('en-US', {
             weekday: 'long',
@@ -876,7 +878,7 @@ $currentDateTime = date('Y-m-d H:i:s');
         const normalFontSize = 10;
         const pageWidth = doc.internal.pageSize.getWidth();
         
-        // Sort categories by total items (descending)
+        // Calculate total items for each category to sort by most orders
         const categoriesWithCounts = allCategories.map(category => {
             const products = currentOrderData[category]?.products || [];
             const totalItems = products.reduce((sum, product) => sum + product.total_quantity, 0);
@@ -888,6 +890,12 @@ $currentDateTime = date('Y-m-d H:i:s');
             };
         }).filter(cat => cat.totalItems > 0)
           .sort((a, b) => b.totalItems - a.totalItems);
+        
+        // Check if there are any categories with products
+        if (categoriesWithCounts.length === 0) {
+            alert("No products found for this date.");
+            return;
+        }
         
         // Generate a page for each department with products
         let isFirstPage = true;
@@ -965,6 +973,7 @@ $currentDateTime = date('Y-m-d H:i:s');
         doc.save(`Department_Orders_${datePart}.pdf`);
     }
     
+    // Show orders for a specific date
     function showOrders(date) {
         const modal = document.getElementById('departmentOrdersModal');
         const modalDate = document.getElementById('modalDate');
@@ -1152,6 +1161,9 @@ $currentDateTime = date('Y-m-d H:i:s');
                     });
                 });
             });
+            
+            // Add event listener for print button
+            document.getElementById('printOrdersBtn').addEventListener('click', generateProductsPDF);
         })
         .catch(error => {
             console.error('Error fetching orders:', error);
@@ -1174,6 +1186,9 @@ $currentDateTime = date('Y-m-d H:i:s');
             departmentOrdersModal.style.display = 'none';
         }
     };
+    
+    // Pass the PHP array of all categories to JavaScript
+    const allCategories = <?= json_encode($allCategories) ?>;
     </script>
 </body>
 </html>
