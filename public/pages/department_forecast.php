@@ -442,6 +442,80 @@ $currentDateTime = date('Y-m-d H:i:s');
         .scrollbar-style::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+        
+        .materials-summary {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 8px;
+        }
+        
+        .materials-summary h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 16px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 8px;
+            color: #333;
+        }
+        
+        .material-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            padding: 5px 0;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        .material-item:last-child {
+            border-bottom: none;
+        }
+        
+        .material-name {
+            font-weight: 500;
+        }
+        
+        .material-amount {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .tab-container {
+            margin-top: 15px;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tab {
+            padding: 10px 15px;
+            margin-right: 5px;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            cursor: pointer;
+            background-color: #f5f5f5;
+            transition: background-color 0.3s;
+        }
+        
+        .tab.active {
+            background-color: #fff;
+            font-weight: bold;
+            border-bottom: 1px solid #fff;
+            margin-bottom: -1px;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 15px 0;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -540,7 +614,7 @@ $currentDateTime = date('Y-m-d H:i:s');
         </div>
         
         <div class="timestamp">
-            Current Date and Time (UTC): <?= $currentDateTime ?>
+            Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): <?= $currentDateTime ?>
             <br>
             Current User's Login: <?= isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Guest' ?>
         </div>
@@ -589,11 +663,14 @@ $currentDateTime = date('Y-m-d H:i:s');
             
             // Calculate total items for each category to sort by most orders
             const categoriesWithCounts = allCategories.map(category => {
-                const products = data[category] || [];
+                const products = data[category]?.products || [];
                 const totalItems = products.reduce((sum, product) => sum + product.total_quantity, 0);
+                const rawMaterials = data[category]?.materials || {};
+                
                 return {
                     name: category,
                     products: products,
+                    materials: rawMaterials,
                     totalItems: totalItems
                 };
             });
@@ -603,7 +680,7 @@ $currentDateTime = date('Y-m-d H:i:s');
             
             // Display each category
             categoriesWithCounts.forEach(categoryData => {
-                const { name: category, products, totalItems } = categoryData;
+                const { name: category, products, materials, totalItems } = categoryData;
                 
                 // Create department header with order count badge
                 const departmentHeader = document.createElement('div');
@@ -613,6 +690,22 @@ $currentDateTime = date('Y-m-d H:i:s');
                     <span class="order-count-badge">${totalItems} items</span>
                 `;
                 departmentOrdersContainer.appendChild(departmentHeader);
+                
+                // Create tab container for products and materials
+                const tabContainer = document.createElement('div');
+                tabContainer.className = 'tab-container';
+                tabContainer.innerHTML = `
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab(this, 'products-${category.replace(/\s+/g, '-')}')">Products</div>
+                        <div class="tab" onclick="switchTab(this, 'materials-${category.replace(/\s+/g, '-')}')">Raw Materials</div>
+                    </div>
+                `;
+                departmentOrdersContainer.appendChild(tabContainer);
+                
+                // Products tab content
+                const productsTabContent = document.createElement('div');
+                productsTabContent.className = 'tab-content active';
+                productsTabContent.id = `products-${category.replace(/\s+/g, '-')}`;
                 
                 if (products.length > 0) {
                     // Create table for products
@@ -642,14 +735,48 @@ $currentDateTime = date('Y-m-d H:i:s');
                         tbody.appendChild(row);
                     });
                     
-                    departmentOrdersContainer.appendChild(table);
+                    productsTabContent.appendChild(table);
                 } else {
                     // Show no orders message
                     const noOrdersDiv = document.createElement('div');
                     noOrdersDiv.className = 'no-category-orders';
                     noOrdersDiv.innerHTML = 'No orders for today in this category';
-                    departmentOrdersContainer.appendChild(noOrdersDiv);
+                    productsTabContent.appendChild(noOrdersDiv);
                 }
+                departmentOrdersContainer.appendChild(productsTabContent);
+                
+                // Materials tab content
+                const materialsTabContent = document.createElement('div');
+                materialsTabContent.className = 'tab-content';
+                materialsTabContent.id = `materials-${category.replace(/\s+/g, '-')}`;
+                
+                if (Object.keys(materials).length > 0) {
+                    const materialsSummary = document.createElement('div');
+                    materialsSummary.className = 'materials-summary';
+                    materialsSummary.innerHTML = '<h3>Raw Materials Required</h3>';
+                    
+                    // Sort materials by amount in descending order
+                    const sortedMaterials = Object.entries(materials)
+                        .sort((a, b) => b[1] - a[1]);
+                    
+                    sortedMaterials.forEach(([materialName, amount]) => {
+                        const materialItem = document.createElement('div');
+                        materialItem.className = 'material-item';
+                        materialItem.innerHTML = `
+                            <span class="material-name">${materialName}</span>
+                            <span class="material-amount">${amount.toFixed(2)} grams</span>
+                        `;
+                        materialsSummary.appendChild(materialItem);
+                    });
+                    
+                    materialsTabContent.appendChild(materialsSummary);
+                } else {
+                    const noMaterialsDiv = document.createElement('div');
+                    noMaterialsDiv.className = 'no-category-orders';
+                    noMaterialsDiv.innerHTML = 'No raw materials data available for this category';
+                    materialsTabContent.appendChild(noMaterialsDiv);
+                }
+                departmentOrdersContainer.appendChild(materialsTabContent);
             });
         })
         .catch(error => {
@@ -660,6 +787,27 @@ $currentDateTime = date('Y-m-d H:i:s');
         });
                 
         modal.style.display = 'block';
+    }
+    
+    function switchTab(tabElement, contentId) {
+        // Remove active class from all tabs and tab contents in the same container
+        const tabContainer = tabElement.parentElement;
+        const tabs = tabContainer.getElementsByClassName('tab');
+        for (let i = 0; i < tabs.length; i++) {
+            tabs[i].classList.remove('active');
+        }
+        
+        // Find all tab contents in the same section and hide them
+        const tabContainerParent = tabContainer.parentElement;
+        const tabContentsContainer = tabContainerParent.parentElement;
+        const tabContents = tabContentsContainer.getElementsByClassName('tab-content');
+        for (let i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove('active');
+        }
+        
+        // Activate the selected tab and content
+        tabElement.classList.add('active');
+        document.getElementById(contentId).classList.add('active');
     }
     
     function closeModal() {
