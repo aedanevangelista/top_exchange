@@ -478,11 +478,45 @@ $currentDateTime = date('Y-m-d H:i:s');
         
         .materials-summary h3 {
             margin-top: 0;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             font-size: 16px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 8px;
-            color: #333;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #607d8b, #455a64);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .department-section[data-category="Siopao"] .materials-summary h3 {
+            background: linear-gradient(135deg, #4CAF50, #2E7D32);
+        }
+        
+        .department-section[data-category="Dimsum & Dumplings"] .materials-summary h3,
+        .department-section[data-category="Dimsum"] .materials-summary h3,
+        .department-section[data-category="Dumplings"] .materials-summary h3 {
+            background: linear-gradient(135deg, #FF9800, #E65100);
+        }
+        
+        .department-section[data-category="Healthy Dimsum"] .materials-summary h3 {
+            background: linear-gradient(135deg, #8BC34A, #558B2F);
+        }
+        
+        .department-section[data-category="Sauces"] .materials-summary h3 {
+            background: linear-gradient(135deg, #F44336, #B71C1C);
+        }
+        
+        .department-section[data-category="Marinated Items"] .materials-summary h3 {
+            background: linear-gradient(135deg, #9C27B0, #4A148C);
+        }
+        
+        .department-section[data-category="Noodles & Wrappers"] .materials-summary h3,
+        .department-section[data-category="Noodles"] .materials-summary h3,
+        .department-section[data-category="Wrappers"] .materials-summary h3 {
+            background: linear-gradient(135deg, #2196F3, #0D47A1);
+        }
+        
+        .department-section[data-category="Pork"] .materials-summary h3 {
+            background: linear-gradient(135deg, #E91E63, #880E4F);
         }
         
         .material-item {
@@ -867,7 +901,7 @@ $currentDateTime = date('Y-m-d H:i:s');
                 if (Object.keys(materials).length > 0) {
                     const materialsSummary = document.createElement('div');
                     materialsSummary.className = 'materials-summary';
-                    materialsSummary.innerHTML = '<h3>Raw Materials Required</h3>';
+                    materialsSummary.innerHTML = '<h3><i class="fas fa-mortar-pestle"></i> Raw Materials Required</h3>';
                     
                     // Sort materials by amount in descending order
                     const sortedMaterials = Object.entries(materials)
