@@ -224,6 +224,19 @@ $currentDateTime = date('Y-m-d H:i:s');
             width: 80%;
             max-width: 900px;
             animation: modalFadeIn 0.3s ease-in-out;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-header {
+            margin-bottom: 20px;
+        }
+        
+        .modal-body {
+            overflow-y: auto;
+            flex-grow: 1;
+            padding-right: 10px;
         }
         
         .close-btn {
@@ -376,6 +389,17 @@ $currentDateTime = date('Y-m-d H:i:s');
             margin-bottom: 10px;
             border-left: 4px solid #4CAF50;
             font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .order-count-badge {
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 20px;
+            padding: 3px 8px;
+            font-size: 12px;
         }
         
         .product-summary {
@@ -399,6 +423,24 @@ $currentDateTime = date('Y-m-d H:i:s');
             border-radius: 8px;
             margin: 10px 0 20px 0;
             background: #f9f9f9;
+        }
+        
+        .scrollbar-style::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .scrollbar-style::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .scrollbar-style::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        
+        .scrollbar-style::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
     </style>
 </head>
@@ -498,15 +540,19 @@ $currentDateTime = date('Y-m-d H:i:s');
         </div>
         
         <div class="timestamp">
-            Last Updated: <?= $currentDateTime ?> UTC
+            Current Date and Time (UTC): <?= $currentDateTime ?>
+            <br>
+            Current User's Login: <?= isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Guest' ?>
         </div>
     </div>
     
     <div id="departmentOrdersModal" class="orders-modal">
         <div class="modal-content">
-            <span class="close-btn" onclick="closeModal()">&times;</span>
-            <h2 class="modal-date-header" id="modalDate">Orders for Date</h2>
-            <div id="departmentOrdersContainer">
+            <div class="modal-header">
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+                <h2 class="modal-date-header" id="modalDate">Orders for Date</h2>
+            </div>
+            <div id="departmentOrdersContainer" class="modal-body scrollbar-style">
                 <!-- Department orders will be loaded here -->
             </div>
         </div>
@@ -541,15 +587,34 @@ $currentDateTime = date('Y-m-d H:i:s');
         .then(data => {
             departmentOrdersContainer.innerHTML = '';
             
-            // Show all categories, even if no orders
-            allCategories.forEach(category => {
-                // Create department header
+            // Calculate total items for each category to sort by most orders
+            const categoriesWithCounts = allCategories.map(category => {
+                const products = data[category] || [];
+                const totalItems = products.reduce((sum, product) => sum + product.total_quantity, 0);
+                return {
+                    name: category,
+                    products: products,
+                    totalItems: totalItems
+                };
+            });
+            
+            // Sort categories by total items (descending)
+            categoriesWithCounts.sort((a, b) => b.totalItems - a.totalItems);
+            
+            // Display each category
+            categoriesWithCounts.forEach(categoryData => {
+                const { name: category, products, totalItems } = categoryData;
+                
+                // Create department header with order count badge
                 const departmentHeader = document.createElement('div');
                 departmentHeader.className = 'department-header';
-                departmentHeader.innerHTML = `<i class="fas fa-tag"></i> ${category}`;
+                departmentHeader.innerHTML = `
+                    <span><i class="fas fa-tag"></i> ${category}</span>
+                    <span class="order-count-badge">${totalItems} items</span>
+                `;
                 departmentOrdersContainer.appendChild(departmentHeader);
                 
-                if (data[category] && data[category].length > 0) {
+                if (products.length > 0) {
                     // Create table for products
                     const table = document.createElement('table');
                     table.className = 'orders-table';
@@ -567,7 +632,7 @@ $currentDateTime = date('Y-m-d H:i:s');
                     const tbody = table.querySelector('tbody');
                     
                     // Add rows for each product
-                    data[category].forEach(product => {
+                    products.forEach(product => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${product.item_description}</td>
