@@ -271,8 +271,8 @@ $currentDateTime = date('Y-m-d H:i:s');
         .orders-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
-            margin-bottom: 25px;
+            margin-top: 0;
+            margin-bottom: 0;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             border-radius: 8px;
             overflow: hidden;
@@ -470,21 +470,20 @@ $currentDateTime = date('Y-m-d H:i:s');
         .materials-summary {
             background-color: #fff;
             border: 1px solid #ddd;
-            padding: 15px;
-            margin-top: 15px;
+            padding: 0;
+            margin-top: 0;
+            margin-bottom: 0;
             border-radius: 8px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
         
         .materials-summary h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
+            margin: 0;
+            padding: 12px 15px;
             font-size: 16px;
             color: white;
-            padding: 10px 15px;
-            border-radius: 6px;
             background: linear-gradient(135deg, #607d8b, #455a64);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .department-section[data-category="Siopao"] .materials-summary h3 {
@@ -519,6 +518,10 @@ $currentDateTime = date('Y-m-d H:i:s');
             background: linear-gradient(135deg, #E91E63, #880E4F);
         }
         
+        .materials-container {
+            padding: 15px;
+        }
+        
         .material-item {
             display: flex;
             justify-content: space-between;
@@ -529,6 +532,8 @@ $currentDateTime = date('Y-m-d H:i:s');
         
         .material-item:last-child {
             border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
         }
         
         .material-name {
@@ -901,7 +906,13 @@ $currentDateTime = date('Y-m-d H:i:s');
                 if (Object.keys(materials).length > 0) {
                     const materialsSummary = document.createElement('div');
                     materialsSummary.className = 'materials-summary';
+                    
+                    // Create header for materials section
                     materialsSummary.innerHTML = '<h3><i class="fas fa-mortar-pestle"></i> Raw Materials Required</h3>';
+                    
+                    // Add container for material items
+                    const materialsContainer = document.createElement('div');
+                    materialsContainer.className = 'materials-container';
                     
                     // Sort materials by amount in descending order
                     const sortedMaterials = Object.entries(materials)
@@ -914,9 +925,10 @@ $currentDateTime = date('Y-m-d H:i:s');
                             <span class="material-name">${materialName}</span>
                             <span class="material-amount">${formatMaterialAmount(amount)}</span>
                         `;
-                        materialsSummary.appendChild(materialItem);
+                        materialsContainer.appendChild(materialItem);
                     });
                     
+                    materialsSummary.appendChild(materialsContainer);
                     materialsTabContent.appendChild(materialsSummary);
                 } else {
                     const noMaterialsDiv = document.createElement('div');
