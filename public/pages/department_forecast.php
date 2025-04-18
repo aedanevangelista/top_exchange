@@ -84,6 +84,9 @@ $currentDateTime = date('Y-m-d H:i:s');
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <!-- Include jsPDF library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
         body {
             background-color: #f5f7fa;
@@ -246,6 +249,19 @@ $currentDateTime = date('Y-m-d H:i:s');
             padding: 15px;
             border-radius: 10px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header-left {
+            flex-grow: 1;
+            text-align: center;
+        }
+        
+        .modal-header-right {
+            display: flex;
+            gap: 10px;
         }
         
         .modal-body {
@@ -256,7 +272,6 @@ $currentDateTime = date('Y-m-d H:i:s');
         
         .close-btn {
             color: #aaa;
-            float: right;
             font-size: 28px;
             font-weight: bold;
             cursor: pointer;
@@ -266,6 +281,24 @@ $currentDateTime = date('Y-m-d H:i:s');
         .close-btn:focus {
             color: black;
             text-decoration: none;
+        }
+        
+        .print-btn {
+            background-color: #4caf50;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .print-btn:hover {
+            background-color: #3e8e41;
         }
         
         .orders-table {
@@ -319,10 +352,10 @@ $currentDateTime = date('Y-m-d H:i:s');
 
         .modal-date-header {
             font-size: 24px;
-            margin-bottom: 20px;
             color: #333;
             text-align: center;
             font-weight: 600;
+            margin: 0;
         }
 
         .weekend {
@@ -648,6 +681,26 @@ $currentDateTime = date('Y-m-d H:i:s');
             font-weight: normal;
             margin-left: 5px;
         }
+        
+        /* Print-specific styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .print-container, .print-container * {
+                visibility: visible;
+            }
+            .print-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+        
+        .print-container {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -755,8 +808,15 @@ $currentDateTime = date('Y-m-d H:i:s');
     <div id="departmentOrdersModal" class="orders-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <span class="close-btn" onclick="closeModal()">&times;</span>
-                <h2 class="modal-date-header" id="modalDate">Orders for Date</h2>
+                <div class="modal-header-left">
+                    <h2 class="modal-date-header" id="modalDate">Orders for Date</h2>
+                </div>
+                <div class="modal-header-right">
+                    <button class="print-btn" id="printOrdersBtn" onclick="generateProductsPDF()">
+                        <i class="fas fa-print"></i> Print Products
+                    </button>
+                    <span class="close-btn" onclick="closeModal()">&times;</span>
+                </div>
             </div>
             <div id="departmentOrdersContainer" class="modal-body scrollbar-style">
                 <!-- Department orders will be loaded here -->
@@ -764,9 +824,19 @@ $currentDateTime = date('Y-m-d H:i:s');
         </div>
     </div>
     
+    <!-- Hidden container for print formatting -->
+    <div id="printContainer" class="print-container"></div>
+    
     <script>
+    // Initialize jsPDF
+    window.jspdf = window.jspdf || {};
+    window.jspdf.jsPDF = window.jsPDF.jsPDF;
+    
     // Pass the PHP array of all categories to JavaScript
     const allCategories = <?= json_encode($allCategories) ?>;
+    // Store the current date and order data
+    let currentOrderDate = '';
+    let currentOrderData = [];
     
     // Format number with commas and decimal places
     function formatNumber(num, decimals = 2) {
@@ -782,10 +852,126 @@ $currentDateTime = date('Y-m-d H:i:s');
         }
     }
     
+    // Generate Products PDF with each department on a separate page
+    function generateProductsPDF() {
+        // Get formatted date for the filename and header
+        const formattedDate = new Date(currentOrderDate).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        
+        // Initialize PDF with portrait orientation
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        // Title styles
+        const titleFontSize = 16;
+        const subTitleFontSize = 12;
+        const normalFontSize = 10;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        
+        // Sort categories by total items (descending)
+        const categoriesWithCounts = allCategories.map(category => {
+            const products = currentOrderData[category]?.products || [];
+            const totalItems = products.reduce((sum, product) => sum + product.total_quantity, 0);
+            
+            return {
+                name: category,
+                products: products,
+                totalItems: totalItems
+            };
+        }).filter(cat => cat.totalItems > 0)
+          .sort((a, b) => b.totalItems - a.totalItems);
+        
+        // Generate a page for each department with products
+        let isFirstPage = true;
+        
+        categoriesWithCounts.forEach((categoryData, index) => {
+            // Add a new page for each category except the first one
+            if (!isFirstPage) {
+                doc.addPage();
+            } else {
+                isFirstPage = false;
+            }
+            
+            // Add page header
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(titleFontSize);
+            doc.text(`Department Orders for ${formattedDate}`, pageWidth / 2, 20, { align: 'center' });
+            
+            // Add department name as subtitle
+            doc.setFontSize(subTitleFontSize);
+            doc.text(`${categoryData.name} Department (${categoryData.totalItems} items)`, pageWidth / 2, 30, { align: 'center' });
+            
+            // Add timestamp
+            const timestamp = new Date().toLocaleString();
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            doc.text(`Generated: ${timestamp}`, pageWidth - 15, 10, { align: 'right' });
+            doc.setTextColor(0);
+            
+            // Add products table if there are products
+            if (categoryData.products.length > 0) {
+                // Prepare table data
+                const tableHeaders = [['Product', 'Packaging', 'Quantity']];
+                const tableData = categoryData.products.map(product => [
+                    product.item_description,
+                    product.packaging,
+                    product.total_quantity.toString()
+                ]);
+                
+                // Add table to PDF
+                doc.autoTable({
+                    startY: 40,
+                    head: tableHeaders,
+                    body: tableData,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [66, 66, 66],
+                        textColor: [255, 255, 255],
+                        fontStyle: 'bold',
+                        halign: 'center'
+                    },
+                    styles: {
+                        fontSize: normalFontSize,
+                        cellPadding: 5
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 'auto' }, // Product name
+                        1: { cellWidth: 'auto' }, // Packaging
+                        2: { cellWidth: 30, halign: 'center' } // Quantity
+                    }
+                });
+            } else {
+                doc.setFontSize(normalFontSize);
+                doc.text('No products available for this department.', 20, 50);
+            }
+            
+            // Add page number at bottom
+            const pageNumber = doc.internal.getNumberOfPages();
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Page ${pageNumber} of ${categoriesWithCounts.length}`, pageWidth - 20, doc.internal.pageSize.getHeight() - 10);
+        });
+        
+        // Save the PDF with a descriptive filename
+        const datePart = currentOrderDate.replace(/-/g, '');
+        doc.save(`Department_Orders_${datePart}.pdf`);
+    }
+    
     function showOrders(date) {
         const modal = document.getElementById('departmentOrdersModal');
         const modalDate = document.getElementById('modalDate');
         const departmentOrdersContainer = document.getElementById('departmentOrdersContainer');
+        
+        // Store the current date for PDF generation
+        currentOrderDate = date;
         
         const formattedDate = new Date(date).toLocaleDateString('en-US', {
             weekday: 'long',
@@ -805,6 +991,8 @@ $currentDateTime = date('Y-m-d H:i:s');
             return response.json();
         })
         .then(data => {
+            // Store the order data for PDF generation
+            currentOrderData = data;
             departmentOrdersContainer.innerHTML = '';
             
             // Calculate total items for each category to sort by most orders
