@@ -516,6 +516,23 @@ $currentDateTime = date('Y-m-d H:i:s');
         .tab-content.active {
             display: block;
         }
+        
+        .department-section {
+            margin-bottom: 30px;
+            border: 1px solid #eaeaea;
+            border-radius: 8px;
+            background-color: #fff;
+            padding: 0 15px 15px 15px;
+        }
+        
+        .department-section .department-header {
+            margin-top: 10px;
+            margin-left: -15px;
+            margin-right: -15px;
+            border-radius: 8px 8px 0 0;
+            border-left: none;
+            border-bottom: 1px solid #eaeaea;
+        }
     </style>
 </head>
 <body>
@@ -681,6 +698,12 @@ $currentDateTime = date('Y-m-d H:i:s');
             // Display each category
             categoriesWithCounts.forEach(categoryData => {
                 const { name: category, products, materials, totalItems } = categoryData;
+                const safeCategoryId = category.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+                
+                // Create a container for this department section
+                const departmentSection = document.createElement('div');
+                departmentSection.className = 'department-section';
+                departmentSection.id = `department-${safeCategoryId}`;
                 
                 // Create department header with order count badge
                 const departmentHeader = document.createElement('div');
@@ -689,23 +712,23 @@ $currentDateTime = date('Y-m-d H:i:s');
                     <span><i class="fas fa-tag"></i> ${category}</span>
                     <span class="order-count-badge">${totalItems} items</span>
                 `;
-                departmentOrdersContainer.appendChild(departmentHeader);
+                departmentSection.appendChild(departmentHeader);
                 
                 // Create tab container for products and materials
                 const tabContainer = document.createElement('div');
                 tabContainer.className = 'tab-container';
                 tabContainer.innerHTML = `
-                    <div class="tabs">
-                        <div class="tab active" onclick="switchTab(this, 'products-${category.replace(/\s+/g, '-')}')">Products</div>
-                        <div class="tab" onclick="switchTab(this, 'materials-${category.replace(/\s+/g, '-')}')">Raw Materials</div>
+                    <div class="tabs" id="tabs-${safeCategoryId}">
+                        <div class="tab active" data-target="products-${safeCategoryId}">Products</div>
+                        <div class="tab" data-target="materials-${safeCategoryId}">Raw Materials</div>
                     </div>
                 `;
-                departmentOrdersContainer.appendChild(tabContainer);
+                departmentSection.appendChild(tabContainer);
                 
                 // Products tab content
                 const productsTabContent = document.createElement('div');
                 productsTabContent.className = 'tab-content active';
-                productsTabContent.id = `products-${category.replace(/\s+/g, '-')}`;
+                productsTabContent.id = `products-${safeCategoryId}`;
                 
                 if (products.length > 0) {
                     // Create table for products
@@ -743,12 +766,12 @@ $currentDateTime = date('Y-m-d H:i:s');
                     noOrdersDiv.innerHTML = 'No orders for today in this category';
                     productsTabContent.appendChild(noOrdersDiv);
                 }
-                departmentOrdersContainer.appendChild(productsTabContent);
+                departmentSection.appendChild(productsTabContent);
                 
                 // Materials tab content
                 const materialsTabContent = document.createElement('div');
                 materialsTabContent.className = 'tab-content';
-                materialsTabContent.id = `materials-${category.replace(/\s+/g, '-')}`;
+                materialsTabContent.id = `materials-${safeCategoryId}`;
                 
                 if (Object.keys(materials).length > 0) {
                     const materialsSummary = document.createElement('div');
@@ -776,7 +799,33 @@ $currentDateTime = date('Y-m-d H:i:s');
                     noMaterialsDiv.innerHTML = 'No raw materials data available for this category';
                     materialsTabContent.appendChild(noMaterialsDiv);
                 }
-                departmentOrdersContainer.appendChild(materialsTabContent);
+                departmentSection.appendChild(materialsTabContent);
+                
+                // Add the complete section to the container
+                departmentOrdersContainer.appendChild(departmentSection);
+                
+                // Add event listeners to tabs
+                const tabs = tabContainer.querySelectorAll('.tab');
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', function() {
+                        const targetId = this.getAttribute('data-target');
+                        const parentSection = this.closest('.department-section');
+                        
+                        // Remove active class from all tabs within this section
+                        parentSection.querySelectorAll('.tab').forEach(t => {
+                            t.classList.remove('active');
+                        });
+                        
+                        // Remove active class from all tab contents within this section
+                        parentSection.querySelectorAll('.tab-content').forEach(tc => {
+                            tc.classList.remove('active');
+                        });
+                        
+                        // Add active class to clicked tab and corresponding content
+                        this.classList.add('active');
+                        parentSection.querySelector(`#${targetId}`).classList.add('active');
+                    });
+                });
             });
         })
         .catch(error => {
@@ -787,27 +836,6 @@ $currentDateTime = date('Y-m-d H:i:s');
         });
                 
         modal.style.display = 'block';
-    }
-    
-    function switchTab(tabElement, contentId) {
-        // Remove active class from all tabs and tab contents in the same container
-        const tabContainer = tabElement.parentElement;
-        const tabs = tabContainer.getElementsByClassName('tab');
-        for (let i = 0; i < tabs.length; i++) {
-            tabs[i].classList.remove('active');
-        }
-        
-        // Find all tab contents in the same section and hide them
-        const tabContainerParent = tabContainer.parentElement;
-        const tabContentsContainer = tabContainerParent.parentElement;
-        const tabContents = tabContentsContainer.getElementsByClassName('tab-content');
-        for (let i = 0; i < tabContents.length; i++) {
-            tabContents[i].classList.remove('active');
-        }
-        
-        // Activate the selected tab and content
-        tabElement.classList.add('active');
-        document.getElementById(contentId).classList.add('active');
     }
     
     function closeModal() {
