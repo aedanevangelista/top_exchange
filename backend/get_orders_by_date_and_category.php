@@ -21,13 +21,12 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
 }
 
 try {
-    $sql = "SELECT DISTINCT o.order_id, o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.total_amount, o.orders
+    // Modified query to use JSON_SEARCH instead of joins since there's no order_items table
+    $sql = "SELECT o.id as order_id, o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.total_amount, o.orders
             FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
             WHERE o.delivery_date = ? 
             AND o.status = 'Active'
-            AND p.category = ?";
+            AND JSON_SEARCH(o.orders, 'one', ?) IS NOT NULL";
 
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("ss", $date, $category);

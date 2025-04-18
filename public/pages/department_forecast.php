@@ -18,7 +18,8 @@ $firstDay = strtotime("$year-$month-01");
 $daysInMonth = date('t', $firstDay);
 
 // Get all available departments/categories
-$categoriesQuery = "SELECT DISTINCT category FROM products WHERE status = 'Active' ORDER BY category";
+// Removed "WHERE status = 'Active'" since there's no status column in products table
+$categoriesQuery = "SELECT DISTINCT category FROM products ORDER BY category";
 $categoriesResult = $conn->query($categoriesQuery);
 $categories = [];
 while ($row = $categoriesResult->fetch_assoc()) {
@@ -32,15 +33,13 @@ $deliveryDates = [];
 
 // If a category is selected, fetch orders for that category
 if (!empty($selectedCategory)) {
-    // This query joins orders with order_items and products to filter by category
-    $sql = "SELECT o.delivery_date, COUNT(DISTINCT o.order_id) as order_count 
+    // This query joins orders with JSON data to filter by category
+    $sql = "SELECT o.delivery_date, COUNT(DISTINCT o.id) as order_count 
             FROM orders o
-            JOIN order_items oi ON o.order_id = oi.order_id
-            JOIN products p ON oi.product_id = p.product_id
             WHERE MONTH(o.delivery_date) = ? 
             AND YEAR(o.delivery_date) = ? 
             AND o.status = 'Active'
-            AND p.category = ?
+            AND JSON_SEARCH(o.orders, 'one', ?) IS NOT NULL
             GROUP BY o.delivery_date";
 
     $stmt = $conn->prepare($sql);
