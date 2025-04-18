@@ -381,25 +381,25 @@ $currentDateTime = date('Y-m-d H:i:s');
         }
         
         .department-header {
-            background-color: #f8f8f8;
             font-weight: bold;
             padding: 12px 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            margin-bottom: 10px;
-            border-left: 4px solid #4CAF50;
+            border-radius: 8px 8px 0 0;
+            margin-top: 0;
+            margin-bottom: 0;
             font-size: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            color: white;
         }
         
         .order-count-badge {
-            background-color: #4CAF50;
+            background-color: rgba(255, 255, 255, 0.2);
             color: white;
             border-radius: 20px;
             padding: 3px 8px;
             font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
         }
         
         .product-summary {
@@ -482,12 +482,13 @@ $currentDateTime = date('Y-m-d H:i:s');
         }
         
         .tab-container {
-            margin-top: 15px;
+            margin-top: 0;
         }
         
         .tabs {
             display: flex;
             border-bottom: 1px solid #ddd;
+            background-color: #f8f8f8;
         }
         
         .tab {
@@ -510,7 +511,8 @@ $currentDateTime = date('Y-m-d H:i:s');
         
         .tab-content {
             display: none;
-            padding: 15px 0;
+            padding: 15px;
+            background-color: #fff;
         }
         
         .tab-content.active {
@@ -519,19 +521,66 @@ $currentDateTime = date('Y-m-d H:i:s');
         
         .department-section {
             margin-bottom: 30px;
-            border: 1px solid #eaeaea;
             border-radius: 8px;
             background-color: #fff;
-            padding: 0 15px 15px 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
         
+        /* Category-specific colors */
+        .department-section[data-category="Siopao"] .department-header {
+            background-color: #4CAF50; /* Green */
+            border-left: 5px solid #2E7D32;
+        }
+        
+        .department-section[data-category="Dimsum & Dumplings"] .department-header,
+        .department-section[data-category="Dimsum"] .department-header,
+        .department-section[data-category="Dumplings"] .department-header {
+            background-color: #FF9800; /* Orange */
+            border-left: 5px solid #E65100;
+        }
+        
+        .department-section[data-category="Healthy Dimsum"] .department-header {
+            background-color: #8BC34A; /* Light Green */
+            border-left: 5px solid #558B2F;
+        }
+        
+        .department-section[data-category="Sauces"] .department-header {
+            background-color: #F44336; /* Red */
+            border-left: 5px solid #B71C1C;
+        }
+        
+        .department-section[data-category="Marinated Items"] .department-header {
+            background-color: #9C27B0; /* Purple */
+            border-left: 5px solid #4A148C;
+        }
+        
+        .department-section[data-category="Noodles & Wrappers"] .department-header,
+        .department-section[data-category="Noodles"] .department-header,
+        .department-section[data-category="Wrappers"] .department-header {
+            background-color: #2196F3; /* Blue */
+            border-left: 5px solid #0D47A1;
+        }
+        
+        .department-section[data-category="Pork"] .department-header {
+            background-color: #E91E63; /* Pink */
+            border-left: 5px solid #880E4F;
+        }
+        
+        /* Default color for any other categories */
         .department-section .department-header {
-            margin-top: 10px;
-            margin-left: -15px;
-            margin-right: -15px;
-            border-radius: 8px 8px 0 0;
-            border-left: none;
-            border-bottom: 1px solid #eaeaea;
+            background-color: #607D8B; /* Blue Grey */
+            border-left: 5px solid #37474F;
+        }
+        
+        .unit-badge {
+            background-color: #e0e0e0;
+            color: #333;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: normal;
+            margin-left: 5px;
         }
     </style>
 </head>
@@ -653,6 +702,20 @@ $currentDateTime = date('Y-m-d H:i:s');
     // Pass the PHP array of all categories to JavaScript
     const allCategories = <?= json_encode($allCategories) ?>;
     
+    // Format number with commas and decimal places
+    function formatNumber(num, decimals = 2) {
+        return num.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+    
+    // Format material amount (convert to kg if over 1000g)
+    function formatMaterialAmount(amount) {
+        if (amount >= 1000) {
+            return formatNumber(amount / 1000, 2) + ' <span class="unit-badge">kg</span>';
+        } else {
+            return formatNumber(amount, 2) + ' <span class="unit-badge">g</span>';
+        }
+    }
+    
     function showOrders(date) {
         const modal = document.getElementById('departmentOrdersModal');
         const modalDate = document.getElementById('modalDate');
@@ -704,6 +767,7 @@ $currentDateTime = date('Y-m-d H:i:s');
                 const departmentSection = document.createElement('div');
                 departmentSection.className = 'department-section';
                 departmentSection.id = `department-${safeCategoryId}`;
+                departmentSection.setAttribute('data-category', category);
                 
                 // Create department header with order count badge
                 const departmentHeader = document.createElement('div');
@@ -787,7 +851,7 @@ $currentDateTime = date('Y-m-d H:i:s');
                         materialItem.className = 'material-item';
                         materialItem.innerHTML = `
                             <span class="material-name">${materialName}</span>
-                            <span class="material-amount">${amount.toFixed(2)} grams</span>
+                            <span class="material-amount">${formatMaterialAmount(amount)}</span>
                         `;
                         materialsSummary.appendChild(materialItem);
                     });
