@@ -85,6 +85,10 @@ $currentDateTime = date('Y-m-d H:i:s');
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <style>
+        body {
+            background-color: #f5f7fa;
+        }
+        
         .main-content {
             margin-left: 250px;
             padding: 20px;
@@ -97,6 +101,10 @@ $currentDateTime = date('Y-m-d H:i:s');
             margin-bottom: 20px;
             padding-bottom: 20px;
             border-bottom: 1px solid #ddd;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         
         .forecast-header h1 {
@@ -105,6 +113,7 @@ $currentDateTime = date('Y-m-d H:i:s');
             display: flex;
             align-items: center;
             gap: 12px;
+            color: #333;
         }
         
         .month-navigation {
@@ -141,7 +150,8 @@ $currentDateTime = date('Y-m-d H:i:s');
             background-color: #ffffff;
             padding: 25px;
             border-radius: 12px;
-            box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0px 3px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
         
         .calendar {
@@ -151,7 +161,7 @@ $currentDateTime = date('Y-m-d H:i:s');
         }
         
         .calendar th {
-            background-color: black;
+            background-color: #424242;
             color: white;
             padding: 12px;
             text-align: center;
@@ -165,6 +175,7 @@ $currentDateTime = date('Y-m-d H:i:s');
             width: 14.28%;
             vertical-align: top;
             padding: 8px;
+            background-color: #fff;
         }
         
         .calendar .day-number {
@@ -216,7 +227,7 @@ $currentDateTime = date('Y-m-d H:i:s');
         }
         
         .modal-content {
-            background-color: #fefefe;
+            background-color: #f5f7fa;  /* Pastel background for modal */
             margin: 5% auto;
             padding: 30px;
             border-radius: 12px;
@@ -231,6 +242,10 @@ $currentDateTime = date('Y-m-d H:i:s');
         
         .modal-header {
             margin-bottom: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         
         .modal-body {
@@ -258,10 +273,13 @@ $currentDateTime = date('Y-m-d H:i:s');
             border-collapse: collapse;
             margin-top: 15px;
             margin-bottom: 25px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         .orders-table th {
-            background-color: black;
+            background-color: #424242;
             color: white;
             padding: 12px;
             text-align: center;
@@ -273,6 +291,7 @@ $currentDateTime = date('Y-m-d H:i:s');
             padding: 10px;
             text-align: center;
             height: auto;
+            background-color: #fff;
         }
         
         .orders-table tbody tr:hover {
@@ -303,6 +322,7 @@ $currentDateTime = date('Y-m-d H:i:s');
             margin-bottom: 20px;
             color: #333;
             text-align: center;
+            font-weight: 600;
         }
 
         .weekend {
@@ -412,6 +432,10 @@ $currentDateTime = date('Y-m-d H:i:s');
             text-align: right;
             margin-top: 20px;
             font-style: italic;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         
         .no-category-orders {
@@ -444,11 +468,12 @@ $currentDateTime = date('Y-m-d H:i:s');
         }
         
         .materials-summary {
-            background-color: #f9f9f9;
+            background-color: #fff;
             border: 1px solid #ddd;
             padding: 15px;
             margin-top: 15px;
             border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
         .materials-summary h3 {
@@ -464,7 +489,7 @@ $currentDateTime = date('Y-m-d H:i:s');
             display: flex;
             justify-content: space-between;
             margin-bottom: 5px;
-            padding: 5px 0;
+            padding: 8px 0;
             border-bottom: 1px dashed #eee;
         }
         
@@ -488,7 +513,8 @@ $currentDateTime = date('Y-m-d H:i:s');
         .tabs {
             display: flex;
             border-bottom: 1px solid #ddd;
-            background-color: #f8f8f8;
+            background-color: #fff;
+            border-radius: 0 0 0 0;
         }
         
         .tab {
@@ -513,6 +539,7 @@ $currentDateTime = date('Y-m-d H:i:s');
             display: none;
             padding: 15px;
             background-color: #fff;
+            border-radius: 0 0 8px 8px;
         }
         
         .tab-content.active {
