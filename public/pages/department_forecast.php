@@ -36,6 +36,14 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
+// Get all available categories
+$categoriesQuery = "SELECT DISTINCT category FROM products ORDER BY category";
+$categoriesResult = $conn->query($categoriesQuery);
+$allCategories = [];
+while ($row = $categoriesResult->fetch_assoc()) {
+    $allCategories[] = $row['category'];
+}
+
 function getMonthNavigation($month, $year) {
     $prevMonth = $month - 1;
     $prevYear = $year;
@@ -58,6 +66,9 @@ function getMonthNavigation($month, $year) {
 }
 
 $navigation = getMonthNavigation($month, $year);
+
+// Get current date and time for display
+$currentDateTime = date('Y-m-d H:i:s');
 ?>
 
 <!DOCTYPE html>
@@ -370,6 +381,25 @@ $navigation = getMonthNavigation($month, $year);
         .product-summary {
             margin-bottom: 5px;
         }
+        
+        .timestamp {
+            font-size: 12px;
+            color: #777;
+            text-align: right;
+            margin-top: 20px;
+            font-style: italic;
+        }
+        
+        .no-category-orders {
+            padding: 15px;
+            color: #777;
+            font-style: italic;
+            text-align: center;
+            border: 1px dashed #ddd;
+            border-radius: 8px;
+            margin: 10px 0 20px 0;
+            background: #f9f9f9;
+        }
     </style>
 </head>
 <body>
@@ -466,6 +496,10 @@ $navigation = getMonthNavigation($month, $year);
                 </tbody>
             </table>
         </div>
+        
+        <div class="timestamp">
+            Last Updated: <?= $currentDateTime ?> UTC
+        </div>
     </div>
     
     <div id="departmentOrdersModal" class="orders-modal">
@@ -479,6 +513,9 @@ $navigation = getMonthNavigation($month, $year);
     </div>
     
     <script>
+    // Pass the PHP array of all categories to JavaScript
+    const allCategories = <?= json_encode($allCategories) ?>;
+    
     function showOrders(date) {
         const modal = document.getElementById('departmentOrdersModal');
         const modalDate = document.getElementById('modalDate');
@@ -504,48 +541,50 @@ $navigation = getMonthNavigation($month, $year);
         .then(data => {
             departmentOrdersContainer.innerHTML = '';
             
-            // Check if data is null or not an object
-            if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
-                departmentOrdersContainer.innerHTML = '<div style="text-align: center; padding: 20px;">No orders found for this date.</div>';
-                return;
-            }
-            
-            // Loop through departments and display products
-            Object.entries(data).forEach(([department, products]) => {
+            // Show all categories, even if no orders
+            allCategories.forEach(category => {
                 // Create department header
                 const departmentHeader = document.createElement('div');
                 departmentHeader.className = 'department-header';
-                departmentHeader.innerHTML = `<i class="fas fa-tag"></i> ${department}`;
+                departmentHeader.innerHTML = `<i class="fas fa-tag"></i> ${category}`;
                 departmentOrdersContainer.appendChild(departmentHeader);
                 
-                // Create table for products
-                const table = document.createElement('table');
-                table.className = 'orders-table';
-                table.innerHTML = `
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Packaging</th>
-                            <th>Total Quantity</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                `;
-                
-                const tbody = table.querySelector('tbody');
-                
-                // Add rows for each product
-                products.forEach(product => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${product.item_description}</td>
-                        <td>${product.packaging}</td>
-                        <td>${product.total_quantity}</td>
+                if (data[category] && data[category].length > 0) {
+                    // Create table for products
+                    const table = document.createElement('table');
+                    table.className = 'orders-table';
+                    table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Packaging</th>
+                                <th>Total Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
                     `;
-                    tbody.appendChild(row);
-                });
-                
-                departmentOrdersContainer.appendChild(table);
+                    
+                    const tbody = table.querySelector('tbody');
+                    
+                    // Add rows for each product
+                    data[category].forEach(product => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${product.item_description}</td>
+                            <td>${product.packaging}</td>
+                            <td>${product.total_quantity}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                    
+                    departmentOrdersContainer.appendChild(table);
+                } else {
+                    // Show no orders message
+                    const noOrdersDiv = document.createElement('div');
+                    noOrdersDiv.className = 'no-category-orders';
+                    noOrdersDiv.innerHTML = 'No orders for today in this category';
+                    departmentOrdersContainer.appendChild(noOrdersDiv);
+                }
             });
         })
         .catch(error => {
