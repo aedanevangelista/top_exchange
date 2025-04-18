@@ -2,17 +2,16 @@
 session_start();
 include "db_connection.php";
 include "check_role.php";
-checkApiRole('Department Forecast');  // Changed from 'Forecast' to 'Department Forecast'
+checkApiRole('Department Forecast');
 
 header('Content-Type: application/json');
 
-if (!isset($_GET['date']) || !isset($_GET['category'])) {
-    echo json_encode(['error' => 'Missing required parameters']);
+if (!isset($_GET['date'])) {
+    echo json_encode(['error' => 'Missing required date parameter']);
     exit;
 }
 
 $date = $_GET['date'];
-$category = $_GET['category'];
 
 // Input validation
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
@@ -21,24 +20,59 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
 }
 
 try {
-    // Modified query to use JSON_SEARCH instead of joins since there's no order_items table
-    $sql = "SELECT o.id as order_id, o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.total_amount, o.orders
+    // Get all orders for the specific date
+    $sql = "SELECT o.orders
             FROM orders o
             WHERE o.delivery_date = ? 
-            AND o.status = 'Active'
-            AND JSON_SEARCH(o.orders, 'one', ?) IS NOT NULL";
+            AND o.status = 'Active'";
 
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ss", $date, $category);
+    $stmt->bind_param("s", $date);
     $stmt->execute();
     $result = $stmt->get_result();
     
-    $orders = [];
+    // Process orders and organize by category
+    $departmentProducts = [];
+    
     while ($row = $result->fetch_assoc()) {
-        $orders[] = $row;
+        $ordersData = json_decode($row['orders'], true);
+        
+        if (is_array($ordersData)) {
+            foreach ($ordersData as $item) {
+                $category = $item['category'] ?? 'Uncategorized';
+                $itemDescription = $item['item_description'] ?? 'Unknown Product';
+                $packaging = $item['packaging'] ?? 'N/A';
+                $quantity = intval($item['quantity'] ?? 0);
+                
+                // Create product key based on description and packaging
+                $productKey = $itemDescription . '|' . $packaging;
+                
+                // Initialize category if not exists
+                if (!isset($departmentProducts[$category])) {
+                    $departmentProducts[$category] = [];
+                }
+                
+                // Initialize product if not exists or update quantity
+                if (!isset($departmentProducts[$category][$productKey])) {
+                    $departmentProducts[$category][$productKey] = [
+                        'item_description' => $itemDescription,
+                        'packaging' => $packaging,
+                        'total_quantity' => $quantity
+                    ];
+                } else {
+                    $departmentProducts[$category][$productKey]['total_quantity'] += $quantity;
+                }
+            }
+        }
     }
     
-    echo json_encode($orders);
+    // Convert to expected format for the frontend
+    $formattedResponse = [];
+    foreach ($departmentProducts as $category => $products) {
+        $formattedResponse[$category] = array_values($products);
+    }
+    
+    echo json_encode($formattedResponse);
     
 } catch (Exception $e) {
     echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);

@@ -2,7 +2,7 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Department Forecast');  // Changed from 'Forecast' to 'Department Forecast'
+checkRole('Department Forecast');
 
 $month = isset($_GET['month']) ? intval($_GET['month']) : intval(date('m'));
 $year = isset($_GET['year']) ? intval($_GET['year']) : intval(date('Y'));
@@ -17,43 +17,26 @@ if ($year < 2020 || $year > 2030) {
 $firstDay = strtotime("$year-$month-01");
 $daysInMonth = date('t', $firstDay);
 
-// Get all available departments/categories
-// Removed "WHERE status = 'Active'" since there's no status column in products table
-$categoriesQuery = "SELECT DISTINCT category FROM products ORDER BY category";
-$categoriesResult = $conn->query($categoriesQuery);
-$categories = [];
-while ($row = $categoriesResult->fetch_assoc()) {
-    $categories[] = $row['category'];
-}
+// Get all orders for the selected month and year
+$sql = "SELECT o.delivery_date, COUNT(DISTINCT o.id) as order_count 
+        FROM orders o
+        WHERE MONTH(o.delivery_date) = ? 
+        AND YEAR(o.delivery_date) = ? 
+        AND o.status = 'Active'
+        GROUP BY o.delivery_date";
 
-// Get the selected category (default to first available)
-$selectedCategory = isset($_GET['category']) ? $_GET['category'] : ($categories[0] ?? '');
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("ii", $month, $year);
+$stmt->execute();
+$result = $stmt->get_result();
 
 $deliveryDates = [];
-
-// If a category is selected, fetch orders for that category
-if (!empty($selectedCategory)) {
-    // This query joins orders with JSON data to filter by category
-    $sql = "SELECT o.delivery_date, COUNT(DISTINCT o.id) as order_count 
-            FROM orders o
-            WHERE MONTH(o.delivery_date) = ? 
-            AND YEAR(o.delivery_date) = ? 
-            AND o.status = 'Active'
-            AND JSON_SEARCH(o.orders, 'one', ?) IS NOT NULL
-            GROUP BY o.delivery_date";
-
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iis", $month, $year, $selectedCategory);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    while ($row = $result->fetch_assoc()) {
-        $deliveryDates[$row['delivery_date']] = $row['order_count'];
-    }
-    $stmt->close();
+while ($row = $result->fetch_assoc()) {
+    $deliveryDates[$row['delivery_date']] = $row['order_count'];
 }
+$stmt->close();
 
-function getMonthNavigation($month, $year, $category) {
+function getMonthNavigation($month, $year) {
     $prevMonth = $month - 1;
     $prevYear = $year;
     if ($prevMonth < 1) {
@@ -68,15 +51,13 @@ function getMonthNavigation($month, $year, $category) {
         $nextYear++;
     }
     
-    $categoryParam = !empty($category) ? "&category=" . urlencode($category) : "";
-    
     return [
-        'prev' => "?month=$prevMonth&year=$prevYear" . $categoryParam,
-        'next' => "?month=$nextMonth&year=$nextYear" . $categoryParam
+        'prev' => "?month=$prevMonth&year=$prevYear",
+        'next' => "?month=$nextMonth&year=$nextYear"
     ];
 }
 
-$navigation = getMonthNavigation($month, $year, $selectedCategory);
+$navigation = getMonthNavigation($month, $year);
 ?>
 
 <!DOCTYPE html>
@@ -143,21 +124,6 @@ $navigation = getMonthNavigation($month, $year, $selectedCategory);
             font-weight: bold;
             margin: 0 15px;
             color: #333;
-        }
-
-        .category-selector {
-            margin-top: 15px;
-            margin-bottom: 25px;
-            text-align: center;
-        }
-
-        .category-selector select {
-            padding: 10px 15px;
-            font-size: 16px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            background-color: #f9f9f9;
-            min-width: 250px;
         }
         
         .calendar-container {
@@ -267,6 +233,7 @@ $navigation = getMonthNavigation($month, $year, $selectedCategory);
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
+            margin-bottom: 25px;
         }
         
         .orders-table th {
@@ -388,6 +355,21 @@ $navigation = getMonthNavigation($month, $year, $selectedCategory);
             font-weight: 600;
             margin-bottom: 15px;
         }
+        
+        .department-header {
+            background-color: #f8f8f8;
+            font-weight: bold;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4CAF50;
+            font-size: 16px;
+        }
+        
+        .product-summary {
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
@@ -402,28 +384,6 @@ $navigation = getMonthNavigation($month, $year, $selectedCategory);
                 <a href="<?= $navigation['next'] ?>">Next Month <i class="fas fa-chevron-right"></i></a>
             </div>
         </div>
-
-        <div class="category-selector">
-            <form action="" method="get">
-                <input type="hidden" name="month" value="<?= $month ?>">
-                <input type="hidden" name="year" value="<?= $year ?>">
-                <select name="category" onchange="this.form.submit()">
-                    <?php foreach ($categories as $category): ?>
-                        <option value="<?= htmlspecialchars($category) ?>" <?= $selectedCategory == $category ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($category) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
-        </div>
-
-        <?php if (!empty($selectedCategory)): ?>
-            <div style="text-align: center; margin-bottom: 10px;">
-                <div class="category-badge">
-                    <i class="fas fa-tag"></i> <?= htmlspecialchars($selectedCategory) ?>
-                </div>
-            </div>
-        <?php endif; ?>
         
         <div class="calendar-container">
             <table class="calendar">
@@ -484,7 +444,7 @@ $navigation = getMonthNavigation($month, $year, $selectedCategory);
                             echo '<div class="day-number">' . $dayCounter . '</div>';
                             
                             if ($isDeliveryDay && $orderCount > 0) {
-                                echo '<div class="orders-box" onclick="showOrders(\'' . $currentDate . '\', \'' . $selectedCategory . '\')">';
+                                echo '<div class="orders-box" onclick="showOrders(\'' . $currentDate . '\')">';
                                 echo '<i class="fas fa-box"></i> ' . $orderCount . ' ' . ($orderCount == 1 ? 'Order' : 'Orders');
                                 echo '</div>';
                             } else if ($isDeliveryDay) {
@@ -508,61 +468,21 @@ $navigation = getMonthNavigation($month, $year, $selectedCategory);
         </div>
     </div>
     
-    <div id="ordersModal" class="orders-modal">
+    <div id="departmentOrdersModal" class="orders-modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal()">&times;</span>
             <h2 class="modal-date-header" id="modalDate">Orders for Date</h2>
-            <div class="orders-table-container">
-                <table class="orders-table">
-                    <thead>
-                        <tr>
-                            <th>PO Number</th>
-                            <th>Username</th>
-                            <th>Order Date</th>
-                            <th>Delivery Address</th>
-                            <th>Orders</th>
-                            <th>Total Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ordersTableBody">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div id="orderDetailsModal" class="orders-modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeOrderDetailsModal()">&times;</span>
-            <h2 class="modal-date-header">Order Details</h2>
-            <div id="orderDetailsHeader" style="margin-bottom: 20px; text-align: center;">
-                <p id="orderPoNumber"></p>
-                <p id="orderDeliveryAddress"></p>
-                <div id="orderCategory" class="category-badge" style="display: inline-block;"></div>
-            </div>
-            <div class="orders-table-container">
-                <table class="orders-table">
-                    <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th>Product</th>
-                            <th>Packaging</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                        </tr>
-                    </thead>
-                    <tbody id="orderDetailsBody">
-                    </tbody>
-                </table>
+            <div id="departmentOrdersContainer">
+                <!-- Department orders will be loaded here -->
             </div>
         </div>
     </div>
     
     <script>
-    function showOrders(date, category) {
-        const modal = document.getElementById('ordersModal');
+    function showOrders(date) {
+        const modal = document.getElementById('departmentOrdersModal');
         const modalDate = document.getElementById('modalDate');
-        const ordersTableBody = document.getElementById('ordersTableBody');
+        const departmentOrdersContainer = document.getElementById('departmentOrdersContainer');
         
         const formattedDate = new Date(date).toLocaleDateString('en-US', {
             weekday: 'long',
@@ -571,9 +491,10 @@ $navigation = getMonthNavigation($month, $year, $selectedCategory);
             day: 'numeric'
         });
         
-        modalDate.textContent = category + ' Orders for ' + formattedDate;
+        modalDate.textContent = 'Department Orders for ' + formattedDate;
+        departmentOrdersContainer.innerHTML = '<div style="text-align: center; margin: 20px;"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading orders...</p></div>';
         
-        fetch(`/backend/get_orders_by_date_and_category.php?date=${date}&category=${encodeURIComponent(category)}`)
+        fetch(`/backend/get_orders_by_date_and_category.php?date=${date}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
@@ -581,117 +502,71 @@ $navigation = getMonthNavigation($month, $year, $selectedCategory);
             return response.json();
         })
         .then(data => {
-            ordersTableBody.innerHTML = '';
+            departmentOrdersContainer.innerHTML = '';
             
-            // Check if data is null or not an array
-            if (!data || !Array.isArray(data)) {
-                console.error('Expected array but got:', data);
-                ordersTableBody.innerHTML = '<tr><td colspan="6">Error: Unexpected data format received.</td></tr>';
+            // Check if data is null or not an object
+            if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+                departmentOrdersContainer.innerHTML = '<div style="text-align: center; padding: 20px;">No orders found for this date.</div>';
                 return;
             }
             
-            if (data.length === 0) {
-                ordersTableBody.innerHTML = '<tr><td colspan="6">No orders for this date.</td></tr>';
-                return;
-            }
-            
-            data.forEach(order => {
-                // Parse orders JSON string into an object if it's a string
-                let orderData;
-                if (typeof order.orders === 'string') {
-                    try {
-                        orderData = JSON.parse(order.orders);
-                    } catch (e) {
-                        console.error('Failed to parse order JSON:', e);
-                        orderData = [];
-                    }
-                } else {
-                    orderData = order.orders;
-                }
+            // Loop through departments and display products
+            Object.entries(data).forEach(([department, products]) => {
+                // Create department header
+                const departmentHeader = document.createElement('div');
+                departmentHeader.className = 'department-header';
+                departmentHeader.innerHTML = `<i class="fas fa-tag"></i> ${department}`;
+                departmentOrdersContainer.appendChild(departmentHeader);
                 
-                // Filter out items from this category
-                const categoryItems = orderData.filter(item => item.category === category);
+                // Create table for products
+                const table = document.createElement('table');
+                table.className = 'orders-table';
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Packaging</th>
+                            <th>Total Quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                `;
                 
-                if (categoryItems.length > 0) {
+                const tbody = table.querySelector('tbody');
+                
+                // Add rows for each product
+                products.forEach(product => {
                     const row = document.createElement('tr');
-                    const orderJSON = JSON.stringify(categoryItems).replace(/"/g, '&quot;');
-                    const poNumber = order.po_number;
-                    const deliveryAddress = order.delivery_address || 'Not specified';
-                    
                     row.innerHTML = `
-                        <td>${order.po_number}</td>
-                        <td>${order.username}</td>
-                        <td>${order.order_date}</td>
-                        <td class="delivery-address">${deliveryAddress}</td>
-                        <td><button class="view-orders-btn" onclick='viewOrderDetails(${orderJSON}, "${poNumber}", "${deliveryAddress}", "${category}")'>
-                            <i class="fas fa-clipboard-list"></i> View Orders</button></td>
-                        <td>PHP ${parseFloat(order.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>${product.item_description}</td>
+                        <td>${product.packaging}</td>
+                        <td>${product.total_quantity}</td>
                     `;
-                    ordersTableBody.appendChild(row);
-                }
+                    tbody.appendChild(row);
+                });
+                
+                departmentOrdersContainer.appendChild(table);
             });
         })
         .catch(error => {
             console.error('Error fetching orders:', error);
-            ordersTableBody.innerHTML = '<tr><td colspan="6">Error fetching orders: ' + error.message + '</td></tr>';
+            departmentOrdersContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: red;">
+                <i class="fas fa-exclamation-triangle"></i> Error fetching orders: ${error.message}
+            </div>`;
         });
                 
         modal.style.display = 'block';
     }
     
-    function viewOrderDetails(orders, poNumber, deliveryAddress, category) {
-        try {
-            const orderDetailsBody = document.getElementById('orderDetailsBody');
-            const orderPoNumber = document.getElementById('orderPoNumber');
-            const orderDeliveryAddress = document.getElementById('orderDeliveryAddress');
-            const orderCategory = document.getElementById('orderCategory');
-            const orderDetailsModal = document.getElementById('orderDetailsModal');
-            
-            orderPoNumber.textContent = `PO Number: ${poNumber}`;
-            orderDeliveryAddress.textContent = `Delivery Address: ${deliveryAddress || 'Not specified'}`;
-            orderCategory.textContent = category;
-            
-            orderDetailsBody.innerHTML = '';
-            
-            orders.forEach(product => {
-                const row = document.createElement('tr');
-                
-                row.innerHTML = `
-                    <td>${product.category}</td>
-                    <td>${product.item_description}</td>
-                    <td>${product.packaging}</td>
-                    <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
-                    <td>${product.quantity}</td>
-                `;
-                orderDetailsBody.appendChild(row);
-            });
-            
-            orderDetailsModal.style.display = 'block';
-            
-        } catch (e) {
-            console.error('Error parsing order details:', e);
-            alert('Error displaying order details');
-        }
-    }
-    
     function closeModal() {
-        document.getElementById('ordersModal').style.display = 'none';
-    }
-    
-    function closeOrderDetailsModal() {
-        document.getElementById('orderDetailsModal').style.display = 'none';
+        document.getElementById('departmentOrdersModal').style.display = 'none';
     }
     
     window.onclick = function(event) {
-        const ordersModal = document.getElementById('ordersModal');
-        const orderDetailsModal = document.getElementById('orderDetailsModal');
+        const departmentOrdersModal = document.getElementById('departmentOrdersModal');
         
-        if (event.target === ordersModal) {
-            ordersModal.style.display = 'none';
-        }
-        
-        if (event.target === orderDetailsModal) {
-            orderDetailsModal.style.display = 'none';
+        if (event.target === departmentOrdersModal) {
+            departmentOrdersModal.style.display = 'none';
         }
     };
     </script>
