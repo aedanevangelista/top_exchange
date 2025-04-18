@@ -84,7 +84,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php endif; ?>
             
             <!-- Production Menu with Submenu for Delivery Calendar (formerly Forecast) -->
-            <?php if (in_array('Forecast', $allowedPages) || in_array('Department Forecast', $allowedPages)): ?>
+            <?php if (in_array('Forecast', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
@@ -93,16 +93,12 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
-                        <?php if (in_array('Forecast', $allowedPages)): ?>
-                            <a href="/public/pages/forecast.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Delivery Calendar
-                            </a>
-                        <?php endif; ?>
-                        <?php if (in_array('Department Forecast', $allowedPages)): ?>
-                            <a href="/public/pages/department_forecast.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Department Forecast
-                            </a>
-                        <?php endif; ?>
+                        <a href="/public/pages/forecast.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Delivery Calendar
+                        </a>
+                        <a href="/public/pages/department_forecast.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Department Forecast
+                        </a>
                     </div>
                 </div>
             <?php endif; ?>
@@ -136,12 +132,99 @@ $allowedPages = array_map('trim', explode(',', $pages));
                 </div>
             <?php endif; ?>
 
-            <!-- Rest of the sidebar code remains unchanged -->
-            <!-- ... -->
+            <!-- Payments Menu with Submenu -->
+            <?php if (in_array('Payment History', $allowedPages)): ?>
+                <div class="submenu">
+                    <span class="menu-item" onclick="toggleSubmenu(this)">
+                        <div>
+                            <i class="fas fa-money-bill-wave"></i> Payments
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </span>
+                    <div class="submenu-items">
+                        <a href="/public/pages/payment_history.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Payment History
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if (in_array('Sales Data', $allowedPages)): ?>
+                <a href="/public/pages/sales.php" class="menu-item">
+                    <div>
+                        <i class="fas fa-chart-bar"></i> Sales Data
+                    </div>
+                </a>
+            <?php endif; ?>
         </div>
 
-        <!-- DATA Section and remaining sidebar code unchanged -->
-        <!-- ... -->
+        <!-- DATA Section -->
+        <div class="menu-section">
+            <span class="menu-title"><b>DATA</b></span>
+            <hr>
+            
+            <!-- Accounts Menu with Submenus -->
+            <?php if (in_array('Accounts - Admin', $allowedPages) || in_array('Accounts - Clients', $allowedPages) || in_array('User Roles', $allowedPages)): ?>
+                <div class="submenu">
+                    <span class="menu-item" onclick="toggleSubmenu(this)">
+                        <div>
+                            <i class="fas fa-user"></i> Accounts
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </span>
+                    <div class="submenu-items">
+                        <?php if (in_array('Accounts - Admin', $allowedPages)): ?>
+                            <a href="/public/pages/accounts.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> Admin
+                            </a>
+                        <?php endif; ?>
+                        <?php if (in_array('Accounts - Clients', $allowedPages)): ?>
+                            <a href="/public/pages/accounts_clients.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> Clients
+                            </a>
+                        <?php endif; ?>
+                        <?php if (in_array('User Roles', $allowedPages)): ?>
+                            <a href="/public/pages/user_roles.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> User Roles
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Inventory Menu with Submenus -->
+            <?php if (in_array('Inventory', $allowedPages)): ?>
+                <div class="submenu">
+                    <span class="menu-item" onclick="toggleSubmenu(this)">
+                        <div>
+                            <i class="fas fa-box"></i> Inventory
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </span>
+                    <div class="submenu-items">
+                        <a href="/public/pages/inventory.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Finished Products
+                        </a>
+                        <a href="/public/pages/raw_materials.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Raw Materials
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Fixed Account & Logout Section -->
+    <div class="account-section">
+        <div class="account-info">
+            Logged in as: 
+            <strong>
+                <?php echo htmlspecialchars($username); ?>
+            </strong> (<?= htmlspecialchars(ucfirst($role)) ?>)
+        </div>
+        <a href="/backend/logout.php" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
     </div>
 </div>
 
