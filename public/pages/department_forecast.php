@@ -303,6 +303,25 @@ $currentDateTime = date('Y-m-d H:i:s');
             background-color: #3e8e41;
         }
         
+        .department-print-btn {
+            background-color: #2196F3;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.3s;
+            margin-right: 5px;
+        }
+        
+        .department-print-btn:hover {
+            background-color: #0b7dda;
+        }
+        
         .orders-table {
             width: 100%;
             border-collapse: collapse;
@@ -446,6 +465,18 @@ $currentDateTime = date('Y-m-d H:i:s');
             justify-content: space-between;
             align-items: center;
             color: white;
+        }
+        
+        .department-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .department-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .order-count-badge {
@@ -814,8 +845,8 @@ $currentDateTime = date('Y-m-d H:i:s');
                     <h2 class="modal-date-header" id="modalDate">Orders for Date</h2>
                 </div>
                 <div class="modal-header-right">
-                    <button class="print-btn" id="printOrdersBtn">
-                        <i class="fas fa-print"></i> Print Products
+                    <button class="print-btn" id="printAllOrdersBtn">
+                        <i class="fas fa-print"></i> Print All
                     </button>
                     <span class="close-btn" onclick="closeModal()">&times;</span>
                 </div>
@@ -851,8 +882,112 @@ $currentDateTime = date('Y-m-d H:i:s');
         }
     }
     
-    // Generate Products PDF with each department on a separate page
-    function generateProductsPDF() {
+    // Generate Products PDF for a single department
+    function generateSingleDepartmentPDF(category) {
+        try {
+            // Make sure jsPDF is available
+            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+                alert("PDF generation library not loaded properly. Please refresh the page and try again.");
+                return;
+            }
+            
+            // Get formatted date for the filename and header
+            const formattedDate = new Date(currentOrderDate).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            // Get the products for this category
+            const products = currentOrderData[category]?.products || [];
+            const totalItems = products.reduce((sum, product) => sum + product.total_quantity, 0);
+            
+            // Check if there are any products
+            if (products.length === 0) {
+                alert(`No products found for ${category} department on this date.`);
+                return;
+            }
+            
+            // Initialize PDF with portrait orientation
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            // Title styles
+            const titleFontSize = 16;
+            const subTitleFontSize = 12;
+            const normalFontSize = 10;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            
+            // Add page header
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(titleFontSize);
+            doc.text(`Department Orders for ${formattedDate}`, pageWidth / 2, 20, { align: 'center' });
+            
+            // Add department name as subtitle
+            doc.setFontSize(subTitleFontSize);
+            doc.text(`${category} Department (${totalItems} items)`, pageWidth / 2, 30, { align: 'center' });
+            
+            // Add timestamp
+            const timestamp = new Date().toLocaleString();
+            doc.setFontSize(8);
+            doc.setTextColor(100);
+            doc.text(`Generated: ${timestamp}`, pageWidth - 15, 10, { align: 'right' });
+            doc.setTextColor(0);
+            
+            // Add products table
+            // Prepare table data
+            const tableHeaders = [['Product', 'Packaging', 'Quantity']];
+            const tableData = products.map(product => [
+                product.item_description,
+                product.packaging,
+                product.total_quantity.toString()
+            ]);
+            
+            // Add table to PDF
+            doc.autoTable({
+                startY: 40,
+                head: tableHeaders,
+                body: tableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [66, 66, 66],
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                styles: {
+                    fontSize: normalFontSize,
+                    cellPadding: 5
+                },
+                columnStyles: {
+                    0: { cellWidth: 'auto' }, // Product name
+                    1: { cellWidth: 'auto' }, // Packaging
+                    2: { cellWidth: 30, halign: 'center' } // Quantity
+                }
+            });
+            
+            // Add page number
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text('Page 1 of 1', pageWidth - 20, doc.internal.pageSize.getHeight() - 10);
+            
+            // Save the PDF with a descriptive filename
+            const datePart = currentOrderDate.replace(/-/g, '');
+            const safeCategoryName = category.replace(/[^\w]/g, '_');
+            doc.save(`${safeCategoryName}_Orders_${datePart}.pdf`);
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            alert("An error occurred while generating the PDF. Please try again.");
+        }
+    }
+    
+    // Generate Products PDF with all departments
+    function generateAllDepartmentsPDF() {
         try {
             // Make sure jsPDF is available
             if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
@@ -974,7 +1109,7 @@ $currentDateTime = date('Y-m-d H:i:s');
             
             // Save the PDF with a descriptive filename
             const datePart = currentOrderDate.replace(/-/g, '');
-            doc.save(`Department_Orders_${datePart}.pdf`);
+            doc.save(`All_Departments_Orders_${datePart}.pdf`);
         } catch (error) {
             console.error("Error generating PDF:", error);
             alert("An error occurred while generating the PDF. Please try again.");
@@ -1034,19 +1169,43 @@ $currentDateTime = date('Y-m-d H:i:s');
                 const { name: category, products, materials, totalItems } = categoryData;
                 const safeCategoryId = category.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
                 
+                // Skip empty categories
+                if (totalItems === 0) return;
+                
                 // Create a container for this department section
                 const departmentSection = document.createElement('div');
                 departmentSection.className = 'department-section';
                 departmentSection.id = `department-${safeCategoryId}`;
                 departmentSection.setAttribute('data-category', category);
                 
-                // Create department header with order count badge
+                // Create department header with order count badge and print button
                 const departmentHeader = document.createElement('div');
                 departmentHeader.className = 'department-header';
-                departmentHeader.innerHTML = `
-                    <span><i class="fas fa-tag"></i> ${category}</span>
-                    <span class="order-count-badge">${totalItems} items</span>
-                `;
+                
+                const headerLeft = document.createElement('div');
+                headerLeft.className = 'department-header-left';
+                headerLeft.innerHTML = `<i class="fas fa-tag"></i> ${category}`;
+                
+                const headerRight = document.createElement('div');
+                headerRight.className = 'department-header-right';
+                
+                // Add print button for this department only
+                const printButton = document.createElement('button');
+                printButton.className = 'department-print-btn';
+                printButton.innerHTML = '<i class="fas fa-print"></i> Print';
+                printButton.onclick = function() {
+                    generateSingleDepartmentPDF(category);
+                };
+                headerRight.appendChild(printButton);
+                
+                // Add order count badge
+                const orderCountBadge = document.createElement('span');
+                orderCountBadge.className = 'order-count-badge';
+                orderCountBadge.textContent = `${totalItems} items`;
+                headerRight.appendChild(orderCountBadge);
+                
+                departmentHeader.appendChild(headerLeft);
+                departmentHeader.appendChild(headerRight);
                 departmentSection.appendChild(departmentHeader);
                 
                 // Create tab container for products and materials
@@ -1170,8 +1329,8 @@ $currentDateTime = date('Y-m-d H:i:s');
                 });
             });
             
-            // Add event listener for print button
-            document.getElementById('printOrdersBtn').addEventListener('click', generateProductsPDF);
+            // Add event listener for print all button
+            document.getElementById('printAllOrdersBtn').addEventListener('click', generateAllDepartmentsPDF);
         })
         .catch(error => {
             console.error('Error fetching orders:', error);
