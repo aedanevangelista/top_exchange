@@ -834,6 +834,9 @@ $currentDateTime = date('Y-m-d H:i:s');
     let currentOrderDate = '';
     let currentOrderData = {};
     
+    // Pass the PHP array of all categories to JavaScript
+    const allCategories = <?= json_encode($allCategories) ?>;
+    
     // Format number with commas and decimal places
     function formatNumber(num, decimals = 2) {
         return num.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -850,127 +853,132 @@ $currentDateTime = date('Y-m-d H:i:s');
     
     // Generate Products PDF with each department on a separate page
     function generateProductsPDF() {
-        // Make sure jsPDF is available
-        if (!window.jspdf || !window.jspdf.jsPDF) {
-            alert("PDF generation library not loaded properly. Please refresh the page and try again.");
-            return;
-        }
-        
-        // Get formatted date for the filename and header
-        const formattedDate = new Date(currentOrderDate).toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-        
-        // Initialize PDF with portrait orientation
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4'
-        });
-        
-        // Title styles
-        const titleFontSize = 16;
-        const subTitleFontSize = 12;
-        const normalFontSize = 10;
-        const pageWidth = doc.internal.pageSize.getWidth();
-        
-        // Calculate total items for each category to sort by most orders
-        const categoriesWithCounts = allCategories.map(category => {
-            const products = currentOrderData[category]?.products || [];
-            const totalItems = products.reduce((sum, product) => sum + product.total_quantity, 0);
-            
-            return {
-                name: category,
-                products: products,
-                totalItems: totalItems
-            };
-        }).filter(cat => cat.totalItems > 0)
-          .sort((a, b) => b.totalItems - a.totalItems);
-        
-        // Check if there are any categories with products
-        if (categoriesWithCounts.length === 0) {
-            alert("No products found for this date.");
-            return;
-        }
-        
-        // Generate a page for each department with products
-        let isFirstPage = true;
-        
-        categoriesWithCounts.forEach((categoryData, index) => {
-            // Add a new page for each category except the first one
-            if (!isFirstPage) {
-                doc.addPage();
-            } else {
-                isFirstPage = false;
+        try {
+            // Make sure jsPDF is available
+            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+                alert("PDF generation library not loaded properly. Please refresh the page and try again.");
+                return;
             }
             
-            // Add page header
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(titleFontSize);
-            doc.text(`Department Orders for ${formattedDate}`, pageWidth / 2, 20, { align: 'center' });
+            // Get formatted date for the filename and header
+            const formattedDate = new Date(currentOrderDate).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
             
-            // Add department name as subtitle
-            doc.setFontSize(subTitleFontSize);
-            doc.text(`${categoryData.name} Department (${categoryData.totalItems} items)`, pageWidth / 2, 30, { align: 'center' });
+            // Initialize PDF with portrait orientation
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
             
-            // Add timestamp
-            const timestamp = new Date().toLocaleString();
-            doc.setFontSize(8);
-            doc.setTextColor(100);
-            doc.text(`Generated: ${timestamp}`, pageWidth - 15, 10, { align: 'right' });
-            doc.setTextColor(0);
+            // Title styles
+            const titleFontSize = 16;
+            const subTitleFontSize = 12;
+            const normalFontSize = 10;
+            const pageWidth = doc.internal.pageSize.getWidth();
             
-            // Add products table if there are products
-            if (categoryData.products.length > 0) {
-                // Prepare table data
-                const tableHeaders = [['Product', 'Packaging', 'Quantity']];
-                const tableData = categoryData.products.map(product => [
-                    product.item_description,
-                    product.packaging,
-                    product.total_quantity.toString()
-                ]);
+            // Calculate total items for each category to sort by most orders
+            const categoriesWithCounts = allCategories.map(category => {
+                const products = currentOrderData[category]?.products || [];
+                const totalItems = products.reduce((sum, product) => sum + product.total_quantity, 0);
                 
-                // Add table to PDF
-                doc.autoTable({
-                    startY: 40,
-                    head: tableHeaders,
-                    body: tableData,
-                    theme: 'grid',
-                    headStyles: {
-                        fillColor: [66, 66, 66],
-                        textColor: [255, 255, 255],
-                        fontStyle: 'bold',
-                        halign: 'center'
-                    },
-                    styles: {
-                        fontSize: normalFontSize,
-                        cellPadding: 5
-                    },
-                    columnStyles: {
-                        0: { cellWidth: 'auto' }, // Product name
-                        1: { cellWidth: 'auto' }, // Packaging
-                        2: { cellWidth: 30, halign: 'center' } // Quantity
-                    }
-                });
-            } else {
-                doc.setFontSize(normalFontSize);
-                doc.text('No products available for this department.', 20, 50);
+                return {
+                    name: category,
+                    products: products,
+                    totalItems: totalItems
+                };
+            }).filter(cat => cat.totalItems > 0)
+              .sort((a, b) => b.totalItems - a.totalItems);
+            
+            // Check if there are any categories with products
+            if (categoriesWithCounts.length === 0) {
+                alert("No products found for this date.");
+                return;
             }
             
-            // Add page number at bottom
-            const pageNumber = doc.internal.getNumberOfPages();
-            doc.setFontSize(10);
-            doc.setTextColor(100);
-            doc.text(`Page ${pageNumber} of ${categoriesWithCounts.length}`, pageWidth - 20, doc.internal.pageSize.getHeight() - 10);
-        });
-        
-        // Save the PDF with a descriptive filename
-        const datePart = currentOrderDate.replace(/-/g, '');
-        doc.save(`Department_Orders_${datePart}.pdf`);
+            // Generate a page for each department with products
+            let isFirstPage = true;
+            
+            categoriesWithCounts.forEach((categoryData, index) => {
+                // Add a new page for each category except the first one
+                if (!isFirstPage) {
+                    doc.addPage();
+                } else {
+                    isFirstPage = false;
+                }
+                
+                // Add page header
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(titleFontSize);
+                doc.text(`Department Orders for ${formattedDate}`, pageWidth / 2, 20, { align: 'center' });
+                
+                // Add department name as subtitle
+                doc.setFontSize(subTitleFontSize);
+                doc.text(`${categoryData.name} Department (${categoryData.totalItems} items)`, pageWidth / 2, 30, { align: 'center' });
+                
+                // Add timestamp
+                const timestamp = new Date().toLocaleString();
+                doc.setFontSize(8);
+                doc.setTextColor(100);
+                doc.text(`Generated: ${timestamp}`, pageWidth - 15, 10, { align: 'right' });
+                doc.setTextColor(0);
+                
+                // Add products table if there are products
+                if (categoryData.products.length > 0) {
+                    // Prepare table data
+                    const tableHeaders = [['Product', 'Packaging', 'Quantity']];
+                    const tableData = categoryData.products.map(product => [
+                        product.item_description,
+                        product.packaging,
+                        product.total_quantity.toString()
+                    ]);
+                    
+                    // Add table to PDF
+                    doc.autoTable({
+                        startY: 40,
+                        head: tableHeaders,
+                        body: tableData,
+                        theme: 'grid',
+                        headStyles: {
+                            fillColor: [66, 66, 66],
+                            textColor: [255, 255, 255],
+                            fontStyle: 'bold',
+                            halign: 'center'
+                        },
+                        styles: {
+                            fontSize: normalFontSize,
+                            cellPadding: 5
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 'auto' }, // Product name
+                            1: { cellWidth: 'auto' }, // Packaging
+                            2: { cellWidth: 30, halign: 'center' } // Quantity
+                        }
+                    });
+                } else {
+                    doc.setFontSize(normalFontSize);
+                    doc.text('No products available for this department.', 20, 50);
+                }
+                
+                // Add page number at bottom
+                const pageNumber = doc.internal.getNumberOfPages();
+                doc.setFontSize(10);
+                doc.setTextColor(100);
+                doc.text(`Page ${pageNumber} of ${categoriesWithCounts.length}`, pageWidth - 20, doc.internal.pageSize.getHeight() - 10);
+            });
+            
+            // Save the PDF with a descriptive filename
+            const datePart = currentOrderDate.replace(/-/g, '');
+            doc.save(`Department_Orders_${datePart}.pdf`);
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            alert("An error occurred while generating the PDF. Please try again.");
+        }
     }
     
     // Show orders for a specific date
@@ -1186,9 +1194,6 @@ $currentDateTime = date('Y-m-d H:i:s');
             departmentOrdersModal.style.display = 'none';
         }
     };
-    
-    // Pass the PHP array of all categories to JavaScript
-    const allCategories = <?= json_encode($allCategories) ?>;
     </script>
 </body>
 </html>
