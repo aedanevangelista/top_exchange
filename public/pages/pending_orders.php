@@ -5,7 +5,9 @@ include "../../backend/check_role.php";
 checkRole('Pending Orders');
 
 // Get all pending orders (status = 'Pending')
-$sql = "SELECT o.id, o.customer_name, o.customer_contact, o.delivery_address, o.delivery_date, o.status, o.orders, o.notes, o.created_at, o.updated_at, o.total_price
+// Adjust the column names to match your actual database schema
+$sql = "SELECT o.id, o.name AS customer_name, o.contact AS customer_contact, o.address AS delivery_address, 
+               o.delivery_date, o.status, o.orders, o.notes, o.created_at, o.updated_at, o.total_price
         FROM orders o
         WHERE o.status = 'Pending'
         ORDER BY o.delivery_date ASC";
