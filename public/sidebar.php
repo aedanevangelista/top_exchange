@@ -96,31 +96,30 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <a href="/public/pages/forecast.php" class="submenu-item">
                             <i class="fas fa-arrow-right"></i> Delivery Calendar
                         </a>
-                        <a href="/public/pages/department_forecast.php" class="submenu-item">
-                            <i class="fas fa-arrow-right"></i> Department Forecast
-                        </a>
                     </div>
                 </div>
             <?php endif; ?>
 
-            <!-- Ordering Menu with Submenus -->
-            <?php if (in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages) || in_array('Pending Orders', $allowedPages)): ?>
+            <!-- Orders Menu -->
+            <?php if (in_array('Orders', $allowedPages) || 
+                     in_array('Order History', $allowedPages) || 
+                     in_array('Pending Orders', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
-                            <i class="fas fa-shopping-cart"></i> Ordering
+                            <i class="fas fa-shopping-cart"></i> Orders
                         </div>
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
-                        <?php if (in_array('Orders', $allowedPages)): ?>
-                            <a href="/public/pages/orders.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Orders
-                            </a>
-                        <?php endif; ?>
                         <?php if (in_array('Pending Orders', $allowedPages)): ?>
                             <a href="/public/pages/pending_orders.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Pending Orders
+                            </a>
+                        <?php endif; ?>
+                        <?php if (in_array('Orders', $allowedPages)): ?>
+                            <a href="/public/pages/orders.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> Active Orders
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Order History', $allowedPages)): ?>
@@ -132,142 +131,147 @@ $allowedPages = array_map('trim', explode(',', $pages));
                 </div>
             <?php endif; ?>
 
-            <!-- Payments Menu with Submenu -->
-            <?php if (in_array('Payment History', $allowedPages)): ?>
+            <!-- Reports Menu -->
+            <?php if (in_array('Reports', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
-                            <i class="fas fa-money-bill-wave"></i> Payments
+                            <i class="fas fa-chart-bar"></i> Reports
                         </div>
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
-                        <a href="/public/pages/payment_history.php" class="submenu-item">
-                            <i class="fas fa-arrow-right"></i> Payment History
+                        <a href="/reports/sales_report.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Sales Reports
+                        </a>
+                        <a href="/reports/product_performance.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Product Performance
                         </a>
                     </div>
                 </div>
             <?php endif; ?>
 
-            <?php if (in_array('Sales Data', $allowedPages)): ?>
-                <a href="/public/pages/sales.php" class="menu-item">
-                    <div>
-                        <i class="fas fa-chart-bar"></i> Sales Data
-                    </div>
-                </a>
-            <?php endif; ?>
-        </div>
-
-        <!-- DATA Section -->
-        <div class="menu-section">
-            <span class="menu-title"><b>DATA</b></span>
-            <hr>
-            
-            <!-- Accounts Menu with Submenus -->
-            <?php if (in_array('Accounts - Admin', $allowedPages) || in_array('Accounts - Clients', $allowedPages) || in_array('User Roles', $allowedPages)): ?>
+            <!-- Inventory Menu -->
+            <?php if (in_array('Inventory', $allowedPages) || in_array('Raw Materials', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
-                            <i class="fas fa-user"></i> Accounts
+                            <i class="fas fa-warehouse"></i> Inventory
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </span>
+                    <div class="submenu-items">
+                        <?php if (in_array('Inventory', $allowedPages)): ?>
+                            <a href="/public/pages/inventory.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> Products
+                            </a>
+                        <?php endif; ?>
+                        <?php if (in_array('Raw Materials', $allowedPages)): ?>
+                            <a href="/public/pages/raw_materials.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> Raw Materials
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+            
+            <!-- Payment History -->
+            <?php if (in_array('Payment History', $allowedPages)): ?>
+                <a href="/public/pages/payment_history.php" class="menu-item">
+                    <div>
+                        <i class="fas fa-credit-card"></i> Payment History
+                    </div>
+                </a>
+            <?php endif; ?>
+
+            <!-- Accounts Menu -->
+            <?php if (in_array('Accounts - Admin', $allowedPages) || 
+                     in_array('Accounts - Clients', $allowedPages)): ?>
+                <div class="submenu">
+                    <span class="menu-item" onclick="toggleSubmenu(this)">
+                        <div>
+                            <i class="fas fa-users"></i> Accounts
                         </div>
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
                         <?php if (in_array('Accounts - Admin', $allowedPages)): ?>
                             <a href="/public/pages/accounts.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Admin
+                                <i class="fas fa-arrow-right"></i> Admin Accounts
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Accounts - Clients', $allowedPages)): ?>
                             <a href="/public/pages/accounts_clients.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Clients
-                            </a>
-                        <?php endif; ?>
-                        <?php if (in_array('User Roles', $allowedPages)): ?>
-                            <a href="/public/pages/user_roles.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> User Roles
+                                <i class="fas fa-arrow-right"></i> Client Accounts
                             </a>
                         <?php endif; ?>
                     </div>
                 </div>
             <?php endif; ?>
 
-            <!-- Inventory Menu with Submenus -->
-            <?php if (in_array('Inventory', $allowedPages)): ?>
-                <div class="submenu">
-                    <span class="menu-item" onclick="toggleSubmenu(this)">
-                        <div>
-                            <i class="fas fa-box"></i> Inventory
-                        </div>
-                        <i class="fas fa-chevron-down"></i>
-                    </span>
-                    <div class="submenu-items">
-                        <a href="/public/pages/inventory.php" class="submenu-item">
-                            <i class="fas fa-arrow-right"></i> Finished Products
-                        </a>
-                        <a href="/public/pages/raw_materials.php" class="submenu-item">
-                            <i class="fas fa-arrow-right"></i> Raw Materials
-                        </a>
+            <!-- Customers -->
+            <?php if (in_array('Customers', $allowedPages)): ?>
+                <a href="/public/pages/customers.php" class="menu-item">
+                    <div>
+                        <i class="fas fa-user-tie"></i> Customers
                     </div>
-                </div>
+                </a>
+            <?php endif; ?>
+
+            <!-- User Roles -->
+            <?php if (in_array('User Roles', $allowedPages)): ?>
+                <a href="/public/pages/user_roles.php" class="menu-item">
+                    <div>
+                        <i class="fas fa-user-shield"></i> User Roles
+                    </div>
+                </a>
             <?php endif; ?>
         </div>
-    </div>
-
-    <!-- Fixed Account & Logout Section -->
-    <div class="account-section">
-        <div class="account-info">
-            Logged in as: 
-            <strong>
-                <?php echo htmlspecialchars($username); ?>
-            </strong> (<?= htmlspecialchars(ucfirst($role)) ?>)
-        </div>
-        <a href="/backend/logout.php" class="logout-btn">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
     </div>
 </div>
 
 <script>
-// Updated toggle function with smoother animation handling
+// Function to toggle submenu visibility
 function toggleSubmenu(element) {
-    // First, close all other open submenus
-    const allOpenSubmenus = document.querySelectorAll('.submenu-items.visible');
-    const allActiveMenuItems = document.querySelectorAll('.menu-item.active');
-    
-    // Get the submenu we're trying to toggle
-    const targetSubmenu = element.nextElementSibling;
-    
-    // Check if we're opening or closing this submenu
-    const isOpening = !targetSubmenu.classList.contains('visible');
-    
-    // If we're opening this one, close all others first
-    if (isOpening) {
-        // Close all other open submenus
-        allOpenSubmenus.forEach(menu => {
-            if (menu !== targetSubmenu) {
-                menu.classList.remove('visible');
-            }
-        });
-        
-        // Reset all other active menu items
-        allActiveMenuItems.forEach(item => {
-            if (item !== element) {
-                item.classList.remove('active');
-            }
-        });
-    }
-    
-    // Toggle active class on the menu item
     element.classList.toggle('active');
-    
-    // Toggle visibility of the submenu
-    if (targetSubmenu) {
-        if (isOpening) {
-            targetSubmenu.classList.add('visible');
-        } else {
-            targetSubmenu.classList.remove('visible');
-        }
-    }
+    const submenuItems = element.nextElementSibling;
+    submenuItems.classList.toggle('visible');
 }
+
+// Check if there's a saved active submenu in sessionStorage and restore it
+document.addEventListener('DOMContentLoaded', function() {
+    const activeSubmenuPaths = JSON.parse(sessionStorage.getItem('activeSubmenus') || '[]');
+    
+    activeSubmenuPaths.forEach(path => {
+        // Find all menu items
+        const menuItems = document.querySelectorAll('.submenu > .menu-item');
+        menuItems.forEach(item => {
+            // Check if this is the one we want to activate
+            const menuTitle = item.querySelector('div').innerText.trim();
+            if (menuTitle === path) {
+                // Activate this submenu
+                item.classList.add('active');
+                const submenuItems = item.nextElementSibling;
+                if (submenuItems) {
+                    submenuItems.classList.add('visible');
+                }
+            }
+        });
+    });
+});
+
+// Save active submenus when they're toggled
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.menu-item') && e.target.closest('.submenu')) {
+        // This is a submenu item click
+        setTimeout(() => {
+            // Get all active submenus
+            const activeSubmenus = Array.from(document.querySelectorAll('.submenu > .menu-item.active'))
+                .map(item => item.querySelector('div').innerText.trim());
+            
+            // Save to sessionStorage
+            sessionStorage.setItem('activeSubmenus', JSON.stringify(activeSubmenus));
+        }, 10);
+    }
+});
 </script>
