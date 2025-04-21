@@ -6,9 +6,8 @@ checkRole('Pending Orders');
 
 // Get all pending orders (status = 'Pending')
 // Adjust the column names to match your actual database schema
-$sql = "SELECT o.id, o.username AS customer_name, o.contact_number AS customer_contact, o.delivery_address, 
-        o.delivery_date, o.status, o.orders, o.special_instructions AS notes, 
-        o.order_date AS created_at, o.order_date AS updated_at, o.total_amount AS total_price
+$sql = "SELECT o.id, o.name AS customer_name, o.contact AS customer_contact, o.address AS delivery_address, 
+               o.delivery_date, o.status, o.orders, o.notes, o.created_at, o.updated_at, o.total_price
         FROM orders o
         WHERE o.status = 'Pending'
         ORDER BY o.delivery_date ASC";
