@@ -106,27 +106,14 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- basic -->
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- mobile metas -->
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1">
-    <!-- site metas -->
-    <title>Products | Top Exchange Food Corp</title> 
-    <meta name="keywords" content="Filipino food, siopao, siomai, noodles, sauces, food supplier, Philippines">
-    <meta name="description" content="Browse our premium selection of Filipino food products - siopao, siomai, noodles, and sauces from Top Exchange Food Corp.">
-    <meta name="author" content="Top Food Exchange Corp.">
-    <!-- bootstrap css -->
-    <link rel="stylesheet" type="text/css" href="/LandingPage/css/bootstrap.min.css">
-    <!-- style css -->
-    <link rel="stylesheet" type="text/css" href="/LandingPage/css/style.css">
-    <!-- Responsive-->
-    <link rel="stylesheet" href="/LandingPage/css/responsive.css">
-    <!-- fevicon -->
-    <link rel="icon" href="/LandingPage/images/fevicon.png" type="image/gif" />
-    <!-- font css -->
+    <title>Products | Top Exchange Food Corp</title>
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="icon" href="images/fevicon.png" type="image/gif" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
     <!-- fontawesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -134,20 +121,19 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Primary brand colors and variables */
         :root {
-            --primary-color: #9a7432;
-            --primary-hover: #b08a3e;
-            --secondary-color: #333;
-            --light-color: #f8f9fa;
-            --dark-color: #222;
-            --accent-color: #dc3545;
-            --section-padding: 100px 0;
-            --box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            --primary-color:#9a7432;
+            --secondary-color: #e74c3c;
+            --accent-color: #f39c12;
+            --light-bg: #f8f9fa;
+            --dark-text: #2c3e50;
+            --light-text: #7f8c8d;
+            --white: #ffffff;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             --transition: all 0.3s ease;
-            --border-radius: 10px;
         }
 
         /* Custom Popup Styles */
@@ -155,24 +141,20 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             position: fixed;
             top: 20px;
             right: 20px;
-            background-color: var(--primary-color);
-            color: white;
+            background-color: var(--accent-color);
+            color: var(--white);
             padding: 15px 25px;
-            border-radius: 4px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
             z-index: 9999;
             display: none;
             animation: slideIn 0.5s forwards, fadeOut 0.5s forwards 2.5s;
             max-width: 300px;
-        }
-
-        .popup-content {
-            display: flex;
-            align-items: center;
+            font-size: 14px;
         }
 
         .custom-popup.error {
-            background-color: var(--accent-color);
+            background-color: var(--secondary-color);
         }
 
         @keyframes slideIn {
@@ -185,10 +167,10 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             to { opacity: 0; }
         }
         
-        /* Cart count badge */
+        /* Cart badge styling */
         .badge-danger {
-            background-color: var(--accent-color);
-            color: white;
+            background-color: var(--secondary-color);
+            color: var(--white);
             border-radius: 50%;
             padding: 3px 6px;
             font-size: 12px;
@@ -196,19 +178,19 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             top: -10px;
             left: -5px;
         }
-
+        
         /* Filter section styling */
         .filter-section {
-            background-color: white;
-            padding: 30px;
+            background-color: var(--white);
+            padding: 25px;
             border-radius: var(--border-radius);
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             box-shadow: var(--box-shadow);
         }
         
         .filter-section h2 {
             color: var(--primary-color);
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             font-weight: 600;
             font-size: 1.5rem;
         }
@@ -219,21 +201,23 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         
         .filter-group label {
             font-weight: 500;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             display: block;
-            color: var(--secondary-color);
+            color: var(--dark-text);
+            font-size: 0.9rem;
         }
         
         .form-control, .form-select {
             border-radius: var(--border-radius);
             border: 1px solid #ddd;
             padding: 10px 15px;
+            font-size: 0.9rem;
             transition: var(--transition);
         }
         
         .form-control:focus, .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.25rem rgba(154, 116, 50, 0.25);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.25rem rgba(243, 156, 18, 0.25);
         }
         
         .price-range-inputs {
@@ -249,11 +233,12 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             margin-top: 25px;
             display: flex;
             gap: 15px;
+            flex-wrap: wrap;
         }
         
         .btn {
-            border-radius: 50px;
-            padding: 10px 25px;
+            border-radius: var(--border-radius);
+            padding: 10px 20px;
             font-weight: 500;
             transition: var(--transition);
         }
@@ -264,10 +249,8 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         }
         
         .btn-primary:hover {
-            background-color: var(--primary-hover);
-            border-color: var(--primary-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(154, 116, 50, 0.3);
+            background-color: #1a252f;
+            border-color: #1a252f;
         }
         
         .btn-outline-secondary {
@@ -276,7 +259,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         }
         
         .btn-outline-secondary:hover {
-            background-color: var(--light-color);
+            background-color: var(--light-bg);
             border-color: #ccc;
         }
         
@@ -290,7 +273,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             left: 15px;
             top: 50%;
             transform: translateY(-50%);
-            color: #777;
+            color: var(--light-text);
         }
         
         .search-box input {
@@ -299,86 +282,73 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         }
         
         /* Product cards */
-        .product-card {
-            background: white;
+        .cream_box {
+            background: var(--white);
             border-radius: var(--border-radius);
-            overflow: visible; /* Changed from hidden to fix dropdown */
+            overflow: hidden;
             box-shadow: var(--box-shadow);
             transition: var(--transition);
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             height: 100%;
             display: flex;
             flex-direction: column;
-            position: relative;
         }
         
-        .product-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        .cream_box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
         }
         
-        .product-img {
-            height: 220px;
+        .cream_img {
+            height: 200px;
             overflow: hidden;
             position: relative;
         }
         
-        .product-img img {
+        .cream_img img {
             width: 100%;
             height: 100%;
-            object-fit: contain;
-            transition: transform 0.5s ease;
+            object-fit: cover;
+            transition: var(--transition);
         }
         
-        .product-card:hover .product-img img {
-            transform: scale(1.1);
+        .cream_box:hover .cream_img img {
+            transform: scale(1.05);
         }
         
-        .product-badge {
+        .price_text {
             position: absolute;
             top: 15px;
             right: 15px;
             background-color: var(--accent-color);
-            color: white;
+            color: var(--white);
             padding: 5px 15px;
             border-radius: 20px;
             font-weight: 600;
             font-size: 0.9rem;
         }
         
-        .product-body {
-            padding: 25px;
+        .cream_box_content {
+            padding: 20px;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
         }
         
-        .product-title {
+        .strawberry_text {
             color: var(--primary-color);
             font-weight: 600;
             margin-bottom: 10px;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
         }
         
-        .product-description {
-            color: #666;
+        .cream_text {
+            color: var(--light-text);
             font-size: 0.9rem;
             margin-bottom: 15px;
         }
         
-        .product-price {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--primary-color);
-            margin-bottom: 15px;
-        }
-        
-        .product-rating {
-            color: #ffc107;
-            margin-bottom: 15px;
-        }
-        
-        .product-btn {
+        .cart_bt {
             margin-top: auto;
         }
         
@@ -389,40 +359,35 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             border-radius: var(--border-radius);
             font-weight: 500;
             transition: var(--transition);
-            width: 100%;
         }
         
         .add-to-cart {
             background-color: var(--primary-color);
-            color: white;
-            border: none;
+            color: var(--white);
+            border: 1px solid var(--primary-color);
         }
         
         .add-to-cart:hover {
-            background-color: var(--primary-hover);
-            color: white;
-            text-decoration: none;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(154, 116, 50, 0.3);
+            background-color: #1a252f;
+            color: var(--white);
         }
         
         .login-to-order {
-            background-color: var(--light-color);
-            color: var(--secondary-color);
+            background-color: var(--light-bg);
+            color: var(--dark-text);
             border: 1px solid #ddd;
         }
         
         .login-to-order:hover {
             background-color: #e9ecef;
-            color: var(--secondary-color);
-            text-decoration: none;
+            color: var(--dark-text);
         }
         
         /* No results styling */
         .no-results {
             text-align: center;
             padding: 50px 20px;
-            background-color: white;
+            background-color: var(--white);
             border-radius: var(--border-radius);
             box-shadow: var(--box-shadow);
             margin-bottom: 30px;
@@ -440,14 +405,47 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         }
         
         .no-results p {
-            color: #666;
+            color: var(--light-text);
         }
         
-        /* Variant selector styling - FIXED */
+        /* Accessibility improvements */
+        a:focus, button:focus, input:focus, select:focus {
+            outline: 3px solid var(--accent-color);
+            outline-offset: 2px;
+        }
+        
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .price-range-inputs {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .filter-actions {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .cream_img {
+                height: 160px;
+            }
+        }
+        
+        /* Variant selector styling */
         .variant-selector {
             margin-bottom: 15px;
-            position: relative;
-            z-index: 1;
         }
         
         .variant-selector select {
@@ -455,351 +453,271 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             padding: 8px 12px;
             border-radius: var(--border-radius);
             border: 1px solid #ddd;
-            background-color: white;
-            color: var(--secondary-color);
+            background-color: var(--white);
+            color: var(--dark-text);
             font-size: 0.9rem;
             transition: var(--transition);
-            z-index: 1;
-            position: relative;
-        }
-        
-        /* Fix for dropdown options visibility */
-        .variant-selector select:focus {
-            z-index: 1000;
-            position: relative;
-        }
-        
-        /* Ensure dropdown options appear above other elements */
-        .variant-selector option {
-            position: relative;
-            z-index: 1001;
-            background: white;
-            padding: 8px 12px;
         }
         
         .variant-selector select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.25rem rgba(154, 116, 50, 0.25);
-        }
-        
-        /* Section title styling */
-        .section-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--secondary-color);
-            margin-bottom: 15px;
-            position: relative;
-            display: inline-block;
-        }
-        
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 0;
-            width: 50px;
-            height: 3px;
-            background-color: var(--primary-color);
-        }
-        
-        .section-subtitle {
-            font-size: 1.2rem;
-            color: #777;
-            margin-bottom: 50px;
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 992px) {
-            .filter-section {
-                padding: 20px;
-            }
-            
-            .filter-actions {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .product-img {
-                height: 180px;
-            }
-            
-            .price-range-inputs {
-                flex-direction: column;
-            }
-            
-            .section-title {
-                font-size: 2rem;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .product-img {
-                height: 160px;
-            }
-            
-            .product-body {
-                padding: 20px;
-            }
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.25rem rgba(243, 156, 18, 0.25);
         }
     </style>
 </head>
 <body>
-    <div class="header_section">
-        <div class="container">
-            <nav class="navbar navbar-expand-lg navbar-light bg-light">
-                <a class="navbar-brand" href="index.php"><img src="/LandingPage/images/resized_food_corp_logo.png" alt="Top Food Exchange Corp. Logo"></a>
-                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <ul class="navbar-nav ml-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/LandingPage/index.php">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/LandingPage/about.php">About</a>
-                        </li>
-                        <li class="nav-item active">
-                            <a class="nav-link" href="/LandingPage/ordering.php">Products</a>
-                        </li>        
-                        <li class="nav-item">
-                            <a class="nav-link" href="/LandingPage/contact.php">Contact Us</a>
-                        </li>
-                    </ul>
-                    <form class="form-inline my-2 my-lg-0">
-                        <div class="login_bt">
-                            <?php if (isset($_SESSION['username'])): ?>
-                                <a href="#" class="cart-button" data-toggle="modal" data-target="#cartModal">
-                                    <span style="color: #222222;"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
-                                    <span id="cart-count" class="badge badge-danger"><?php echo array_sum(array_column($_SESSION['cart'], 'quantity')); ?></span>
-                                </a>
-                                <a href="/LandingPage/logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>) 
-                                    <span style="color: #222222;"><i class="fa fa-sign-out" aria-hidden="true"></i></span>
-                                </a>
-                            <?php else: ?>
-                                <a href="/LandingPage/login.php">Login 
-                                    <span style="color: #222222;"><i class="fa fa-user" aria-hidden="true"></i></span>
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    </form>
-                </div>
-            </nav>
-        </div>
-        
-        <?php if (isset($_SESSION['username'])): ?>
-        <!-- Cart Modal -->
-        <div class="modal fade" id="cartModal" tabindex="-1" role="dialog" aria-labelledby="cartModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="cartModalLabel">Your Shopping Cart</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div id="empty-cart-message" class="text-center py-4" style="display: <?php echo empty($_SESSION['cart']) ? 'block' : 'none'; ?>;">
-                            <i class="fa fa-shopping-cart fa-4x mb-3" style="color: #ddd;"></i>
-                            <h4>Your cart is empty</h4>
-                            <p>Start shopping to add items to your cart</p>
-                        </div>
-                        <div id="cart-items-container" style="display: <?php echo empty($_SESSION['cart']) ? 'none' : 'block'; ?>;">
-                            <div class="table-responsive">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 120px;">Product</th>
-                                            <th>Description</th>
-                                            <th style="width: 100px;">Price</th>
-                                            <th style="width: 150px;">Quantity</th>
-                                            <th style="width: 100px;">Subtotal</th>
-                                            <th style="width: 40px;"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="cart-items-list">
-                                        <?php if (!empty($_SESSION['cart'])): ?>
-                                            <?php 
-                                            $subtotal = 0;
-                                            foreach ($_SESSION['cart'] as $productId => $item): 
-                                                $itemSubtotal = $item['price'] * $item['quantity'];
-                                                $subtotal += $itemSubtotal;
-                                            ?>
-                                                <tr>
-                                                    <td>
-                                                        <img src="<?php echo htmlspecialchars($item['image_path'] ?? '/LandingPage/images/default-product.jpg'); ?>" 
-                                                             style="width: 80px; height: 80px; object-fit: contain;">
-                                                    </td>
-                                                    <td>
-                                                        <h6><?php echo htmlspecialchars($item['name']); ?></h6>
-                                                        <small class="text-muted"><?php echo htmlspecialchars($item['packaging'] ?? ''); ?></small>
-                                                    </td>
-                                                    <td>₱<?php echo number_format($item['price'], 2); ?></td>
-                                                    <td>
-                                                        <div class="input-group">
-                                                            <div class="input-group-prepend">
-                                                                <button class="btn btn-outline-secondary decrease-quantity" 
-                                                                        type="button" 
-                                                                        data-product-id="<?php echo $productId; ?>">
-                                                                    <i class="fa fa-minus"></i>
-                                                                </button>
-                                                            </div>
-                                                            <input type="text" 
-                                                                   class="form-control text-center quantity-input" 
-                                                                   value="<?php echo $item['quantity']; ?>" 
-                                                                   readonly>
-                                                            <div class="input-group-append">
-                                                                <button class="btn btn-outline-secondary increase-quantity" 
-                                                                        type="button" 
-                                                                        data-product-id="<?php echo $productId; ?>">
-                                                                    <i class="fa fa-plus"></i>
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td>₱<?php echo number_format($itemSubtotal, 2); ?></td>
-                                                    <td>
-                                                        <button class="btn btn-sm btn-outline-danger remove-from-cart" 
-                                                                data-product-id="<?php echo $productId; ?>">
-                                                            <i class="fa fa-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="special-instructions">Special Instructions</label>
-                                        <textarea class="form-control" id="special-instructions" rows="3" placeholder="Any special requests or notes for your order..."></textarea>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 text-right">
-                                    <div class="order-summary">
-                                        <h5>Order Summary</h5>
-                                        <div class="d-flex justify-content-between">
-                                            <span>Subtotal:</span>
-                                            <span id="subtotal-amount">₱<?php echo number_format($subtotal ?? 0, 2); ?></span>
-                                        </div>
-                                        <div class="d-flex justify-content-between">
-                                            <span>Delivery Fee:</span>
-                                            <span id="delivery-fee">₱<?php echo number_format(($subtotal ?? 0) > 500 ? 0 : 50, 2); ?></span>
-                                        </div>
-                                        <hr>
-                                        <div class="d-flex justify-content-between">
-                                            <strong>Total:</strong>
-                                            <strong id="total-amount">₱<?php echo number_format(($subtotal ?? 0) + (($subtotal ?? 0) > 500 ? 0 : 50), 2); ?></strong>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Continue Shopping</button>
-                        <button type="button" class="btn btn-primary" id="checkout-button">Proceed to Checkout</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
-        
-        <!-- Custom Popup Message -->
-        <div id="customPopup" class="custom-popup">
-            <div class="popup-content">
-                <span id="popupMessage"></span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Products Section -->
-    <div class="cream_section layout_padding" style="padding: var(--section-padding); background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);">
-        <div class="container">
-            <div class="row mb-5">
-                <div class="col-md-12 text-center">
-                    <h1 class="section-title" data-aos="fade-up">Our Products</h1>
-                    <p class="section-subtitle" data-aos="fade-up" data-aos-delay="200">Premium quality Filipino food products</p>
-                </div>
-            </div>
-            
-            <!-- Filter and Search Section -->
-            <div class="filter-section" data-aos="fade-up">
-                <h2><i class="fas fa-sliders-h me-2"></i>Filter Products</h2>
-                <form id="filterForm" method="GET" action="">
-                    <div class="row">
-                        <div class="col-md-12 search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" name="search" id="searchInput" class="form-control" placeholder="Search products by name or category..." value="<?php echo htmlspecialchars($search); ?>">
-                        </div>
-                        
-                        <div class="col-md-4 filter-group">
-                            <label for="category-filter"><i class="fas fa-tags me-2"></i>Category</label>
-                            <select name="category" id="category-filter" class="form-select">
-                                <option value="">All Categories</option>
-                                <?php while ($row = $category_result->fetch_assoc()): ?>
-                                    <option value="<?= htmlspecialchars($row['category']) ?>" <?= $category == $row['category'] ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($row['category']) ?>
-                                    </option>
-                                <?php endwhile; ?>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-4 filter-group">
-                            <label><i class="fas fa-tag me-2"></i>Price Range</label>
-                            <div class="price-range-inputs">
-                                <input type="number" name="min_price" id="minPrice" class="form-control" placeholder="Min price" value="<?php echo htmlspecialchars($min_price); ?>" min="0">
-                                <input type="number" name="max_price" id="maxPrice" class="form-control" placeholder="Max price" value="<?php echo htmlspecialchars($max_price); ?>" min="0">
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-4 filter-group d-flex align-items-end">
-                            <div class="filter-actions w-100">
-                                <a href="ordering.php" class="btn btn-outline-secondary w-100 mt-2">
-                                    <i class="fas fa-times me-2"></i>Reset
-                                </a>
-                            </div>
-                        </div>
+
+<div class="header_section header_bg">
+    <div class="container">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <a class="navbar-brand" href="index.php"><img src="images/resized_food_corp_logo.png" alt="Top Exchange Logo"></a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="../index.php">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="../LandingPage/about.php">About</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="../LandingPage/ordering.php">Products</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="../LandingPage/contact.php">Contact Us</a>
+                    </li>
+                </ul>
+                <form class="form-inline my-2 my-lg-0">
+                    <div class="login_bt">
+                        <?php if (isset($_SESSION['username'])): ?>
+                            <a href="#" class="cart-button" data-toggle="modal" data-target="#cartModal" aria-label="View shopping cart">
+                                <span style="color: #222222;"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
+                                <span id="cart-count" class="badge badge-danger"><?php echo array_sum(array_column($_SESSION['cart'], 'quantity')); ?></span>
+                            </a>
+                            <a href="logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>) 
+                                <span style="color: #222222;"><i class="fa fa-sign-out-alt" aria-hidden="true"></i></span>
+                            </a>
+                        <?php else: ?>
+                            <a href="login.php">Login 
+                                <span style="color: #222222;"><i class="fa fa-user" aria-hidden="true"></i></span>
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </form>
             </div>
+        </nav>
+    </div>
+</div>
 
-            <div id="productsContainer" class="row">
+<?php if (isset($_SESSION['username'])): ?>
+<!-- Cart Modal -->
+<div class="modal fade" id="cartModal" tabindex="-1" role="dialog" aria-labelledby="cartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cartModalLabel">Your Shopping Cart</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="empty-cart-message" class="text-center py-4" style="display: <?php echo empty($_SESSION['cart']) ? 'block' : 'none'; ?>;">
+                    <i class="fas fa-shopping-cart fa-4x mb-3" style="color: #ddd;"></i>
+                    <h4>Your cart is empty</h4>
+                    <p>Start shopping to add items to your cart</p>
+                </div>
+                <div id="cart-items-container" style="display: <?php echo empty($_SESSION['cart']) ? 'none' : 'block'; ?>;">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 120px;">Product</th>
+                                    <th>Description</th>
+                                    <th style="width: 100px;">Price</th>
+                                    <th style="width: 150px;">Quantity</th>
+                                    <th style="width: 100px;">Subtotal</th>
+                                    <th style="width: 40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="cart-items-list">
+                                <?php if (!empty($_SESSION['cart'])): ?>
+                                    <?php 
+                                    $subtotal = 0;
+                                    foreach ($_SESSION['cart'] as $productId => $item): 
+                                        $itemSubtotal = $item['price'] * $item['quantity'];
+                                        $subtotal += $itemSubtotal;
+                                    ?>
+                                        <tr>
+                                            <td>
+                                                <img src="<?php echo htmlspecialchars($item['image_path'] ?? 'images/default-product.jpg'); ?>" 
+                                                     alt="<?php echo htmlspecialchars($item['name']); ?>" 
+                                                     style="width: 80px; height: 80px; object-fit: cover;">
+                                            </td>
+                                            <td>
+                                                <h6><?php echo htmlspecialchars($item['name']); ?></h6>
+                                                <small class="text-muted"><?php echo htmlspecialchars($item['packaging'] ?? ''); ?></small>
+                                            </td>
+                                            <td>₱<?php echo number_format($item['price'], 2); ?></td>
+                                            <td>
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend">
+                                                        <button class="btn btn-outline-secondary decrease-quantity" 
+                                                                type="button" 
+                                                                data-product-id="<?php echo $productId; ?>"
+                                                                aria-label="Decrease quantity">
+                                                            <i class="fas fa-minus"></i>
+                                                        </button>
+                                                    </div>
+                                                    <input type="text" 
+                                                           class="form-control text-center quantity-input" 
+                                                           value="<?php echo $item['quantity']; ?>" 
+                                                           readonly
+                                                           aria-label="Quantity">
+                                                    <div class="input-group-append">
+                                                        <button class="btn btn-outline-secondary increase-quantity" 
+                                                                type="button" 
+                                                                data-product-id="<?php echo $productId; ?>"
+                                                                aria-label="Increase quantity">
+                                                            <i class="fas fa-plus"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>₱<?php echo number_format($itemSubtotal, 2); ?></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger remove-from-cart" 
+                                                        data-product-id="<?php echo $productId; ?>"
+                                                        aria-label="Remove item">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="special-instructions">Special Instructions</label>
+                                <textarea class="form-control" id="special-instructions" rows="3" placeholder="Any special requests or notes for your order..."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <div class="order-summary">
+                                <h5>Order Summary</h5>
+                                <div class="d-flex justify-content-between">
+                                    <span>Subtotal:</span>
+                                    <span id="subtotal-amount">₱<?php echo number_format($subtotal ?? 0, 2); ?></span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Delivery Fee:</span>
+                                    <span id="delivery-fee">₱<?php echo number_format(($subtotal ?? 0) > 500 ? 0 : 50, 2); ?></span>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <strong>Total:</strong>
+                                    <strong id="total-amount">₱<?php echo number_format(($subtotal ?? 0) + (($subtotal ?? 0) > 500 ? 0 : 50), 2); ?></strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Continue Shopping</button>
+                <button type="button" class="btn btn-primary" id="checkout-button">Proceed to Checkout</button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<div class="cream_section layout_padding">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1 class="cream_taital">Our Products</h1>
+                <p class="cream_text">Discover our high-quality selection</p>
+            </div>
+        </div>
+        
+        <!-- Filter and Search Section -->
+        <div class="filter-section">
+            <h2><i class="fas fa-sliders-h me-2"></i>Filter Products</h2>
+            <form method="GET" action="" class="row">
+                <div class="col-md-12 search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="search" class="form-control" placeholder="Search products by name or category..." value="<?php echo htmlspecialchars($search); ?>" aria-label="Search products">
+                </div>
+                
+                <div class="col-md-4 col-lg-3 filter-group">
+                    <label for="category-filter"><i class="fas fa-tags me-2"></i>Category</label>
+                    <select name="category" id="category-filter" class="form-select">
+                        <option value="">All Categories</option>
+                        <?php while ($row = $category_result->fetch_assoc()): ?>
+                            <option value="<?= htmlspecialchars($row['category']) ?>" <?= $category == $row['category'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($row['category']) ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                
+                <div class="col-md-8 col-lg-6 filter-group">
+                <label><span class="me-2">₱</span>Price Range</label>
+                    <div class="price-range-inputs">
+                        <input type="number" name="min_price" class="form-control" placeholder="Minimum price" value="<?php echo htmlspecialchars($min_price); ?>" aria-label="Minimum price" min="0">
+                        <input type="number" name="max_price" class="form-control" placeholder="Maximum price" value="<?php echo htmlspecialchars($max_price); ?>" aria-label="Maximum price" min="0">
+                    </div>
+                </div>
+                
+                <div class="col-md-12 filter-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                    <a href="ordering.php" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-2"></i>Reset Filters
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="cream_section_2">
+            <div class="row">
                 <?php if (!empty($groupedProducts)): ?>
                     <?php foreach ($groupedProducts as $productName => $productGroup) { 
                         $mainProduct = $productGroup['main_product'];
                         $variants = $productGroup['variants'];
                         $hasVariants = !empty($variants);
                     ?>
-                        <div class="col-md-6 col-lg-4 product-item" data-aos="fade-up" data-aos-delay="<?php echo (($loop->index % 3) + 1) * 100; ?>">
-                            <div class="product-card">
-                                <div class="product-img">
-                                    <img src="<?php echo htmlspecialchars($mainProduct['image_path'] ?? '/LandingPage/images/default-product.jpg'); ?>" alt="<?php echo htmlspecialchars($productName); ?>" id="product-image-<?php echo $mainProduct['product_id']; ?>">
-                                    <div class="product-badge" id="product-price-<?php echo $mainProduct['product_id']; ?>">
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="cream_box">
+                                <div class="cream_img">
+                                    <img src="<?php echo htmlspecialchars($mainProduct['image_path'] ?? 'images/default-product.jpg'); ?>" alt="<?php echo htmlspecialchars($productName); ?>" id="product-image-<?php echo $mainProduct['product_id']; ?>">
+                                    <div class="price_text" id="product-price-<?php echo $mainProduct['product_id']; ?>">
                                         ₱<?php echo isset($mainProduct['price']) ? number_format($mainProduct['price'], 2) : '0.00'; ?>
                                     </div>
                                 </div>
-                                <div class="product-body">
-                                    <h5 class="product-title"><?php echo htmlspecialchars($productName); ?></h5>
-                                    <p class="product-description" id="product-packaging-<?php echo $mainProduct['product_id']; ?>">
-                                        <i class="fas fa-box me-2"></i><?php echo isset($mainProduct['packaging']) ? htmlspecialchars($mainProduct['packaging']) : 'N/A'; ?>
+                                <div class="cream_box_content">
+                                    <h6 class="strawberry_text">
+                                        <?php echo htmlspecialchars($productName); ?>
+                                    </h6>
+                                    <p class="cream_text" id="product-packaging-<?php echo $mainProduct['product_id']; ?>">
+                                        <i class="fas fa-box me-2"></i>Packaging: <?php echo isset($mainProduct['packaging']) ? htmlspecialchars($mainProduct['packaging']) : 'N/A'; ?>
                                     </p>
                                     
                                     <?php if ($hasVariants): ?>
                                     <div class="variant-selector">
                                         <label for="variant-select-<?php echo $mainProduct['product_id']; ?>">Select Variant:</label>
-                                        <select id="variant-select-<?php echo $mainProduct['product_id']; ?>" class="form-select variant-dropdown">
+                                        <select id="variant-select-<?php echo $mainProduct['product_id']; ?>" class="form-select variant-dropdown" 
+                                                data-product-container="product-container-<?php echo $mainProduct['product_id']; ?>">
                                             <option value="<?php echo $mainProduct['product_id']; ?>" 
                                                     data-price="<?php echo $mainProduct['price']; ?>"
                                                     data-packaging="<?php echo htmlspecialchars($mainProduct['packaging']); ?>"
-                                                    data-image="<?php echo htmlspecialchars($mainProduct['image_path'] ?? '/LandingPage/images/default-product.jpg'); ?>"
+                                                    data-image="<?php echo htmlspecialchars($mainProduct['image_path'] ?? 'images/default-product.jpg'); ?>"
                                                     data-name="<?php echo htmlspecialchars($mainProduct['item_description']); ?>" selected>
                                                 <?php echo htmlspecialchars($mainProduct['item_description']); ?> - ₱<?php echo number_format($mainProduct['price'], 2); ?>
                                             </option>
@@ -807,7 +725,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                             <option value="<?php echo $variant['product_id']; ?>" 
                                                     data-price="<?php echo $variant['price']; ?>"
                                                     data-packaging="<?php echo htmlspecialchars($variant['packaging']); ?>"
-                                                    data-image="<?php echo htmlspecialchars($variant['image_path'] ?? '/LandingPage/images/default-product.jpg'); ?>"
+                                                    data-image="<?php echo htmlspecialchars($variant['image_path'] ?? 'images/default-product.jpg'); ?>"
                                                     data-name="<?php echo htmlspecialchars($variant['item_description']); ?>">
                                                 <?php echo htmlspecialchars($variant['item_description']); ?> - ₱<?php echo number_format($variant['price'], 2); ?>
                                             </option>
@@ -816,19 +734,19 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                     </div>
                                     <?php endif; ?>
                                     
-                                    <div class="product-btn">
+                                    <div class="cart_bt">
                                         <?php if (isset($_SESSION['username'])): ?>
                                             <a href="#" class="add-to-cart" 
                                                 data-product-id="<?php echo $mainProduct['product_id']; ?>" 
                                                 data-product-name="<?php echo htmlspecialchars($mainProduct['item_description']); ?>" 
                                                 data-product-price="<?php echo $mainProduct['price']; ?>" 
-                                                data-image-path="<?php echo htmlspecialchars($mainProduct['image_path'] ?? '/LandingPage/images/default-product.jpg'); ?>" 
+                                                data-image-path="<?php echo htmlspecialchars($mainProduct['image_path'] ?? 'images/default-product.jpg'); ?>" 
                                                 data-packaging="<?php echo htmlspecialchars($mainProduct['packaging']); ?>"
                                                 id="add-to-cart-<?php echo $mainProduct['product_id']; ?>">
                                                 <i class="fas fa-cart-plus me-2"></i>Add To Cart
                                             </a>
                                         <?php else: ?>
-                                            <a href="/LandingPage/login.php" class="login-to-order">
+                                            <a href="login.php" class="login-to-order">
                                                 <i class="fas fa-sign-in-alt me-2"></i>Login to Order
                                             </a>
                                         <?php endif; ?>
@@ -839,7 +757,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                     <?php } ?>
                 <?php else: ?>
                     <div class="col-md-12">
-                        <div class="no-results" data-aos="fade-up">
+                        <div class="no-results">
                             <i class="fas fa-search fa-4x"></i>
                             <h4>No products found</h4>
                             <p>We couldn't find any products matching your criteria. Try adjusting your filters.</p>
@@ -852,136 +770,159 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             </div>
         </div>
     </div>
-    
-    <!-- copyright section start -->
-    <div class="copyright_section">
-        <div class="container">
-            <p class="copyright_text">2025 All Rights Reserved. Design by STI Munoz Students</p>
-        </div>
-    </div>
-    <!-- copyright section end -->
-    
-    <!-- Javascript files-->
-    <script src="/LandingPage/js/jquery.min.js"></script>
-    <script src="/LandingPage/js/popper.min.js"></script>
-    <script src="/LandingPage/js/bootstrap.bundle.min.js"></script>
-    <script src="/LandingPage/js/jquery-3.0.0.min.js"></script>
-    <script src="/LandingPage/js/plugin.js"></script>
-    <!-- AOS Animation -->
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <!-- sidebar -->
-    <script src="/LandingPage/js/jquery.mCustomScrollbar.concat.min.js"></script>
-    <script src="/LandingPage/js/custom.js"></script>
-    
-    <script>
-        // Initialize AOS animation
-        AOS.init({
-            duration: 800,
-            easing: 'ease-in-out',
-            once: true
-        });
-        
-        // Function to show custom popup message
-        function showPopup(message, isError = false) {
-            const popup = $('#customPopup');
-            const popupMessage = $('#popupMessage');
-            
-            popupMessage.text(message);
-            popup.removeClass('error');
-            
-            if (isError) {
-                popup.addClass('error');
-            }
-            
-            // Reset animation by briefly showing/hiding
-            popup.hide().show();
-            
-            // Automatically hide after 3 seconds
-            setTimeout(() => {
-                popup.hide();
-            }, 3000);
-        }
+</div>
 
-        // Function to update products based on filters
-        function updateProducts() {
-            const search = $('#searchInput').val();
-            const category = $('#category-filter').val();
-            const minPrice = $('#minPrice').val();
-            const maxPrice = $('#maxPrice').val();
-            
-            // Show loading state
-            $('#productsContainer').html('<div class="col-md-12 text-center py-5"><i class="fas fa-spinner fa-spin fa-3x"></i><p class="mt-3">Loading products...</p></div>');
-            
+<!-- Custom Popup Message -->
+<div id="customPopup" class="custom-popup" role="alert" aria-live="assertive">
+    <div class="popup-content">
+        <span id="popupMessage"></span>
+    </div>
+</div>
+
+<!-- copyright section start -->
+<div class="copyright_section margin_top90">
+    <div class="container">
+        <p class="copyright_text">2025 All Rights Reserved. Design by STI Munoz Students</p>
+    </div>
+</div>
+<!-- copyright section end -->
+
+<?php $conn->close(); ?>
+
+<script src="js/jquery.min.js"></script>
+<script src="js/bootstrap.bundle.min.js"></script>
+<?php if (isset($_SESSION['username'])): ?>
+<script>
+    // Function to show custom popup message
+    function showPopup(message, isError = false) {
+        const popup = $('#customPopup');
+        const popupMessage = $('#popupMessage');
+        
+        popupMessage.text(message);
+        popup.removeClass('error');
+        
+        if (isError) {
+            popup.addClass('error');
+        }
+        
+        // Reset animation by briefly showing/hiding
+        popup.hide().show();
+        
+        // Automatically hide after 3 seconds
+        setTimeout(() => {
+            popup.hide();
+        }, 3000);
+    }
+
+    $(document).ready(function() {
+        // Add to cart handler
+        $(document).on('click', '.add-to-cart', function(e) {
+            e.preventDefault();
+
+            const productId = $(this).data('product-id');
+            const productName = $(this).data('product-name');
+            const productPrice = $(this).data('product-price');
+            const imagePath = $(this).data('image-path');
+            const packaging = $(this).data('packaging');
+
             $.ajax({
-                url: 'ordering.php',
-                type: 'GET',
+                url: 'add_to_cart.php',
+                type: 'POST',
+                dataType: 'json',
                 data: {
-                    search: search,
-                    category: category,
-                    min_price: minPrice,
-                    max_price: maxPrice
+                    product_id: productId,
+                    product_name: productName,
+                    product_price: productPrice,
+                    image_path: imagePath,
+                    packaging: packaging
                 },
                 success: function(response) {
-                    // Extract the products container from the response
-                    const temp = $('<div>').html(response);
-                    const productsHtml = temp.find('#productsContainer').html();
-                    
-                    // Update the products container
-                    $('#productsContainer').html(productsHtml);
-                    
-                    // Reinitialize AOS for new elements
-                    AOS.refresh();
-                    
-                    // Update URL without reloading the page
-                    const params = new URLSearchParams();
-                    if (search) params.set('search', search);
-                    if (category) params.set('category', category);
-                    if (minPrice) params.set('min_price', minPrice);
-                    if (maxPrice) params.set('max_price', maxPrice);
-                    
-                    const newUrl = params.toString() ? 'ordering.php?' + params.toString() : 'ordering.php';
-                    window.history.replaceState(null, null, newUrl);
+                    if(response.success) {
+                        $('#cart-count').text(response.cart_count);
+                        showPopup(productName + " added to cart!");
+                        
+                        // Update cart modal if it's open
+                        if ($('#cartModal').hasClass('show')) {
+                            updateCartModal();
+                        }
+                    } else {
+                        showPopup(response.message || "Error adding to cart", true);
+                    }
                 },
                 error: function(xhr, status, error) {
-                    $('#productsContainer').html('<div class="col-md-12"><div class="no-results"><i class="fas fa-exclamation-triangle fa-4x"></i><h4>Error loading products</h4><p>Please try again later.</p></div></div>');
-                    console.error("Error fetching filtered products:", error);
+                    console.error("Error adding product to cart:", error);
+                    showPopup("Error adding product to cart.", true);
                 }
             });
-        }
-
-        // Set up event listeners for live filtering
-        $(document).ready(function() {
-            // Search input with debounce
-            let searchTimer;
-            $('#searchInput').on('input', function() {
-                clearTimeout(searchTimer);
-                searchTimer = setTimeout(updateProducts, 500);
-            });
-            
-            // Category filter
-            $('#category-filter').on('change', updateProducts);
-            
-            // Price range filters with debounce
-            let priceTimer;
-            $('#minPrice, #maxPrice').on('input', function() {
-                clearTimeout(priceTimer);
-                priceTimer = setTimeout(updateProducts, 500);
-            });
-            
-            // Reset button
-            $('.btn-outline-secondary').on('click', function(e) {
-                e.preventDefault();
-                window.location.href = 'ordering.php';
-            });
         });
-    </script>
 
-    <?php if (isset($_SESSION['username'])): ?>
-    <script>
+        // Variant selection handler
+        // Variant selection handler
+$(document).on('change', '.variant-dropdown', function() {
+    // Get the selected option element
+    const selectedOption = $(this).find('option:selected');
+    
+    // Get the product ID from the dropdown's ID
+    const mainProductId = $(this).attr('id').replace('variant-select-', '');
+    
+    // Get variant information from the selected option
+    const variantId = selectedOption.val();
+    const variantName = selectedOption.data('name');
+    const variantPrice = selectedOption.data('price');
+    const variantPackaging = selectedOption.data('packaging');
+    const variantImage = selectedOption.data('image');
+    
+    // Update price text (this is the price tag that appears over the image)
+    $('#product-price-' + mainProductId).text('₱' + parseFloat(variantPrice).toFixed(2));
+    
+    // Update packaging display
+    $('#product-packaging-' + mainProductId).html('<i class="fas fa-box me-2"></i>Packaging: ' + variantPackaging);
+    
+    // Update image if exists
+    if (variantImage) {
+        $('#product-image-' + mainProductId).attr('src', variantImage);
+    }
+    
+    // Update add to cart button with variant data
+    $('#add-to-cart-' + mainProductId)
+        .data('product-id', variantId)  // Change to the variant ID
+        .data('product-name', variantName)
+        .data('product-price', variantPrice)
+        .data('packaging', variantPackaging)
+        .data('image-path', variantImage);
+    
+    console.log('Price updated to:', variantPrice, 'for product:', mainProductId);
+});
+
+        // Quantity adjustment handlers
+        $(document).on('click', '.increase-quantity', function() {
+            const productId = $(this).data('product-id');
+            updateCartItemQuantity(productId, 1);
+        });
+
+        $(document).on('click', '.decrease-quantity', function() {
+            const productId = $(this).data('product-id');
+            updateCartItemQuantity(productId, -1);
+        });
+
+        // Remove item handler
+        $(document).on('click', '.remove-from-cart', function() {
+            const productId = $(this).data('product-id');
+            removeCartItem(productId);
+        });
+
+        // Checkout button handler
+        $(document).on('click', '#checkout-button', function() {
+            const specialInstructions = $('#special-instructions').val();
+            sessionStorage.setItem('specialInstructions', specialInstructions);
+            $('#cartModal').modal('hide');
+            window.location.href = 'checkout.php';
+        });
+
         // Function to update cart item quantity
         function updateCartItemQuantity(productId, change) {
             $.ajax({
-                url: '/LandingPage/update_cart_item.php',
+                url: 'update_cart_item.php',
                 type: 'POST',
                 dataType: 'json',
                 data: {
@@ -992,7 +933,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                     if(response.success) {
                         $('#cart-count').text(response.cart_count);
                         updateCartModal();
-                        showPopup("Cart updated successfully");
                     } else {
                         showPopup(response.message || "Error updating quantity", true);
                     }
@@ -1007,7 +947,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         // Function to remove cart item
         function removeCartItem(productId) {
             $.ajax({
-                url: '/LandingPage/remove_cart_item.php',
+                url: 'remove_cart_item.php',
                 type: 'POST',
                 dataType: 'json',
                 data: {
@@ -1032,7 +972,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         // Function to update the cart modal
         function updateCartModal() {
             $.ajax({
-                url: '/LandingPage/fetch_cart_items.php',
+                url: 'fetch_cart_items.php',
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
@@ -1055,8 +995,9 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                 cartItemsHtml += `
                                     <tr>
                                         <td>
-                                            <img src="${item.image_path || '/LandingPage/images/default-product.jpg'}" 
-                                                 style="width: 80px; height: 80px; object-fit: contain;">
+                                            <img src="${item.image_path || 'images/default-product.jpg'}" 
+                                                 alt="${item.name}" 
+                                                 style="width: 80px; height: 80px; object-fit: cover;">
                                         </td>
                                         <td>
                                             <h6>${item.name}</h6>
@@ -1068,19 +1009,22 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                                 <div class="input-group-prepend">
                                                     <button class="btn btn-outline-secondary decrease-quantity" 
                                                             type="button" 
-                                                            data-product-id="${item.product_id}">
-                                                        <i class="fa fa-minus"></i>
+                                                            data-product-id="${item.product_id}"
+                                                            aria-label="Decrease quantity">
+                                                        <i class="fas fa-minus"></i>
                                                     </button>
                                                 </div>
                                                 <input type="text" 
                                                        class="form-control text-center quantity-input" 
                                                        value="${item.quantity}" 
-                                                       readonly>
+                                                       readonly
+                                                       aria-label="Quantity">
                                                 <div class="input-group-append">
                                                     <button class="btn btn-outline-secondary increase-quantity" 
                                                             type="button" 
-                                                            data-product-id="${item.product_id}">
-                                                        <i class="fa fa-plus"></i>
+                                                            data-product-id="${item.product_id}"
+                                                            aria-label="Increase quantity">
+                                                        <i class="fas fa-plus"></i>
                                                     </button>
                                                 </div>
                                             </div>
@@ -1088,8 +1032,9 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                         <td>₱${itemSubtotal.toFixed(2)}</td>
                                         <td>
                                             <button class="btn btn-sm btn-outline-danger remove-from-cart" 
-                                                    data-product-id="${item.product_id}">
-                                                <i class="fa fa-trash"></i>
+                                                    data-product-id="${item.product_id}"
+                                                    aria-label="Remove item">
+                                                <i class="fas fa-trash"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -1115,107 +1060,12 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             });
         }
 
-        $(document).ready(function() {
-            // Add to cart handler
-            $(document).on('click', '.add-to-cart', function(e) {
-                e.preventDefault();
-
-                const productId = $(this).data('product-id');
-                const productName = $(this).data('product-name');
-                const productPrice = $(this).data('product-price');
-                const imagePath = $(this).data('image-path');
-                const packaging = $(this).data('packaging');
-
-                $.ajax({
-                    url: '/LandingPage/add_to_cart.php',
-                    type: 'POST',
-                    dataType: 'json',
-                    data: {
-                        product_id: productId,
-                        product_name: productName,
-                        product_price: productPrice,
-                        image_path: imagePath,
-                        packaging: packaging
-                    },
-                    success: function(response) {
-                        if(response.success) {
-                            $('#cart-count').text(response.cart_count);
-                            showPopup(productName + " added to cart!");
-                            
-                            // Update cart modal if it's open
-                            if ($('#cartModal').hasClass('show')) {
-                                updateCartModal();
-                            }
-                        } else {
-                            showPopup(response.message || "Error adding to cart", true);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("Error adding product to cart:", error);
-                        showPopup("Error adding product to cart.", true);
-                    }
-                });
-            });
-
-            // Variant selection handler
-            $(document).on('change', '.variant-dropdown', function() {
-                const selectedOption = $(this).find('option:selected');
-                const mainProductId = $(this).attr('id').replace('variant-select-', '');
-                
-                const variantId = selectedOption.val();
-                const variantName = selectedOption.data('name');
-                const variantPrice = selectedOption.data('price');
-                const variantPackaging = selectedOption.data('packaging');
-                const variantImage = selectedOption.data('image');
-                
-                // Update displayed information
-                $('#product-price-' + mainProductId).text('₱' + parseFloat(variantPrice).toFixed(2));
-                $('#product-packaging-' + mainProductId).html('<i class="fas fa-box me-2"></i>' + variantPackaging);
-                
-                if (variantImage) {
-                    $('#product-image-' + mainProductId).attr('src', variantImage);
-                }
-                
-                // Update add to cart button with variant data
-                $('#add-to-cart-' + mainProductId)
-                    .data('product-id', variantId)
-                    .data('product-name', variantName)
-                    .data('product-price', variantPrice)
-                    .data('packaging', variantPackaging)
-                    .data('image-path', variantImage);
-            });
-
-            // Quantity adjustment handlers
-            $(document).on('click', '.increase-quantity', function() {
-                const productId = $(this).data('product-id');
-                updateCartItemQuantity(productId, 1);
-            });
-
-            $(document).on('click', '.decrease-quantity', function() {
-                const productId = $(this).data('product-id');
-                updateCartItemQuantity(productId, -1);
-            });
-
-            // Remove item handler
-            $(document).on('click', '.remove-from-cart', function() {
-                const productId = $(this).data('product-id');
-                removeCartItem(productId);
-            });
-
-            // Checkout button handler
-            $(document).on('click', '#checkout-button', function() {
-                const specialInstructions = $('#special-instructions').val();
-                sessionStorage.setItem('specialInstructions', specialInstructions);
-                $('#cartModal').modal('hide');
-                window.location.href = '/LandingPage/checkout.php';
-            });
-
-            // Update cart modal when it's shown
-            $('#cartModal').on('show.bs.modal', function() {
-                updateCartModal();
-            });
+        // Update cart modal when it's shown
+        $('#cartModal').on('show.bs.modal', function() {
+            updateCartModal();
         });
-    </script>
-    <?php endif; ?>
+    });
+</script>
+<?php endif; ?>
 </body>
 </html>

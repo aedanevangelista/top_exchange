@@ -45,26 +45,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $client = $result->fetch_assoc();
             
             if ($client) {
-    // Code is valid - log the user in
-    $_SESSION['user_id'] = $client['id'];
-    $_SESSION['username'] = $client['email']; // or whatever field contains the username
-    $_SESSION['role'] = 'Client';
-    
-    // Clear the verification code from database
-    $stmt = $conn->prepare("UPDATE clients_accounts SET verification_code = NULL, code_expires_at = NULL WHERE email = ?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    
-    // Clear session variables
-    unset($_SESSION['verification_email']);
-    unset($_SESSION['verification_attempts']);
-    unset($_SESSION['last_verification_attempt']);
-    
-    // Redirect to appropriate page
-    header('Location: ordering.php'); // Changed from user_dashboard.php to ordering.php
-    exit();
-}
-
+                // Login successful
+                $_SESSION['user_id'] = $client['id'];
+                $_SESSION['username'] = $client['email'];
+                $_SESSION['role'] = 'Client';
+                
+                // Clear verification code
+                $stmt = $conn->prepare("UPDATE clients_accounts SET verification_code = NULL, code_expires_at = NULL WHERE email = ?");
+                $stmt->bind_param("s", $email);
+                $stmt->execute();
+                
+                // Clear session
+                unset($_SESSION['verification_email']);
+                unset($_SESSION['verification_attempts']);
+                unset($_SESSION['last_verification_attempt']);
+                
+                header('Location: user_dashboard.php');
+                exit();
             } else {
                 $_SESSION['verification_attempts']++;
                 $_SESSION['last_verification_attempt'] = time();

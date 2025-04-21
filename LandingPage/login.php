@@ -206,9 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 } else {
                     $form_errors['login'] = "Invalid account status. Please contact support.";
                 }
-            }
-            
-            else {
+            } else {
                 $form_errors['login'] = "Invalid email or password.";
             }
         }
