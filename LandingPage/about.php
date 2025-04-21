@@ -2,7 +2,7 @@
 // Start the session
 session_start();
 
-// Prevent caching of the page (solves the "Back button still logged in" issue)
+// Prevent caching of the page
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -11,12 +11,6 @@ header("Pragma: no-cache");
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
-
-// Include database connection file
-include_once('db_connection.php');
-
-// Set the page title dynamically
-$pageTitle = "About";
 ?>
 
 <!DOCTYPE html>
@@ -30,74 +24,43 @@ $pageTitle = "About";
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1">
     <!-- site metas -->
-    <title>About | Top Exchange Food Corp</title>
-    <meta name="keywords" content="">
-    <meta name="description" content="">
-    <meta name="author" content="">
+    <title>About | Top Exchange Food Corp</title> 
+    <meta name="keywords" content="Filipino food, siopao, siomai, noodles, sauces, food supplier, Philippines">
+    <meta name="description" content="Learn about Top Food Exchange Corp. - Premium Filipino food products since 1998. Our history, mission, and values.">
+    <meta name="author" content="Top Food Exchange Corp.">
     <!-- bootstrap css -->
-    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/LandingPage/css/bootstrap.min.css">
     <!-- style css -->
-    <link rel="stylesheet" type="text/css" href="css/style.css">
+    <link rel="stylesheet" type="text/css" href="/LandingPage/css/style.css">
     <!-- Responsive-->
-    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="/LandingPage/css/responsive.css">
     <!-- fevicon -->
-    <link rel="icon" href="images/fevicon.png" type="image/gif" />
+    <link rel="icon" href="/LandingPage/images/fevicon.png" type="image/gif" />
     <!-- font css -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
-    <!-- Scrollbar Custom CSS -->
-    <link rel="stylesheet" href="css/jquery.mCustomScrollbar.min.css">
-    <!-- Tweaks for older IEs-->
-    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- fontawesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
     <style>
-        /* Custom Popup Styles */
-        .custom-popup {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background-color: rgb(173, 133, 59);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 4px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            z-index: 9999;
-            display: none;
-            animation: slideIn 0.5s forwards, fadeOut 0.5s forwards 2.5s;
-            max-width: 300px;
+        /* Primary brand colors and variables */
+        :root {
+            --primary-color: #9a7432;
+            --primary-hover: #b08a3e;
+            --secondary-color: #333;
+            --light-color: #f8f9fa;
+            --dark-color: #222;
+            --accent-color: #dc3545;
+            --section-padding: 100px 0;
+            --box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+            --border-radius: 10px;
         }
 
-        .popup-content {
-            display: flex;
-            align-items: center;
-        }
-
-        .custom-popup.error {
-            background-color: #f44336;
-        }
-
-        @keyframes slideIn {
-            from { right: -100%; opacity: 0; }
-            to { right: 20px; opacity: 1; }
-        }
-
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-        
-        /* Cart count badge */
-        .badge-danger {
-            background-color: #dc3545;
-            color: white;
-            border-radius: 50%;
-            padding: 3px 6px;
-            font-size: 12px;
-            position: relative;
-            top: -10px;
-            left: -5px;
-        }
-
-        /* New Timeline Styles */
+        /* Timeline Styles */
         .timeline {
             position: relative;
             max-width: 1200px;
@@ -107,7 +70,7 @@ $pageTitle = "About";
             content: '';
             position: absolute;
             width: 6px;
-            background-color: #ad853b;
+            background-color: var(--primary-color);
             top: 0;
             bottom: 0;
             left: 50%;
@@ -126,7 +89,7 @@ $pageTitle = "About";
             height: 25px;
             right: -12px;
             background-color: white;
-            border: 4px solid #ad853b;
+            border: 4px solid var(--primary-color);
             top: 15px;
             border-radius: 50%;
             z-index: 1;
@@ -168,10 +131,11 @@ $pageTitle = "About";
             padding: 20px 30px;
             background-color: #f1f1f1;
             position: relative;
-            border-radius: 6px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
         }
         .timeline-date {
-            color: #ad853b;
+            color: var(--primary-color);
             font-weight: bold;
             font-size: 1.2em;
             margin-bottom: 10px;
@@ -180,659 +144,791 @@ $pageTitle = "About";
         /* Achievement Box Styles */
         .achievement-box {
             border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            padding: 20px;
+            text-align: center;
+            background: white;
+            height: 100%;
         }
         .achievement-box:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            box-shadow: var(--box-shadow);
         }
         .achievement-icon {
-            color: #ad853b;
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            margin-bottom: 15px;
         }
 
         /* Card Styles */
         .card {
             border: none;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            transition: var(--transition);
+            height: 100%;
         }
         .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
         .card-title {
-            color: #ad853b;
+            color: var(--primary-color);
+        }
+        
+        /* Testimonial Styles */
+        .testimonial-quote {
+            position: relative;
+        }
+        .testimonial-quote i {
+            color: rgba(154, 116, 50, 0.2);
+            font-size: 2rem;
+        }
+        
+        /* Custom Popup Styles */
+        .custom-popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            display: none;
+            animation: slideIn 0.5s forwards, fadeOut 0.5s forwards 2.5s;
+            max-width: 300px;
+        }
+
+        .popup-content {
+            display: flex;
+            align-items: center;
+        }
+
+        .custom-popup.error {
+            background-color: var(--accent-color);
+        }
+
+        @keyframes slideIn {
+            from { right: -100%; opacity: 0; }
+            to { right: 20px; opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        /* About Page Specific Styles */
+        .about_img {
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
+        }
+        
+        .about_taital {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin-bottom: 25px;
+            position: relative;
+            padding-top: 0;
+            width: 100%;
+        }
+
+        .about_taital::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 0;
+            width: 80px;
+            height: 4px;
+            background-color: var(--primary-color);
+            border-radius: 2px;
+        }
+        
+        .mission-vision .card {
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .core-values .list-group-item {
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        /* Responsive Timeline */
+        @media (max-width: 768px) {
+            .timeline::after {
+                left: 31px;
+            }
+            .timeline-item {
+                width: 100%;
+                padding-left: 70px;
+                padding-right: 25px;
+            }
+            .timeline-item::after {
+                left: 18px;
+            }
+            .left::before, .right::before {
+                left: 60px;
+                border-width: 10px 10px 10px 0;
+                border-color: transparent #f1f1f1 transparent transparent;
+            }
+            .left::after, .right::after {
+                left: 18px;
+            }
+            .right {
+                left: 0%;
+            }
         }
     </style>
 </head>
 <body>
-
-<div class="header_section header_bg">
-    <div class="container">
-        <nav class="navbar navbar-expand-lg navbar-light bg-light">
-            <a class="navbar-brand" href="index.php"><img src="images/resized_food_corp_logo.png"></a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav ml-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="../index.php">Home</a>
-                    </li>
-                    <li class="nav-item active">
-                        <a class="nav-link" href="about.php">About</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="ordering.php">Products</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="contact.php">Contact Us</a>
-                    </li>
-                </ul>
-                <form class="form-inline my-2 my-lg-0">
-                    <div class="login_bt">
-                        <?php if (isset($_SESSION['username'])): ?>
-                            <a href="#" class="cart-button" data-toggle="modal" data-target="#cartModal">
-                                <span style="color: #222222;"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
-                                <span id="cart-count" class="badge badge-danger"><?php echo array_sum(array_column($_SESSION['cart'], 'quantity')); ?></span>
-                            </a>
-                            <a href="logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>) 
-                                <span style="color: #222222;"><i class="fa fa-sign-out" aria-hidden="true"></i></span>
-                            </a>
-                        <?php else: ?>
-                            <a href="login.php">Login 
-                                <span style="color: #222222;"><i class="fa fa-user" aria-hidden="true"></i></span>
-                            </a>
-                        <?php endif; ?>
-                    </div>
-                </form>
-            </div>
-        </nav>
-    </div>
-</div>
-
-<?php if (isset($_SESSION['username'])): ?>
-<!-- Cart Modal - Matching the ordering page -->
-<div class="modal fade" id="cartModal" tabindex="-1" role="dialog" aria-labelledby="cartModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="cartModalLabel">Your Shopping Cart</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+    <div class="header_section">
+        <div class="container">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                <a class="navbar-brand" href="index.php"><img src="/LandingPage/images/resized_food_corp_logo.png" alt="Top Food Exchange Corp. Logo"></a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
                 </button>
-            </div>
-            <div class="modal-body">
-                <div id="empty-cart-message" class="text-center py-4" style="display: <?php echo empty($_SESSION['cart']) ? 'block' : 'none'; ?>;">
-                    <i class="fa fa-shopping-cart fa-4x mb-3" style="color: #ddd;"></i>
-                    <h4>Your cart is empty</h4>
-                    <p>Start shopping to add items to your cart</p>
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/LandingPage/index.php">Home</a>
+                        </li>
+                        <li class="nav-item active">
+                            <a class="nav-link" href="/LandingPage/about.php">About</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/LandingPage/ordering.php">Products</a>
+                        </li>        
+                        <li class="nav-item">
+                            <a class="nav-link" href="/LandingPage/contact.php">Contact Us</a>
+                        </li>
+                    </ul>
+                    <form class="form-inline my-2 my-lg-0">
+                        <div class="login_bt">
+                            <?php if (isset($_SESSION['username'])): ?>
+                                <a href="#" class="cart-button" data-toggle="modal" data-target="#cartModal">
+                                    <span style="color: #222222;"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
+                                    <span id="cart-count" class="badge badge-danger"><?php echo array_sum(array_column($_SESSION['cart'], 'quantity')); ?></span>
+                                </a>
+                                <a href="/LandingPage/logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>) 
+                                    <span style="color: #222222;"><i class="fa fa-sign-out" aria-hidden="true"></i></span>
+                                </a>
+                            <?php else: ?>
+                                <a href="/LandingPage/login.php">Login 
+                                    <span style="color: #222222;"><i class="fa fa-user" aria-hidden="true"></i></span>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </form>
                 </div>
-                <div id="cart-items-container" style="display: <?php echo empty($_SESSION['cart']) ? 'none' : 'block'; ?>;">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 120px;">Product</th>
-                                    <th>Description</th>
-                                    <th style="width: 100px;">Price</th>
-                                    <th style="width: 150px;">Quantity</th>
-                                    <th style="width: 100px;">Subtotal</th>
-                                    <th style="width: 40px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="cart-items-list">
-                                <?php if (!empty($_SESSION['cart'])): ?>
-                                    <?php 
-                                    $subtotal = 0;
-                                    foreach ($_SESSION['cart'] as $productId => $item): 
-                                        $itemSubtotal = $item['price'] * $item['quantity'];
-                                        $subtotal += $itemSubtotal;
-                                    ?>
+            </nav>
+        </div>
+        
+        <?php if (isset($_SESSION['username'])): ?>
+        <!-- Cart Modal -->
+        <div class="modal fade" id="cartModal" tabindex="-1" role="dialog" aria-labelledby="cartModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="cartModalLabel">Your Shopping Cart</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="empty-cart-message" class="text-center py-4" style="display: <?php echo empty($_SESSION['cart']) ? 'block' : 'none'; ?>;">
+                            <i class="fa fa-shopping-cart fa-4x mb-3" style="color: #ddd;"></i>
+                            <h4>Your cart is empty</h4>
+                            <p>Start shopping to add items to your cart</p>
+                        </div>
+                        <div id="cart-items-container" style="display: <?php echo empty($_SESSION['cart']) ? 'none' : 'block'; ?>;">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
                                         <tr>
-                                            <td>
-                                                <img src="<?php echo htmlspecialchars($item['image_path'] ?? 'images/default-product.jpg'); ?>" 
-                                                     style="width: 80px; height: 80px; object-fit: cover;">
-                                            </td>
-                                            <td>
-                                                <h6><?php echo htmlspecialchars($item['name']); ?></h6>
-                                                <small class="text-muted"><?php echo htmlspecialchars($item['packaging'] ?? ''); ?></small>
-                                            </td>
-                                            <td>₱<?php echo number_format($item['price'], 2); ?></td>
-                                            <td>
-                                                <div class="input-group">
-                                                    <div class="input-group-prepend">
-                                                        <button class="btn btn-outline-secondary decrease-quantity" 
-                                                                type="button" 
-                                                                data-product-id="<?php echo $productId; ?>">
-                                                            <i class="fa fa-minus"></i>
-                                                        </button>
-                                                    </div>
-                                                    <input type="text" 
-                                                           class="form-control text-center quantity-input" 
-                                                           value="<?php echo $item['quantity']; ?>" 
-                                                           readonly>
-                                                    <div class="input-group-append">
-                                                        <button class="btn btn-outline-secondary increase-quantity" 
-                                                                type="button" 
-                                                                data-product-id="<?php echo $productId; ?>">
-                                                            <i class="fa fa-plus"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>₱<?php echo number_format($itemSubtotal, 2); ?></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-danger remove-from-cart" 
-                                                        data-product-id="<?php echo $productId; ?>">
-                                                    <i class="fa fa-trash"></i>
-                                                </button>
-                                            </td>
+                                            <th style="width: 120px;">Product</th>
+                                            <th>Description</th>
+                                            <th style="width: 100px;">Price</th>
+                                            <th style="width: 150px;">Quantity</th>
+                                            <th style="width: 100px;">Subtotal</th>
+                                            <th style="width: 40px;"></th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="special-instructions">Special Instructions</label>
-                                <textarea class="form-control" id="special-instructions" rows="3" placeholder="Any special requests or notes for your order..."></textarea>
+                                    </thead>
+                                    <tbody id="cart-items-list">
+                                        <?php if (!empty($_SESSION['cart'])): ?>
+                                            <?php 
+                                            $subtotal = 0;
+                                            foreach ($_SESSION['cart'] as $productId => $item): 
+                                                $itemSubtotal = $item['price'] * $item['quantity'];
+                                                $subtotal += $itemSubtotal;
+                                            ?>
+                                                <tr>
+                                                    <td>
+                                                        <img src="<?php echo htmlspecialchars($item['image_path'] ?? '/LandingPage/images/default-product.jpg'); ?>" 
+                                                             style="width: 80px; height: 80px; object-fit: contain;">
+                                                    </td>
+                                                    <td>
+                                                        <h6><?php echo htmlspecialchars($item['name']); ?></h6>
+                                                        <small class="text-muted"><?php echo htmlspecialchars($item['packaging'] ?? ''); ?></small>
+                                                    </td>
+                                                    <td>₱<?php echo number_format($item['price'], 2); ?></td>
+                                                    <td>
+                                                        <div class="input-group">
+                                                            <div class="input-group-prepend">
+                                                                <button class="btn btn-outline-secondary decrease-quantity" 
+                                                                        type="button" 
+                                                                        data-product-id="<?php echo $productId; ?>">
+                                                                    <i class="fa fa-minus"></i>
+                                                                </button>
+                                                            </div>
+                                                            <input type="text" 
+                                                                   class="form-control text-center quantity-input" 
+                                                                   value="<?php echo $item['quantity']; ?>" 
+                                                                   readonly>
+                                                            <div class="input-group-append">
+                                                                <button class="btn btn-outline-secondary increase-quantity" 
+                                                                        type="button" 
+                                                                        data-product-id="<?php echo $productId; ?>">
+                                                                    <i class="fa fa-plus"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>₱<?php echo number_format($itemSubtotal, 2); ?></td>
+                                                    <td>
+                                                        <button class="btn btn-sm btn-outline-danger remove-from-cart" 
+                                                                data-product-id="<?php echo $productId; ?>">
+                                                            <i class="fa fa-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
                             </div>
-                        </div>
-                        <div class="col-md-6 text-right">
-                            <div class="order-summary">
-                                <h5>Order Summary</h5>
-                                <div class="d-flex justify-content-between">
-                                    <span>Subtotal:</span>
-                                    <span id="subtotal-amount">₱<?php echo number_format($subtotal ?? 0, 2); ?></span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span>Delivery Fee:</span>
-                                    <span id="delivery-fee">₱<?php echo number_format(($subtotal ?? 0) > 500 ? 0 : 50, 2); ?></span>
-                                </div>
-                                <hr>
-                                <div class="d-flex justify-content-between">
-                                    <strong>Total:</strong>
-                                    <strong id="total-amount">₱<?php echo number_format(($subtotal ?? 0) + (($subtotal ?? 0) > 500 ? 0 : 50), 2); ?></strong>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Continue Shopping</button>
-                <button type="button" class="btn btn-primary" id="checkout-button">Proceed to Checkout</button>
-            </div>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
-
-<!-- Custom Popup Message -->
-<div id="customPopup" class="custom-popup">
-    <div class="popup-content">
-        <span id="popupMessage"></span>
-    </div>
-</div>
-
-<!-- about section start -->
-<div class="about_section layout_padding">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-6">
-                <div class="about_img"><img src="images/about_image_1.png" class="img-fluid" alt="About Top Exchange Food Corp"></div>
-                <div class="about_img mt-4"><img src="images/about_image_2.png" class="img-fluid" alt="Our Facilities"></div>
-            </div>
-            <div class="col-md-6">
-                <h1 class="about_taital">Top Exchange Food Corporation</h1>
-                <p class="about_text"><strong>Top Exchange Food Corporation (TEFC)</strong> is a top-tier broad line food service supply integrator based in the Philippines. The company began in <strong>1998</strong> as a private enterprise that focused on the compelling need of the local food industry for stability, quality, and value. Today, the company continues to meet this need with the help of various partners in its international network of supply resources.</p>
-                
-                <div class="mission-vision mt-5">
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <h3 class="card-title"><i class="fa fa-bullseye mr-2"></i>Our Mission</h3>
-                                    <p class="card-text">To be the premier food service provider in the Philippines by delivering exceptional quality products, innovative solutions, and unmatched customer service while maintaining the highest standards of integrity and sustainability.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <h3 class="card-title"><i class="fa fa-eye mr-2"></i>Our Vision</h3>
-                                    <p class="card-text">To revolutionize the food service industry by creating a seamless bridge between global food innovations and local culinary traditions, making quality ingredients accessible to every Filipino household and business.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="core-values mt-4">
-                    <h3><i class="fa fa-star mr-2"></i>Core Values</h3>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item"><strong>Quality:</strong> We source only the finest ingredients</li>
-                                <li class="list-group-item"><strong>Integrity:</strong> Honesty in all our dealings</li>
-                                <li class="list-group-item"><strong>Innovation:</strong> Continuous improvement in our offerings</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-6">
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item"><strong>Sustainability:</strong> Environmentally responsible practices</li>
-                                <li class="list-group-item"><strong>Customer Focus:</strong> Exceeding expectations</li>
-                                <li class="list-group-item"><strong>Teamwork:</strong> Collaborative success</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mt-5">
-            <div class="col-md-12">
-                <div class="history-section">
-                    <h2 class="text-center mb-4"><i class="fa fa-history mr-2"></i>Our History</h2>
-                    <div class="timeline">
-                        <div class="timeline-item left">
-                            <div class="timeline-date">1998</div>
-                            <div class="timeline-content">
-                                <h4>Foundation</h4>
-                                <p>Top Exchange Food Corporation was established with a small warehouse in Metro Manila, serving local restaurants and food businesses.</p>
-                            </div>
-                        </div>
-                        <div class="timeline-item right">
-                            <div class="timeline-date">2005</div>
-                            <div class="timeline-content">
-                                <h4>First Expansion</h4>
-                                <p>Opened regional distribution centers in Luzon, Visayas, and Mindanao to better serve clients nationwide.</p>
-                            </div>
-                        </div>
-                        <div class="timeline-item left">
-                            <div class="timeline-date">2012</div>
-                            <div class="timeline-content">
-                                <h4>International Partnerships</h4>
-                                <p>Established key partnerships with international suppliers to bring global food products to the Philippine market.</p>
-                            </div>
-                        </div>
-                        <div class="timeline-item right">
-                            <div class="timeline-date">2020</div>
-                            <div class="timeline-content">
-                                <h4>Digital Transformation</h4>
-                                <p>Launched e-commerce platform to serve customers more efficiently during the pandemic.</p>
-                            </div>
-                        </div>
-                        <div class="timeline-item left">
-                            <div class="timeline-date">Present</div>
-                            <div class="timeline-content">
-                                <h4>Market Leadership</h4>
-                                <p>Recognized as one of the leading food service providers in the country with over 5,000 satisfied clients.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mt-5">
-            <div class="col-md-12">
-                <div class="team-section">
-                    <h2 class="text-center mb-4"><i class="fa fa-users mr-2"></i>Meet Our Leadership Team</h2>
-                    <div class="row">
-                        <div class="col-md-4 mb-4">
-                            <div class="card h-100">
-                                <img src="images/team_ceo.jpg" class="card-img-top" alt="CEO">
-                                <div class="card-body">
-                                    <h5 class="card-title">Juan Dela Cruz</h5>
-                                    <p class="card-subtitle mb-2 text-muted">Founder & CEO</p>
-                                    <p class="card-text">With over 25 years in the food industry, Juan established TEFC with a vision to transform food distribution in the Philippines.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-4">
-                            <div class="card h-100">
-                                <img src="images/team_cfo.jpg" class="card-img-top" alt="CFO">
-                                <div class="card-body">
-                                    <h5 class="card-title">Maria Santos</h5>
-                                    <p class="card-subtitle mb-2 text-muted">Chief Financial Officer</p>
-                                    <p class="card-text">Maria brings financial expertise that has guided TEFC's sustainable growth and expansion.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-4">
-                            <div class="card h-100">
-                                <img src="images/team_coo.jpg" class="card-img-top" alt="COO">
-                                <div class="card-body">
-                                    <h5 class="card-title">Roberto Garcia</h5>
-                                    <p class="card-subtitle mb-2 text-muted">Chief Operations Officer</p>
-                                    <p class="card-text">Roberto oversees our nationwide logistics network ensuring timely deliveries to all clients.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mt-5">
-            <div class="col-md-12">
-                <div class="achievements-section">
-                    <h2 class="text-center mb-4"><i class="fa fa-trophy mr-2"></i>Our Achievements</h2>
-                    <div class="row text-center">
-                        <div class="col-md-3 mb-4">
-                            <div class="achievement-box p-3">
-                                <div class="achievement-icon mb-3">
-                                    <i class="fa fa-building fa-3x"></i>
-                                </div>
-                                <h3>25+</h3>
-                                <p>Warehouses Nationwide</p>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-4">
-                            <div class="achievement-box p-3">
-                                <div class="achievement-icon mb-3">
-                                    <i class="fa fa-users fa-3x"></i>
-                                </div>
-                                <h3>5,000+</h3>
-                                <p>Satisfied Clients</p>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-4">
-                            <div class="achievement-box p-3">
-                                <div class="achievement-icon mb-3">
-                                    <i class="fa fa-globe fa-3x"></i>
-                                </div>
-                                <h3>50+</h3>
-                                <p>International Suppliers</p>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-4">
-                            <div class="achievement-box p-3">
-                                <div class="achievement-icon mb-3">
-                                    <i class="fa fa-certificate fa-3x"></i>
-                                </div>
-                                <h3>15+</h3>
-                                <p>Industry Awards</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row mt-5">
-            <div class="col-md-12">
-                <div class="testimonials-section">
-                    <h2 class="text-center mb-4"><i class="fa fa-quote-left mr-2"></i>What Our Clients Say</h2>
-                    <div class="row">
-                        <div class="col-md-4 mb-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <div class="testimonial-quote">
-                                        <i class="fa fa-quote-left text-muted mb-3"></i>
-                                        <p class="card-text">Top Exchange Food Corp has been our trusted supplier for over 10 years. Their consistent quality and reliable delivery make them our top choice.</p>
-                                    </div>
-                                    <div class="testimonial-author mt-3">
-                                        <h6 class="mb-0">- Manuel Reyes</h6>
-                                        <small class="text-muted">Owner, Reyes Restaurant Chain</small>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="special-instructions">Special Instructions</label>
+                                        <textarea class="form-control" id="special-instructions" rows="3" placeholder="Any special requests or notes for your order..."></textarea>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <div class="testimonial-quote">
-                                        <i class="fa fa-quote-left text-muted mb-3"></i>
-                                        <p class="card-text">Their customer service is exceptional. Whenever we have special requests, they go above and beyond to accommodate our needs.</p>
-                                    </div>
-                                    <div class="testimonial-author mt-3">
-                                        <h6 class="mb-0">- Sofia Lim</h6>
-                                        <small class="text-muted">Purchasing Manager, Grand Hotel</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-4">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <div class="testimonial-quote">
-                                        <i class="fa fa-quote-left text-muted mb-3"></i>
-                                        <p class="card-text">The variety of international products they offer has allowed us to expand our menu and attract more customers. Highly recommended!</p>
-                                    </div>
-                                    <div class="testimonial-author mt-3">
-                                        <h6 class="mb-0">- Carlos Tan</h6>
-                                        <small class="text-muted">Executive Chef, Fusion Bistro</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- about section end -->
-
-<!-- copyright section start -->
-<div class="copyright_section margin_top90">
-    <div class="container">
-        <p class="copyright_text">2025 All Rights Reserved. Design by STI Munoz Students</p>
-    </div>
-</div>
-<!-- copyright section end -->
-
-<!-- Javascript files-->
-<script src="js/jquery.min.js"></script>
-<script src="js/popper.min.js"></script>
-<script src="js/bootstrap.bundle.min.js"></script>
-<script src="js/jquery-3.0.0.min.js"></script>
-<script src="js/plugin.js"></script>
-<!-- sidebar -->
-<script src="js/jquery.mCustomScrollbar.concat.min.js"></script>
-<script src="js/custom.js"></script>
-
-<?php if (isset($_SESSION['username'])): ?>
-<script>
-    // Function to show custom popup message
-    function showPopup(message, isError = false) {
-        const popup = $('#customPopup');
-        const popupMessage = $('#popupMessage');
-        
-        popupMessage.text(message);
-        popup.removeClass('error');
-        
-        if (isError) {
-            popup.addClass('error');
-        }
-        
-        // Reset animation by briefly showing/hiding
-        popup.hide().show();
-        
-        // Automatically hide after 3 seconds
-        setTimeout(() => {
-            popup.hide();
-        }, 3000);
-    }
-
-    // Function to update cart item quantity
-    function updateCartItemQuantity(productId, change) {
-        $.ajax({
-            url: 'update_cart_item.php',
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                product_id: productId,
-                quantity_change: change
-            },
-            success: function(response) {
-                if(response.success) {
-                    $('#cart-count').text(response.cart_count);
-                    updateCartModal();
-                } else {
-                    showPopup(response.message || "Error updating quantity", true);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error("Error updating cart item:", error);
-                showPopup("Error updating cart item.", true);
-            }
-        });
-    }
-
-    // Function to remove cart item
-    function removeCartItem(productId) {
-        $.ajax({
-            url: 'remove_cart_item.php',
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                product_id: productId
-            },
-            success: function(response) {
-                if(response.success) {
-                    $('#cart-count').text(response.cart_count);
-                    updateCartModal();
-                    showPopup("Item removed from cart");
-                } else {
-                    showPopup(response.message || "Error removing item", true);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error("Error removing cart item:", error);
-                showPopup("Error removing cart item.", true);
-            }
-        });
-    }
-
-    // Function to update the cart modal
-    function updateCartModal() {
-        $.ajax({
-            url: 'fetch_cart_items.php',
-            type: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if(response && response.cart_items !== undefined) {
-                    if(response.cart_items.length === 0) {
-                        $('#empty-cart-message').show();
-                        $('#cart-items-container').hide();
-                    } else {
-                        $('#empty-cart-message').hide();
-                        $('#cart-items-container').show();
-                        
-                        let cartItemsHtml = '';
-                        let subtotal = 0;
-                        
-                        response.cart_items.forEach(item => {
-                            const price = parseFloat(item.price);
-                            const itemSubtotal = price * item.quantity;
-                            subtotal += itemSubtotal;
-                            
-                            cartItemsHtml += `
-                                <tr>
-                                    <td>
-                                        <img src="${item.image_path || 'images/default-product.jpg'}" 
-                                             alt="${item.name}" 
-                                             style="width: 80px; height: 80px; object-fit: cover;">
-                                    </td>
-                                    <td>
-                                        <h6>${item.name}</h6>
-                                        <small class="text-muted">${item.packaging || ''}</small>
-                                    </td>
-                                    <td>₱${price.toFixed(2)}</td>
-                                    <td>
-                                        <div class="input-group">
-                                            <div class="input-group-prepend">
-                                                <button class="btn btn-outline-secondary decrease-quantity" 
-                                                        type="button" 
-                                                        data-product-id="${item.product_id}">
-                                                    <i class="fa fa-minus"></i>
-                                                </button>
-                                            </div>
-                                            <input type="text" 
-                                                   class="form-control text-center quantity-input" 
-                                                   value="${item.quantity}" 
-                                                   readonly>
-                                            <div class="input-group-append">
-                                                <button class="btn btn-outline-secondary increase-quantity" 
-                                                        type="button" 
-                                                        data-product-id="${item.product_id}">
-                                                    <i class="fa fa-plus"></i>
-                                                </button>
-                                            </div>
+                                <div class="col-md-6 text-right">
+                                    <div class="order-summary">
+                                        <h5>Order Summary</h5>
+                                        <div class="d-flex justify-content-between">
+                                            <span>Subtotal:</span>
+                                            <span id="subtotal-amount">₱<?php echo number_format($subtotal ?? 0, 2); ?></span>
                                         </div>
-                                    </td>
-                                    <td>₱${itemSubtotal.toFixed(2)}</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-danger remove-from-cart" 
-                                                data-product-id="${item.product_id}">
-                                            <i class="fa fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-
-                        $('#cart-items-list').html(cartItemsHtml);
-                        $('#subtotal-amount').text('₱' + subtotal.toFixed(2));
-                        
-                        // Calculate delivery fee
-                        const deliveryFee = subtotal > 500 ? 0 : 50;
-                        $('#delivery-fee').text('₱' + deliveryFee.toFixed(2));
-                        
-                        const totalAmount = subtotal + deliveryFee;
-                        $('#total-amount').text('₱' + totalAmount.toFixed(2));
-                    }
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error("Error fetching cart items:", error);
-                showPopup("Error fetching cart items.", true);
+                                        <div class="d-flex justify-content-between">
+                                            <span>Delivery Fee:</span>
+                                            <span id="delivery-fee">₱<?php echo number_format(($subtotal ?? 0) > 500 ? 0 : 50, 2); ?></span>
+                                        </div>
+                                        <hr>
+                                        <div class="d-flex justify-content-between">
+                                            <strong>Total:</strong>
+                                            <strong id="total-amount">₱<?php echo number_format(($subtotal ?? 0) + (($subtotal ?? 0) > 500 ? 0 : 50), 2); ?></strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Continue Shopping</button>
+                        <button type="button" class="btn btn-primary" id="checkout-button">Proceed to Checkout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <!-- Custom Popup Message -->
+        <div id="customPopup" class="custom-popup">
+            <div class="popup-content">
+                <span id="popupMessage"></span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- about section start -->
+    <div class="about_section layout_padding" style="background-color: #fff; padding: var(--section-padding);">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6" data-aos="fade-right">
+                    <div class="about_img"><img src="/LandingPage/images/about_image_1.png" class="img-fluid" alt="About Top Exchange Food Corp"></div>
+                    <div class="about_img mt-4" data-aos="fade-right" data-aos-delay="200"><img src="/LandingPage/images/about_image_2.png" class="img-fluid" alt="Our Facilities"></div>
+                </div>
+                <div class="col-md-6" data-aos="fade-left">
+                    <h1 class="about_taital">Top Exchange Food Corporation</h1>
+                    <p class="about_text"><strong>Top Exchange Food Corporation (TEFC)</strong> is a top-tier broad line food service supply integrator based in the Philippines. The company began in <strong>1998</strong> as a private enterprise that focused on the compelling need of the local food industry for stability, quality, and value. Today, the company continues to meet this need with the help of various partners in its international network of supply resources.</p>
+                    
+                    <div class="mission-vision mt-5">
+                        <div class="row">
+                            <div class="col-md-6 mb-4" data-aos="fade-up" data-aos-delay="200">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h3 class="card-title"><i class="fas fa-bullseye mr-2"></i>Our Mission</h3>
+                                        <p class="card-text">To be the premier food service provider in the Philippines by delivering exceptional quality products, innovative solutions, and unmatched customer service while maintaining the highest standards of integrity and sustainability.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4" data-aos="fade-up" data-aos-delay="300">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h3 class="card-title"><i class="fas fa-eye mr-2"></i>Our Vision</h3>
+                                        <p class="card-text">To revolutionize the food service industry by creating a seamless bridge between global food innovations and local culinary traditions, making quality ingredients accessible to every Filipino household and business.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="core-values mt-4" data-aos="fade-up" data-aos-delay="400">
+                        <h3><i class="fas fa-star mr-2"></i>Core Values</h3>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item"><strong>Quality:</strong> We source only the finest ingredients</li>
+                                    <li class="list-group-item"><strong>Integrity:</strong> Honesty in all our dealings</li>
+                                    <li class="list-group-item"><strong>Innovation:</strong> Continuous improvement in our offerings</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item"><strong>Sustainability:</strong> Environmentally responsible practices</li>
+                                    <li class="list-group-item"><strong>Customer Focus:</strong> Exceeding expectations</li>
+                                    <li class="list-group-item"><strong>Teamwork:</strong> Collaborative success</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-5">
+                <div class="col-md-12">
+                    <div class="history-section">
+                        <h2 class="text-center mb-4" data-aos="fade-up"><i class="fas fa-history mr-2"></i>Our History</h2>
+                        <div class="timeline">
+                            <div class="timeline-item left" data-aos="fade-right">
+                                <div class="timeline-date">1998</div>
+                                <div class="timeline-content">
+                                    <h4>Foundation</h4>
+                                    <p>Top Exchange Food Corporation was established with a small warehouse in Metro Manila, serving local restaurants and food businesses.</p>
+                                </div>
+                            </div>
+                            <div class="timeline-item right" data-aos="fade-left">
+                                <div class="timeline-date">2005</div>
+                                <div class="timeline-content">
+                                    <h4>First Expansion</h4>
+                                    <p>Opened regional distribution centers in Luzon, Visayas, and Mindanao to better serve clients nationwide.</p>
+                                </div>
+                            </div>
+                            <div class="timeline-item left" data-aos="fade-right">
+                                <div class="timeline-date">2012</div>
+                                <div class="timeline-content">
+                                    <h4>International Partnerships</h4>
+                                    <p>Established key partnerships with international suppliers to bring global food products to the Philippine market.</p>
+                                </div>
+                            </div>
+                            <div class="timeline-item right" data-aos="fade-left">
+                                <div class="timeline-date">2020</div>
+                                <div class="timeline-content">
+                                    <h4>Digital Transformation</h4>
+                                    <p>Launched e-commerce platform to serve customers more efficiently during the pandemic.</p>
+                                </div>
+                            </div>
+                            <div class="timeline-item left" data-aos="fade-right">
+                                <div class="timeline-date">Present</div>
+                                <div class="timeline-content">
+                                    <h4>Market Leadership</h4>
+                                    <p>Recognized as one of the leading food service providers in the country with over 5,000 satisfied clients.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-5">
+                <div class="col-md-12">
+                    <div class="team-section">
+                        <h2 class="text-center mb-4" data-aos="fade-up"><i class="fas fa-users mr-2"></i>Meet Our Leadership Team</h2>
+                        <div class="row">
+                            <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
+                                <div class="card h-100">
+                                    <img src="/LandingPage/images/team_ceo.jpg" class="card-img-top" alt="CEO" style="height: 250px; object-fit: cover;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Juan Dela Cruz</h5>
+                                        <p class="card-subtitle mb-2 text-muted">Founder & CEO</p>
+                                        <p class="card-text">With over 25 years in the food industry, Juan established TEFC with a vision to transform food distribution in the Philippines.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
+                                <div class="card h-100">
+                                    <img src="/LandingPage/images/team_cfo.jpg" class="card-img-top" alt="CFO" style="height: 250px; object-fit: cover;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Maria Santos</h5>
+                                        <p class="card-subtitle mb-2 text-muted">Chief Financial Officer</p>
+                                        <p class="card-text">Maria brings financial expertise that has guided TEFC's sustainable growth and expansion.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="400">
+                                <div class="card h-100">
+                                    <img src="/LandingPage/images/team_coo.jpg" class="card-img-top" alt="COO" style="height: 250px; object-fit: cover;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Roberto Garcia</h5>
+                                        <p class="card-subtitle mb-2 text-muted">Chief Operations Officer</p>
+                                        <p class="card-text">Roberto oversees our nationwide logistics network ensuring timely deliveries to all clients.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-5">
+                <div class="col-md-12">
+                    <div class="achievements-section">
+                        <h2 class="text-center mb-4" data-aos="fade-up"><i class="fas fa-trophy mr-2"></i>Our Achievements</h2>
+                        <div class="row text-center">
+                            <div class="col-md-3 mb-4" data-aos="fade-up" data-aos-delay="200">
+                                <div class="achievement-box">
+                                    <div class="achievement-icon">
+                                        <i class="fas fa-building"></i>
+                                    </div>
+                                    <h3>25+</h3>
+                                    <p>Warehouses Nationwide</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-4" data-aos="fade-up" data-aos-delay="300">
+                                <div class="achievement-box">
+                                    <div class="achievement-icon">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <h3>5,000+</h3>
+                                    <p>Satisfied Clients</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-4" data-aos="fade-up" data-aos-delay="400">
+                                <div class="achievement-box">
+                                    <div class="achievement-icon">
+                                        <i class="fas fa-globe"></i>
+                                    </div>
+                                    <h3>50+</h3>
+                                    <p>International Suppliers</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-4" data-aos="fade-up" data-aos-delay="500">
+                                <div class="achievement-box">
+                                    <div class="achievement-icon">
+                                        <i class="fas fa-certificate"></i>
+                                    </div>
+                                    <h3>15+</h3>
+                                    <p>Industry Awards</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-5">
+                <div class="col-md-12">
+                    <div class="testimonials-section">
+                        <h2 class="text-center mb-4" data-aos="fade-up"><i class="fas fa-quote-left mr-2"></i>What Our Clients Say</h2>
+                        <div class="row">
+                            <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="testimonial-quote">
+                                            <i class="fas fa-quote-left"></i>
+                                            <p class="card-text mt-3">Top Exchange Food Corp has been our trusted supplier for over 10 years. Their consistent quality and reliable delivery make them our top choice.</p>
+                                        </div>
+                                        <div class="testimonial-author mt-3">
+                                            <h6 class="mb-0">- Manuel Reyes</h6>
+                                            <small class="text-muted">Owner, Reyes Restaurant Chain</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="300">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="testimonial-quote">
+                                            <i class="fas fa-quote-left"></i>
+                                            <p class="card-text mt-3">Their customer service is exceptional. Whenever we have special requests, they go above and beyond to accommodate our needs.</p>
+                                        </div>
+                                        <div class="testimonial-author mt-3">
+                                            <h6 class="mb-0">- Sofia Lim</h6>
+                                            <small class="text-muted">Purchasing Manager, Grand Hotel</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="400">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="testimonial-quote">
+                                            <i class="fas fa-quote-left"></i>
+                                            <p class="card-text mt-3">The variety of international products they offer has allowed us to expand our menu and attract more customers. Highly recommended!</p>
+                                        </div>
+                                        <div class="testimonial-author mt-3">
+                                            <h6 class="mb-0">- Carlos Tan</h6>
+                                            <small class="text-muted">Executive Chef, Fusion Bistro</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- about section end -->
+    
+    <!-- copyright section start -->
+    <div class="copyright_section">
+        <div class="container">
+            <p class="copyright_text">2025 All Rights Reserved. Design by STI Munoz Students</p>
+        </div>
+    </div>
+    <!-- copyright section end -->
+    
+    <!-- Javascript files-->
+    <script src="/LandingPage/js/jquery.min.js"></script>
+    <script src="/LandingPage/js/popper.min.js"></script>
+    <script src="/LandingPage/js/bootstrap.bundle.min.js"></script>
+    <script src="/LandingPage/js/jquery-3.0.0.min.js"></script>
+    <script src="/LandingPage/js/plugin.js"></script>
+    <!-- AOS Animation -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <!-- sidebar -->
+    <script src="/LandingPage/js/jquery.mCustomScrollbar.concat.min.js"></script>
+    <script src="/LandingPage/js/custom.js"></script>
+    
+    <script>
+        // Initialize AOS animation
+        AOS.init({
+            duration: 800,
+            easing: 'ease-in-out',
+            once: true
+        });
+        
+        // Back to top button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 300) {
+                $('.back-to-top').addClass('active');
+            } else {
+                $('.back-to-top').removeClass('active');
             }
         });
-    }
+        
+        // Function to show custom popup message
+        function showPopup(message, isError = false) {
+            const popup = $('#customPopup');
+            const popupMessage = $('#popupMessage');
+            
+            popupMessage.text(message);
+            popup.removeClass('error');
+            
+            if (isError) {
+                popup.addClass('error');
+            }
+            
+            // Reset animation by briefly showing/hiding
+            popup.hide().show();
+            
+            // Automatically hide after 3 seconds
+            setTimeout(() => {
+                popup.hide();
+            }, 3000);
+        }
+    </script>
 
-    $(document).ready(function() {
-        // Quantity adjustment handlers
-        $(document).on('click', '.increase-quantity', function() {
-            const productId = $(this).data('product-id');
-            updateCartItemQuantity(productId, 1);
+    <?php if (isset($_SESSION['username'])): ?>
+    <script>
+        // Function to update cart item quantity
+        function updateCartItemQuantity(productId, change) {
+            $.ajax({
+                url: '/LandingPage/update_cart_item.php',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    product_id: productId,
+                    quantity_change: change
+                },
+                success: function(response) {
+                    if(response.success) {
+                        $('#cart-count').text(response.cart_count);
+                        updateCartModal();
+                        showPopup("Cart updated successfully");
+                    } else {
+                        showPopup(response.message || "Error updating quantity", true);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error updating cart item:", error);
+                    showPopup("Error updating cart item.", true);
+                }
+            });
+        }
+
+        // Function to remove cart item
+        function removeCartItem(productId) {
+            $.ajax({
+                url: '/LandingPage/remove_cart_item.php',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    product_id: productId
+                },
+                success: function(response) {
+                    if(response.success) {
+                        $('#cart-count').text(response.cart_count);
+                        updateCartModal();
+                        showPopup("Item removed from cart");
+                    } else {
+                        showPopup(response.message || "Error removing item", true);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error removing cart item:", error);
+                    showPopup("Error removing cart item.", true);
+                }
+            });
+        }
+
+        // Function to update the cart modal
+        function updateCartModal() {
+            $.ajax({
+                url: '/LandingPage/fetch_cart_items.php',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if(response && response.cart_items !== undefined) {
+                        if(response.cart_items.length === 0) {
+                            $('#empty-cart-message').show();
+                            $('#cart-items-container').hide();
+                        } else {
+                            $('#empty-cart-message').hide();
+                            $('#cart-items-container').show();
+                            
+                            let cartItemsHtml = '';
+                            let subtotal = 0;
+                            
+                            response.cart_items.forEach(item => {
+                                const price = parseFloat(item.price);
+                                const itemSubtotal = price * item.quantity;
+                                subtotal += itemSubtotal;
+                                
+                                cartItemsHtml += `
+                                    <tr>
+                                        <td>
+                                            <img src="${item.image_path || '/LandingPage/images/default-product.jpg'}" 
+                                                 alt="${item.name}" 
+                                                 style="width: 80px; height: 80px; object-fit: contain;">
+                                        </td>
+                                        <td>
+                                            <h6>${item.name}</h6>
+                                            <small class="text-muted">${item.packaging || ''}</small>
+                                        </td>
+                                        <td>₱${price.toFixed(2)}</td>
+                                        <td>
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <button class="btn btn-outline-secondary decrease-quantity" 
+                                                            type="button" 
+                                                            data-product-id="${item.product_id}">
+                                                        <i class="fa fa-minus"></i>
+                                                    </button>
+                                                </div>
+                                                <input type="text" 
+                                                       class="form-control text-center quantity-input" 
+                                                       value="${item.quantity}" 
+                                                       readonly>
+                                                <div class="input-group-append">
+                                                    <button class="btn btn-outline-secondary increase-quantity" 
+                                                            type="button" 
+                                                            data-product-id="${item.product_id}">
+                                                        <i class="fa fa-plus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>₱${itemSubtotal.toFixed(2)}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger remove-from-cart" 
+                                                    data-product-id="${item.product_id}">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            });
+
+                            $('#cart-items-list').html(cartItemsHtml);
+                            $('#subtotal-amount').text('₱' + subtotal.toFixed(2));
+                            
+                            // Calculate delivery fee
+                            const deliveryFee = subtotal > 500 ? 0 : 50;
+                            $('#delivery-fee').text('₱' + deliveryFee.toFixed(2));
+                            
+                            const totalAmount = subtotal + deliveryFee;
+                            $('#total-amount').text('₱' + totalAmount.toFixed(2));
+                        }
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error fetching cart items:", error);
+                    showPopup("Error fetching cart items.", true);
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            // Quantity adjustment handlers
+            $(document).on('click', '.increase-quantity', function() {
+                const productId = $(this).data('product-id');
+                updateCartItemQuantity(productId, 1);
+            });
+
+            $(document).on('click', '.decrease-quantity', function() {
+                const productId = $(this).data('product-id');
+                updateCartItemQuantity(productId, -1);
+            });
+
+            // Remove item handler
+            $(document).on('click', '.remove-from-cart', function() {
+                const productId = $(this).data('product-id');
+                removeCartItem(productId);
+            });
+
+            // Checkout button handler
+            $(document).on('click', '#checkout-button', function() {
+                const specialInstructions = $('#special-instructions').val();
+                sessionStorage.setItem('specialInstructions', specialInstructions);
+                $('#cartModal').modal('hide');
+                window.location.href = '/LandingPage/checkout.php';
+            });
+
+            // Update cart modal when it's shown
+            $('#cartModal').on('show.bs.modal', function() {
+                updateCartModal();
+            });
         });
-
-        $(document).on('click', '.decrease-quantity', function() {
-            const productId = $(this).data('product-id');
-            updateCartItemQuantity(productId, -1);
-        });
-
-        // Remove item handler
-        $(document).on('click', '.remove-from-cart', function() {
-            const productId = $(this).data('product-id');
-            removeCartItem(productId);
-        });
-
-        // Checkout button handler
-        $(document).on('click', '#checkout-button', function() {
-            const specialInstructions = $('#special-instructions').val();
-            sessionStorage.setItem('specialInstructions', specialInstructions);
-            $('#cartModal').modal('hide');
-            window.location.href = 'checkout.php';
-        });
-
-        // Update cart modal when it's shown
-        $('#cartModal').on('show.bs.modal', function() {
-            updateCartModal();
-        });
-    });
-</script>
-<?php endif; ?>
-
-<?php $conn->close(); ?>
+    </script>
+    <?php endif; ?>
 </body>
 </html>
