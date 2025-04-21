@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Apr 20, 2025 at 05:40 AM
+-- Generation Time: Apr 14, 2025 at 01:52 PM
 -- Server version: 10.11.10-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -89,20 +89,37 @@ CREATE TABLE `clients_accounts` (
   `balance` decimal(10,2) DEFAULT 0.00,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `client_session_id` varchar(255) DEFAULT NULL,
-  `client_last_login` timestamp NULL DEFAULT NULL,
-  `verification_code` varchar(6) DEFAULT NULL,
-  `code_expires_at` datetime DEFAULT NULL
+  `client_last_login` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `clients_accounts`
 --
 
-INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company`, `company_address`, `business_proof`, `status`, `balance`, `created_at`, `client_session_id`, `client_last_login`, `verification_code`, `code_expires_at`) VALUES
-(17, 'aedanevangelista', '$2y$10$jBu29UPrI.tiA6RY78Sfmeq3MX07il.3QHNi/5yLJp4pPPRR2u1eW', 'aedanevangelista@gmail.com', '0912345678', 'NCR', 'Quezon City', 'Top Exchange', '', '[\"\\/uploads\\/aedanevangelista\\/67ea26c320cf1_BeefFilletSauce.png\"]', 'Pending', 0.00, '2025-03-31 05:23:15', NULL, NULL, NULL, NULL),
-(18, 'aedanpogi', '$2y$10$8gTpS4G2a5./WFrpYVavL.OJYt.rF2d4Cqvi1QzKeTXbSxWWwWe5O', 'aedanpogi@gmail.com', '09185585149', 'NCR', 'Quezon City', '', '', '[\"\\/uploads\\/aedanpogi\\/67ea344a30392_BeancurdRoll.png\",\"\\/uploads\\/aedanpogi\\/67ea344a30655_BeefFilletSauce.png\",\"\\/uploads\\/aedanpogi\\/67ea344a3083b_BeefSiomai.png\"]', 'Active', 0.00, '2025-03-31 06:20:58', NULL, NULL, NULL, NULL),
-(19, 'Boters', '$2y$10$ZCuwFddafUAQjSSkGiW1u.fn3L5oomcUGr/scGq/7KP7gwHsJHJHa', 'jefferson45santonia@gmail.com', '09185585149', 'Metro Manila', 'Quezon City', '', '10 Aguinaldo', '[\"\\/uploads\\/Boters\\/RadishCake.png\"]', 'Active', 0.00, '2025-04-17 05:58:45', NULL, NULL, '964336', '2025-04-20 00:53:12'),
-(20, 'Ryan', '$2y$10$j7do4aHoJGhm7q98GMYV8uLjw7bxz6kBYvsvVjoYR.giafGEXuLGi', 'ryanfrancisrodriguez02@gmail.com', '09154864843', 'NCR', 'Quezon City', '', '1-B Palomaria Street Veterans Village Project 7 ', '[\"\\/uploads\\/Ryan\\/FlowChart.drawio.png\"]', 'Active', 0.00, '2025-04-17 12:14:15', NULL, NULL, NULL, NULL);
+INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company`, `company_address`, `business_proof`, `status`, `balance`, `created_at`, `client_session_id`, `client_last_login`) VALUES
+(17, 'aedanevangelista', '$2y$10$jBu29UPrI.tiA6RY78Sfmeq3MX07il.3QHNi/5yLJp4pPPRR2u1eW', 'aedanevangelista@gmail.com', '0912345678', 'NCR', 'Quezon City', 'Top Exchange', '', '[\"\\/uploads\\/aedanevangelista\\/67ea26c320cf1_BeefFilletSauce.png\"]', 'Active', 0.00, '2025-03-31 05:23:15', NULL, NULL),
+(18, 'aedanpogi', '$2y$10$8gTpS4G2a5./WFrpYVavL.OJYt.rF2d4Cqvi1QzKeTXbSxWWwWe5O', 'aedanpogi@gmail.com', '09185585149', 'NCR', 'Quezon City', '', '', '[\"\\/uploads\\/aedanpogi\\/67ea344a30392_BeancurdRoll.png\",\"\\/uploads\\/aedanpogi\\/67ea344a30655_BeefFilletSauce.png\",\"\\/uploads\\/aedanpogi\\/67ea344a3083b_BeefSiomai.png\"]', 'Pending', 0.00, '2025-03-31 06:20:58', NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `customers`
+--
+
+CREATE TABLE `customers` (
+  `customer_id` int(11) NOT NULL,
+  `customer_name` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `customers`
+--
+
+INSERT INTO `customers` (`customer_id`, `customer_name`, `created_at`) VALUES
+(1, 'Solaire Entertainment City', '2025-02-18 04:23:50'),
+(2, 'Tiger', '2025-02-18 04:23:50'),
+(3, 'City of Dreams', '2025-02-18 04:23:50');
 
 -- --------------------------------------------------------
 
@@ -162,13 +179,7 @@ INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_dat
 (51, 'aedanevangelista-2', 'aedanevangelista', '2025-03-31', '2025-04-02', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":17,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Special Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":260,\"quantity\":5}]', 2700.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1]', NULL, NULL, NULL),
 (52, 'aedanevangelista-3', 'aedanevangelista', '2025-04-09', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0]', NULL, NULL, NULL),
 (53, 'aedanevangelista-4', 'aedanevangelista', '2025-04-10', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":55},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":4,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Large)\",\"packaging\":\"6pcs/pack\",\"price\":235,\"quantity\":5}]', 19550.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1,2,3]', NULL, NULL, NULL),
-(54, 'aedanevangelista-5', 'aedanevangelista', '2025-04-12', '2025-04-14', 'No company address available', '[{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 4375.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1,2]', '[{\"progress\":0},{\"progress\":0},{\"progress\":0}]', '[[true,true,true,true,true],[true,true,true,true,true],[true,true,true,true,true]]', '[100,100,100]'),
-(55, 'aedanevangelista-6', 'aedanevangelista', '2025-04-15', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":55}]', 15400.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(56, 'aedanevangelista-7', 'aedanevangelista', '2025-04-15', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(57, 'aedanevangelista-8', 'aedanevangelista', '2025-04-15', '2025-04-23', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(58, 'Ryan-1', 'Ryan', '2025-04-17', '2025-04-18', '1-B Palomaria Street Veterans Village Project 7', '[{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":10}]', 2700.00, 'Active', '09154864843', '', 'Bank Transfer', 2700.00, 0.00, 60, '[]', NULL, '[[true,true,true,true,true,true,false,false,false,false]]', '[60]'),
-(59, 'aedanpogi-1', 'aedanpogi', '2025-04-19', '2025-04-23', 'No company address available', '[{\"product_id\":17,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Special Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":260,\"quantity\":5},{\"product_id\":16,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Regular Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":180,\"quantity\":5},{\"product_id\":18,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Kutchay Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":275,\"quantity\":5}]', 3575.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(60, 'Ryan-2', 'Ryan', '2025-04-19', '2025-04-23', '1-B Palomaria Street Veterans Village Project 7 ', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":4,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Large)\",\"packaging\":\"6pcs/pack\",\"price\":235,\"quantity\":5},{\"product_id\":5,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs/pack\",\"price\":250,\"quantity\":5}]', 6800.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL);
+(54, 'aedanevangelista-5', 'aedanevangelista', '2025-04-12', '2025-04-14', 'No company address available', '[{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 4375.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 33, '[0]', '[{\"progress\":0},{\"progress\":0},{\"progress\":0}]', '[[true,true,true,true,true]]', '[100,0,0]');
 
 -- --------------------------------------------------------
 
@@ -197,8 +208,7 @@ INSERT INTO `pages` (`page_id`, `page_name`, `file_path`) VALUES
 (8, 'Order History', 'order_history.php'),
 (9, 'Payment History', 'payment_history.php'),
 (12, 'Raw Materials', 'raw_materials.php'),
-(13, 'Pending Orders', 'pending_orders.php'),
-(14, 'Department Forecast', 'department_forecast.php');
+(13, 'Pending Orders', 'pending_orders.php');
 
 -- --------------------------------------------------------
 
@@ -353,17 +363,17 @@ CREATE TABLE `raw_materials` (
 --
 
 INSERT INTO `raw_materials` (`material_id`, `name`, `stock_quantity`, `created_at`, `updated_at`) VALUES
-(1, 'Chicken Meat', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:59'),
-(2, 'Chicken Feet', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:53'),
-(3, 'Chicken Breading', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:51'),
-(4, 'Chicken Diced Seasoned', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:53'),
-(5, 'Chicken Lemon Seasoned', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:57'),
-(6, 'Chicken Leg Boneless', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:35:54'),
-(7, 'Chicken Leg Quarter', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:35:56'),
-(8, 'Chicken Marinated', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:58'),
-(9, 'Chicken Sliced Seasoned', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:01'),
+(1, 'Chicken Meat', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:10'),
+(2, 'Chicken Feet', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:04'),
+(3, 'Chicken Breading', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:03'),
+(4, 'Chicken Diced Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:04'),
+(5, 'Chicken Lemon Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:09'),
+(6, 'Chicken Leg Boneless', 400.00, '2025-04-07 16:57:58', '2025-04-08 16:43:07'),
+(7, 'Chicken Leg Quarter', 400.00, '2025-04-07 16:57:58', '2025-04-08 16:43:07'),
+(8, 'Chicken Marinated', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:09'),
+(9, 'Chicken Sliced Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:12'),
 (10, 'Whole Chicken', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:14'),
-(11, 'Peking Duck', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:33'),
+(11, 'Peking Duck', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:41'),
 (12, 'Pork Meat', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:49'),
 (13, 'Pork Belly (Skin On)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:43'),
 (14, 'Pork Belly (Skinless)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:44'),
@@ -376,64 +386,64 @@ INSERT INTO `raw_materials` (`material_id`, `name`, `stock_quantity`, `created_a
 (21, 'Pork Sweet & Sour Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:53'),
 (22, 'Porkloin', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:55'),
 (23, 'Pork Spareribs', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:52'),
-(24, 'Minced Pork', 67500.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
+(24, 'Minced Pork', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:38'),
 (25, 'Siao Long Pao (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:01'),
 (26, 'Wanton (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:13'),
 (27, 'Veg. Spring Roll (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:11'),
 (28, 'Smoked Ham', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:03'),
-(29, 'Hakaav (Ham)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:24'),
-(30, 'Beef Meat', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:40'),
-(31, 'Beef Cube Roll', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:37'),
-(32, 'Beef Forequarter / Brisket', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:38'),
-(33, 'Beef Knuckle', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:39'),
-(34, 'Beef Rum', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:41'),
-(35, 'Beef Short Plates', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:42'),
-(36, 'Beef Sliced Seasoned', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:44'),
-(37, 'Beef Tenderloin Seasoned', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:45'),
-(38, 'Shrimp', 99800.00, '2025-04-07 16:57:58', '2025-04-19 07:56:26'),
-(39, 'Crabstick', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:05'),
+(29, 'Hakaav (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:29'),
+(30, 'Beef Meat', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:52'),
+(31, 'Beef Cube Roll', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:48'),
+(32, 'Beef Forequarter / Brisket', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:49'),
+(33, 'Beef Knuckle', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:51'),
+(34, 'Beef Rum', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:53'),
+(35, 'Beef Short Plates', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:54'),
+(36, 'Beef Sliced Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:55'),
+(37, 'Beef Tenderloin Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:56'),
+(38, 'Shrimp', 400.00, '2025-04-07 16:57:58', '2025-04-08 16:44:00'),
+(39, 'Crabstick', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:16'),
 (40, 'Scallop', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:59'),
-(41, 'Dried Japanese Scallop', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:36:11'),
+(41, 'Dried Japanese Scallop', 400.00, '2025-04-07 16:57:58', '2025-04-08 16:43:21'),
 (42, 'Salted Fish', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:56'),
-(43, 'Hibi', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:23'),
-(44, 'Ebito', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:16'),
+(43, 'Hibi', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:30'),
+(44, 'Ebito', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:24'),
 (45, 'Squid Cube', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:04'),
-(46, 'Giant Squid / Cuttlefish', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:20'),
-(47, 'Cuttlefish Seasoned', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:09'),
-(48, 'Fish Fillet Seasoned', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:17'),
-(49, 'Cream Dory Fillet', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:06'),
-(50, 'Cream Dory Fish Skin', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:07'),
+(46, 'Giant Squid / Cuttlefish', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:27'),
+(47, 'Cuttlefish Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:19'),
+(48, 'Fish Fillet Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:24'),
+(49, 'Cream Dory Fillet', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:15'),
+(50, 'Cream Dory Fish Skin', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:17'),
 (51, 'Tai Tai Fish', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:08'),
-(52, 'Soy Sauce', 97775.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(53, 'Japanese Soy Sauce', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:26'),
-(54, 'Hoisin Sauce', 8980.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(55, 'Star Anise', 258.50, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(56, 'Butter (Anchor)', 9010.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(57, 'Margarine Buttercup (Buttercup)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:29'),
-(58, 'Cheese Quickmelt (Magnolia)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:48'),
-(59, 'Cheese Unsalted (Magnolia)', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:35:50'),
-(60, 'Cheese (Eden)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:47'),
-(61, 'Dark Chocolate Bar', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:10'),
-(62, 'Flour', 67450.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(63, 'Sugar', 98075.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(64, 'Yeast', 99885.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(65, 'Baking Powder', 10084.50, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(66, 'Milk', 8180.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(67, 'Glutinous Rice', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:21'),
-(68, 'Chestnut', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:35:51'),
+(52, 'Soy Sauce', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:03'),
+(53, 'Japanese Soy Sauce', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:32'),
+(54, 'Hoisin Sauce', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:31'),
+(55, 'Star Anise', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:07'),
+(56, 'Butter (Anchor)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:57'),
+(57, 'Margarine Buttercup (Buttercup)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:35'),
+(58, 'Cheese Quickmelt (Magnolia)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:59'),
+(59, 'Cheese Unsalted (Magnolia)', 400.00, '2025-04-07 16:57:58', '2025-04-08 16:43:01'),
+(60, 'Cheese (Eden)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:42:58'),
+(61, 'Dark Chocolate Bar', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:19'),
+(62, 'Flour', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:25'),
+(63, 'Sugar', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:06'),
+(64, 'Yeast', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:15'),
+(65, 'Baking Powder', 399.50, '2025-04-07 16:57:58', '2025-04-08 16:42:48'),
+(66, 'Milk', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:36'),
+(67, 'Glutinous Rice', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:28'),
+(68, 'Chestnut', 400.00, '2025-04-07 16:57:58', '2025-04-08 16:43:02'),
 (69, 'Tofu', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:09'),
-(70, 'Chili', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:36:02'),
-(71, 'Garlic', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:19'),
-(72, 'Lemon', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:28'),
+(70, 'Chili', 400.00, '2025-04-07 16:57:58', '2025-04-09 17:15:27'),
+(71, 'Garlic', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:26'),
+(72, 'Lemon', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:34'),
 (73, 'Pineapple', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:41'),
-(74, 'Cornstarch', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:04'),
+(74, 'Cornstarch', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:13'),
 (75, 'Vinegar', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:12'),
-(76, 'Dried Shrimp', 110400.00, '2025-04-07 16:57:58', '2025-04-19 07:56:20'),
-(77, 'Ketchup', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:27'),
-(156, 'Oil', 10300.00, '2025-04-07 17:57:32', '2025-04-15 12:36:32'),
+(76, 'Dried Shrimp', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:22'),
+(77, 'Ketchup', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:33'),
+(156, 'Oil', 300.00, '2025-04-07 17:57:32', '2025-04-08 16:43:39'),
 (157, 'Salt', 300.00, '2025-04-07 17:57:32', '2025-04-08 16:43:56'),
 (158, 'Sausana/Chinese', 300.00, '2025-04-07 17:57:32', '2025-04-08 16:43:58'),
-(159, 'Crispy Powder', 10300.00, '2025-04-07 17:57:32', '2025-04-15 12:36:08');
+(159, 'Crispy Powder', 300.00, '2025-04-07 17:57:32', '2025-04-08 16:43:18');
 
 -- --------------------------------------------------------
 
@@ -453,8 +463,8 @@ CREATE TABLE `roles` (
 --
 
 INSERT INTO `roles` (`role_id`, `role_name`, `status`, `pages`) VALUES
-(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory, Orders, Order History, Payment History, Forecast, Raw Materials, Pending Orders, Department Forecast'),
-(2, 'Manager', 'active', 'Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, Forecast, Raw Materials, Pending Orders, Department Forecast'),
+(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory, Orders, Order History, Payment History, Forecast, Raw Materials, Pending Orders'),
+(2, 'Manager', 'active', 'Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, Forecast, Raw Materials, Pending Orders'),
 (3, 'Secretary', 'active', 'Customers, Dashboard, Inventory, Order History, Orders, Payment History, Raw Materials, Pending Orders'),
 (4, 'Accountant', 'active', 'Dashboard, Order History, Orders, Payment History, Pending Orders'),
 (36, 'aed', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, User Roles, Raw Materials, Pending Orders');
@@ -483,6 +493,12 @@ ALTER TABLE `balance_history`
 ALTER TABLE `clients_accounts`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_username` (`username`);
+
+--
+-- Indexes for table `customers`
+--
+ALTER TABLE `customers`
+  ADD PRIMARY KEY (`customer_id`);
 
 --
 -- Indexes for table `monthly_payments`
@@ -559,7 +575,13 @@ ALTER TABLE `balance_history`
 -- AUTO_INCREMENT for table `clients_accounts`
 --
 ALTER TABLE `clients_accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+
+--
+-- AUTO_INCREMENT for table `customers`
+--
+ALTER TABLE `customers`
+  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `monthly_payments`
@@ -571,13 +593,13 @@ ALTER TABLE `monthly_payments`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
 
 --
 -- AUTO_INCREMENT for table `pages`
 --
 ALTER TABLE `pages`
-  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `payment_history`

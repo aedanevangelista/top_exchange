@@ -96,9 +96,6 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <a href="/public/pages/forecast.php" class="submenu-item">
                             <i class="fas fa-arrow-right"></i> Delivery Calendar
                         </a>
-                        <a href="/public/pages/department_forecast.php" class="submenu-item">
-                            <i class="fas fa-arrow-right"></i> Department Forecast
-                        </a>
                     </div>
                 </div>
             <?php endif; ?>
