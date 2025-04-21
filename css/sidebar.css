@@ -1,0 +1,242 @@
+/* Reset & General Styles */
+/* ================================ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+    text-decoration: none; /* Removes underlines */
+}
+
+/* ================================ */
+/* Sidebar Styling */
+/* ================================ */
+.sidebar {
+    width: 250px; /* Fixed width */
+    background: #222;
+    color: white;
+    padding: 20px; /* Reduced padding */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+}
+
+/* Sidebar Sections */
+.menu-section {
+    margin-bottom: 32px;
+}
+
+.menu-title {
+    font-size: 12px; /* Reduced by 2px */
+    font-weight: bold;
+    color: #aaa;
+    margin-bottom: 10px; /* More gap before divider */
+    margin-top: 20px; /* More gap from the previous section */
+}
+
+/* Divider */
+hr {
+    border: none;
+    height: 1px;
+    background: #444;
+    margin-bottom: 12px; /* Adds gap */
+}
+
+/* Sidebar Menu Items */
+.menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Distributes content to both ends */
+    gap: 10px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 13px; /* Reduced by 2px */
+    font-weight: 400;
+    padding: 10px 15px; /* Adjusted padding */
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s ease-in-out;
+    border-radius: 4px;
+}
+
+.menu-item:hover {
+    background: #333;
+}
+
+/* No hover effect for specific menu item */
+.no-hover:hover {
+    background: none;
+    cursor: default;
+}
+
+.menu-item.active {
+    background-color: #383838;
+    font-weight: bold;
+}
+
+/* Submenu Styling */
+.submenu {
+    display: flex;
+    flex-direction: column;
+}
+
+.submenu-items {
+    display: block;
+    flex-direction: column;
+    margin-left: 20px; /* Indentation */
+    margin-top: 0;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Smooth easing function */
+    pointer-events: none; /* Prevents clicking on hidden items */
+}
+
+.submenu-items.visible {
+    max-height: 300px; /* Adjust based on your content */
+    opacity: 1;
+    margin-top: 5px;
+    pointer-events: all; /* Re-enables clicking */
+}
+
+/* Arrow Icon Styling */
+.menu-item .fa-chevron-down {
+    font-size: 12px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.8;
+}
+
+.menu-item.active .fa-chevron-down {
+    transform: rotate(180deg);
+    opacity: 1;
+}
+
+.submenu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: none;
+    border: none;
+    color: #ddd; /* Lighter color for differentiation */
+    font-size: 12px; /* Reduced by 2px */
+    font-weight: 400;
+    padding: 5px 10px; /* Adjusted padding */
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s ease-in-out;
+    border-radius: 4px;
+}
+
+.submenu-item:hover {
+    background: #444;
+}
+
+/* Dropdown arrow styling */
+.dropdown-arrow {
+    margin-left: 10px;
+    transition: transform 0.3s ease;
+}
+
+.dropdown-arrow.rotate {
+    transform: rotate(180deg);
+}
+
+/* ================================ */
+/* Account & Logout Section Fix */
+/* ================================ */
+.account-section {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch; /* Full width */
+    gap: 5px;
+    padding: 10px;
+    width: 100%;
+    background-color: #222; /* Matches sidebar background */
+}
+
+/* Account Info Full Width */
+.account-info {
+    background: #333;
+    padding: 14px;
+    border-radius: 5px;
+    font-size: 12px; /* Reduced by 2px */
+    color: white;
+    font-weight: bold;
+}
+
+/* Logout Button */
+.logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #c62828; /* Red logout button */
+    color: white;
+    font-size: 13px; /* Reduced by 2px */
+    font-weight: 400;
+    padding: 10px 15px; /* Adjusted padding */
+    width: 100%;
+    text-align: center;
+    justify-content: center; /* Center logout text */
+    cursor: pointer;
+    transition: background 0.2s ease-in-out;
+    border-radius: 4px;
+    margin-top: 10px; /* Add gap between account info and logout */
+}
+
+.logout-btn:hover {
+    background: #b71c1c; /* Darker red on hover */
+}
+
+/* Make icons consistent size */
+.sidebar i {
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+}
+
+/* For dropdown menu items, need to structure differently */
+.menu-item > div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.main-content {
+    margin-left: 250px; /* Same as sidebar width */
+    padding: 20px;
+    width: calc(100% - 250px); /* Full width minus sidebar */
+    box-sizing: border-box;
+    overflow-x: auto; /* Allow horizontal scroll if needed */
+}
+
+.dashboard-container {
+    display: flex;
+    height: 100vh;
+    position: relative; /* Ensure proper positioning context */
+}
+
+/* For smaller screens, adjust as needed */
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px;
+    }
+    
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .sidebar.show {
+        transform: translateX(0);
+    }
+}

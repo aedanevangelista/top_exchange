@@ -1,0 +1,280 @@
+/* ================================ */
+/* Reset & General Styles */
+/* ================================ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* ================================ */
+/* Dashboard Layout */
+/* ================================ */
+.dashboard-container {
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 220px;
+    background-color: #e0e0e0;
+    padding: 20px;
+    border-right: 1px solid #ccc;
+}
+
+/* ================================ */
+/* Main Content Layout */
+/* ================================ */
+.main-content {
+    flex: 1;
+    padding: 32px;
+    background-color: #f4f7f9;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center; /* Center all sections horizontally */
+}
+
+/* ================================ */
+/* Overview Section */
+/* ================================ */
+.overview-container {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #ddd;
+}
+
+/* Input P.O. Button */
+.input-po-btn {
+    padding: 10px 20px;
+    background-color: black;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease-in-out;
+}
+
+.input-po-btn:hover {
+    background-color: #333;
+    transform: scale(1.05);
+}
+
+/* ================================ */
+/* Top Section: Client Orders & Packs Sold */
+/* ================================ */
+.top-section {
+    width: 100%;
+
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+/* ================================ */
+/* Client Orders Section */
+/* ================================ */
+.client-orders-container {
+    flex: 1;
+    background-color: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    gap: 16px;
+}
+
+/* Client Orders Dropdown */
+#client-orders-filter {
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+/* Client Orders Chart */
+.client-orders {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 250px;
+}
+
+/* ================================ */
+/* Packs Sold Since Section */
+/* ================================ */
+.packs-sold-container {
+    flex: 1;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Header */
+.packs-sold-header {
+    font-size: 16px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+/* Packs Sold Count */
+.packs-sold-count {
+    font-size: 44px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+/* Comparison Text */
+.packs-comparison-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ================================ */
+/* Sales per Department Section */
+/* ================================ */
+.sales-department-container {
+    flex: 1;
+    width: 70%;
+    min-height: 400px; /* Set minimum height */
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+
+.sales-department-chart {
+    height: calc(100% - 60px); /* Subtract header height */
+    width: 100%;
+    position: relative;
+}
+
+/* If you want the chart to be even bigger */
+.dashboard-left {
+    min-height: 600px; /* Adjust this value as needed */
+}
+
+/* Chart Area */
+.chart-container {
+    width: 100%;
+    height: 250px;
+}
+
+/* ================================ */
+/* Consistent Dropdown Styles */
+/* ================================ */
+.dropdown,
+#client-orders-filter,
+#sales-per-department-filter,
+#packs-sold-year,
+#packs-sold-compare-year {
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.year-select{
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Dropdown Hover & Focus */
+.dropdown:hover {
+    border-color: #888;
+    background-color: #f7f7f7;
+}
+
+.dropdown:focus {
+    outline: 2px solid #4CAF50;
+}
+
+/* ================================ */
+/* Responsive Styles */
+/* ================================ */
+@media (max-width: 768px) {
+    .top-section {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .overview-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .sales-department-container {
+        height: auto;
+    }
+}
+
+.client-orders-container {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 4px;
+}
+
+.client-orders {
+    min-height: 300px;
+    position: relative;
+}
+
+canvas#clientOrdersChart {
+    width: 100% !important;
+    height: 100% !important;
+}
+
