@@ -50,7 +50,7 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Loginasdas</title>
+    <title>Admin Login</title>
 <style>
     .formHeading {
     margin-bottom: 40px;
@@ -155,7 +155,7 @@ label {
     <div class="login-container">
         <div class="form-content">
             <div class="formHeading">
-                <span class="h3">ADMIN LOGIN 👋</span> <br/>
+                <span class="h3">ADMIN LOGINasdasd 👋</span> <br/>
                 <span class="excerptOne">Enter your username and password to continue.</span>
             </div>
 
