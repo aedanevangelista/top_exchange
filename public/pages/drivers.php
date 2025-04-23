@@ -13,63 +13,107 @@ if (!isset($_SESSION['admin_user_id'])) {
 // Check role permission for Drivers
 checkRole('Drivers');
 
-// Process form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['add_driver'])) {
-        // Add new driver
-        $name = $conn->real_escape_string($_POST['name']);
-        $address = $conn->real_escape_string($_POST['address']);
-        $contact_no = $conn->real_escape_string($_POST['contact_no']);
-        $availability = $conn->real_escape_string($_POST['availability']);
-        
-        $sql = "INSERT INTO drivers (name, address, contact_no, availability) VALUES (?, ?, ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssss", $name, $address, $contact_no, $availability);
-        
-        if ($stmt->execute()) {
-            $success_message = "Driver added successfully";
-        } else {
-            $error_message = "Error: " . $stmt->error;
-        }
-        $stmt->close();
-    } elseif (isset($_POST['update_driver'])) {
-        // Update driver
-        $driver_id = $conn->real_escape_string($_POST['driver_id']);
-        $name = $conn->real_escape_string($_POST['name']);
-        $address = $conn->real_escape_string($_POST['address']);
-        $contact_no = $conn->real_escape_string($_POST['contact_no']);
-        $availability = $conn->real_escape_string($_POST['availability']);
-        
-        $sql = "UPDATE drivers SET name = ?, address = ?, contact_no = ?, availability = ? WHERE id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssssi", $name, $address, $contact_no, $availability, $driver_id);
-        
-        if ($stmt->execute()) {
-            $success_message = "Driver updated successfully";
-        } else {
-            $error_message = "Error: " . $stmt->error;
-        }
-        $stmt->close();
-    } elseif (isset($_POST['delete_driver'])) {
-        // Delete driver
-        $driver_id = $conn->real_escape_string($_POST['driver_id']);
-        
-        $sql = "DELETE FROM drivers WHERE id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $driver_id);
-        
-        if ($stmt->execute()) {
-            $success_message = "Driver deleted successfully";
-        } else {
-            $error_message = "Error: " . $stmt->error;
-        }
-        $stmt->close();
-    }
+function returnJsonResponse($success, $reload, $message = '') {
+    echo json_encode(['success' => $success, 'reload' => $reload, 'message' => $message]);
+    exit;
 }
 
-// Get all drivers
-$sql = "SELECT * FROM drivers ORDER BY name ASC";
-$result = $conn->query($sql);
+// Process form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
+    header('Content-Type: application/json');
+    
+    $name = trim($_POST['name']);
+    $address = $_POST['address'];
+    $contact_no = $_POST['contact_no'];
+    $availability = $_POST['availability'];
+    
+    $checkStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ?");
+    $checkStmt->bind_param("s", $name);
+    $checkStmt->execute();
+    $checkStmt->store_result();
+    
+    if ($checkStmt->num_rows > 0) {
+        returnJsonResponse(false, false, 'Driver name already exists.');
+    }
+    $checkStmt->close();
+    
+    $stmt = $conn->prepare("INSERT INTO drivers (name, address, contact_no, availability) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("ssss", $name, $address, $contact_no, $availability);
+    
+    if ($stmt->execute()) {
+        returnJsonResponse(true, true);
+    } else {
+        returnJsonResponse(false, false);
+    }
+    $stmt->close();
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['formType'] == 'edit') {
+    header('Content-Type: application/json');
+    
+    $id = $_POST['id'];
+    $name = trim($_POST['name']);
+    $address = $_POST['address'];
+    $contact_no = $_POST['contact_no'];
+    $availability = $_POST['availability'];
+    
+    $checkStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ? AND id != ?");
+    $checkStmt->bind_param("si", $name, $id);
+    $checkStmt->execute();
+    $checkStmt->store_result();
+    
+    if ($checkStmt->num_rows > 0) {
+        returnJsonResponse(false, false, 'Driver name already exists.');
+    }
+    $checkStmt->close();
+    
+    $stmt = $conn->prepare("UPDATE drivers SET name = ?, address = ?, contact_no = ?, availability = ? WHERE id = ?");
+    $stmt->bind_param("ssssi", $name, $address, $contact_no, $availability, $id);
+    
+    if ($stmt->execute()) {
+        returnJsonResponse(true, true);
+    } else {
+        returnJsonResponse(false, false);
+    }
+    $stmt->close();
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['formType'] == 'status') {
+    header('Content-Type: application/json');
+    
+    $id = $_POST['id'];
+    $status = $_POST['status'];
+    $stmt = $conn->prepare("UPDATE drivers SET availability = ? WHERE id = ?");
+    $stmt->bind_param("si", $status, $id);
+    
+    if ($stmt->execute()) {
+        returnJsonResponse(true, true);
+    } else {
+        returnJsonResponse(false, false, 'Failed to change status.');
+    }
+    
+    $stmt->close();
+    exit;
+}
+
+$status_filter = $_GET['status'] ?? '';
+
+$sql = "SELECT id, name, address, contact_no, availability, created_at FROM drivers";
+if (!empty($status_filter)) {
+    $sql .= " WHERE availability = ?";
+}
+$sql .= " ORDER BY name ASC";
+
+if (!empty($status_filter)) {
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $status_filter);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    $result = $conn->query($sql);
+}
 ?>
 
 <!DOCTYPE html>
@@ -77,272 +121,151 @@ $result = $conn->query($sql);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drivers</title>
-    <link rel="stylesheet" href="/css/dashboard.css">
+    <title>Drivers Management</title>
+    <link rel="stylesheet" href="/css/accounts.css">
+    <link rel="stylesheet" href="/css/drivers.css">
     <link rel="stylesheet" href="/css/sidebar.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <style>
-        .drivers-container {
-            padding: 20px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        
-        .drivers-form {
-            margin-bottom: 20px;
-        }
-        
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .button-group {
-            margin-top: 15px;
-        }
-        
-        .button-group button {
-            padding: 8px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        
-        .button-group button.primary {
-            background-color: #4CAF50;
-            color: white;
-        }
-        
-        .drivers-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        
-        .drivers-table th, .drivers-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .drivers-table th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }
-        
-        .status-available {
-            color: green;
-            font-weight: bold;
-        }
-        
-        .status-unavailable {
-            color: red;
-            font-weight: bold;
-        }
-        
-        .action-buttons button {
-            margin-right: 5px;
-            padding: 5px 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        
-        .edit-btn {
-            background-color: #2196F3;
-            color: white;
-        }
-        
-        .delete-btn {
-            background-color: #f44336;
-            color: white;
-        }
-        
-        .message {
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 4px;
-        }
-        
-        .success {
-            background-color: #dff0d8;
-            color: #3c763d;
-            border: 1px solid #d6e9c6;
-        }
-        
-        .error {
-            background-color: #f2dede;
-            color: #a94442;
-            border: 1px solid #ebccd1;
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="/css/toast.css">
 </head>
 <body>
-    <div class="dashboard-container">
-        <?php include '../sidebar.php'; ?>
-        
-        <div class="main-content">
-            <div class="overview-container">
-                <h2>Drivers Management</h2>
+    <div id="toast-container"></div>
+    <?php include '../sidebar.php'; ?>
+    <div class="main-content">
+        <div class="accounts-header">
+            <h1>Drivers Management</h1>
+            <div class="filter-section">
+                <label for="statusFilter">Filter by Status:</label>
+                <select id="statusFilter" onchange="filterByStatus()">
+                    <option value="">All</option>
+                    <option value="Available" <?= $status_filter == 'Available' ? 'selected' : '' ?>>Available</option>
+                    <option value="Not Available" <?= $status_filter == 'Not Available' ? 'selected' : '' ?>>Not Available</option>
+                </select>
             </div>
-            
-            <div class="drivers-container">
-                <?php if (isset($success_message)): ?>
-                    <div class="message success"><?php echo $success_message; ?></div>
-                <?php endif; ?>
-                
-                <?php if (isset($error_message)): ?>
-                    <div class="message error"><?php echo $error_message; ?></div>
-                <?php endif; ?>
-                
-                <div class="drivers-form">
-                    <h3>Add New Driver</h3>
-                    <form method="POST" action="">
-                        <div class="form-group">
-                            <label for="name">Name</label>
-                            <input type="text" id="name" name="name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="address">Address</label>
-                            <input type="text" id="address" name="address" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="contact_no">Contact No.</label>
-                            <input type="text" id="contact_no" name="contact_no" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="availability">Availability</label>
-                            <select id="availability" name="availability" required>
-                                <option value="Available">Available</option>
-                                <option value="Not Available">Not Available</option>
-                            </select>
-                        </div>
-                        <div class="button-group">
-                            <button type="submit" name="add_driver" class="primary">Add Driver</button>
-                        </div>
-                    </form>
-                </div>
-                
-                <h3>Drivers List</h3>
-                <table class="drivers-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Address</th>
-                            <th>Contact No.</th>
-                            <th>Availability</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if ($result && $result->num_rows > 0): ?>
-                            <?php while ($row = $result->fetch_assoc()): ?>
-                                <tr>
-                                    <td><?php echo $row['id']; ?></td>
-                                    <td><?php echo htmlspecialchars($row['name']); ?></td>
-                                    <td><?php echo htmlspecialchars($row['address']); ?></td>
-                                    <td><?php echo htmlspecialchars($row['contact_no']); ?></td>
-                                    <td class="<?php echo $row['availability'] == 'Available' ? 'status-available' : 'status-unavailable'; ?>">
-                                        <?php echo htmlspecialchars($row['availability']); ?>
-                                    </td>
-                                    <td class="action-buttons">
-                                        <button class="edit-btn" onclick="editDriver(<?php echo $row['id']; ?>, '<?php echo addslashes($row['name']); ?>', '<?php echo addslashes($row['address']); ?>', '<?php echo addslashes($row['contact_no']); ?>', '<?php echo $row['availability']; ?>')">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </button>
-                                        <button class="delete-btn" onclick="deleteDriver(<?php echo $row['id']; ?>)">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endwhile; ?>
-                        <?php else: ?>
+            <button onclick="openAddDriverForm()" class="add-account-btn">
+                <i class="fas fa-user-plus"></i> Add New Driver
+            </button>
+        </div>
+        <div class="accounts-table-container">
+            <table class="accounts-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Address</th>
+                        <th>Contact No.</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ($result && $result->num_rows > 0): ?>
+                        <?php while ($row = $result->fetch_assoc()): ?>
                             <tr>
-                                <td colspan="6" style="text-align: center;">No drivers found</td>
+                                <td><?= htmlspecialchars($row['name']) ?></td>
+                                <td><?= htmlspecialchars($row['address']) ?></td>
+                                <td><?= htmlspecialchars($row['contact_no']) ?></td>
+                                <td class="<?= 'status-' . strtolower(str_replace(' ', '-', $row['availability'])) ?>">
+                                    <?= htmlspecialchars($row['availability']) ?>
+                                </td>
+                                <td class="action-buttons">
+                                    <button class="edit-btn" onclick="openEditDriverForm(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>', '<?= htmlspecialchars(addslashes($row['address'])) ?>', '<?= htmlspecialchars(addslashes($row['contact_no'])) ?>', '<?= $row['availability'] ?>')">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>')">
+                                        <i class="fas fa-exchange-alt"></i> Change Status
+                                    </button>
+                                </td>
                             </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="5" class="no-accounts">No drivers found.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="addDriverOverlay" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2><i class="fas fa-user-plus"></i> Add New Driver</h2>
+            <div id="addDriverError" class="error-message"></div>
+            <form id="addDriverForm" method="POST" class="account-form" action="">
+                <input type="hidden" name="formType" value="add">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required>
+                <label for="address">Address:</label>
+                <input type="text" id="address" name="address" required>
+                <label for="contact_no">Contact No.:</label>
+                <input type="text" id="contact_no" name="contact_no" required>
+                <label for="availability">Availability:</label>
+                <select id="availability" name="availability" required>
+                    <option value="Available">Available</option>
+                    <option value="Not Available">Not Available</option>
+                </select>
+                <div class="form-buttons">
+                    <button type="button" class="cancel-btn" onclick="closeAddDriverForm()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editDriverOverlay" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2><i class="fas fa-edit"></i> Edit Driver</h2>
+            <div id="editDriverError" class="error-message"></div>
+            <form id="editDriverForm" method="POST" class="account-form" action="">
+                <input type="hidden" name="formType" value="edit">
+                <input type="hidden" id="edit-id" name="id"> 
+                <label for="edit-name">Name:</label>
+                <input type="text" id="edit-name" name="name" required>
+                <label for="edit-address">Address:</label>
+                <input type="text" id="edit-address" name="address" required>
+                <label for="edit-contact_no">Contact No.:</label>
+                <input type="text" id="edit-contact_no" name="contact_no" required>
+                <label for="edit-availability">Availability:</label>
+                <select id="edit-availability" name="availability" required>
+                    <option value="Available">Available</option>
+                    <option value="Not Available">Not Available</option>
+                </select>
+                <div class="form-buttons">
+                    <button type="button" class="cancel-btn" onclick="closeEditDriverForm()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="statusModal" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2>Change Status</h2>
+            <p id="statusMessage"></p>
+            <div class="modal-buttons">
+                <button class="approve-btn" onclick="changeStatus('Available')">
+                    <i class="fas fa-check"></i> Available
+                </button>
+                <button class="reject-btn" onclick="changeStatus('Not Available')">
+                    <i class="fas fa-times"></i> Not Available
+                </button>
+            </div>
+            <div class="modal-buttons single-button">
+                <button class="cancel-btn" onclick="closeStatusModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Edit Driver Modal -->
-    <div id="editModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
-        <div style="background-color: white; margin: 10% auto; padding: 20px; border-radius: 8px; width: 60%; box-shadow: 0 0 20px rgba(0,0,0,0.2);">
-            <span onclick="document.getElementById('editModal').style.display='none'" style="float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
-            <h3>Edit Driver</h3>
-            <form method="POST" action="" id="editForm">
-                <input type="hidden" id="edit_driver_id" name="driver_id">
-                <div class="form-group">
-                    <label for="edit_name">Name</label>
-                    <input type="text" id="edit_name" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit_address">Address</label>
-                    <input type="text" id="edit_address" name="address" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit_contact_no">Contact No.</label>
-                    <input type="text" id="edit_contact_no" name="contact_no" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit_availability">Availability</label>
-                    <select id="edit_availability" name="availability" required>
-                        <option value="Available">Available</option>
-                        <option value="Not Available">Not Available</option>
-                    </select>
-                </div>
-                <div class="button-group">
-                    <button type="submit" name="update_driver" class="primary">Update Driver</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
-        <div style="background-color: white; margin: 15% auto; padding: 20px; border-radius: 8px; width: 40%; box-shadow: 0 0 20px rgba(0,0,0,0.2);">
-            <h3>Confirm Delete</h3>
-            <p>Are you sure you want to delete this driver?</p>
-            <form method="POST" action="" id="deleteForm">
-                <input type="hidden" id="delete_driver_id" name="driver_id">
-                <div class="button-group">
-                    <button type="button" onclick="document.getElementById('deleteModal').style.display='none'" style="background-color: #ccc;">Cancel</button>
-                    <button type="submit" name="delete_driver" style="background-color: #f44336; color: white;">Delete</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        function editDriver(id, name, address, contact_no, availability) {
-            document.getElementById('edit_driver_id').value = id;
-            document.getElementById('edit_name').value = name;
-            document.getElementById('edit_address').value = address;
-            document.getElementById('edit_contact_no').value = contact_no;
-            document.getElementById('edit_availability').value = availability;
-            document.getElementById('editModal').style.display = 'block';
-        }
-        
-        function deleteDriver(id) {
-            document.getElementById('delete_driver_id').value = id;
-            document.getElementById('deleteModal').style.display = 'block';
-        }
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="/js/toast.js"></script>
+    <script src="/js/drivers.js"></script>
 </body>
 </html>
