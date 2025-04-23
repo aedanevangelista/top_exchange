@@ -66,6 +66,8 @@ function fetchInventory() {
 
         data.forEach(product => {
             const price = parseFloat(product.price);
+            // Calculate the maximum allowed quantity (minimum of stock quantity and 200)
+            const maxQuantity = Math.min(product.stock_quantity, 200);
             const productElement = `
                 <tr>
                     <td>${product.category}</td>
@@ -76,7 +78,7 @@ function fetchInventory() {
                         <input type="number" 
                             class="product-quantity" 
                             min="1" 
-                            max="${product.stock_quantity}"
+                            max="${maxQuantity}"
                             data-product-id="${product.product_id}"
                             data-category="${product.category}"
                             data-description="${product.item_description}"
@@ -161,7 +163,8 @@ function populateCart() {
                         <input type="number" 
                             class="cart-quantity" 
                             value="${product.quantity}" 
-                            min="1" 
+                            min="1"
+                            max="200"
                             data-index="${index}">
                         <button class="remove-from-cart" data-index="${index}" data-product="${product.item_description}" data-quantity="${product.quantity}">
                             <i class="fas fa-trash"></i>
@@ -401,6 +404,12 @@ $(document).ready(function() {
             alert('Please enter a valid quantity');
             return;
         }
+        
+        // Add validation for maximum quantity limit of 200
+        if (quantity > 200) {
+            alert('Maximum quantity allowed is 200 per product');
+            return;
+        }
 
         const product = {
             product_id: quantityInput.data('product-id'),
@@ -415,7 +424,14 @@ $(document).ready(function() {
             p.product_id === product.product_id);
 
         if (existingProductIndex !== -1) {
-            selectedProducts[existingProductIndex].quantity += quantity;
+            // Check if adding this quantity would exceed 200
+            const newTotalQuantity = selectedProducts[existingProductIndex].quantity + quantity;
+            if (newTotalQuantity > 200) {
+                alert('Total quantity cannot exceed 200 per product. Currently in cart: ' + 
+                      selectedProducts[existingProductIndex].quantity);
+                return;
+            }
+            selectedProducts[existingProductIndex].quantity = newTotalQuantity;
         } else {
             selectedProducts.push(product);
         }
@@ -450,6 +466,13 @@ $(document).ready(function() {
         const newQuantity = parseInt($(this).val(), 10);
         
         if (newQuantity > 0) {
+            // Add validation for maximum quantity limit of 200 in cart
+            if (newQuantity > 200) {
+                alert('Maximum quantity allowed is 200 per product');
+                $(this).val(selectedProducts[index].quantity); // Reset to previous value
+                return;
+            }
+            
             selectedProducts[index].quantity = newQuantity;
             updateCartTotal();
         }
