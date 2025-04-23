@@ -162,10 +162,6 @@ if ($result && $result->num_rows > 0) {
             background-color: #2471a3;
         }
         
-        .main-content {
-            padding-top: 0;
-        }
-        
         .orders-header {
             display: flex;
             justify-content: space-between;
