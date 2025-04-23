@@ -19,14 +19,29 @@ while ($stmt->fetch()) {
 }
 $stmt->close();
 
+// Handle search query for PO number
+$po_search = $_GET['po_search'] ?? '';
+
 // Modified query to only show Active orders
 $orders = []; // Initialize $orders as an empty array
 $sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status, progress FROM orders WHERE status = 'Active'";
+
+// Add search condition if PO search is provided
+if (!empty($po_search)) {
+    $sql .= " AND po_number LIKE ?";
+}
 
 // Order by delivery_date ascending
 $sql .= " ORDER BY delivery_date ASC";
 
 $stmt = $conn->prepare($sql);
+
+// Bind search parameter if provided
+if (!empty($po_search)) {
+    $search_param = "%{$po_search}%";
+    $stmt->bind_param("s", $search_param);
+}
+
 $stmt->execute();
 $result = $stmt->get_result();
 if ($result && $result->num_rows > 0) {
@@ -271,6 +286,47 @@ if ($result && $result->num_rows > 0) {
             color: #28a745;
             font-weight: bold;
         }
+        
+        /* Search box styles */
+        .search-section {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .search-input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 250px;
+            margin-right: 10px;
+        }
+        
+        .search-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .search-btn:hover {
+            background-color: #0069d9;
+        }
+        
+        .clear-search {
+            background-color: #6c757d;
+            margin-left: 10px;
+        }
+        
+        .clear-search:hover {
+            background-color: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -278,6 +334,20 @@ if ($result && $result->num_rows > 0) {
     <div class="main-content">
         <div class="orders-header">
             <h1>Orders Management</h1>
+            <!-- Add PO Search Box -->
+            <div class="search-section">
+                <form action="" method="GET" style="display: flex;">
+                    <input type="text" name="po_search" class="search-input" placeholder="Search by PO Number..." value="<?= htmlspecialchars($po_search) ?>">
+                    <button type="submit" class="search-btn">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <?php if(!empty($po_search)): ?>
+                        <a href="/public/pages/orders.php" class="search-btn clear-search">
+                            <i class="fas fa-times"></i> Clear
+                        </a>
+                    <?php endif; ?>
+                </form>
+            </div>
         </div>
         <div class="orders-table-container">
             <table class="orders-table">
@@ -325,7 +395,7 @@ if ($result && $result->num_rows > 0) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="no-orders">No orders found.</td>
+                            <td colspan="8" class="no-orders">No orders found.<?= !empty($po_search) ? ' Try a different search term.' : '' ?></td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
