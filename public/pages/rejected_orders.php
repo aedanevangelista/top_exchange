@@ -41,11 +41,6 @@ if ($result && $result->num_rows > 0) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <style>
-        .status-badge.status-rejected {
-            background-color: #dc3545;
-            color: white;
-        }
-        
         /* Raw Materials table styling */
         .raw-materials-container {
             margin-bottom: 20px;
@@ -123,37 +118,6 @@ if ($result && $result->num_rows > 0) {
         #statusModal .modal-content {
             max-width: 700px;
             width: 90%;
-        }
-        
-        /* Update the header style to match other ordering pages */
-        .orders-header {
-            background-color: #435ebe; /* Match the standard blue color */
-            color: white;
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .status-btn {
-            background-color: #17a2b8;
-            border: none;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            transition: background-color 0.2s;
-        }
-        
-        .status-btn:hover {
-            background-color: #138496;
         }
     </style>
 </head>
