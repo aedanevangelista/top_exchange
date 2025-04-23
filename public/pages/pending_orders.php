@@ -57,67 +57,57 @@ if ($result && $result->num_rows > 0) {
         
         /* Make the table properly aligned */
         .summary-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-        
-        /* Apply proper scrolling to tbody only */
-        .summary-table tbody {
-            display: block;
-            max-height: 250px;
-            overflow-y: auto;
-        }
-        
-        /* Make table header and rows consistent */
-        .summary-table thead, 
-        .summary-table tbody tr {
-            display: table;
-            width: 100%;
-            table-layout: fixed;
-        }
-        
-        /* Account for scrollbar width in header */
-        .summary-table thead {
-            width: calc(100% - 17px);
-        }
-        
-        /* Cell styling for proper alignment and text overflow */
-        .summary-table th,
-        .summary-table td {
-            padding: 8px;
-            text-align: left;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            border: 1px solid #ddd;
-        }
-        
-        /* Specify consistent column widths */
-        .summary-table th:nth-child(1),
-        .summary-table td:nth-child(1) {
-            width: 18%;
-        }
-        
-        .summary-table th:nth-child(2),
-        .summary-table td:nth-child(2) {
-            width: 26%;
-        }
-        
-        .summary-table th:nth-child(3),
-        .summary-table td:nth-child(3) {
-            width: 18%;
-        }
-        
-        .summary-table th:nth-child(4),
-        .summary-table td:nth-child(4) {
-            width: 18%;
-        }
-        
-        .summary-table th:nth-child(5),
-        .summary-table td:nth-child(5) {
-            width: 20%;
-        }
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.summary-table th,
+.summary-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Fixed column widths for better alignment */
+.summary-table th:nth-child(1),
+.summary-table td:nth-child(1) {
+    width: 18%;
+}
+
+.summary-table th:nth-child(2),
+.summary-table td:nth-child(2) {
+    width: 35%;
+}
+
+.summary-table th:nth-child(3),
+.summary-table td:nth-child(3) {
+    width: 15%;
+}
+
+.summary-table th:nth-child(4),
+.summary-table td:nth-child(4) {
+    width: 15%;
+}
+
+.summary-table th:nth-child(5),
+.summary-table td:nth-child(5) {
+    width: 17%;
+}
+
+/* Keep input elements properly sized */
+.summary-table input[type="number"] {
+    width: 90%;
+    box-sizing: border-box;
+}
+
+/* Add some spacing between rows */
+.summary-table tr {
+    height: 40px;
+}
         
         /* Style for the total section */
         .summary-total {
@@ -133,10 +123,6 @@ if ($result && $result->num_rows > 0) {
             width: 80px;
             max-width: 100%;
             text-align: center;
-        }
-
-        thead {
-            width:100%;
         }
     </style>
 </head>
