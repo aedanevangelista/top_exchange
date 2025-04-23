@@ -107,6 +107,7 @@ if ($result && $result->num_rows > 0) {
 /* Add some spacing between rows */
 .summary-table tr {
     height: 40px;
+    width: 100%;
 }
         
         /* Style for the total section */
