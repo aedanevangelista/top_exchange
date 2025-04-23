@@ -49,24 +49,27 @@ if ($result && $result->num_rows > 0) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <style>
-        /* Only add scrolling to the Order Summary table and not the whole modal */
+        /* Main styles for the Order Summary table */
         .order-summary {
             margin-top: 20px;
             margin-bottom: 20px;
         }
         
-        /* Make only the tbody section of the summary table scrollable */
+        /* Make the table properly aligned */
         .summary-table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
         }
         
+        /* Apply proper scrolling to tbody only */
         .summary-table tbody {
             display: block;
             max-height: 250px;
             overflow-y: auto;
         }
         
+        /* Make table header and rows consistent */
         .summary-table thead, 
         .summary-table tbody tr {
             display: table;
@@ -74,17 +77,62 @@ if ($result && $result->num_rows > 0) {
             table-layout: fixed;
         }
         
+        /* Account for scrollbar width in header */
         .summary-table thead {
-            width: calc(100% - 17px); /* Compensate for scrollbar width */
+            width: calc(100% - 17px);
         }
         
-        /* Keep the total fixed at the bottom of the summary */
+        /* Cell styling for proper alignment and text overflow */
+        .summary-table th,
+        .summary-table td {
+            padding: 8px;
+            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border: 1px solid #ddd;
+        }
+        
+        /* Specify consistent column widths */
+        .summary-table th:nth-child(1),
+        .summary-table td:nth-child(1) {
+            width: 18%;
+        }
+        
+        .summary-table th:nth-child(2),
+        .summary-table td:nth-child(2) {
+            width: 26%;
+        }
+        
+        .summary-table th:nth-child(3),
+        .summary-table td:nth-child(3) {
+            width: 18%;
+        }
+        
+        .summary-table th:nth-child(4),
+        .summary-table td:nth-child(4) {
+            width: 18%;
+        }
+        
+        .summary-table th:nth-child(5),
+        .summary-table td:nth-child(5) {
+            width: 20%;
+        }
+        
+        /* Style for the total section */
         .summary-total {
             margin-top: 10px;
             text-align: right;
             font-weight: bold;
             border-top: 1px solid #ddd;
             padding-top: 10px;
+        }
+        
+        /* Style for quantity input fields */
+        .summary-quantity {
+            width: 80px;
+            max-width: 100%;
+            text-align: center;
         }
     </style>
 </head>
@@ -357,81 +405,6 @@ if ($result && $result->num_rows > 0) {
         </div>
     </div>
 
-   <style>
-        /* Only add scrolling to the Order Summary table and not the whole modal */
-        .order-summary {
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
-        
-        /* Make only the tbody section of the summary table scrollable */
-        .summary-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed; /* Keep this to ensure columns maintain consistent width */
-        }
-
-        .summary-table tbody {
-            display: block;
-            max-height: 250px;
-            overflow-y: auto;
-        }
-
-        .summary-table thead, 
-        .summary-table tbody tr {
-            display: table;
-            width: 100%;
-            table-layout: fixed;
-        }
-
-        .summary-table thead {
-            width: calc(100% - 17px); /* Compensate for scrollbar width */
-        }
-
-        /* Set specific widths for each column to ensure alignment */
-        .summary-table th,
-        .summary-table td {
-            padding: 8px;
-            text-align: left;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        /* Adjust column widths to match across header and rows */
-        .summary-table th:nth-child(1),
-        .summary-table td:nth-child(1) {
-            width: 20%;
-        }
-
-        .summary-table th:nth-child(2),
-        .summary-table td:nth-child(2) {
-            width: 25%;
-        }
-
-        .summary-table th:nth-child(3),
-        .summary-table td:nth-child(3) {
-            width: 20%;
-        }
-
-        .summary-table th:nth-child(4),
-        .summary-table td:nth-child(4) {
-            width: 15%;
-        }
-
-        .summary-table th:nth-child(5),
-        .summary-table td:nth-child(5) {
-            width: 20%;
-        }
-
-        /* Style for quantity inputs */
-        .summary-quantity {
-            width: 80px;
-            max-width: 100%;
-            text-align: center;
-        }
-    </style>
-
     <script src="/js/orders.js"></script>
         <script>
     window.openStatusModal = function(poNumber, username, ordersJson) {
@@ -556,7 +529,7 @@ if ($result && $result->num_rows > 0) {
         
         // If not all products are in stock but can be manufactured
         if (!allSufficient && anyCanManufacture) {
-            $('#rawMaterialsContainer').append('<h3>Raw Materials Required for Manufacturing</h3><div class="materials-table-container"><table class="materials-table"><thead><tr><th>Material</th><th>Available</th><th>Required</th><th>Status</th></tr></thead><tbody id="rawMaterialsBody"></tbody></table></div><div id="materialsStatus" class="materials-status"></div>');
+            $('#rawMaterialsContainer').append('<h3>Raw Materials Required for Manufacturing</h3><div class="materials-table-container"><table class="materials-table"><thead><tr><th>Material</th><th>Available</th><th>Required</th><th>Status</th></tr></thead><tbody id="rawMaterialsBody"></tbody></table></div><p id="materialsStatus" class="materials-status">Checking raw materials availability...</p>');
         }
     }
 
