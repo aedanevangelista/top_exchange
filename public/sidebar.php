@@ -162,7 +162,23 @@ $allowedPages = array_map('trim', explode(',', $pages));
         <div class="menu-section">
             <span class="menu-title"><b>DATA</b></span>
             <hr>
-            
+            <?php if (in_array('Staff', $allowedPages) || in_array('Drivers', $allowedPages)): ?>
+                <div class="submenu">
+                    <span class="menu-item" onclick="toggleSubmenu(this)">
+                        <div>
+                            <i class="fas fa-users-cog"></i> Staff
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </span>
+                    <div class="submenu-items">
+                        <?php if (in_array('Drivers', $allowedPages)): ?>
+                            <a href="/public/pages/drivers.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> Drivers
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
             <!-- Accounts Menu with Submenus -->
             <?php if (in_array('Accounts - Admin', $allowedPages) || in_array('Accounts - Clients', $allowedPages) || in_array('User Roles', $allowedPages)): ?>
                 <div class="submenu">
