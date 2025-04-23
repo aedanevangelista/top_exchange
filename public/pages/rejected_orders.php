@@ -2,7 +2,9 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Pending Orders'); // Using the same role permission as Pending Orders
+
+// Use 'Rejected Orders' as the role permission name
+checkRole('Rejected Orders');
 
 if (!isset($_SESSION['admin_user_id'])) {
     header("Location: /public/login.php");

@@ -46,7 +46,7 @@ try {
     // Log the status change
     $logStmt = $conn->prepare("INSERT INTO order_status_logs (po_number, old_status, new_status, changed_by, changed_at) 
                               VALUES (?, 'Rejected', 'Pending', ?, NOW())");
-    $adminId = $_SESSION['admin_user_id'];
+    $adminId = $_SESSION['admin_username']; // Using the username, not user_id
     $logStmt->bind_param("ss", $poNumber, $adminId);
     $logStmt->execute();
     
