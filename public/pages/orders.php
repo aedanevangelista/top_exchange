@@ -19,29 +19,14 @@ while ($stmt->fetch()) {
 }
 $stmt->close();
 
-// Handle status filter
-$status_filter = $_GET['status'] ?? '';
-
-// Modified query to only show Active and Rejected orders
+// Modified query to only show Active orders
 $orders = []; // Initialize $orders as an empty array
-$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status, progress FROM orders WHERE status IN ('Active', 'Rejected')";
-if (!empty($status_filter)) {
-    $sql .= " AND status = ?";
-}
+$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status, progress FROM orders WHERE status = 'Active'";
 
-// Modified ORDER BY clause to prioritize status (Active, then Rejected) and then delivery_date (ascending)
-$sql .= " ORDER BY 
-          CASE 
-              WHEN status = 'Active' THEN 1 
-              WHEN status = 'Rejected' THEN 2 
-              ELSE 3 
-          END, 
-          delivery_date ASC";
+// Order by delivery_date ascending
+$sql .= " ORDER BY delivery_date ASC";
 
 $stmt = $conn->prepare($sql);
-if (!empty($status_filter)) {
-    $stmt->bind_param("s", $status_filter);
-}
 $stmt->execute();
 $result = $stmt->get_result();
 if ($result && $result->num_rows > 0) {
@@ -293,14 +278,6 @@ if ($result && $result->num_rows > 0) {
     <div class="main-content">
         <div class="orders-header">
             <h1>Orders Management</h1>
-            <div class="filter-section">
-                <label for="statusFilter">Filter by Status:</label>
-                <select id="statusFilter" onchange="filterByStatus()">
-                    <option value="">All</option>
-                    <option value="Active" <?= $status_filter == 'Active' ? 'selected' : '' ?>>Active</option>
-                    <option value="Rejected" <?= $status_filter == 'Rejected' ? 'selected' : '' ?>>Rejected</option>
-                </select>
-            </div>
         </div>
         <div class="orders-table-container">
             <table class="orders-table">
@@ -337,18 +314,7 @@ if ($result && $result->num_rows > 0) {
                                 </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
-                                    <?php
-                                    $statusClass = '';
-                                    switch($order['status']) {
-                                        case 'Active':
-                                            $statusClass = 'status-active';
-                                            break;
-                                        case 'Rejected':
-                                            $statusClass = 'status-rejected';
-                                            break;
-                                    }
-                                    ?>
-                                    <span class="status-badge <?= $statusClass ?>"><?= htmlspecialchars($order['status']) ?></span>
+                                    <span class="status-badge status-active"><?= htmlspecialchars($order['status']) ?></span>
                                 </td>
                                 <td class="action-buttons">
                                     <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
@@ -419,9 +385,6 @@ if ($result && $result->num_rows > 0) {
                 <button onclick="changeStatus('Active')" class="modal-status-btn active">
                     <i class="fas fa-check"></i> Active
                 </button>
-                <button onclick="changeStatus('Rejected')" class="modal-status-btn reject">
-                    <i class="fas fa-ban"></i> Reject
-                </button>
                 <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
                     <i class="fas fa-clock"></i> Pending
                 </button>
@@ -446,11 +409,6 @@ if ($result && $result->num_rows > 0) {
         let itemProgressPercentages = {};
         let itemContributions = {}; // How much each item contributes to the total
         let overallProgress = 0;
-
-        function filterByStatus() {
-            const status = document.getElementById('statusFilter').value;
-            window.location.href = `/public/pages/orders.php${status ? '?status=' + status : ''}`;
-        }
 
         function openStatusModal(poNumber, username) {
             currentPoNumber = poNumber;
