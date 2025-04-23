@@ -117,7 +117,7 @@ function updateOrderSummary() {
     summaryBody.empty();
     let total = 0;
 
-    selectedProducts.forEach(product => {
+    selectedProducts.forEach((product, index) => {
         const subtotal = product.price * product.quantity;
         total += subtotal;
         
@@ -127,13 +127,33 @@ function updateOrderSummary() {
                 <td>${product.item_description}</td>
                 <td>${product.packaging}</td>
                 <td>PHP ${product.price.toFixed(2)}</td>
-                <td>${product.quantity}</td>
+                <td>
+                    <input type="number" 
+                        class="summary-quantity" 
+                        value="${product.quantity}" 
+                        min="1"
+                        max="200"
+                        oninput="if(this.value > 200) this.value = 200;"
+                        data-index="${index}">
+                </td>
             </tr>
         `;
         summaryBody.append(row);
     });
 
     $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`);
+    
+    // Add event listener for quantity changes in summary
+    $('.summary-quantity').on('change', function() {
+        const index = $(this).data('index');
+        const newQuantity = parseInt($(this).val(), 10);
+        
+        if (newQuantity > 0) {
+            // Automatically cap at 200
+            selectedProducts[index].quantity = Math.min(newQuantity, 200);
+            updateOrderSummary(); // Refresh the summary with new quantities
+        }
+    });
 }
 
 // Global function for populating cart
@@ -361,6 +381,15 @@ window.changeStatus = function(status) {
     });
 };
 
+// Update summary total when quantities change
+function updateSummaryTotal() {
+    let total = 0;
+    selectedProducts.forEach(product => {
+        total += product.price * product.quantity;
+    });
+    $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`);
+}
+
 // Document ready function
 $(document).ready(function() {
     // Initialize datepicker for delivery date
@@ -457,9 +486,21 @@ $(document).ready(function() {
         const newQuantity = parseInt($(this).val(), 10);
         
         if (newQuantity > 0) {
-            // Automatically cap at 200 (the input itself should already cap at 200 due to max attribute and oninput)
+            // Automatically cap at 200
             selectedProducts[index].quantity = Math.min(newQuantity, 200);
             updateCartTotal();
+        }
+    });
+
+    // Handle quantity change in order summary
+    $(document).on('change', '.summary-quantity', function() {
+        const index = $(this).data('index');
+        const newQuantity = parseInt($(this).val(), 10);
+        
+        if (newQuantity > 0) {
+            // Automatically cap at 200
+            selectedProducts[index].quantity = Math.min(newQuantity, 200);
+            updateSummaryTotal();
         }
     });
 
