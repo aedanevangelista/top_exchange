@@ -123,11 +123,11 @@ function updateOrderSummary() {
         
         const row = `
             <tr>
-                <td>${product.category}</td>
-                <td>${product.item_description}</td>
-                <td>${product.packaging}</td>
-                <td>PHP ${product.price.toFixed(2)}</td>
-                <td>
+                <td class="category-cell">${product.category}</td>
+                <td class="description-cell">${product.item_description}</td>
+                <td class="packaging-cell">${product.packaging}</td>
+                <td class="price-cell">PHP ${product.price.toFixed(2)}</td>
+                <td class="quantity-cell">
                     <input type="number" 
                         class="summary-quantity" 
                         value="${product.quantity}" 
@@ -151,9 +151,62 @@ function updateOrderSummary() {
         if (newQuantity > 0) {
             // Automatically cap at 200
             selectedProducts[index].quantity = Math.min(newQuantity, 200);
-            updateOrderSummary(); // Refresh the summary with new quantities
+            updateSummaryTotal(); // Update only the total rather than refreshing the entire summary
         }
     });
+
+    // Add the CSS styles for the table cells to ensure proper layout
+    addTableStyles();
+}
+
+// Function to add CSS styles to ensure proper table layout
+function addTableStyles() {
+    // Check if styles are already added
+    if (!$('#order-table-styles').length) {
+        const styles = `
+            <style id="order-table-styles">
+                .summary-table {
+                    table-layout: fixed;
+                    width: 100%;
+                }
+                .summary-table th,
+                .summary-table td {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    padding: 8px;
+                }
+                .category-cell {
+                    width: 20%;
+                }
+                .description-cell {
+                    width: 30%;
+                }
+                .packaging-cell {
+                    width: 15%;
+                }
+                .price-cell {
+                    width: 15%;
+                }
+                .quantity-cell {
+                    width: 20%;
+                }
+                .summary-quantity {
+                    width: 80px;
+                }
+                .cart-quantity {
+                    width: 80px;
+                }
+                /* Make sure the quantity input is not too wide */
+                input.summary-quantity,
+                input.cart-quantity,
+                input.product-quantity {
+                    max-width: 80px;
+                }
+            </style>
+        `;
+        $('head').append(styles);
+    }
 }
 
 // Global function for populating cart
@@ -176,11 +229,11 @@ function populateCart() {
             
             const row = `
                 <tr>
-                    <td>${product.category}</td>
-                    <td>${product.item_description}</td>
-                    <td>${product.packaging}</td>
-                    <td>PHP ${product.price.toFixed(2)}</td>
-                    <td>
+                    <td class="category-cell">${product.category}</td>
+                    <td class="description-cell">${product.item_description}</td>
+                    <td class="packaging-cell">${product.packaging}</td>
+                    <td class="price-cell">PHP ${product.price.toFixed(2)}</td>
+                    <td class="quantity-cell">
                         <input type="number" 
                             class="cart-quantity" 
                             value="${product.quantity}" 
@@ -199,6 +252,9 @@ function populateCart() {
         
         $('.total-amount').text(`PHP ${total.toFixed(2)}`);
     }
+
+    // Ensure table styles are applied
+    addTableStyles();
 }
 
 // Function to toggle delivery address fields
@@ -292,17 +348,20 @@ window.viewOrderDetails = function(orders) {
         orderDetails.forEach(product => {
             const row = `
                 <tr>
-                    <td>${product.category}</td>
-                    <td>${product.item_description}</td>
-                    <td>${product.packaging}</td>
-                    <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
-                    <td>${product.quantity}</td>
+                    <td class="category-cell">${product.category}</td>
+                    <td class="description-cell">${product.item_description}</td>
+                    <td class="packaging-cell">${product.packaging}</td>
+                    <td class="price-cell">PHP ${parseFloat(product.price).toFixed(2)}</td>
+                    <td class="quantity-cell">${product.quantity}</td>
                 </tr>
             `;
             orderDetailsBody.append(row);
         });
         
         $('#orderDetailsModal').show();
+        
+        // Ensure table styles are applied
+        addTableStyles();
     } catch (e) {
         console.error('Error parsing order details:', e);
         alert('Error displaying order details');
@@ -578,4 +637,7 @@ $(document).ready(function() {
             this.value = 200;
         }
     });
+
+    // Apply table styles immediately
+    addTableStyles();
 });
