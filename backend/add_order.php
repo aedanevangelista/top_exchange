@@ -20,16 +20,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Invalid order data format');
         }
 
-        // Set maximum quantity limit per product
-        $MAX_QUANTITY = 100;
-
-        // Check each product's quantity against the maximum limit
-        foreach ($decoded_orders as $item) {
-            if ($item['quantity'] > $MAX_QUANTITY) {
-                throw new Exception('Product "' . ($item['item_description'] ?? $item['product_name']) . '" exceeds maximum allowed quantity of ' . $MAX_QUANTITY);
-            }
-        }
-
         // Insert into orders table (now including delivery_address)
         $insertOrder = $conn->prepare("
             INSERT INTO orders (username, order_date, delivery_date, delivery_address, po_number, orders, total_amount, status) 

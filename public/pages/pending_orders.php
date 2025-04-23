@@ -86,19 +86,6 @@ if ($result && $result->num_rows > 0) {
             border-top: 1px solid #ddd;
             padding-top: 10px;
         }
-        
-        /* Quantity error styling */
-        .quantity-error {
-            border: 1px solid #dc3545 !important;
-            background-color: #fff8f8 !important;
-        }
-        
-        .error-message {
-            color: #dc3545;
-            font-size: 12px;
-            margin-top: 5px;
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -452,152 +439,7 @@ if ($result && $result->num_rows > 0) {
     </style>
 
     <script src="/js/orders.js"></script>
-    <script>
-    // Maximum allowed quantity per product
-    const MAX_QUANTITY = 100;
-    
-    // Original addToCart function that we're going to modify
-    window.addToCart = function(productId, category, name, packaging, price) {
-        // Get quantity from input
-        const quantityInput = document.querySelector(`.product-quantity[data-id="${productId}"]`);
-        const quantity = parseInt(quantityInput.value, 10);
-        
-        // Validate quantity
-        if (isNaN(quantity) || quantity <= 0) {
-            alert("Please enter a valid quantity.");
-            return;
-        }
-        
-        // Check if quantity exceeds maximum allowed
-        if (quantity > MAX_QUANTITY) {
-            alert(`Maximum quantity allowed is ${MAX_QUANTITY} per product.`);
-            quantityInput.classList.add('quantity-error');
-            return;
-        } else {
-            quantityInput.classList.remove('quantity-error');
-        }
-        
-        // Continue with adding to cart...
-        // This is the existing functionality in your orders.js
-        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-        
-        // Check if product already exists in cart
-        const productIndex = cart.findIndex(item => item.product_id == productId);
-        
-        if (productIndex !== -1) {
-            // Update existing product quantity
-            const currentQty = cart[productIndex].quantity;
-            const newQty = currentQty + quantity;
-            
-            // Check if combined quantity exceeds maximum
-            if (newQty > MAX_QUANTITY) {
-                alert(`Cannot add ${quantity} more. Total would exceed maximum allowed quantity of ${MAX_QUANTITY}.`);
-                return;
-            }
-            
-            cart[productIndex].quantity = newQty;
-            
-        } else {
-            // Add new product to cart
-            cart.push({
-                product_id: productId,
-                category: category,
-                item_description: name,
-                packaging: packaging,
-                price: price,
-                quantity: quantity
-            });
-        }
-        
-        // Save updated cart
-        localStorage.setItem('cart', JSON.stringify(cart));
-        
-        // Reset quantity input
-        quantityInput.value = "1";
-        
-        // Show confirmation
-        showToast(`Added ${quantity} ${name} to cart`, 'success');
-    };
-
-    // Modify the updateCartItemQuantity function to add quantity validation
-    window.updateCartItemQuantity = function(index, value) {
-        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-        const quantityInput = document.querySelectorAll('.cart-quantity-input')[index];
-        
-        // Validate new value
-        if (isNaN(value) || value <= 0) {
-            alert("Please enter a valid quantity.");
-            quantityInput.value = cart[index].quantity; // Reset to previous value
-            return;
-        }
-        
-        // Check if quantity exceeds maximum allowed
-        if (value > MAX_QUANTITY) {
-            alert(`Maximum quantity allowed is ${MAX_QUANTITY} per product.`);
-            quantityInput.classList.add('quantity-error');
-            quantityInput.value = cart[index].quantity; // Reset to previous value
-            return;
-        } else {
-            quantityInput.classList.remove('quantity-error');
-        }
-        
-        // Update quantity
-        cart[index].quantity = parseInt(value, 10);
-        localStorage.setItem('cart', JSON.stringify(cart));
-        
-        // Update total
-        calculateTotal();
-    };
-
-    // Add form validation before submission
-    window.prepareOrderData = function(e) {
-        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-        
-        // Check if cart is empty
-        if (cart.length === 0) {
-            alert('Please add at least one product to the order.');
-            e.preventDefault();
-            return false;
-        }
-        
-        // Validate all quantities
-        let hasInvalidQuantity = false;
-        cart.forEach(item => {
-            if (item.quantity > MAX_QUANTITY) {
-                hasInvalidQuantity = true;
-                alert(`Quantity for ${item.item_description} exceeds the maximum allowed (${MAX_QUANTITY}).`);
-            }
-        });
-        
-        if (hasInvalidQuantity) {
-            e.preventDefault();
-            return false;
-        }
-        
-        // Set form values
-        document.getElementById('orders').value = JSON.stringify(cart);
-        document.getElementById('total_amount').value = calculateTotalAmount();
-        
-        // Prepare delivery address
-        const addressType = document.getElementById('delivery_address_type').value;
-        if (addressType === 'company') {
-            document.getElementById('delivery_address').value = document.getElementById('company_address').value;
-        } else {
-            document.getElementById('delivery_address').value = document.getElementById('custom_address').value;
-        }
-        
-        return true;
-    };
-    
-    // Override the original function from orders.js
-    document.getElementById('addOrderForm').onsubmit = function(e) {
-        if (!prepareOrderData()) {
-            e.preventDefault();
-            return false;
-        }
-        return true;
-    };
-
+        <script>
     window.openStatusModal = function(poNumber, username, ordersJson) {
         $('#statusMessage').text('Change order status for ' + poNumber);
         $('#statusModal').data('po_number', poNumber).show();
@@ -971,7 +813,7 @@ if ($result && $result->num_rows > 0) {
             }
         });
     };
-    </script>
+        </script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
     </script> 
