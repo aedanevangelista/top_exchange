@@ -78,7 +78,8 @@ function fetchInventory() {
                         <input type="number" 
                             class="product-quantity" 
                             min="1" 
-                            max="${maxQuantity}"
+                            max="200"
+                            oninput="if(this.value > 200) this.value = 200;"
                             data-product-id="${product.product_id}"
                             data-category="${product.category}"
                             data-description="${product.item_description}"
@@ -165,6 +166,7 @@ function populateCart() {
                             value="${product.quantity}" 
                             min="1"
                             max="200"
+                            oninput="if(this.value > 200) this.value = 200;"
                             data-index="${index}">
                         <button class="remove-from-cart" data-index="${index}" data-product="${product.item_description}" data-quantity="${product.quantity}">
                             <i class="fas fa-trash"></i>
@@ -214,7 +216,7 @@ window.saveCartChanges = function() {
         const index = $(this).data('index');
         const newQuantity = parseInt($(this).val(), 10);
         if (newQuantity > 0) {
-            selectedProducts[index].quantity = newQuantity;
+            selectedProducts[index].quantity = Math.min(newQuantity, 200); // Ensure quantity doesn't exceed 200
         }
     });
     
@@ -404,12 +406,6 @@ $(document).ready(function() {
             alert('Please enter a valid quantity');
             return;
         }
-        
-        // Add validation for maximum quantity limit of 200
-        if (quantity > 200) {
-            alert('Maximum quantity allowed is 200 per product');
-            return;
-        }
 
         const product = {
             product_id: quantityInput.data('product-id'),
@@ -417,20 +413,15 @@ $(document).ready(function() {
             item_description: quantityInput.data('description'),
             packaging: quantityInput.data('packaging'),
             price: parseFloat(quantityInput.data('price')),
-            quantity: quantity
+            quantity: Math.min(quantity, 200) // Ensure quantity doesn't exceed 200
         };
 
         const existingProductIndex = selectedProducts.findIndex(p => 
             p.product_id === product.product_id);
 
         if (existingProductIndex !== -1) {
-            // Check if adding this quantity would exceed 200
-            const newTotalQuantity = selectedProducts[existingProductIndex].quantity + quantity;
-            if (newTotalQuantity > 200) {
-                alert('Total quantity cannot exceed 200 per product. Currently in cart: ' + 
-                      selectedProducts[existingProductIndex].quantity);
-                return;
-            }
+            // Add to existing product, but cap at 200
+            const newTotalQuantity = Math.min(selectedProducts[existingProductIndex].quantity + quantity, 200);
             selectedProducts[existingProductIndex].quantity = newTotalQuantity;
         } else {
             selectedProducts.push(product);
@@ -466,14 +457,8 @@ $(document).ready(function() {
         const newQuantity = parseInt($(this).val(), 10);
         
         if (newQuantity > 0) {
-            // Add validation for maximum quantity limit of 200 in cart
-            if (newQuantity > 200) {
-                alert('Maximum quantity allowed is 200 per product');
-                $(this).val(selectedProducts[index].quantity); // Reset to previous value
-                return;
-            }
-            
-            selectedProducts[index].quantity = newQuantity;
+            // Automatically cap at 200 (the input itself should already cap at 200 due to max attribute and oninput)
+            selectedProducts[index].quantity = Math.min(newQuantity, 200);
             updateCartTotal();
         }
     });
@@ -544,5 +529,12 @@ $(document).ready(function() {
         categories.forEach(category => {
             filter.append(`<option value="${category}">${category}</option>`);
         });
+    });
+    
+    // Add a global input event handler to restrict all number inputs in the app to max 200
+    $(document).on('input', 'input[type="number"]', function() {
+        if (parseInt(this.value) > 200) {
+            this.value = 200;
+        }
     });
 });
