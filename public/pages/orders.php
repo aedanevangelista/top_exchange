@@ -19,29 +19,14 @@ while ($stmt->fetch()) {
 }
 $stmt->close();
 
-// Handle search query for PO number
-$po_search = $_GET['po_search'] ?? '';
-
 // Modified query to only show Active orders
 $orders = []; // Initialize $orders as an empty array
 $sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status, progress FROM orders WHERE status = 'Active'";
-
-// Add search condition if PO search is provided
-if (!empty($po_search)) {
-    $sql .= " AND po_number LIKE ?";
-}
 
 // Order by delivery_date ascending
 $sql .= " ORDER BY delivery_date ASC";
 
 $stmt = $conn->prepare($sql);
-
-// Bind search parameter if provided
-if (!empty($po_search)) {
-    $search_param = "%{$po_search}%";
-    $stmt->bind_param("s", $search_param);
-}
-
 $stmt->execute();
 $result = $stmt->get_result();
 if ($result && $result->num_rows > 0) {
@@ -286,73 +271,36 @@ if ($result && $result->num_rows > 0) {
             color: #28a745;
             font-weight: bold;
         }
-        
-        /* Updated search box styles to match order history */
-        .orders-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .header-title {
-            margin: 0;
-        }
-        
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
+
+        /* Search Container Styling (exactly as in order_history.php) */
         .search-container {
-            position: relative;
-            width: 300px;
-        }
-        
-        .search-input {
-            width: 100%;
-            padding: 10px 15px 10px 40px;
-            border: 1px solid #ddd;
-            border-radius: 30px;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-        
-        .search-input:focus {
-            border-color: #007bff;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-        }
-        
-        .search-icon {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6c757d;
-        }
-        
-        .clear-search {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6c757d;
-            cursor: pointer;
-            background: none;
-            border: none;
-            padding: 0;
-            font-size: 14px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            width: 18px;
-            height: 18px;
         }
-        
-        .clear-search:hover {
-            color: #dc3545;
+
+        .search-container input {
+            padding: 8px 12px;
+            border-radius: 20px 0 0 20px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            width: 220px;
+        }
+
+        .search-container .search-btn {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 0 20px 20px 0;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .search-container .search-btn:hover {
+            background-color: #2471a3;
+        }
+
+        .main-content {
+            padding-top: 0;
         }
     </style>
 </head>
@@ -360,20 +308,11 @@ if ($result && $result->num_rows > 0) {
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="orders-header">
-            <h1 class="header-title">Orders Management</h1>
-            <div class="header-actions">
-                <!-- Updated search box to match order history design -->
-                <div class="search-container">
-                    <form action="" method="GET" id="search-form">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" name="po_search" class="search-input" placeholder="Search by PO Number..." value="<?= htmlspecialchars($po_search) ?>" onkeyup="if(event.keyCode === 13) this.form.submit();">
-                        <?php if(!empty($po_search)): ?>
-                            <button type="button" class="clear-search" onclick="window.location.href='/public/pages/orders.php'">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        <?php endif; ?>
-                    </form>
-                </div>
+            <h1>Orders Management</h1>
+            <!-- Updated search section to exactly match order_history.php -->
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
+                <button class="search-btn"><i class="fas fa-search"></i></button>
             </div>
         </div>
         <div class="orders-table-container">
@@ -422,7 +361,7 @@ if ($result && $result->num_rows > 0) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="no-orders">No orders found.<?= !empty($po_search) ? ' Try a different search term.' : '' ?></td>
+                            <td colspan="8" class="no-orders">No orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -996,6 +935,42 @@ if ($result && $result->num_rows > 0) {
                 toast.remove();
             }, 5000);
         }
+
+        // Document ready function for real-time searching
+        $(document).ready(function() {
+            // Search functionality - exact match to order_history.php
+            $("#searchInput").on("input", function() {
+                let searchText = $(this).val().toLowerCase().trim();
+                console.log("Searching for:", searchText); // Debug line
+
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+            });
+            
+            // Handle search button click (same functionality as typing)
+            $(".search-btn").on("click", function() {
+                let searchText = $("#searchInput").val().toLowerCase().trim();
+                
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>
