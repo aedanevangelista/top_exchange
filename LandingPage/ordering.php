@@ -408,6 +408,19 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             color: var(--light-text);
         }
         
+        /* Loading spinner */
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            color: var(--primary-color);
+        }
+        
         /* Accessibility improvements */
         a:focus, button:focus, input:focus, select:focus {
             outline: 3px solid var(--accent-color);
@@ -462,6 +475,46 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         .variant-selector select:focus {
             border-color: var(--accent-color);
             box-shadow: 0 0 0 0.25rem rgba(243, 156, 18, 0.25);
+        }
+        
+        /* Price range slider */
+        .price-slider-container {
+            margin-top: 10px;
+        }
+        
+        .price-slider {
+            width: 100%;
+            height: 5px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .price-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+        
+        .price-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+        
+        .price-slider-values {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 0.8rem;
+            color: var(--light-text);
         }
     </style>
 </head>
@@ -648,15 +701,16 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         <!-- Filter and Search Section -->
         <div class="filter-section">
             <h2><i class="fas fa-sliders-h me-2"></i>Filter Products</h2>
-            <form method="GET" action="" class="row">
+            <div class="row">
                 <div class="col-md-12 search-box">
                     <i class="fas fa-search"></i>
-                    <input type="text" name="search" class="form-control" placeholder="Search products by name or category..." value="<?php echo htmlspecialchars($search); ?>" aria-label="Search products">
+                    <input type="text" id="search-input" class="form-control" placeholder="Search products by name or category..." 
+                           value="<?php echo htmlspecialchars($search); ?>" aria-label="Search products">
                 </div>
                 
                 <div class="col-md-4 col-lg-3 filter-group">
                     <label for="category-filter"><i class="fas fa-tags me-2"></i>Category</label>
-                    <select name="category" id="category-filter" class="form-select">
+                    <select id="category-filter" class="form-select">
                         <option value="">All Categories</option>
                         <?php while ($row = $category_result->fetch_assoc()): ?>
                             <option value="<?= htmlspecialchars($row['category']) ?>" <?= $category == $row['category'] ? 'selected' : '' ?>>
@@ -667,25 +721,41 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                 </div>
                 
                 <div class="col-md-8 col-lg-6 filter-group">
-                <label><span class="me-2">₱</span>Price Range</label>
-                    <div class="price-range-inputs">
-                        <input type="number" name="min_price" class="form-control" placeholder="Minimum price" value="<?php echo htmlspecialchars($min_price); ?>" aria-label="Minimum price" min="0">
-                        <input type="number" name="max_price" class="form-control" placeholder="Maximum price" value="<?php echo htmlspecialchars($max_price); ?>" aria-label="Maximum price" min="0">
+                    <label><span class="me-2">₱</span>Price Range</label>
+                    <div class="price-slider-container">
+                        <input type="range" class="price-slider" id="price-range" min="0" max="1000" step="10" 
+                               value="<?php echo !empty($max_price) ? $max_price : 1000; ?>">
+                        <div class="price-slider-values">
+                            <span id="min-price-value">₱0</span>
+                            <span id="max-price-value">₱<?php echo !empty($max_price) ? $max_price : '1000'; ?></span>
+                        </div>
+                    </div>
+                    <div class="price-range-inputs mt-2">
+                        <input type="number" id="min-price-input" class="form-control" placeholder="Min price" 
+                               value="<?php echo htmlspecialchars($min_price); ?>" aria-label="Minimum price" min="0">
+                        <input type="number" id="max-price-input" class="form-control" placeholder="Max price" 
+                               value="<?php echo htmlspecialchars($max_price); ?>" aria-label="Maximum price" min="0">
                     </div>
                 </div>
                 
                 <div class="col-md-12 filter-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-filter me-2"></i>Apply Filters
-                    </button>
-                    <a href="ordering.php" class="btn btn-outline-secondary">
+                    <button type="button" id="reset-filters" class="btn btn-outline-secondary">
                         <i class="fas fa-times me-2"></i>Reset Filters
-                    </a>
+                    </button>
                 </div>
-            </form>
+            </div>
         </div>
 
-        <div class="cream_section_2">
+        <!-- Loading Spinner -->
+        <div class="loading-spinner" id="loading-spinner">
+            <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="mt-2">Loading products...</p>
+        </div>
+
+        <!-- Products Container -->
+        <div class="cream_section_2" id="products-container">
             <div class="row">
                 <?php if (!empty($groupedProducts)): ?>
                     <?php foreach ($groupedProducts as $productName => $productGroup) { 
@@ -761,9 +831,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                             <i class="fas fa-search fa-4x"></i>
                             <h4>No products found</h4>
                             <p>We couldn't find any products matching your criteria. Try adjusting your filters.</p>
-                            <a href="ordering.php" class="btn btn-primary mt-3">
-                                <i class="fas fa-times me-2"></i>Clear all filters
-                            </a>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -791,7 +858,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
 
 <script src="js/jquery.min.js"></script>
 <script src="js/bootstrap.bundle.min.js"></script>
-<?php if (isset($_SESSION['username'])): ?>
 <script>
     // Function to show custom popup message
     function showPopup(message, isError = false) {
@@ -814,7 +880,120 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         }, 3000);
     }
 
+    // Function to update URL parameters without reloading
+    function updateUrlParams(params) {
+        const url = new URL(window.location.href);
+        Object.keys(params).forEach(key => {
+            if (params[key]) {
+                url.searchParams.set(key, params[key]);
+            } else {
+                url.searchParams.delete(key);
+            }
+        });
+        window.history.pushState({}, '', url);
+    }
+
+    // Function to fetch filtered products
+    function fetchFilteredProducts() {
+        const search = $('#search-input').val();
+        const category = $('#category-filter').val();
+        const minPrice = $('#min-price-input').val();
+        const maxPrice = $('#max-price-input').val();
+        
+        // Show loading spinner
+        $('#loading-spinner').show();
+        $('#products-container').hide();
+        
+        // Update URL parameters
+        updateUrlParams({
+            search: search,
+            category: category,
+            min_price: minPrice,
+            max_price: maxPrice
+        });
+        
+        $.ajax({
+            url: 'fetch_products.php',
+            type: 'GET',
+            data: {
+                search: search,
+                category: category,
+                min_price: minPrice,
+                max_price: maxPrice
+            },
+            success: function(response) {
+                $('#products-container').html(response);
+                $('#loading-spinner').hide();
+                $('#products-container').fadeIn();
+            },
+            error: function(xhr, status, error) {
+                console.error("Error fetching products:", error);
+                $('#loading-spinner').hide();
+                $('#products-container').html(`
+                    <div class="col-md-12">
+                        <div class="no-results">
+                            <i class="fas fa-exclamation-triangle fa-4x"></i>
+                            <h4>Error loading products</h4>
+                            <p>There was an error loading the products. Please try again.</p>
+                        </div>
+                    </div>
+                `).fadeIn();
+            }
+        });
+    }
+
+    // Price range slider functionality
+    function updatePriceSlider() {
+        const minPrice = $('#min-price-input').val() || 0;
+        const maxPrice = $('#max-price-input').val() || 1000;
+        
+        // Update slider values
+        $('#price-range').attr('min', minPrice);
+        $('#price-range').attr('max', maxPrice > 1000 ? maxPrice : 1000);
+        $('#price-range').val(maxPrice);
+        $('#max-price-value').text('₱' + maxPrice);
+        $('#min-price-value').text('₱' + minPrice);
+    }
+
     $(document).ready(function() {
+        // Initialize price slider
+        updatePriceSlider();
+        
+        // Set up event listeners for real-time filtering
+        let searchTimer;
+        $('#search-input').on('input', function() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(fetchFilteredProducts, 500);
+        });
+        
+        $('#category-filter').on('change', fetchFilteredProducts);
+        
+        // Price range inputs
+        $('#min-price-input, #max-price-input').on('input', function() {
+            updatePriceSlider();
+            fetchFilteredProducts();
+        });
+        
+        // Price slider
+        $('#price-range').on('input', function() {
+            $('#max-price-input').val($(this).val());
+            $('#max-price-value').text('₱' + $(this).val());
+        });
+        
+        $('#price-range').on('change', function() {
+            fetchFilteredProducts();
+        });
+        
+        // Reset filters
+        $('#reset-filters').on('click', function() {
+            $('#search-input').val('');
+            $('#category-filter').val('');
+            $('#min-price-input').val('');
+            $('#max-price-input').val('');
+            updatePriceSlider();
+            fetchFilteredProducts();
+        });
+        
         // Add to cart handler
         $(document).on('click', '.add-to-cart', function(e) {
             e.preventDefault();
@@ -857,42 +1036,35 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         });
 
         // Variant selection handler
-        // Variant selection handler
-$(document).on('change', '.variant-dropdown', function() {
-    // Get the selected option element
-    const selectedOption = $(this).find('option:selected');
-    
-    // Get the product ID from the dropdown's ID
-    const mainProductId = $(this).attr('id').replace('variant-select-', '');
-    
-    // Get variant information from the selected option
-    const variantId = selectedOption.val();
-    const variantName = selectedOption.data('name');
-    const variantPrice = selectedOption.data('price');
-    const variantPackaging = selectedOption.data('packaging');
-    const variantImage = selectedOption.data('image');
-    
-    // Update price text (this is the price tag that appears over the image)
-    $('#product-price-' + mainProductId).text('₱' + parseFloat(variantPrice).toFixed(2));
-    
-    // Update packaging display
-    $('#product-packaging-' + mainProductId).html('<i class="fas fa-box me-2"></i>Packaging: ' + variantPackaging);
-    
-    // Update image if exists
-    if (variantImage) {
-        $('#product-image-' + mainProductId).attr('src', variantImage);
-    }
-    
-    // Update add to cart button with variant data
-    $('#add-to-cart-' + mainProductId)
-        .data('product-id', variantId)  // Change to the variant ID
-        .data('product-name', variantName)
-        .data('product-price', variantPrice)
-        .data('packaging', variantPackaging)
-        .data('image-path', variantImage);
-    
-    console.log('Price updated to:', variantPrice, 'for product:', mainProductId);
-});
+        $(document).on('change', '.variant-dropdown', function() {
+            const selectedOption = $(this).find('option:selected');
+            const mainProductId = $(this).attr('id').replace('variant-select-', '');
+            
+            const variantId = selectedOption.val();
+            const variantName = selectedOption.data('name');
+            const variantPrice = selectedOption.data('price');
+            const variantPackaging = selectedOption.data('packaging');
+            const variantImage = selectedOption.data('image');
+            
+            // Update price text
+            $('#product-price-' + mainProductId).text('₱' + parseFloat(variantPrice).toFixed(2));
+            
+            // Update packaging display
+            $('#product-packaging-' + mainProductId).html('<i class="fas fa-box me-2"></i>Packaging: ' + variantPackaging);
+            
+            // Update image if exists
+            if (variantImage) {
+                $('#product-image-' + mainProductId).attr('src', variantImage);
+            }
+            
+            // Update add to cart button with variant data
+            $('#add-to-cart-' + mainProductId)
+                .data('product-id', variantId)
+                .data('product-name', variantName)
+                .data('product-price', variantPrice)
+                .data('packaging', variantPackaging)
+                .data('image-path', variantImage);
+        });
 
         // Quantity adjustment handlers
         $(document).on('click', '.increase-quantity', function() {
@@ -1066,6 +1238,5 @@ $(document).on('change', '.variant-dropdown', function() {
         });
     });
 </script>
-<?php endif; ?>
 </body>
 </html>

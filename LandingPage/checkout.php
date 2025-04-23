@@ -1,6 +1,10 @@
 <?php
 session_start();
 
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // Check if user is logged in
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
@@ -13,8 +17,13 @@ if (empty($_SESSION['cart'])) {
     exit();
 }
 
-// Connect to database - replace hard-coded connection with include
+// Connect to database
 include_once('db_connection.php');
+
+// Check connection
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
 
 // Process checkout form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -23,16 +32,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $deliveryDate = $_POST['delivery_date'];
     $specialInstructions = trim($_POST['special_instructions']);
     $contactNumber = trim($_POST['contact_number']);
+    $paymentMethod = isset($_POST['payment_method']) ? $_POST['payment_method'] : 'Cash on Delivery';
     
     // Basic validation
     if (empty($deliveryAddress) || empty($deliveryDate) || empty($contactNumber)) {
-        die("Please fill in all required fields");
+        $_SESSION['error'] = "Please fill in all required fields";
+        header("Location: checkout.php");
+        exit();
     }
     
     // Validate delivery day is Monday, Wednesday, or Friday
     $deliveryDay = date('l', strtotime($deliveryDate));
     if (!in_array($deliveryDay, ['Monday', 'Wednesday', 'Friday'])) {
-        die("Delivery is only available on Monday, Wednesday, and Friday");
+        $_SESSION['error'] = "Delivery is only available on Monday, Wednesday, and Friday";
+        header("Location: checkout.php");
+        exit();
     }
     
     // Calculate order totals
@@ -58,47 +72,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_SESSION['username'];
     $poNumber = $username . '-' . (getNextOrderNumber($conn, $username) + 1);
     
-    // Insert order into database
-    $stmt = $conn->prepare("INSERT INTO orders (
-        po_number, 
-        username, 
-        order_date, 
-        delivery_date, 
-        delivery_address, 
-        contact_number,
-        orders, 
-        total_amount, 
-        status, 
-        special_instructions,
-        subtotal,
-        delivery_fee
-    ) VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?, 'Pending', ?, ?, ?)");
-    
-    $jsonOrders = json_encode($orderItems);
-    
-    $stmt->bind_param(
-        "ssssssdssdd", 
-        $poNumber,
-        $username,
-        $deliveryDate,
-        $deliveryAddress,
-        $contactNumber,
-        $jsonOrders,
-        $total,
-        $specialInstructions,
-        $subtotal,
-        $deliveryFee
-    );
-    
-    if ($stmt->execute()) {
+    try {
+        // Insert order into database
+        $stmt = $conn->prepare("INSERT INTO orders (
+            po_number, 
+            username, 
+            order_date, 
+            delivery_date, 
+            delivery_address, 
+            contact_number,
+            orders, 
+            total_amount, 
+            status, 
+            special_instructions,
+            subtotal,
+            delivery_fee,
+            payment_method
+        ) VALUES (?, ?, CURDATE(), ?, ?, ?, ?, ?, 'Pending', ?, ?, ?, ?)");
+        
+        if (!$stmt) {
+            throw new Exception("Prepare failed: " . $conn->error);
+        }
+        
+        $jsonOrders = json_encode($orderItems, JSON_UNESCAPED_UNICODE);
+        
+        // Corrected bind_param with proper parameter count
+        $bindResult = $stmt->bind_param(
+            "ssssssdsdds", 
+            $poNumber,
+            $username,
+            $deliveryDate,
+            $deliveryAddress,
+            $contactNumber,
+            $jsonOrders,
+            $total,
+            $specialInstructions,
+            $subtotal,
+            $deliveryFee,
+            $paymentMethod
+        );
+        
+        if (!$bindResult) {
+            throw new Exception("Bind failed: " . $stmt->error);
+        }
+        
+        $executeResult = $stmt->execute();
+        
+        if (!$executeResult) {
+            throw new Exception("Execute failed: " . $stmt->error);
+        }
+        
         // Clear the cart
         $_SESSION['cart'] = [];
         
-        // Redirect to confirmation page with the new order ID
-        header("Location: order_confirmation.php?id=" . $stmt->insert_id);
+        // Get the inserted order ID
+        $orderId = $stmt->insert_id;
+        
+        // Close statement
+        $stmt->close();
+        
+        // Redirect to confirmation page
+        header("Location: order_confirmation.php?id=" . $orderId);
         exit();
-    } else {
-        die("Error processing order: " . $conn->error);
+        
+    } catch (Exception $e) {
+        error_log("Order processing error: " . $e->getMessage());
+        $_SESSION['error'] = "Error processing your order. Please try again.";
+        header("Location: checkout.php");
+        exit();
     }
 }
 
@@ -120,6 +161,7 @@ $result = $stmt->get_result();
 if ($result->num_rows > 0) {
     $userDetails = $result->fetch_assoc();
 }
+$stmt->close();
 
 // Function to get next available delivery dates
 function getAvailableDeliveryDates($days = ['Monday', 'Wednesday', 'Friday'], $count = 10) {
@@ -138,41 +180,33 @@ function getAvailableDeliveryDates($days = ['Monday', 'Wednesday', 'Friday'], $c
 }
 
 $availableDates = getAvailableDeliveryDates();
+
+// Display any errors
+if (isset($_SESSION['error'])) {
+    $errorMessage = $_SESSION['error'];
+    unset($_SESSION['error']);
+}
 ?>
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- basic -->
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- mobile metas -->
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="viewport" content="initial-scale=1, maximum-scale=1">
-    <!-- site metas -->
     <title>Checkout | Top Exchange Food Corp</title> 
     <meta name="keywords" content="checkout, order, food delivery, Filipino food">
     <meta name="description" content="Complete your order with Top Food Exchange Corp. - Premium Filipino food products since 1998.">
     <meta name="author" content="Top Food Exchange Corp.">
-    <!-- bootstrap css -->
     <link rel="stylesheet" type="text/css" href="/LandingPage/css/bootstrap.min.css">
-    <!-- style css -->
     <link rel="stylesheet" type="text/css" href="/LandingPage/css/style.css">
-    <!-- Responsive-->
     <link rel="stylesheet" href="/LandingPage/css/responsive.css">
-    <!-- fevicon -->
     <link rel="icon" href="/LandingPage/images/fevicon.png" type="image/gif" />
-    <!-- font css -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
-    <!-- fontawesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     
     <style>
-        /* Primary brand colors and variables */
         :root {
             --primary-color: #9a7432;
             --primary-hover: #b08a3e;
@@ -185,7 +219,6 @@ $availableDates = getAvailableDeliveryDates();
             --border-radius: 8px;
         }
 
-        /* Layout adjustments */
         html, body {
             height: 100%;
         }
@@ -219,7 +252,6 @@ $availableDates = getAvailableDeliveryDates();
             margin-top: auto;
         }
 
-        /* Checkout Page Specific Styles */
         .checkout-card {
             border: 1px solid #e0e0e0;
             border-radius: var(--border-radius);
@@ -369,7 +401,6 @@ $availableDates = getAvailableDeliveryDates();
             margin-top: 5px;
         }
         
-        /* Confirmation Modal Styles */
         .confirmation-modal .modal-content {
             border-radius: var(--border-radius);
             border: none;
@@ -445,7 +476,6 @@ $availableDates = getAvailableDeliveryDates();
             background-color: #f1f1f1;
         }
         
-        /* Responsive adjustments */
         @media (max-width: 991.98px) {
             .order-summary-card {
                 position: static;
@@ -471,7 +501,6 @@ $availableDates = getAvailableDeliveryDates();
             }
         }
 
-        /* Custom Popup Styles */
         .custom-popup {
             position: fixed;
             top: 20px;
@@ -596,6 +625,17 @@ $availableDates = getAvailableDeliveryDates();
                                         <p class="info-text">Delivery days: Monday, Wednesday, Friday</p>
                                     </div>
                                 </div>
+                            </div>
+                            
+                            <div class="delivery-info-group">
+                                <label for="payment_method" class="form-label required-field">Payment Method</label>
+                                <select class="form-control" id="payment_method" name="payment_method" required>
+                                    <option value="Cash on Delivery">Cash on Delivery</option>
+                                    <option value="Bank Transfer">Bank Transfer</option>
+                                    <option value="GCash">GCash</option>
+                                    <option value="Credit Card">Credit Card</option>
+                                </select>
+                                <p class="info-text">Please select your preferred payment method</p>
                             </div>
                             
                             <div class="delivery-info-group">
@@ -761,6 +801,11 @@ $availableDates = getAvailableDeliveryDates();
         
         // Handle place order button click
         $(document).ready(function() {
+            // Show error message if exists
+            <?php if (isset($errorMessage)): ?>
+                showPopup('<?php echo addslashes($errorMessage); ?>', true);
+            <?php endif; ?>
+            
             $('#placeOrderBtn').click(function(e) {
                 e.preventDefault();
                 
@@ -789,12 +834,15 @@ $availableDates = getAvailableDeliveryDates();
             
             // Handle confirm order button click
             $('#confirmOrderBtn').click(function() {
+                // Disable button to prevent multiple clicks
+                $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+                
                 // Submit the form
                 $('#checkoutForm').submit();
             });
             
             // Remove invalid class when user starts typing
-            $('input, textarea').on('input', function() {
+            $('input, textarea, select').on('input change', function() {
                 if ($(this).val()) {
                     $(this).removeClass('is-invalid');
                 }

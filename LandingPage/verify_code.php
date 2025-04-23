@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($client) {
                 // Login successful
                 $_SESSION['user_id'] = $client['id'];
-                $_SESSION['username'] = $client['email'];
+                $_SESSION['username'] = $client['username'];
                 $_SESSION['role'] = 'Client';
                 
                 // Clear verification code
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 unset($_SESSION['verification_attempts']);
                 unset($_SESSION['last_verification_attempt']);
                 
-                header('Location: user_dashboard.php');
+                header('Location: ordering.php');
                 exit();
             } else {
                 $_SESSION['verification_attempts']++;
