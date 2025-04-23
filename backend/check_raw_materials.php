@@ -25,6 +25,8 @@ try {
     // Initialize arrays to store data
     $requiredMaterials = [];
     $availableMaterials = [];
+    $finishedProductsStatus = [];
+    $needsManufacturing = false;
     
     // Process each order item
     foreach ($orders as $order) {
@@ -35,16 +37,41 @@ try {
         $productId = $order['product_id'];
         $quantity = (int)$order['quantity'];
         
-        // Get product ingredients
-        $stmt = $conn->prepare("SELECT ingredients FROM products WHERE product_id = ?");
+        // First check if we have enough finished products
+        $stmt = $conn->prepare("SELECT product_id, item_description, stock_quantity, ingredients FROM products WHERE product_id = ?");
         $stmt->bind_param("i", $productId);
         $stmt->execute();
         $result = $stmt->get_result();
         
         if ($row = $result->fetch_assoc()) {
+            $availableQuantity = (int)$row['stock_quantity'];
+            $itemDescription = $row['item_description'];
             $ingredients = json_decode($row['ingredients'], true);
             
-            if (is_array($ingredients)) {
+            // Record status of finished product
+            $finishedProductsStatus[$itemDescription] = [
+                'available' => $availableQuantity,
+                'required' => $quantity,
+                'sufficient' => $availableQuantity >= $quantity,
+                'shortfall' => max(0, $quantity - $availableQuantity)
+            ];
+            
+            // If not enough finished products, calculate raw materials needed
+            if ($availableQuantity < $quantity) {
+                $needsManufacturing = true;
+                $shortfall = $quantity - $availableQuantity;
+                
+                // Make sure there are ingredients defined
+                if (!is_array($ingredients) || count($ingredients) === 0) {
+                    // No ingredients defined, can't manufacture
+                    $finishedProductsStatus[$itemDescription]['canManufacture'] = false;
+                    $finishedProductsStatus[$itemDescription]['message'] = 'No ingredients defined';
+                    continue;
+                }
+                
+                $finishedProductsStatus[$itemDescription]['canManufacture'] = true;
+                
+                // Calculate required raw materials for shortfall
                 foreach ($ingredients as $ingredient) {
                     if (is_array($ingredient) && count($ingredient) >= 2) {
                         $materialName = $ingredient[0];
@@ -54,7 +81,7 @@ try {
                             $requiredMaterials[$materialName] = 0;
                         }
                         
-                        $requiredMaterials[$materialName] += $materialAmount * $quantity;
+                        $requiredMaterials[$materialName] += $materialAmount * $shortfall;
                     }
                 }
             }
@@ -63,17 +90,18 @@ try {
         $stmt->close();
     }
     
-    // If no materials required, return an empty result
-    if (empty($requiredMaterials)) {
+    // If all finished products are sufficient, no need to check raw materials
+    if (!$needsManufacturing) {
         echo json_encode([
             'success' => true,
-            'materials' => [],
-            'message' => 'No raw materials required for this order'
+            'finishedProducts' => $finishedProductsStatus,
+            'needsManufacturing' => false,
+            'message' => 'All finished products are in stock'
         ]);
         exit;
     }
     
-    // Get available quantities for each required material
+    // If we need manufacturing, get available quantities for each required material
     foreach ($requiredMaterials as $material => $required) {
         $stmt = $conn->prepare("SELECT stock_quantity FROM raw_materials WHERE name = ?");
         $stmt->bind_param("s", $material);
@@ -97,13 +125,16 @@ try {
         
         $materialsData[$material] = [
             'available' => $available,
-            'required' => $required
+            'required' => $required,
+            'sufficient' => $available >= $required
         ];
     }
     
     echo json_encode([
         'success' => true,
-        'materials' => $materialsData
+        'finishedProducts' => $finishedProductsStatus,
+        'materials' => $materialsData,
+        'needsManufacturing' => true
     ]);
     
 } catch (Exception $e) {
