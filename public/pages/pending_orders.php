@@ -2,7 +2,7 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Pending Orders'); // Ensure the user has access to the Pending Orders page
+checkRole('Orders'); // Ensure the user has access to the Orders page
 
 // Fetch active clients for the dropdown
 $clients = [];
@@ -19,9 +19,9 @@ while ($stmt->fetch()) {
 }
 $stmt->close();
 
-// Fetch only pending orders for display in the table
+// Modified query to only show Active orders
 $orders = []; // Initialize $orders as an empty array
-$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status FROM orders WHERE status = 'Pending'";
+$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status, progress FROM orders WHERE status = 'Active'";
 
 // Order by delivery_date ascending
 $sql .= " ORDER BY delivery_date ASC";
@@ -40,7 +40,7 @@ if ($result && $result->num_rows > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pending Orders</title>
+    <title>Orders</title>
     <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="/css/toast.css">
@@ -49,81 +49,227 @@ if ($result && $result->num_rows > 0) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <style>
-        /* Main styles for the Order Summary table */
-        .order-summary {
-            margin-top: 20px;
-            margin-bottom: 20px;
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            height: 20px;
+            position: relative;
+            overflow: hidden;
         }
-        
-        /* Make the table properly aligned */
-        .summary-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-}
 
-.summary-table th,
-.summary-table td {
-    padding: 8px;
-    border: 1px solid #ddd;
-    text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+        .progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-/* Fixed column widths for better alignment */
-.summary-table th:nth-child(1),
-.summary-table td:nth-child(1) {
-    width: 18%;
-}
-
-.summary-table th:nth-child(2),
-.summary-table td:nth-child(2) {
-    width: 35%;
-}
-
-.summary-table th:nth-child(3),
-.summary-table td:nth-child(3) {
-    width: 15%;
-}
-
-.summary-table th:nth-child(4),
-.summary-table td:nth-child(4) {
-    width: 15%;
-}
-
-.summary-table th:nth-child(5),
-.summary-table td:nth-child(5) {
-    width: 17%;
-}
-
-/* Keep input elements properly sized */
-.summary-table input[type="number"] {
-    width: 90%;
-    box-sizing: border-box;
-}
-
-/* Add some spacing between rows */
-.summary-table tr {
-    height: 40px;
-    width: 100%;
-}
-        
-        /* Style for the total section */
-        .summary-total {
-            margin-top: 10px;
-            text-align: right;
+        .progress-text {
+            color: white;
+            font-size: 12px;
             font-weight: bold;
-            border-top: 1px solid #ddd;
-            padding-top: 10px;
+            position: absolute;
+            width: 100%;
+            text-align: center;
         }
         
-        /* Style for quantity input fields */
-        .summary-quantity {
-            width: 80px;
-            max-width: 100%;
+        .completed-item {
+            background-color: #d4edda !important;
+        }
+        
+        /* Fix for hover color on green rows */
+        .completed-item:hover, 
+        tr.completed-item:hover td,
+        tr.unit-item.completed:hover,
+        tr.unit-item.completed:hover td {
+            background-color: #c3e6cb !important;
+        }
+        
+        .form-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .save-progress-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .save-progress-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .back-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .back-btn:hover {
+            background-color: #5a6268;
+        }
+        
+        /* New styles for quantity tracking */
+        .toggle-item-progress {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+        
+        .toggle-item-progress:hover {
+            background-color: #0069d9;
+        }
+        
+        .unit-row {
+            display: none;
+        }
+        
+        .unit-item {
+            background-color: #f8f9fa;
+        }
+        
+        .unit-item.completed {
+            background-color: #d4edda !important;
+        }
+        
+        .unit-item td {
+            padding-left: 20px; /* Indent to show hierarchy */
+            border-top: 1px dashed #dee2e6;
+        }
+        
+        .select-all-units {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .select-all-units:hover {
+            background-color: #218838;
+        }
+        
+        .units-divider {
+            border-top: 2px solid #6c757d;
+            margin-top: -1px;
+        }
+        
+        .unit-number-cell {
+            width: 70px;
+            font-weight: bold;
+            color: #6c757d;
+        }
+        
+        .item-header-row {
+            background-color: #f8f9fa !important;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        /* Add scrolling to the order details container */
+        .order-details-container {
+            max-height: 70vh; /* 70% of viewport height */
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding-right: 5px;
+        }
+        
+        /* Make sure the header stays visible */
+        .order-details-table thead {
+            position: sticky;
+            top: 0;
+            background-color: #fff;
+            z-index: 10;
+        }
+        
+        .order-details-table thead th {
+            box-shadow: 0 1px 0 0 #dee2e6; /* Add bottom border that doesn't move */
+        }
+        
+        /* Styles for item progress bar */
+        .item-progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            height: 12px;
+            margin-top: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .item-progress-bar {
+            height: 100%;
+            background-color: #17a2b8;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .item-progress-text {
+            display: block;
+            font-size: 11px;
+            margin-top: 3px;
+            color: #6c757d;
             text-align: center;
+        }
+        
+        .status-cell {
+            min-width: 120px;
+        }
+        
+        /* Progress contribution text */
+        .contribution-text {
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 3px;
+            display: block;
+            text-align: center;
+        }
+        
+        /* Progress percentage info */
+        .item-progress-info {
+            margin-top: 5px;
+            padding: 5px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            font-size: 12px;
+        }
+        
+        .progress-info-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .progress-info-value {
+            color: #28a745;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -131,11 +277,7 @@ if ($result && $result->num_rows > 0) {
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="orders-header">
-            <h1>Pending Orders</h1>
-            <!-- Removed filter section since we only show pending orders -->
-            <button onclick="openAddOrderForm()" class="add-order-btn">
-                <i class="fas fa-plus"></i> Add New Order
-            </button>
+            <h1>Orders Management</h1>
         </div>
         <div class="orders-table-container">
             <table class="orders-table">
@@ -143,9 +285,8 @@ if ($result && $result->num_rows > 0) {
                     <tr>
                         <th>PO Number</th>
                         <th>Username</th>
-                        <th>Order Date</th>
                         <th>Delivery Date</th>
-                        <th>Delivery Address</th>
+                        <th>Progress</th>
                         <th>Orders</th>
                         <th>Total Amount</th>
                         <th>Status</th>
@@ -158,26 +299,33 @@ if ($result && $result->num_rows > 0) {
                             <tr>
                                 <td><?= htmlspecialchars($order['po_number']) ?></td>
                                 <td><?= htmlspecialchars($order['username']) ?></td>
-                                <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
-                                <td><?= htmlspecialchars($order['delivery_address']) ?></td>
-                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
-                                <i class="fas fa-clipboard-list"></i>    
-                                View Orders</button></td>
+                                <td>
+                                    <div class="progress-bar-container">
+                                        <div class="progress-bar" style="width: <?= $order['progress'] ?? 0 ?>%"></div>
+                                        <div class="progress-text"><?= $order['progress'] ?? 0 ?>%</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
+                                        <i class="fas fa-clipboard-list"></i>    
+                                        View Order Status
+                                    </button>
+                                </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
-                                    <span class="status-badge status-pending"><?= htmlspecialchars($order['status']) ?></span>
+                                    <span class="status-badge status-active"><?= htmlspecialchars($order['status']) ?></span>
                                 </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
-                                    <i class="fas fa-exchange-alt"></i> Change Status
-                                </button>
+                                    <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
+                                        <i class="fas fa-exchange-alt"></i> Change Status
+                                    </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="no-orders">No pending orders found.</td>
+                            <td colspan="8" class="no-orders">No orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -188,187 +336,7 @@ if ($result && $result->num_rows > 0) {
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- Overlay Form for Adding New Order -->
-    <div id="addOrderOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <h2><i class="fas fa-plus"></i> Add New Order</h2>
-            <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
-                <div class="left-section">
-                    <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber()">
-                        <option value="" disabled selected>Select User</option>
-                        <?php foreach ($clients as $client): ?>
-                            <option value="<?= htmlspecialchars($client) ?>" data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"><?= htmlspecialchars($client) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <label for="order_date">Order Date:</label>
-                    <input type="text" id="order_date" name="order_date" readonly>
-                    <label for="delivery_date">Delivery Date:</label>
-                    <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
-                    
-                    <!-- New Delivery Address selection -->
-                    <label for="delivery_address_type">Delivery Address:</label>
-                    <select id="delivery_address_type" name="delivery_address_type" onchange="toggleDeliveryAddress()">
-                        <option value="company">Company Address</option>
-                        <option value="custom">Custom Address</option>
-                    </select>
-                    
-                    <div id="company_address_container">
-                        <input type="text" id="company_address" name="company_address" readonly placeholder="Company address will appear here">
-                    </div>
-                    
-                    <div id="custom_address_container" style="display: none;">
-                        <textarea id="custom_address" name="custom_address" rows="3" placeholder="Enter delivery address"></textarea>
-                    </div>
-                    
-                    <input type="hidden" name="delivery_address" id="delivery_address">
-                    
-                    <div class="centered-button">
-                        <button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()">
-                            <i class="fas fa-box-open"></i> Select Products
-                        </button>
-                    </div>
-                    <div class="order-summary">
-                        <h3>Order Summary</h3>
-                        <table class="summary-table">
-                            <thead>
-                                <tr>
-                                    <th>Category</th>
-                                    <th>Product</th>
-                                    <th>Packaging</th>
-                                    <th>Price</th>
-                                    <th>Quantity</th>
-                                </tr>
-                            </thead>
-                            <tbody id="summaryBody">
-                                <!-- Summary will be populated here -->
-                            </tbody>
-                        </table>
-                        <div class="summary-total">
-                            Total: <span class="summary-total-amount">PHP 0.00</span>
-                        </div>
-                    </div>
-                    <input type="hidden" name="po_number" id="po_number">
-                    <input type="hidden" name="orders" id="orders">
-                    <input type="hidden" name="total_amount" id="total_amount">
-                </div>
-                <div class="form-buttons">
-
-                    <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Inventory Overlay for Selecting Products -->
-    <div id="inventoryOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <div class="overlay-header">
-                <h2 class="overlay-title"><i class="fas fa-box-open"></i> Select Products</h2>
-                <button class="cart-btn" onclick="window.openCartModal()">
-                    <i class="fas fa-shopping-cart"></i> View Cart
-                </button>
-            </div>
-            <input type="text" id="inventorySearch" placeholder="Search products...">
-            <select id="inventoryFilter">
-                <option value="all">All Categories</option>
-                <!-- Populate with categories dynamically -->
-            </select>
-            <div class="inventory-table-container">
-                <table class="inventory-table">
-                    <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th>Product</th>
-                            <th>Packaging</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="inventory">
-                        <!-- Inventory list will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-            <div class="form-buttons" style="margin-top: 20px;">
-                <button type="button" class="cancel-btn" onclick="closeInventoryOverlay()">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-                <button type="button" class="done-btn" onclick="closeInventoryOverlay()">
-                    <i class="fas fa-check"></i> Done
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Cart Modal for Viewing Selected Products -->
-    <div id="cartModal" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <h2><i class="fas fa-shopping-cart"></i> Selected Products</h2>
-            <div class="cart-table-container">
-                <table class="cart-table">
-                    <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th>Product</th>
-                            <th>Packaging</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                        </tr>
-                    </thead>
-                    <tbody class="cart">
-                        <!-- Selected products list will be populated here -->
-                    </tbody>
-                </table>
-                <div class="no-products" style="display: none;">No products in the cart.</div>
-            </div>
-            <div class="cart-total" style="text-align: right; margin-bottom: 20px;">
-                Total: <span class="total-amount">PHP 0.00</span>
-            </div>
-            <div class="form-buttons" style="margin-top: 20px;">
-                <button type="button" class="back-btn" onclick="closeCartModal()">
-                    <i class="fas fa-arrow-left"></i> Back
-                </button>
-                <button type="button" class="save-cart-btn" onclick="saveCartChanges()">
-                    <i class="fas fa-save"></i> Save
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Enhanced Status Modal - Including both finished products and raw materials information -->
-    <div id="statusModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h2>Change Status</h2>
-            <p id="statusMessage"></p>
-            
-            <!-- Enhanced Raw Materials Section -->
-            <div id="rawMaterialsContainer" class="raw-materials-container">
-                <h3>Loading inventory status...</h3>
-                <!-- Content will be populated dynamically -->
-            </div>
-            
-            <div class="status-buttons">
-                <button id="activeStatusBtn" onclick="changeStatus('Active')" class="modal-status-btn active">
-                    <i class="fas fa-check"></i> Active
-                </button>
-                <button onclick="changeStatus('Rejected')" class="modal-status-btn reject">
-                    <i class="fas fa-ban"></i> Reject
-                </button>
-            </div>
-            <div class="modal-footer">
-                <button onclick="closeStatusModal()" class="modal-cancel-btn">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Order Details Modal -->
+    <!-- Order Details Modal with Progress Tracking -->
     <div id="orderDetailsModal" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-box-open"></i> Order Details</h2>
@@ -381,399 +349,556 @@ if ($result && $result->num_rows > 0) {
                             <th>Packaging</th>
                             <th>Price</th>
                             <th>Quantity</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="orderDetailsBody">
                         <!-- Order details will be populated here -->
                     </tbody>
                 </table>
+                <!-- Overall progress info -->
+                <div class="item-progress-info" id="overall-progress-info" style="margin-top: 10px;">
+                    <div class="progress-info-label">Overall Order Progress:</div>
+                    <div class="progress-bar-container" style="margin-top: 5px;">
+                        <div class="progress-bar" id="overall-progress-bar" style="width: 0%"></div>
+                        <div class="progress-text" id="overall-progress-text">0%</div>
+                    </div>
+                </div>
             </div>
-            <div class="form-buttons" style="margin-top: 20px;">
+            <div class="form-buttons">
                 <button type="button" class="back-btn" onclick="closeOrderDetailsModal()">
                     <i class="fas fa-arrow-left"></i> Back
+                </button>
+                <button type="button" class="save-progress-btn" onclick="saveProgressChanges()">
+                    <i class="fas fa-save"></i> Save Progress
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Status Modal -->
+    <div id="statusModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Change Status</h2>
+            <p id="statusMessage"></p>
+            <div class="status-buttons">
+                <button onclick="changeStatus('Active')" class="modal-status-btn active">
+                    <i class="fas fa-check"></i> Active
+                </button>
+                <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
+                    <i class="fas fa-clock"></i> Pending
+                </button>
+                <button onclick="changeStatus('Completed')" class="modal-status-btn complete">
+                    <i class="fas fa-check-circle"></i> Complete
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeStatusModal()" class="modal-cancel-btn">
+                    <i class="fas fa-times"></i> Cancel
                 </button>
             </div>
         </div>
     </div>
 
-    <script src="/js/orders.js"></script>
-        <script>
-    window.openStatusModal = function(poNumber, username, ordersJson) {
-        $('#statusMessage').text('Change order status for ' + poNumber);
-        $('#statusModal').data('po_number', poNumber).show();
-        
-        // Clear previous data and show loading state
-        $('#rawMaterialsBody').html('<tr><td colspan="4" style="text-align:center;">Loading inventory data...</td></tr>');
-        $('#materialsStatus').text('Checking product availability...');
-        $('#materialsStatus').removeClass('status-sufficient status-insufficient');
-        $('#rawMaterialsContainer').show();
-        
-        // Parse the orders JSON and check materials
-        try {
-            $.ajax({
-                url: '/backend/check_raw_materials.php',
-                type: 'POST',
-                data: { 
-                    orders: ordersJson,
-                    po_number: poNumber
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        // Display finished products status first
-                        if (response.finishedProducts) {
-                            displayFinishedProducts(response.finishedProducts);
-                        }
-                        
-                        // If manufacturing is needed, display raw materials
-                        if (response.needsManufacturing && response.materials) {
-                            displayRawMaterials(response.materials);
-                        } else {
-                            // Hide the raw materials section if no manufacturing needed
-                            $('#rawMaterialsContainer h3').text('All products are in stock - no manufacturing needed');
-                            $('#rawMaterialsBody').html('<tr><td colspan="4" style="text-align:center;">No additional raw materials required</td></tr>');
-                        }
-                        
-                        // Enable or disable the Active button based on overall status
-                        updateOrderActionStatus(response);
-                    } else {
-                        $('#rawMaterialsBody').html(`<tr><td colspan="4" style="text-align:center;color:red;">Error: ${response.message || 'Unknown error'}</td></tr>`);
-                        $('#materialsStatus').text('Could not check product availability. Order status can still be changed.');
-                        $('#activeStatusBtn').prop('disabled', false);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    $('#rawMaterialsBody').html(`<tr><td colspan="4" style="text-align:center;color:red;">Server error: ${error}</td></tr>`);
-                    $('#materialsStatus').text('Error checking inventory. Order status can still be changed.');
-                    $('#activeStatusBtn').prop('disabled', false);
-                    console.error("AJAX Error:", status, error);
-                }
-            });
-        } catch (e) {
-            $('#rawMaterialsBody').html(`<tr><td colspan="4" style="text-align:center;color:red;">Error: ${e.message}</td></tr>`);
-            $('#materialsStatus').text('Error processing order data. Order status can still be changed.');
-            $('#activeStatusBtn').prop('disabled', false);
-            console.error("Error:", e);
-        }
-    };
-
-    // Helper function to format weight values
-    function formatWeight(weightInGrams) {
-        if (weightInGrams >= 1000) {
-            return (weightInGrams / 1000).toFixed(2) + ' kg';
-        } else {
-            return weightInGrams.toFixed(2) + ' g';
-        }
-    }
-
-    // Function to display finished products status
-    function displayFinishedProducts(productsData) {
-        const productsTable = $('<table class="materials-table"></table>');
-        const thead = $(`
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>In Stock</th>
-                    <th>Required</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-        `);
-        const tbody = $('<tbody></tbody>');
-        
-        let allSufficient = true;
-        let anyCanManufacture = true;
-        
-        Object.keys(productsData).forEach(product => {
-            const data = productsData[product];
-            const available = parseInt(data.available);
-            const required = parseInt(data.required);
-            const isSufficient = data.sufficient;
-            
-            if (!isSufficient) {
-                allSufficient = false;
-                
-                // Check if product can be manufactured
-                if (data.canManufacture === false) {
-                    anyCanManufacture = false;
-                }
-            }
-            
-            const row = $(`
-                <tr>
-                    <td>${product}</td>
-                    <td>${available}</td>
-                    <td>${required}</td>
-                    <td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">
-                        ${isSufficient ? 'In Stock' : 'Need to manufacture ' + data.shortfall + ' more'}
-                    </td>
-                </tr>
-            `);
-            tbody.append(row);
-        });
-        
-        productsTable.append(thead).append(tbody);
-        
-        // Update the HTML container
-        $('#rawMaterialsContainer').html('<h3>Finished Products Status</h3>');
-        $('#rawMaterialsContainer').append(productsTable);
-        
-        // If not all products are in stock but can be manufactured
-        if (!allSufficient && anyCanManufacture) {
-            $('#rawMaterialsContainer').append('<h3>Raw Materials Required for Manufacturing</h3><div class="materials-table-container"><table class="materials-table"><thead><tr><th>Material</th><th>Available</th><th>Required</th><th>Status</th></tr></thead><tbody id="rawMaterialsBody"></tbody></table></div><p id="materialsStatus" class="materials-status">Checking raw materials availability...</p>');
-        }
-    }
-
-    // Function to display raw materials data
-    function displayRawMaterials(materialsData) {
-        const rawMaterialsBody = $('#rawMaterialsBody');
-        rawMaterialsBody.empty();
-        
-        // If no materials data
-        if (!materialsData || Object.keys(materialsData).length === 0) {
-            rawMaterialsBody.html('<tr><td colspan="4" style="text-align:center;">No raw materials data available</td></tr>');
-            $('#materialsStatus').text('No raw materials information found. Order status can be changed.');
-            $('#activeStatusBtn').prop('disabled', false);
-            return;
-        }
-        
-        // Process materials data
-        let allSufficient = true;
-        let insufficientMaterials = [];
-        
-        // Add each material to the table
-        Object.keys(materialsData).forEach(material => {
-            const data = materialsData[material];
-            const available = parseFloat(data.available);
-            const required = parseFloat(data.required);
-            const isSufficient = data.sufficient;
-            
-            if (!isSufficient) {
-                allSufficient = false;
-                insufficientMaterials.push(material);
-            }
-            
-            const row = $(`
-                <tr>
-                    <td>${material}</td>
-                    <td>${formatWeight(available)}</td>
-                    <td>${formatWeight(required)}</td>
-                    <td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">
-                        ${isSufficient ? 'Sufficient' : 'Insufficient'}
-                    </td>
-                </tr>
-            `);
-            rawMaterialsBody.append(row);
-        });
-        
-        // Update overall status and enable/disable button
-        if (allSufficient) {
-            $('#materialsStatus').text('All raw materials are sufficient for manufacturing.');
-            $('#materialsStatus').addClass('status-sufficient').removeClass('status-insufficient');
-        } else {
-            const message = `Insufficient raw materials: ${insufficientMaterials.join(', ')}`;
-            $('#materialsStatus').text(`${message}. The order cannot proceed.`);
-            $('#materialsStatus').addClass('status-insufficient').removeClass('status-sufficient');
-        }
-        
-        return allSufficient;
-    }
-
-    // Function to update order action status
-    function updateOrderActionStatus(response) {
-        let canProceed = true;
-        let statusMessage = 'All inventory requirements are met. The order can proceed.';
-        
-        // Check if all finished products are in stock
-        const finishedProducts = response.finishedProducts || {};
-        const allProductsInStock = Object.values(finishedProducts).every(product => product.sufficient);
-        
-        // If manufacturing is needed, check raw materials
-        if (!allProductsInStock && response.needsManufacturing) {
-            // Check if all products can be manufactured
-            const canManufactureAll = Object.values(finishedProducts).every(product => 
-                product.sufficient || product.canManufacture !== false);
-                
-            if (!canManufactureAll) {
-                canProceed = false;
-                statusMessage = 'Some products cannot be manufactured due to missing ingredients.';
-            } else {
-                // Check if all raw materials are sufficient
-                const materials = response.materials || {};
-                const allMaterialsSufficient = Object.values(materials).every(material => material.sufficient);
-                
-                if (!allMaterialsSufficient) {
-                    canProceed = false;
-                    statusMessage = 'Insufficient raw materials for manufacturing required products.';
-                } else {
-                    statusMessage = 'Products will be manufactured using raw materials. The order can proceed.';
-                }
-            }
-        }
-        
-        // Update UI based on status
-        $('#activeStatusBtn').prop('disabled', !canProceed);
-        $('#materialsStatus').text(statusMessage);
-        
-        if (canProceed) {
-            $('#materialsStatus').addClass('status-sufficient').removeClass('status-insufficient');
-        } else {
-            $('#materialsStatus').addClass('status-insufficient').removeClass('status-sufficient');
-        }
-    }
-
-    // Function to change order status
-    window.changeStatus = function(status) {
-        var poNumber = $('#statusModal').data('po_number');
-        
-        // Only deduct materials if changing to Active
-        const deductMaterials = (status === 'Active');
-        
-        $.ajax({
-            type: 'POST',
-            url: '/backend/update_order_status.php',
-            data: { 
-                po_number: poNumber, 
-                status: status,
-                deduct_materials: deductMaterials
-            },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    // Format status type for toast
-                    let toastType = status.toLowerCase();
-                    if (toastType === 'completed') toastType = 'complete';
-                    if (toastType === 'rejected') toastType = 'reject';
-                    
-                    // Create message
-                    let message = `Changed status for ${poNumber} to ${status}.`;
-                    if (status === 'Active' && deductMaterials) {
-                        message = `Changed status for ${poNumber} to ${status}. Inventory has been updated.`;
-                    }
-                    
-                    // Show toast and reload
-                    showToast(message, toastType);
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    alert('Failed to change status: ' + (response.error || 'Unknown error'));
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error:', error);
-                alert('Failed to change status. Please try again.');
-            }
-        });
-    };
-
-    // Helper function to format weight values
-    function formatWeight(weightInGrams) {
-        if (weightInGrams >= 1000) {
-            return (weightInGrams / 1000).toFixed(2) + ' kg';
-        } else {
-            return weightInGrams.toFixed(2) + ' g';
-        }
-    }
-
-    // Function to display raw materials data
-    function displayRawMaterials(materialsData) {
-        const rawMaterialsBody = $('#rawMaterialsBody');
-        rawMaterialsBody.empty();
-        
-        // If no materials data
-        if (!materialsData || Object.keys(materialsData).length === 0) {
-            rawMaterialsBody.html('<tr><td colspan="4" style="text-align:center;">No raw materials data available</td></tr>');
-            $('#materialsStatus').text('No raw materials information found. Order status can be changed.');
-            $('#activeStatusBtn').prop('disabled', false);
-            return;
-        }
-        
-        // Process materials data
-        let allSufficient = true;
-        let insufficientMaterials = [];
-        
-        // Add each material to the table
-        Object.keys(materialsData).forEach(material => {
-            const data = materialsData[material];
-            const available = parseFloat(data.available);
-            const required = parseFloat(data.required);
-            const isSufficient = available >= required;
-            
-            if (!isSufficient) {
-                allSufficient = false;
-                insufficientMaterials.push(material);
-            }
-            
-            const row = `
-                <tr>
-                    <td>${material}</td>
-                    <td>${formatWeight(available)}</td>
-                    <td>${formatWeight(required)}</td>
-                    <td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">
-                        ${isSufficient ? 'Sufficient' : 'Insufficient'}
-                    </td>
-                </tr>
-            `;
-            rawMaterialsBody.append(row);
-        });
-        
-        // Update overall status and enable/disable button
-        if (allSufficient) {
-            $('#materialsStatus').text('All raw materials are sufficient for this order.');
-            $('#materialsStatus').addClass('status-sufficient').removeClass('status-insufficient');
-            $('#activeStatusBtn').prop('disabled', false);
-        } else {
-            const message = `Insufficient raw materials: ${insufficientMaterials.join(', ')}`;
-            $('#materialsStatus').text(`${message}. The order cannot proceed.`);
-            $('#materialsStatus').addClass('status-insufficient').removeClass('status-sufficient');
-            $('#activeStatusBtn').prop('disabled', true);
-        }
-    }
-
-    // Function to change order status
-    window.changeStatus = function(status) {
-        var poNumber = $('#statusModal').data('po_number');
-        
-        // Only deduct materials if changing to Active
-        const deductMaterials = (status === 'Active');
-        
-        $.ajax({
-            type: 'POST',
-            url: '/backend/update_order_status.php',
-            data: { 
-                po_number: poNumber, 
-                status: status,
-                deduct_materials: deductMaterials
-            },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    // Format status type for toast
-                    let toastType = status.toLowerCase();
-                    if (toastType === 'completed') toastType = 'complete';
-                    if (toastType === 'rejected') toastType = 'reject';
-                    
-                    // Create message
-                    let message = `Changed status for ${poNumber} to ${status}.`;
-                    if (deductMaterials) {
-                        message = `Changed status for ${poNumber} to ${status}. Raw materials have been deducted.`;
-                    }
-                    
-                    // Show toast and reload
-                    showToast(message, toastType);
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    alert('Failed to change status: ' + (response.error || 'Unknown error'));
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error:', error);
-                alert('Failed to change status. Please try again.');
-            }
-        });
-    };
-        </script>
     <script>
-        <?php include('../../js/order_processing.js'); ?>
-    </script> 
+        // Global variables
+        let currentPoNumber = '';
+        let currentOrderItems = [];
+        let completedItems = [];
+        let quantityProgressData = {};
+        let itemProgressPercentages = {};
+        let itemContributions = {}; // How much each item contributes to the total
+        let overallProgress = 0;
+
+        function openStatusModal(poNumber, username) {
+            currentPoNumber = poNumber;
+            document.getElementById('statusMessage').textContent = `Change status for order ${poNumber} (${username})`;
+            document.getElementById('statusModal').style.display = 'flex';
+        }
+
+        function closeStatusModal() {
+            document.getElementById('statusModal').style.display = 'none';
+        }
+
+        function changeStatus(status) {
+            // Send AJAX request to update status
+            fetch('/backend/update_order_status.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `po_number=${currentPoNumber}&status=${status}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Status updated successfully', 'success');
+                    // Reload the page after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('Error updating status: ' + data.message, 'error');
+                }
+                closeStatusModal();
+            })
+            .catch(error => {
+                showToast('Error updating status: ' + error, 'error');
+                closeStatusModal();
+            });
+        }
+
+        function viewOrderDetails(poNumber) {
+            currentPoNumber = poNumber;
+            
+            // Fetch the order data and completion status
+            fetch(`/backend/get_order_details.php?po_number=${poNumber}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentOrderItems = data.orderItems;
+                    completedItems = data.completedItems || [];
+                    quantityProgressData = data.quantityProgressData || {};
+                    itemProgressPercentages = data.itemProgressPercentages || {};
+                    
+                    const orderDetailsBody = document.getElementById('orderDetailsBody');
+                    orderDetailsBody.innerHTML = '';
+                    
+                    // Calculate item contributions to overall progress
+                    const totalItems = currentOrderItems.length;
+                    const contributionPerItem = totalItems > 0 ? (100 / totalItems) : 0;
+                    
+                    // Track overall progress
+                    overallProgress = 0;
+                    
+                    currentOrderItems.forEach((item, index) => {
+                        const isCompleted = completedItems.includes(index);
+                        const itemQuantity = parseInt(item.quantity) || 0;
+                        
+                        // Store contribution percentage
+                        itemContributions[index] = contributionPerItem;
+                        
+                        // Calculate item progress percentage based on units
+                        let unitCompletedCount = 0;
+                        if (quantityProgressData[index]) {
+                            for (let i = 0; i < itemQuantity; i++) {
+                                if (quantityProgressData[index][i] === true) {
+                                    unitCompletedCount++;
+                                }
+                            }
+                        }
+                        
+                        // Calculate unit progress percentage
+                        const unitProgress = itemQuantity > 0 ? (unitCompletedCount / itemQuantity) * 100 : 0;
+                        
+                        // Calculate contribution to overall progress (what this item adds to overall)
+                        const contributionToOverall = (unitProgress / 100) * contributionPerItem;
+                        overallProgress += contributionToOverall;
+                        
+                        // Store item progress
+                        itemProgressPercentages[index] = unitProgress;
+                        
+                        // Create main row for the item
+                        const mainRow = document.createElement('tr');
+                        mainRow.className = 'item-header-row';
+                        if (isCompleted) {
+                            mainRow.classList.add('completed-item');
+                        }
+                        mainRow.dataset.itemIndex = index;
+                        
+                        mainRow.innerHTML = `
+                            <td>${item.category}</td>
+                            <td>${item.item_description}</td>
+                            <td>${item.packaging}</td>
+                            <td>PHP ${parseFloat(item.price).toFixed(2)}</td>
+                            <td>${item.quantity}</td>
+                            <td class="status-cell">
+                                <div style="display: flex; align-items: center; justify-content: space-between">
+                                    <input type="checkbox" class="item-status-checkbox" data-index="${index}" 
+                                        ${isCompleted ? 'checked' : ''} onchange="updateRowStyle(this)">
+                                    <button type="button" class="toggle-item-progress" data-index="${index}" onclick="toggleQuantityProgress(${index})">
+                                        <i class="fas fa-list-ol"></i> Units
+                                    </button>
+                                </div>
+                                <div class="item-progress-bar-container">
+                                    <div class="item-progress-bar" id="item-progress-bar-${index}" style="width: ${unitProgress}%"></div>
+                                </div>
+                                <span class="item-progress-text" id="item-progress-text-${index}">${Math.round(unitProgress)}% Complete</span>
+                                <span class="contribution-text" id="contribution-text-${index}">
+                                    (${Math.round(contributionToOverall)}% of total)
+                                </span>
+                            </td>
+                        `;
+                        orderDetailsBody.appendChild(mainRow);
+                        
+                        // Add a divider row
+                        const dividerRow = document.createElement('tr');
+                        dividerRow.className = 'units-divider';
+                        dividerRow.id = `units-divider-${index}`;
+                        dividerRow.style.display = 'none';
+                        dividerRow.innerHTML = `<td colspan="6"></td>`;
+                        orderDetailsBody.appendChild(dividerRow);
+                        
+                        // Create rows for individual units
+                        for (let i = 0; i < itemQuantity; i++) {
+                            // Check if this unit is completed
+                            const isUnitCompleted = quantityProgressData[index] && 
+                                                    quantityProgressData[index][i] === true;
+                            
+                            const unitRow = document.createElement('tr');
+                            unitRow.className = `unit-row unit-item unit-for-item-${index}`;
+                            unitRow.style.display = 'none';
+                            if (isUnitCompleted) {
+                                unitRow.classList.add('completed');
+                            }
+                            
+                            unitRow.innerHTML = `
+                                <td>${item.category}</td>
+                                <td>${item.item_description}</td>
+                                <td>${item.packaging}</td>
+                                <td>PHP ${parseFloat(item.price).toFixed(2)}</td>
+                                <td class="unit-number-cell">Unit ${i+1}</td>
+                                <td>
+                                    <input type="checkbox" class="unit-status-checkbox" 
+                                        data-item-index="${index}" 
+                                        data-unit-index="${i}" 
+                                        ${isUnitCompleted ? 'checked' : ''} 
+                                        onchange="updateUnitStatus(this)">
+                                </td>
+                            `;
+                            orderDetailsBody.appendChild(unitRow);
+                        }
+                        
+                        // Add an action row with a "Select All" button
+                        if (itemQuantity > 0) {
+                            const actionRow = document.createElement('tr');
+                            actionRow.className = `unit-row unit-action-row unit-for-item-${index}`;
+                            actionRow.style.display = 'none';
+                            actionRow.innerHTML = `
+                                <td colspan="6" style="text-align: right; padding: 10px;">
+                                    <button type="button" class="select-all-units" onclick="selectAllUnits(${index}, ${itemQuantity})">
+                                        <i class="fas fa-check-square"></i> Select All Units
+                                    </button>
+                                </td>
+                            `;
+                            orderDetailsBody.appendChild(actionRow);
+                        }
+                    });
+                    
+                    // Update overall progress display
+                    updateOverallProgressDisplay();
+                    
+                    document.getElementById('orderDetailsModal').style.display = 'flex';
+                } else {
+                    showToast('Error: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error: ' + error, 'error');
+                console.error('Error fetching order details:', error);
+            });
+        }
+
+        function updateOverallProgressDisplay() {
+            const overallProgressBar = document.getElementById('overall-progress-bar');
+            const overallProgressText = document.getElementById('overall-progress-text');
+            
+            // Round to nearest whole number
+            const roundedProgress = Math.round(overallProgress);
+            
+            overallProgressBar.style.width = `${roundedProgress}%`;
+            overallProgressText.textContent = `${roundedProgress}%`;
+        }
+
+        function toggleQuantityProgress(itemIndex) {
+            const unitRows = document.querySelectorAll(`.unit-for-item-${itemIndex}`);
+            const dividerRow = document.getElementById(`units-divider-${itemIndex}`);
+            const isVisible = unitRows[0].style.display !== 'none';
+            
+            // Toggle divider
+            dividerRow.style.display = isVisible ? 'none' : 'table-row';
+            
+            // Toggle unit rows
+            unitRows.forEach(row => {
+                row.style.display = isVisible ? 'none' : 'table-row';
+            });
+        }
+
+        function updateUnitStatus(checkbox) {
+            const itemIndex = parseInt(checkbox.getAttribute('data-item-index'));
+            const unitIndex = parseInt(checkbox.getAttribute('data-unit-index'));
+            const isChecked = checkbox.checked;
+            
+            // Update unit row style
+            const unitRow = checkbox.closest('tr');
+            if (isChecked) {
+                unitRow.classList.add('completed');
+            } else {
+                unitRow.classList.remove('completed');
+            }
+            
+            // Initialize the quantityProgressData structure if needed
+            if (!quantityProgressData[itemIndex]) {
+                quantityProgressData[itemIndex] = [];
+                const itemQuantity = parseInt(currentOrderItems[itemIndex].quantity) || 0;
+                for (let i = 0; i < itemQuantity; i++) {
+                    quantityProgressData[itemIndex].push(false);
+                }
+            }
+            
+            // Update the progress data
+            quantityProgressData[itemIndex][unitIndex] = isChecked;
+            
+            // Update item progress and contribution to overall
+            updateItemProgress(itemIndex);
+            
+            // Update overall progress
+            updateOverallProgress();
+        }
+
+        function updateItemProgress(itemIndex) {
+            const item = currentOrderItems[itemIndex];
+            const itemQuantity = parseInt(item.quantity) || 0;
+            
+            if (itemQuantity === 0) return;
+            
+            // Count completed units
+            let completedUnits = 0;
+            for (let i = 0; i < itemQuantity; i++) {
+                if (quantityProgressData[itemIndex] && quantityProgressData[itemIndex][i]) {
+                    completedUnits++;
+                }
+            }
+            
+            // Calculate unit progress percentage
+            const unitProgress = (completedUnits / itemQuantity) * 100;
+            itemProgressPercentages[itemIndex] = unitProgress;
+            
+            // Calculate contribution to overall progress
+            const contributionToOverall = (unitProgress / 100) * itemContributions[itemIndex];
+            
+            // Update item progress display
+            const progressBar = document.getElementById(`item-progress-bar-${itemIndex}`);
+            const progressText = document.getElementById(`item-progress-text-${itemIndex}`);
+            const contributionText = document.getElementById(`contribution-text-${itemIndex}`);
+            
+            progressBar.style.width = `${unitProgress}%`;
+            progressText.textContent = `${Math.round(unitProgress)}% Complete`;
+            contributionText.textContent = `(${Math.round(contributionToOverall)}% of total)`;
+            
+            // Check if all units are complete to update item checkbox
+            updateItemStatusBasedOnUnits(itemIndex, completedUnits === itemQuantity);
+        }
+
+        function updateOverallProgress() {
+            // Calculate overall progress from all items
+            let newOverallProgress = 0;
+            
+            Object.keys(itemProgressPercentages).forEach(itemIndex => {
+                const itemProgress = itemProgressPercentages[itemIndex];
+                const itemContribution = itemContributions[itemIndex];
+                newOverallProgress += (itemProgress / 100) * itemContribution;
+            });
+            
+            overallProgress = newOverallProgress;
+            updateOverallProgressDisplay();
+            
+            return Math.round(overallProgress);
+        }
+
+        function updateItemStatusBasedOnUnits(itemIndex, allComplete) {
+            // Update the main item checkbox based on unit completion
+            const mainCheckbox = document.querySelector(`.item-status-checkbox[data-index="${itemIndex}"]`);
+            const mainRow = document.querySelector(`tr[data-item-index="${itemIndex}"]`);
+            
+            if (allComplete) {
+                mainCheckbox.checked = true;
+                mainRow.classList.add('completed-item');
+                if (!completedItems.includes(parseInt(itemIndex))) {
+                    completedItems.push(parseInt(itemIndex));
+                }
+            } else {
+                mainCheckbox.checked = false;
+                mainRow.classList.remove('completed-item');
+                const completedIndex = completedItems.indexOf(parseInt(itemIndex));
+                if (completedIndex > -1) {
+                    completedItems.splice(completedIndex, 1);
+                }
+            }
+        }
+
+        function selectAllUnits(itemIndex, quantity) {
+            // Get all unit checkboxes for this item
+            const unitCheckboxes = document.querySelectorAll(`.unit-status-checkbox[data-item-index="${itemIndex}"]`);
+            
+            // Check all unit checkboxes
+            unitCheckboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                const unitRow = checkbox.closest('tr');
+                unitRow.classList.add('completed');
+            });
+            
+            // Update the progress data
+            if (!quantityProgressData[itemIndex]) {
+                quantityProgressData[itemIndex] = [];
+            }
+            
+            for (let i = 0; i < quantity; i++) {
+                quantityProgressData[itemIndex][i] = true;
+            }
+            
+            // Update item progress
+            updateItemProgress(itemIndex);
+            
+            // Update overall progress
+            updateOverallProgress();
+        }
+
+        function updateRowStyle(checkbox) {
+            const index = parseInt(checkbox.getAttribute('data-index'));
+            const row = checkbox.closest('tr');
+            const itemQuantity = parseInt(currentOrderItems[index].quantity) || 0;
+            
+            if (checkbox.checked) {
+                row.classList.add('completed-item');
+                if (!completedItems.includes(index)) {
+                    completedItems.push(index);
+                }
+                
+                // Mark all units as completed
+                if (!quantityProgressData[index]) {
+                    quantityProgressData[index] = [];
+                }
+                
+                for (let i = 0; i < itemQuantity; i++) {
+                    quantityProgressData[index][i] = true;
+                }
+                
+                // Update unit checkboxes and row styles
+                const unitCheckboxes = document.querySelectorAll(`.unit-status-checkbox[data-item-index="${index}"]`);
+                unitCheckboxes.forEach(checkbox => {
+                    checkbox.checked = true;
+                    const unitRow = checkbox.closest('tr');
+                    unitRow.classList.add('completed');
+                });
+                
+                // Set item progress to 100%
+                itemProgressPercentages[index] = 100;
+                
+                // Update item display
+                const progressBar = document.getElementById(`item-progress-bar-${index}`);
+                const progressText = document.getElementById(`item-progress-text-${index}`);
+                const contributionText = document.getElementById(`contribution-text-${index}`);
+                
+                progressBar.style.width = '100%';
+                progressText.textContent = '100% Complete';
+                contributionText.textContent = `(${Math.round(itemContributions[index])}% of total)`;
+                
+            } else {
+                row.classList.remove('completed-item');
+                const completedIndex = completedItems.indexOf(index);
+                if (completedIndex > -1) {
+                    completedItems.splice(completedIndex, 1);
+                }
+                
+                // Mark all units as not completed
+                if (!quantityProgressData[index]) {
+                    quantityProgressData[index] = [];
+                }
+                
+                for (let i = 0; i < itemQuantity; i++) {
+                    quantityProgressData[index][i] = false;
+                }
+                
+                // Update unit checkboxes and row styles
+                const unitCheckboxes = document.querySelectorAll(`.unit-status-checkbox[data-item-index="${index}"]`);
+                unitCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                    const unitRow = checkbox.closest('tr');
+                    unitRow.classList.remove('completed');
+                });
+                
+                // Set item progress to 0%
+                itemProgressPercentages[index] = 0;
+                
+                // Update item display
+                const progressBar = document.getElementById(`item-progress-bar-${index}`);
+                const progressText = document.getElementById(`item-progress-text-${index}`);
+                const contributionText = document.getElementById(`contribution-text-${index}`);
+                
+                progressBar.style.width = '0%';
+                progressText.textContent = '0% Complete';
+                contributionText.textContent = '(0% of total)';
+            }
+            
+            // Update overall progress
+            updateOverallProgress();
+        }
+
+        function closeOrderDetailsModal() {
+            document.getElementById('orderDetailsModal').style.display = 'none';
+        }
+
+        function saveProgressChanges() {
+            // Calculate overall progress percentage
+            const progressPercentage = updateOverallProgress();
+            
+            // Determine if the order should be completed automatically
+            const shouldComplete = progressPercentage === 100;
+            
+            // Send AJAX request to update progress
+            fetch('/backend/update_order_progress.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    po_number: currentPoNumber,
+                    completed_items: completedItems,
+                    quantity_progress_data: quantityProgressData,
+                    item_progress_percentages: itemProgressPercentages,
+                    progress: progressPercentage,
+                    auto_complete: shouldComplete
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (shouldComplete) {
+                        showToast('Order completed successfully!', 'success');
+                    } else {
+                        showToast('Progress updated successfully', 'success');
+                    }
+                    // Reload the page after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('Error updating progress: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error: ' + error, 'error');
+            });
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                    <div class="message">${message}</div>
+                </div>
+                <i class="fas fa-times close" onclick="this.parentElement.remove()"></i>
+            `;
+            document.getElementById('toast-container').appendChild(toast);
+            
+            // Automatically remove the toast after 5 seconds
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+    </script>
 </body>
 </html>
