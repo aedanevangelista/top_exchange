@@ -79,7 +79,6 @@ function fetchInventory() {
                             class="product-quantity" 
                             min="1" 
                             max="200"
-                            oninput="if(this.value > 200) this.value = 200;"
                             data-product-id="${product.product_id}"
                             data-category="${product.category}"
                             data-description="${product.item_description}"
@@ -169,68 +168,6 @@ function updateSummaryTotal() {
     $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`);
 }
 
-// Add the global input handler to the document.ready function
-$(document).ready(function() {
-    // ...existing code...
-    
-    // Add a global input event handler to restrict all number inputs in the app to max 200
-    $(document).on('input', 'input[type="number"]', function() {
-        if (parseInt(this.value) > 200) {
-            this.value = 200;
-        }
-    });
-});
-
-// Function to add CSS styles to ensure proper table layout
-function addTableStyles() {
-    // Check if styles are already added
-    if (!$('#order-table-styles').length) {
-        const styles = `
-            <style id="order-table-styles">
-                .summary-table {
-                    table-layout: fixed;
-                    width: 100%;
-                }
-                .summary-table th,
-                .summary-table td {
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                    padding: 8px;
-                }
-                .category-cell {
-                    width: 20%;
-                }
-                .description-cell {
-                    width: 30%;
-                }
-                .packaging-cell {
-                    width: 15%;
-                }
-                .price-cell {
-                    width: 15%;
-                }
-                .quantity-cell {
-                    width: 20%;
-                }
-                .summary-quantity {
-                    width: 80px;
-                }
-                .cart-quantity {
-                    width: 80px;
-                }
-                /* Make sure the quantity input is not too wide */
-                input.summary-quantity,
-                input.cart-quantity,
-                input.product-quantity {
-                    max-width: 80px;
-                }
-            </style>
-        `;
-        $('head').append(styles);
-    }
-}
-
 // Global function for populating cart
 function populateCart() {
     const cartBody = $('.cart');
@@ -251,17 +188,16 @@ function populateCart() {
             
             const row = `
                 <tr>
-                    <td class="category-cell">${product.category}</td>
-                    <td class="description-cell">${product.item_description}</td>
-                    <td class="packaging-cell">${product.packaging}</td>
-                    <td class="price-cell">PHP ${product.price.toFixed(2)}</td>
-                    <td class="quantity-cell">
+                    <td>${product.category}</td>
+                    <td>${product.item_description}</td>
+                    <td>${product.packaging}</td>
+                    <td>PHP ${product.price.toFixed(2)}</td>
+                    <td>
                         <input type="number" 
                             class="cart-quantity" 
                             value="${product.quantity}" 
                             min="1"
                             max="200"
-                            oninput="if(this.value > 200) this.value = 200;"
                             data-index="${index}">
                         <button class="remove-from-cart" data-index="${index}" data-product="${product.item_description}" data-quantity="${product.quantity}">
                             <i class="fas fa-trash"></i>
@@ -274,9 +210,6 @@ function populateCart() {
         
         $('.total-amount').text(`PHP ${total.toFixed(2)}`);
     }
-
-    // Ensure table styles are applied
-    addTableStyles();
 }
 
 // Function to toggle delivery address fields
@@ -370,20 +303,17 @@ window.viewOrderDetails = function(orders) {
         orderDetails.forEach(product => {
             const row = `
                 <tr>
-                    <td class="category-cell">${product.category}</td>
-                    <td class="description-cell">${product.item_description}</td>
-                    <td class="packaging-cell">${product.packaging}</td>
-                    <td class="price-cell">PHP ${parseFloat(product.price).toFixed(2)}</td>
-                    <td class="quantity-cell">${product.quantity}</td>
+                    <td>${product.category}</td>
+                    <td>${product.item_description}</td>
+                    <td>${product.packaging}</td>
+                    <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
+                    <td>${product.quantity}</td>
                 </tr>
             `;
             orderDetailsBody.append(row);
         });
         
         $('#orderDetailsModal').show();
-        
-        // Ensure table styles are applied
-        addTableStyles();
     } catch (e) {
         console.error('Error parsing order details:', e);
         alert('Error displaying order details');
@@ -461,15 +391,6 @@ window.changeStatus = function(status) {
         }
     });
 };
-
-// Update summary total when quantities change
-function updateSummaryTotal() {
-    let total = 0;
-    selectedProducts.forEach(product => {
-        total += product.price * product.quantity;
-    });
-    $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`);
-}
 
 // Document ready function
 $(document).ready(function() {
@@ -562,27 +483,20 @@ $(document).ready(function() {
     });
 
     // Handle quantity change in cart
-    $(document).on('change', '.cart-quantity', function() {
+    $(document).on('change input', '.cart-quantity', function() {
         const index = $(this).data('index');
-        const newQuantity = parseInt($(this).val(), 10);
+        let newQuantity = parseInt($(this).val(), 10);
         
-        if (newQuantity > 0) {
-            // Automatically cap at 200
-            selectedProducts[index].quantity = Math.min(newQuantity, 200);
-            updateCartTotal();
+        if (isNaN(newQuantity) || newQuantity < 1) {
+            newQuantity = 1;
+            $(this).val(1);
+        } else if (newQuantity > 200) {
+            newQuantity = 200;
+            $(this).val(200);
         }
-    });
-
-    // Handle quantity change in order summary
-    $(document).on('change', '.summary-quantity', function() {
-        const index = $(this).data('index');
-        const newQuantity = parseInt($(this).val(), 10);
         
-        if (newQuantity > 0) {
-            // Automatically cap at 200
-            selectedProducts[index].quantity = Math.min(newQuantity, 200);
-            updateSummaryTotal();
-        }
+        selectedProducts[index].quantity = newQuantity;
+        updateCartTotal();
     });
 
     // Form submission
@@ -659,7 +573,4 @@ $(document).ready(function() {
             this.value = 200;
         }
     });
-
-    // Apply table styles immediately
-    addTableStyles();
 });
