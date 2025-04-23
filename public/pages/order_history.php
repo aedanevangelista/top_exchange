@@ -22,7 +22,7 @@ if ($result && $result->num_rows > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transaction History</title>
+    <title>Order History</title>
     <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -79,7 +79,7 @@ if ($result && $result->num_rows > 0) {
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="orders-header">
-            <h1>Transaction History</h1>
+            <h1>Order History</h1>
             <!-- Updated search section to match inventory.php design -->
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Search by PO Number, Username, or Order Date...">
