@@ -57,58 +57,67 @@ if ($result && $result->num_rows > 0) {
         
         /* Make the table properly aligned */
         .summary-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-}
-
-.summary-table th,
-.summary-table td {
-    padding: 8px;
-    border: 1px solid #ddd;
-    text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Fixed column widths for better alignment */
-.summary-table th:nth-child(1),
-.summary-table td:nth-child(1) {
-    width: 18%;
-}
-
-.summary-table th:nth-child(2),
-.summary-table td:nth-child(2) {
-    width: 35%;
-}
-
-.summary-table th:nth-child(3),
-.summary-table td:nth-child(3) {
-    width: 15%;
-}
-
-.summary-table th:nth-child(4),
-.summary-table td:nth-child(4) {
-    width: 15%;
-}
-
-.summary-table th:nth-child(5),
-.summary-table td:nth-child(5) {
-    width: 17%;
-}
-
-/* Keep input elements properly sized */
-.summary-table input[type="number"] {
-    width: 90%;
-    box-sizing: border-box;
-}
-
-/* Add some spacing between rows */
-.summary-table tr {
-    height: 40px;
-    width: 100%;
-}
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        
+        /* Apply proper scrolling to tbody only */
+        .summary-table tbody {
+            display: block;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        /* Make table header and rows consistent */
+        .summary-table thead, 
+        .summary-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        
+        /* Account for scrollbar width in header */
+        .summary-table thead {
+            width: calc(100% - 17px);
+        }
+        
+        /* Cell styling for proper alignment and text overflow */
+        .summary-table th,
+        .summary-table td {
+            padding: 8px;
+            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border: 1px solid #ddd;
+        }
+        
+        /* Specify consistent column widths */
+        .summary-table th:nth-child(1),
+        .summary-table td:nth-child(1) {
+            width: 18%;
+        }
+        
+        .summary-table th:nth-child(2),
+        .summary-table td:nth-child(2) {
+            width: 26%;
+        }
+        
+        .summary-table th:nth-child(3),
+        .summary-table td:nth-child(3) {
+            width: 18%;
+        }
+        
+        .summary-table th:nth-child(4),
+        .summary-table td:nth-child(4) {
+            width: 18%;
+        }
+        
+        .summary-table th:nth-child(5),
+        .summary-table td:nth-child(5) {
+            width: 20%;
+        }
         
         /* Style for the total section */
         .summary-total {
@@ -125,6 +134,44 @@ if ($result && $result->num_rows > 0) {
             max-width: 100%;
             text-align: center;
         }
+        
+        /* Search Container Styling (exactly as in order_history.php) */
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-container input {
+            padding: 8px 12px;
+            border-radius: 20px 0 0 20px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            width: 220px;
+        }
+
+        .search-container .search-btn {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 0 20px 20px 0;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .search-container .search-btn:hover {
+            background-color: #2471a3;
+        }
+        
+        .main-content {
+            padding-top: 0;
+        }
+        
+        .orders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -132,7 +179,11 @@ if ($result && $result->num_rows > 0) {
     <div class="main-content">
         <div class="orders-header">
             <h1>Pending Orders</h1>
-            <!-- Removed filter section since we only show pending orders -->
+            <!-- Added search box matching order_history.php -->
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
+                <button class="search-btn"><i class="fas fa-search"></i></button>
+            </div>
             <button onclick="openAddOrderForm()" class="add-order-btn">
                 <i class="fas fa-plus"></i> Add New Order
             </button>
@@ -397,7 +448,7 @@ if ($result && $result->num_rows > 0) {
     </div>
 
     <script src="/js/orders.js"></script>
-        <script>
+    <script>
     window.openStatusModal = function(poNumber, username, ordersJson) {
         $('#statusMessage').text('Change order status for ' + poNumber);
         $('#statusModal').data('po_number', poNumber).show();
@@ -771,9 +822,45 @@ if ($result && $result->num_rows > 0) {
             }
         });
     };
-        </script>
+    </script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
+    
+        // Search functionality (client-side, same as in order_history.php)
+        $(document).ready(function() {
+            // Search functionality
+            $("#searchInput").on("input", function() {
+                let searchText = $(this).val().toLowerCase().trim();
+                console.log("Searching for:", searchText); // Debug line
+
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+            });
+            
+            // Handle search button click (same functionality as typing)
+            $(".search-btn").on("click", function() {
+                let searchText = $("#searchInput").val().toLowerCase().trim();
+                
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+            });
+        });
     </script> 
 </body>
 </html>
