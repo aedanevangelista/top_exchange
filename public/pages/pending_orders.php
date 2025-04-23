@@ -134,6 +134,10 @@ if ($result && $result->num_rows > 0) {
             max-width: 100%;
             text-align: center;
         }
+
+        thead {
+            width:100%;
+        }
     </style>
 </head>
 <body>
