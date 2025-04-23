@@ -368,73 +368,67 @@ if ($result && $result->num_rows > 0) {
         .summary-table {
             width: 100%;
             border-collapse: collapse;
-            table-layout: fixed;
+            table-layout: fixed; /* Keep this to ensure columns maintain consistent width */
         }
-        
+
         .summary-table tbody {
             display: block;
             max-height: 250px;
             overflow-y: auto;
         }
-        
+
         .summary-table thead, 
         .summary-table tbody tr {
             display: table;
             width: 100%;
             table-layout: fixed;
         }
-        
+
         .summary-table thead {
             width: calc(100% - 17px); /* Compensate for scrollbar width */
         }
-        
-        /* Column widths for better layout */
+
+        /* Set specific widths for each column to ensure alignment */
+        .summary-table th,
+        .summary-table td {
+            padding: 8px;
+            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Adjust column widths to match across header and rows */
         .summary-table th:nth-child(1),
         .summary-table td:nth-child(1) {
             width: 20%;
         }
-        
+
         .summary-table th:nth-child(2),
         .summary-table td:nth-child(2) {
-            width: 30%;
+            width: 25%;
         }
-        
+
         .summary-table th:nth-child(3),
         .summary-table td:nth-child(3) {
-            width: 15%;
+            width: 20%;
         }
-        
+
         .summary-table th:nth-child(4),
         .summary-table td:nth-child(4) {
             width: 15%;
         }
-        
+
         .summary-table th:nth-child(5),
         .summary-table td:nth-child(5) {
             width: 20%;
         }
-        
-        /* Keep the total fixed at the bottom of the summary */
-        .summary-total {
-            margin-top: 10px;
-            text-align: right;
-            font-weight: bold;
-            border-top: 1px solid #ddd;
-            padding-top: 10px;
-        }
-        
+
         /* Style for quantity inputs */
         .summary-quantity {
             width: 80px;
             max-width: 100%;
             text-align: center;
-        }
-        
-        /* Prevent text overflow in table cells */
-        .summary-table td {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
     </style>
 
