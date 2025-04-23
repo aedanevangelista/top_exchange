@@ -125,13 +125,31 @@ if ($result && $result->num_rows > 0) {
             width: 90%;
         }
         
-        /* Modified the header style for rejected orders */
+        /* Update the header style to match other ordering pages */
         .orders-header {
-            background-color: #dc3545;
+            background-color: #435ebe; /* Match the standard blue color */
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         
         .status-btn {
             background-color: #17a2b8;
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.2s;
         }
         
         .status-btn:hover {
@@ -239,7 +257,7 @@ if ($result && $result->num_rows > 0) {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${order.category || 'N/A'}</td>
-                    <td>${order.product_name || 'N/A'}</td>
+                    <td>${order.product_name || order.item_description || 'N/A'}</td>
                     <td>${order.packaging || 'N/A'}</td>
                     <td>PHP ${parseFloat(order.price).toFixed(2)}</td>
                     <td>${order.quantity}</td>
