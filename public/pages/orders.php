@@ -23,8 +23,8 @@ $stmt->close();
 $orders = []; // Initialize $orders as an empty array
 $sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status, progress FROM orders WHERE status = 'Active'";
 
-// Order by delivery_date ascending
-$sql .= " ORDER BY delivery_date ASC";
+// Order by order_date descending (latest orders first)
+$sql .= " ORDER BY order_date DESC";
 
 $stmt = $conn->prepare($sql);
 $stmt->execute();
@@ -299,6 +299,9 @@ if ($result && $result->num_rows > 0) {
             background-color: #2471a3;
         }
 
+        .main-content {
+            padding-top: 0;
+        }
     </style>
 </head>
 <body>
@@ -318,6 +321,7 @@ if ($result && $result->num_rows > 0) {
                     <tr>
                         <th>PO Number</th>
                         <th>Username</th>
+                        <th>Order Date</th>
                         <th>Delivery Date</th>
                         <th>Progress</th>
                         <th>Orders</th>
@@ -332,6 +336,7 @@ if ($result && $result->num_rows > 0) {
                             <tr>
                                 <td><?= htmlspecialchars($order['po_number']) ?></td>
                                 <td><?= htmlspecialchars($order['username']) ?></td>
+                                <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td>
                                     <div class="progress-bar-container">
@@ -358,7 +363,7 @@ if ($result && $result->num_rows > 0) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="no-orders">No orders found.</td>
+                            <td colspan="9" class="no-orders">No orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
