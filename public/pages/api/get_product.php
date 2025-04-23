@@ -2,43 +2,33 @@
 session_start();
 include "../../../backend/db_connection.php";
 
-if (!isset($_SESSION['admin_user_id']) && !isset($_SESSION['user_id'])) {
-    header('Content-Type: application/json');
+header('Content-Type: application/json');
+
+// Check if admin is logged in
+if (!isset($_SESSION['admin_user_id'])) {
     echo json_encode(['error' => 'Not authenticated']);
     exit;
 }
 
-if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Invalid product ID']);
+if (!isset($_GET['id'])) {
+    echo json_encode(['error' => 'No product ID provided']);
     exit;
 }
 
-$product_id = intval($_GET['id']);
+$product_id = $_GET['id'];
+$type = isset($_GET['type']) && $_GET['type'] === 'walkin' ? 'walkin' : 'company';
+$table = $type === 'walkin' ? 'walkin_products' : 'products';
 
-$stmt = $conn->prepare("SELECT product_id, category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image, ingredients FROM products WHERE product_id = ?");
+$stmt = $conn->prepare("SELECT product_id, category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image FROM $table WHERE product_id = ?");
 $stmt->bind_param("i", $product_id);
 $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
-    header('Content-Type: application/json');
     echo json_encode(['error' => 'Product not found']);
     exit;
 }
 
 $product = $result->fetch_assoc();
-
-// Parse ingredients JSON if not null
-if ($product['ingredients'] !== null) {
-    $product['ingredients'] = json_decode($product['ingredients'], true);
-} else {
-    $product['ingredients'] = [];
-}
-
-header('Content-Type: application/json');
 echo json_encode($product);
-
-$stmt->close();
-$conn->close();
 ?>

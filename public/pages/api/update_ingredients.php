@@ -4,37 +4,36 @@ include "../../../backend/db_connection.php";
 
 header('Content-Type: application/json');
 
+// Check if admin is logged in
 if (!isset($_SESSION['admin_user_id'])) {
     echo json_encode(['success' => false, 'message' => 'Not authenticated']);
     exit;
 }
 
-// Get JSON data from request
-$data = json_decode(file_get_contents('php://input'), true);
+// Get the input data from the POST request body
+$input = json_decode(file_get_contents('php://input'), true);
 
-if (!isset($data['product_id']) || !is_numeric($data['product_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Invalid product ID']);
+// Validate required fields
+if (!isset($input['product_id'], $input['ingredients'])) {
+    echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
     exit;
 }
 
-if (!isset($data['ingredients']) || !is_array($data['ingredients'])) {
-    echo json_encode(['success' => false, 'message' => 'Invalid ingredients data']);
-    exit;
-}
+$product_id = $input['product_id'];
+$ingredients = $input['ingredients'];
+$product_type = isset($input['product_type']) && $input['product_type'] === 'walkin' ? 'walkin' : 'company';
+$table = $product_type === 'walkin' ? 'walkin_products' : 'products';
 
-$product_id = intval($data['product_id']);
-$ingredients = json_encode($data['ingredients']);
+// Convert the ingredients array to JSON
+$ingredients_json = json_encode($ingredients);
 
-$stmt = $conn->prepare("UPDATE products SET ingredients = ? WHERE product_id = ?");
-$stmt->bind_param("si", $ingredients, $product_id);
-$result = $stmt->execute();
+// Update the product's ingredients
+$stmt = $conn->prepare("UPDATE $table SET ingredients = ? WHERE product_id = ?");
+$stmt->bind_param("si", $ingredients_json, $product_id);
 
-if ($result) {
+if ($stmt->execute()) {
     echo json_encode(['success' => true, 'message' => 'Ingredients updated successfully']);
 } else {
-    echo json_encode(['success' => false, 'message' => 'Failed to update ingredients: ' . $conn->error]);
+    echo json_encode(['success' => false, 'message' => 'Failed to update ingredients']);
 }
-
-$stmt->close();
-$conn->close();
 ?>

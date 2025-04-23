@@ -9,10 +9,17 @@ if (!isset($_SESSION['admin_user_id'])) {
     exit();
 }
 
+// Determine which tab is active
+$active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'company';
+
+// Process form submissions for standard product updates
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST['formType'] == 'edit_product') {
     header('Content-Type: application/json');
     
     $product_id = $_POST['product_id'];
+    $is_walkin = isset($_POST['is_walkin']) && $_POST['is_walkin'] == '1';
+    $table = $is_walkin ? 'walkin_products' : 'products';
+    
     $category = $_POST['category'];
     $product_name = $_POST['product_name']; // New field
     $item_description = $_POST['item_description'];
@@ -29,7 +36,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         $product_name = $_POST['new_product_name'];
     }
     
-    $stmt = $conn->prepare("SELECT item_description, product_image FROM products WHERE product_id = ?");
+    $stmt = $conn->prepare("SELECT item_description, product_image FROM $table WHERE product_id = ?");
     $stmt->bind_param("i", $product_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -45,121 +52,121 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         mkdir($upload_dir, 0777, true);
     }
     
-// Replace the image upload handling code (around lines 48-92) with this improved version
-if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
-    $allowed_types = ['image/jpeg', 'image/png'];
-    $max_size = 20 * 1024 * 1024;
-    $file_type = $_FILES['product_image']['type'];
-    $file_size = $_FILES['product_image']['size'];
-    
-    if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-        // Create proper folder path based on product variant
-        $item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $item_description);
-        $item_dir = $upload_dir . $item_folder . '/';
+    // Image upload handling code
+    if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
+        $allowed_types = ['image/jpeg', 'image/png'];
+        $max_size = 20 * 1024 * 1024;
+        $file_type = $_FILES['product_image']['type'];
+        $file_size = $_FILES['product_image']['size'];
         
-        // Create the directory if it doesn't exist
-        if (!file_exists($item_dir)) {
-            mkdir($item_dir, 0777, true);
-        }
-        
-        // Step 1: Handle item description change (if the product variant name changed)
-        if ($old_item_description != $item_description && !empty($old_product_image)) {
-            $old_item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $old_item_description);
-            $old_item_dir = $upload_dir . $old_item_folder . '/';
+        if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
+            // Create proper folder path based on product variant
+            $item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $item_description);
+            $item_dir = $upload_dir . $item_folder . '/';
             
-            if (file_exists($old_item_dir)) {
-                error_log("Cleaning up old folder: " . $old_item_dir);
-                $old_files = array_diff(scandir($old_item_dir), array('.', '..'));
-                foreach ($old_files as $file) {
-                    if (file_exists($old_item_dir . $file)) {
-                        if (unlink($old_item_dir . $file)) {
-                            error_log("Successfully deleted old file: " . $old_item_dir . $file);
+            // Create the directory if it doesn't exist
+            if (!file_exists($item_dir)) {
+                mkdir($item_dir, 0777, true);
+            }
+            
+            // Step 1: Handle item description change (if the product variant name changed)
+            if ($old_item_description != $item_description && !empty($old_product_image)) {
+                $old_item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $old_item_description);
+                $old_item_dir = $upload_dir . $old_item_folder . '/';
+                
+                if (file_exists($old_item_dir)) {
+                    error_log("Cleaning up old folder: " . $old_item_dir);
+                    $old_files = array_diff(scandir($old_item_dir), array('.', '..'));
+                    foreach ($old_files as $file) {
+                        if (file_exists($old_item_dir . $file)) {
+                            if (unlink($old_item_dir . $file)) {
+                                error_log("Successfully deleted old file: " . $old_item_dir . $file);
+                            } else {
+                                error_log("Failed to delete old file: " . $old_item_dir . $file);
+                            }
+                        }
+                    }
+                    
+                    // Try to remove old directory if empty
+                    if (count(array_diff(scandir($old_item_dir), array('.', '..'))) == 0) {
+                        if (rmdir($old_item_dir)) {
+                            error_log("Successfully removed old directory: " . $old_item_dir);
                         } else {
-                            error_log("Failed to delete old file: " . $old_item_dir . $file);
+                            error_log("Failed to remove old directory: " . $old_item_dir);
+                        }
+                    }
+                }
+            }
+            
+            // Step 2: CLEAN UP EXISTING FILES - Make sure this happens BEFORE trying to upload
+            if (file_exists($item_dir)) {
+                error_log("Cleaning up current folder before new upload: " . $item_dir);
+                $existing_files = array_diff(scandir($item_dir), array('.', '..'));
+                
+                // Log what we found
+                error_log("Found " . count($existing_files) . " existing files to remove");
+                
+                // Remove each file with proper error handling
+                foreach ($existing_files as $file) {
+                    if (file_exists($item_dir . $file)) {
+                        if (unlink($item_dir . $file)) {
+                            error_log("Successfully deleted file: " . $item_dir . $file);
+                        } else {
+                            error_log("Failed to delete file: " . $item_dir . $file . " - Error: " . error_get_last()['message']);
                         }
                     }
                 }
                 
-                // Try to remove old directory if empty
-                if (count(array_diff(scandir($old_item_dir), array('.', '..'))) == 0) {
-                    if (rmdir($old_item_dir)) {
-                        error_log("Successfully removed old directory: " . $old_item_dir);
-                    } else {
-                        error_log("Failed to remove old directory: " . $old_item_dir);
-                    }
-                }
-            }
-        }
-        
-        // Step 2: CLEAN UP EXISTING FILES - Make sure this happens BEFORE trying to upload
-        if (file_exists($item_dir)) {
-            error_log("Cleaning up current folder before new upload: " . $item_dir);
-            $existing_files = array_diff(scandir($item_dir), array('.', '..'));
-            
-            // Log what we found
-            error_log("Found " . count($existing_files) . " existing files to remove");
-            
-            // Remove each file with proper error handling
-            foreach ($existing_files as $file) {
-                if (file_exists($item_dir . $file)) {
-                    if (unlink($item_dir . $file)) {
-                        error_log("Successfully deleted file: " . $item_dir . $file);
-                    } else {
-                        error_log("Failed to delete file: " . $item_dir . $file . " - Error: " . error_get_last()['message']);
-                    }
+                // Double-check that files were actually deleted
+                $remaining_files = array_diff(scandir($item_dir), array('.', '..'));
+                if (count($remaining_files) > 0) {
+                    error_log("Warning: Some files could not be deleted. Remaining files: " . implode(", ", $remaining_files));
+                } else {
+                    error_log("All files successfully deleted from directory");
                 }
             }
             
-            // Double-check that files were actually deleted
-            $remaining_files = array_diff(scandir($item_dir), array('.', '..'));
-            if (count($remaining_files) > 0) {
-                error_log("Warning: Some files could not be deleted. Remaining files: " . implode(", ", $remaining_files));
-            } else {
-                error_log("All files successfully deleted from directory");
-            }
-        }
-        
-        // Step 3: Now that cleanup is done, proceed with the upload
-        $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
-        $filename = 'product_image.' . $file_extension;
-        $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
-        $target_file_path = $item_dir . $filename;
-        
-        // Add a small delay to ensure file system operations are complete
-        usleep(100000); // 0.1 second delay
-        
-        error_log("Attempting to upload new image to: " . $target_file_path);
-        
-        if (move_uploaded_file($_FILES['product_image']['tmp_name'], $target_file_path)) {
-            error_log("Successfully uploaded new image");
-            $product_image = $product_image_path;
+            // Step 3: Now that cleanup is done, proceed with the upload
+            $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
+            $filename = 'product_image.' . $file_extension;
+            $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
+            $target_file_path = $item_dir . $filename;
             
-            // Verify the file was actually created
-            if (file_exists($target_file_path)) {
-                error_log("Verified file exists: " . $target_file_path . " (size: " . filesize($target_file_path) . " bytes)");
+            // Add a small delay to ensure file system operations are complete
+            usleep(100000); // 0.1 second delay
+            
+            error_log("Attempting to upload new image to: " . $target_file_path);
+            
+            if (move_uploaded_file($_FILES['product_image']['tmp_name'], $target_file_path)) {
+                error_log("Successfully uploaded new image");
+                $product_image = $product_image_path;
+                
+                // Verify the file was actually created
+                if (file_exists($target_file_path)) {
+                    error_log("Verified file exists: " . $target_file_path . " (size: " . filesize($target_file_path) . " bytes)");
+                } else {
+                    error_log("Warning: File doesn't exist after move_uploaded_file reported success!");
+                }
             } else {
-                error_log("Warning: File doesn't exist after move_uploaded_file reported success!");
+                $upload_error = error_get_last();
+                error_log("Failed to upload image. Error: " . ($upload_error ? $upload_error['message'] : 'Unknown error'));
+                error_log("Upload details - tmp_name: " . $_FILES['product_image']['tmp_name'] . ", target: " . $target_file_path);
+                echo json_encode(['success' => false, 'message' => 'Failed to upload image. Please try again.']);
+                exit;
             }
         } else {
-            $upload_error = error_get_last();
-            error_log("Failed to upload image. Error: " . ($upload_error ? $upload_error['message'] : 'Unknown error'));
-            error_log("Upload details - tmp_name: " . $_FILES['product_image']['tmp_name'] . ", target: " . $target_file_path);
-            echo json_encode(['success' => false, 'message' => 'Failed to upload image. Please try again.']);
+            error_log("Invalid file type or size. Type: $file_type, Size: $file_size bytes");
+            echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
             exit;
         }
-    } else {
-        error_log("Invalid file type or size. Type: $file_type, Size: $file_size bytes");
-        echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
-        exit;
     }
-}
     
-    $stmt = $conn->prepare("UPDATE products SET category = ?, product_name = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, product_image = ? WHERE product_id = ?");
+    $stmt = $conn->prepare("UPDATE $table SET category = ?, product_name = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, product_image = ? WHERE product_id = ?");
     $stmt->bind_param("ssssdissi", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $product_id);
     
     if ($stmt->execute()) {
         if ($old_item_description != $item_description && !empty($product_image)) {
-            $stmt = $conn->prepare("UPDATE products SET product_image = ? WHERE item_description = ? AND product_id != ?");
+            $stmt = $conn->prepare("UPDATE $table SET product_image = ? WHERE item_description = ? AND product_id != ?");
             $stmt->bind_param("ssi", $product_image, $item_description, $product_id);
             $stmt->execute();
         }
@@ -183,13 +190,26 @@ if ($raw_materials->num_rows > 0) {
     }
 }
 
-$sql = "SELECT DISTINCT category FROM products ORDER BY category";
+// Fetch categories from both tables (products and walkin_products)
+$sql = "SELECT DISTINCT category FROM products 
+        UNION 
+        SELECT DISTINCT category FROM walkin_products 
+        ORDER BY category";
 $categories = $conn->query($sql);
 
-$sql = "SELECT DISTINCT product_name FROM products WHERE product_name IS NOT NULL AND product_name != '' ORDER BY product_name";
+// Fetch product names from both tables
+$sql = "SELECT DISTINCT product_name FROM products WHERE product_name IS NOT NULL AND product_name != '' 
+        UNION 
+        SELECT DISTINCT product_name FROM walkin_products WHERE product_name IS NOT NULL AND product_name != '' 
+        ORDER BY product_name";
 $product_names = $conn->query($sql);
 
-$sql = "SELECT product_id, category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image FROM products ORDER BY category, product_name, item_description";
+// Fetch products data based on active tab
+if ($active_tab === 'company') {
+    $sql = "SELECT product_id, category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image FROM products ORDER BY category, product_name, item_description";
+} else {
+    $sql = "SELECT product_id, category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image FROM walkin_products ORDER BY category, product_name, item_description";
+}
 $result = $conn->query($sql);
 ?>
 
@@ -204,6 +224,7 @@ $result = $conn->query($sql);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
+        /* Existing styles */
         #myModal {
             display: none;
             position: fixed;
@@ -365,6 +386,52 @@ $result = $conn->query($sql);
         .product-name {
             font-weight: bold;
         }
+
+        /* New styles for tabs */
+        .inventory-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+            padding: 0;
+            list-style: none;
+        }
+
+        .tab-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+            transition: all 0.3s;
+            position: relative;
+            top: 1px;
+        }
+
+        .tab-item.active {
+            background-color: #fff;
+            border-color: #ddd;
+            border-bottom: 1px solid #fff;
+            color: #333;
+        }
+
+        .tab-item:not(.active) {
+            background-color: #f8f8f8;
+            color: #777;
+        }
+
+        .tab-item:not(.active):hover {
+            background-color: #f0f0f0;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
         
         .view-ingredients-btn {
             background-color: #555555; /* Dark gray color */
@@ -485,6 +552,16 @@ $result = $conn->query($sql);
             </button>
         </div>
 
+        <!-- Tabs navigation -->
+        <ul class="inventory-tabs">
+            <li class="tab-item <?php echo ($active_tab === 'company') ? 'active' : ''; ?>" onclick="window.location.href='?tab=company'">
+                <i class="fas fa-building"></i> Company Orders
+            </li>
+            <li class="tab-item <?php echo ($active_tab === 'walkin') ? 'active' : ''; ?>" onclick="window.location.href='?tab=walkin'">
+                <i class="fas fa-walking"></i> Walk-in Customers
+            </li>
+        </ul>
+
         <div class="inventory-table-container">
             <table class="inventory-table">
                 <thead>
@@ -522,33 +599,33 @@ $result = $conn->query($sql);
                                 <td id='stock-{$row['product_id']}'>{$row['stock_quantity']}</td>
                                 <td class='product-image-cell'>";
                                 
-                        if (!empty($row['product_image'])) {
-                            echo "<img src='" . htmlspecialchars($row['product_image']) . "' alt='Product Image' class='product-img' onclick='openModal(this)'>";
-                        } else {
-                            echo "<div class='no-image'>No image</div>";
-                        }
+                            if (!empty($row['product_image'])) {
+                                echo "<img src='" . htmlspecialchars($row['product_image']) . "' alt='Product Image' class='product-img' onclick='openModal(this)'>";
+                            } else {
+                                echo "<div class='no-image'>No image</div>";
+                            }
 
-                        echo "</td>
+                            echo "</td>
                                 <td class='additional-desc'>" . htmlspecialchars($row['additional_description'] ?? '') . "</td>
                                 <td>
-                                    <button class='view-ingredients-btn' onclick='viewIngredients({$row['product_id']})'>
+                                    <button class='view-ingredients-btn' onclick='viewIngredients({$row['product_id']}, \"" . ($active_tab === 'walkin' ? 'walkin' : 'company') . "\")'>
                                         <i class='fas fa-list'></i> View
                                     </button>
                                 </td>
                                 <td class='adjust-stock'>
-                                    <button class='add-btn' onclick='updateStock({$row['product_id']}, \"add\")'>+</button>
+                                    <button class='add-btn' onclick='updateStock({$row['product_id']}, \"add\", \"" . ($active_tab === 'walkin' ? 'walkin' : 'company') . "\")'>+</button>
                                     <input type='number' id='adjust-{$row['product_id']}' min='1' value='1'>
-                                    <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\")'>-</button>
+                                    <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\", \"" . ($active_tab === 'walkin' ? 'walkin' : 'company') . "\")'>-</button>
                                 </td>
                                 <td>
-                                    <button class='edit-btn' onclick='editProduct({$row['product_id']})'>
+                                    <button class='edit-btn' onclick='editProduct({$row['product_id']}, \"" . ($active_tab === 'walkin' ? 'walkin' : 'company') . "\")'>
                                         <i class='fas fa-edit'></i> Edit
                                     </button>
                                 </td>
                             </tr>";
                         }
                     } else {
-                        echo "<tr><td colspan='10'>No products found.</td></tr>";
+                        echo "<tr><td colspan='11'>No products found.</td></tr>";
                     }
                     ?>
                 </tbody>
@@ -560,6 +637,8 @@ $result = $conn->query($sql);
                 <h2><i class="fas fa-plus-circle"></i> Add New Product</h2>
                 <div id="addProductError" class="error-message"></div>
                 <form id="add-product-form" method="POST">
+                    <input type="hidden" id="add_product_type" name="product_type" value="<?php echo $active_tab === 'walkin' ? 'walkin' : 'company'; ?>">
+                    
                     <label for="category">Category:</label>
                     <select id="category" name="category" required>
                         <option value="">Select Category</option>
@@ -583,6 +662,7 @@ $result = $conn->query($sql);
                     <select id="product_name" name="product_name" required>
                         <option value="">Select Product Name</option>
                         <?php
+                        $product_names->data_seek(0);
                         if ($product_names->num_rows > 0) {
                             while ($row = $product_names->fetch_assoc()) {
                                 echo "<option value='{$row['product_name']}'>{$row['product_name']}</option>";
@@ -629,6 +709,7 @@ $result = $conn->query($sql);
                 <form id="edit-product-form" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="formType" value="edit_product">
                     <input type="hidden" id="edit_product_id" name="product_id">
+                    <input type="hidden" id="edit_product_type" name="is_walkin" value="0">
                     
                     <div class="form-grid">
                         <div>
@@ -713,6 +794,7 @@ $result = $conn->query($sql);
                 
                 <form id="ingredients-form">
                     <input type="hidden" id="ingredients_product_id">
+                    <input type="hidden" id="ingredients_product_type" value="company">
                     
                     <table class="ingredients-table" id="ingredients-table">
                         <thead>
@@ -755,6 +837,8 @@ $result = $conn->query($sql);
     <script>
         // Store raw materials for the ingredients dropdown
         const rawMaterials = <?php echo json_encode($raw_materials_list); ?>;
+        // Store current active tab
+        const activeTab = "<?php echo $active_tab; ?>";
         
         toastr.options = {
             "positionClass": "toast-bottom-right",
@@ -865,6 +949,7 @@ $result = $conn->query($sql);
             const packaging = document.getElementById('packaging').value;
             const price = document.getElementById('price').value;
             const additional_description = document.getElementById('additional_description').value;
+            const product_type = document.getElementById('add_product_type').value;
             
             const formData = new FormData();
             formData.append('category', category);
@@ -874,6 +959,7 @@ $result = $conn->query($sql);
             formData.append('price', price);
             formData.append('additional_description', additional_description);
             formData.append('stock_quantity', 0);
+            formData.append('product_type', product_type);  // Add product type (company or walkin)
             
             const product_image = document.getElementById('product_image').files[0];
             if (product_image) {
@@ -915,7 +1001,7 @@ $result = $conn->query($sql);
             });
         });
 
-        // Similar updates for the edit form submission handler
+        // Edit form submission handler
         document.getElementById('edit-product-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -974,6 +1060,9 @@ $result = $conn->query($sql);
             document.getElementById('addProductError').textContent = '';
             document.getElementById('new-category-container').style.display = 'none';
             document.getElementById('new-product-name-container').style.display = 'none';
+            
+            // Set the product type based on the active tab
+            document.getElementById('add_product_type').value = activeTab === 'walkin' ? 'walkin' : 'company';
         }
 
         function closeAddProductModal() {
@@ -988,9 +1077,14 @@ $result = $conn->query($sql);
             document.getElementById('ingredientsModal').style.display = 'none';
         }
 
-        // Replace the editProduct function with this improved version
-        function editProduct(productId) {
-            fetch(`../pages/api/get_product.php?id=${productId}`)
+        // Updated editProduct function to handle both product types
+        function editProduct(productId, productType) {
+            let apiUrl = `../pages/api/get_product.php?id=${productId}`;
+            if (productType === 'walkin') {
+                apiUrl += '&type=walkin';
+            }
+            
+            fetch(apiUrl)
                 .then(response => {
                     return response.text().then(text => {
                         try {
@@ -1004,6 +1098,7 @@ $result = $conn->query($sql);
                 .then(product => {
                     // Set form values
                     document.getElementById('edit_product_id').value = product.product_id;
+                    document.getElementById('edit_product_type').value = productType === 'walkin' ? '1' : '0';
                     
                     // Set category
                     const categorySelect = document.getElementById('edit_category');
@@ -1075,8 +1170,14 @@ $result = $conn->query($sql);
                 });
         }
 
-        function viewIngredients(productId) {
-            fetch(`../pages/api/get_product_ingredients.php?id=${productId}`)
+        // Updated viewIngredients function to handle both product types
+        function viewIngredients(productId, productType) {
+            let apiUrl = `../pages/api/get_product_ingredients.php?id=${productId}`;
+            if (productType === 'walkin') {
+                apiUrl += '&type=walkin';
+            }
+            
+            fetch(apiUrl)
                 .then(response => {
                     return response.text().then(text => {
                         try {
@@ -1091,8 +1192,9 @@ $result = $conn->query($sql);
                     // Set product name in the modal title
                     document.getElementById('ingredients-product-name').textContent = product.item_description;
                     
-                    // Set product ID for form submission
+                    // Set product ID and type for form submission
                     document.getElementById('ingredients_product_id').value = product.product_id;
+                    document.getElementById('ingredients_product_type').value = productType;
                     
                     // Clear previous ingredients table
                     const tbody = document.getElementById('ingredients-tbody');
@@ -1148,8 +1250,10 @@ $result = $conn->query($sql);
             row.remove();
         }
 
+        // Updated saveIngredients function to handle both product types
         function saveIngredients() {
             const productId = document.getElementById('ingredients_product_id').value;
+            const productType = document.getElementById('ingredients_product_type').value;
             const rows = document.querySelectorAll('#ingredients-tbody tr');
             const ingredients = [];
             
@@ -1172,7 +1276,8 @@ $result = $conn->query($sql);
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
-                    product_id: productId, 
+                    product_id: productId,
+                    product_type: productType,
                     ingredients: ingredients 
                 })
             })
@@ -1201,13 +1306,19 @@ $result = $conn->query($sql);
             });
         }
 
-        function updateStock(productId, action) {
+        // Updated updateStock function to handle both product types
+        function updateStock(productId, action, productType) {
             const amount = document.getElementById(`adjust-${productId}`).value;
 
             fetch("../pages/api/update_stock.php", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ product_id: productId, action: action, amount: amount })
+                body: JSON.stringify({ 
+                    product_id: productId, 
+                    action: action, 
+                    amount: amount,
+                    product_type: productType 
+                })
             })
             .then(response => {
                 return response.text().then(text => {
