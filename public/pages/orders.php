@@ -55,7 +55,7 @@ if ($result && $result->num_rows > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orders Management</title>
+    <title>Orders</title>
     <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="/css/toast.css">

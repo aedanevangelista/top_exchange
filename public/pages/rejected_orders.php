@@ -125,7 +125,7 @@ if ($result && $result->num_rows > 0) {
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="orders-header">
-            <h1>Rejected Orders Management</h1>
+            <h1>Rejected Orders</h1>
         </div>
         <div class="orders-table-container">
             <table class="orders-table">

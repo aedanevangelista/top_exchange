@@ -53,7 +53,7 @@ if ($result && $result->num_rows > 0) {
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="orders-header">
-            <h1>Pending Orders Management</h1>
+            <h1>Pending Orders</h1>
             <!-- Removed filter section since we only show pending orders -->
             <button onclick="openAddOrderForm()" class="add-order-btn">
                 <i class="fas fa-plus"></i> Add New Order
