@@ -287,45 +287,72 @@ if ($result && $result->num_rows > 0) {
             font-weight: bold;
         }
         
-        /* Search box styles */
-        .search-section {
+        /* Updated search box styles to match order history */
+        .orders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .header-title {
+            margin: 0;
+        }
+        
+        .header-actions {
             display: flex;
             align-items: center;
-            margin-bottom: 15px;
+            gap: 15px;
+        }
+        
+        .search-container {
+            position: relative;
+            width: 300px;
         }
         
         .search-input {
-            padding: 8px 12px;
+            width: 100%;
+            padding: 10px 15px 10px 40px;
             border: 1px solid #ddd;
-            border-radius: 4px;
-            width: 250px;
-            margin-right: 10px;
+            border-radius: 30px;
+            font-size: 14px;
+            transition: all 0.3s;
         }
         
-        .search-btn {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+        .search-input:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
         }
         
-        .search-btn:hover {
-            background-color: #0069d9;
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
         }
         
         .clear-search {
-            background-color: #6c757d;
-            margin-left: 10px;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
         }
         
         .clear-search:hover {
-            background-color: #5a6268;
+            color: #dc3545;
         }
     </style>
 </head>
@@ -333,20 +360,20 @@ if ($result && $result->num_rows > 0) {
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="orders-header">
-            <h1>Orders Management</h1>
-            <!-- Add PO Search Box -->
-            <div class="search-section">
-                <form action="" method="GET" style="display: flex;">
-                    <input type="text" name="po_search" class="search-input" placeholder="Search by PO Number..." value="<?= htmlspecialchars($po_search) ?>">
-                    <button type="submit" class="search-btn">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                    <?php if(!empty($po_search)): ?>
-                        <a href="/public/pages/orders.php" class="search-btn clear-search">
-                            <i class="fas fa-times"></i> Clear
-                        </a>
-                    <?php endif; ?>
-                </form>
+            <h1 class="header-title">Orders Management</h1>
+            <div class="header-actions">
+                <!-- Updated search box to match order history design -->
+                <div class="search-container">
+                    <form action="" method="GET" id="search-form">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" name="po_search" class="search-input" placeholder="Search by PO Number..." value="<?= htmlspecialchars($po_search) ?>" onkeyup="if(event.keyCode === 13) this.form.submit();">
+                        <?php if(!empty($po_search)): ?>
+                            <button type="button" class="clear-search" onclick="window.location.href='/public/pages/orders.php'">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        <?php endif; ?>
+                    </form>
+                </div>
             </div>
         </div>
         <div class="orders-table-container">
