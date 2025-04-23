@@ -49,35 +49,24 @@ if ($result && $result->num_rows > 0) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <style>
-        /* Update the overlay-content max-height to ensure it fits on screen */
-        .overlay-content {
-            max-height: 90vh; /* Limit height to 90% of the viewport height */
-            overflow-y: auto; /* Enable vertical scrolling if content overflows */
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Make the order form scrollable when needed */
-        .order-form {
-            display: flex;
-            flex-direction: column;
-            max-height: 85vh;
-            overflow-y: auto;
-        }
-
-        /* Add fixed height with scroll for order summary table */
+        /* Only add scrolling to the Order Summary table and not the whole modal */
         .order-summary {
             margin-top: 20px;
             margin-bottom: 20px;
         }
         
-        .order-summary table {
-            display: block;
-            max-height: 250px; /* Set a fixed max height */
-            overflow-y: auto; /* Add vertical scrollbar when needed */
+        /* Make only the tbody section of the summary table scrollable */
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
         }
         
-        /* Make sure the table header columns align with body columns */
+        .summary-table tbody {
+            display: block;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
         .summary-table thead, 
         .summary-table tbody tr {
             display: table;
@@ -89,57 +78,13 @@ if ($result && $result->num_rows > 0) {
             width: calc(100% - 17px); /* Compensate for scrollbar width */
         }
         
-        .summary-table tbody {
-            display: block;
-            max-height: 220px; /* Set a max height for the tbody */
-            overflow-y: auto;
-        }
-
-        /* Fixed bottom positioning for form buttons */
-        .form-buttons {
-            margin-top: 20px;
-            position: sticky;
-            bottom: 10px;
-            background-color: white;
-            padding-top: 10px;
-            border-top: 1px solid #eee;
-            z-index: 10;
-        }
-        
-        /* Ensure the inventory modal fits on screen */
-        #inventoryOverlay .overlay-content {
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .inventory-table-container {
-            flex: 1;
-            overflow-y: auto;
-        }
-        
-        /* Cart modal scrolling */
-        #cartModal .overlay-content {
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .cart-table-container {
-            flex: 1;
-            overflow-y: auto;
-            max-height: 50vh;
-        }
-
-        /* Make sure the total amount sticks at the bottom of the summary */
+        /* Keep the total fixed at the bottom of the summary */
         .summary-total {
-            position: sticky;
-            bottom: 0;
-            background-color: white;
-            padding: 10px 0;
-            border-top: 1px solid #eee;
             margin-top: 10px;
             text-align: right;
+            font-weight: bold;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
         }
     </style>
 </head>
