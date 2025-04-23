@@ -123,17 +123,16 @@ function updateOrderSummary() {
         
         const row = `
             <tr>
-                <td class="category-cell">${product.category}</td>
-                <td class="description-cell">${product.item_description}</td>
-                <td class="packaging-cell">${product.packaging}</td>
-                <td class="price-cell">PHP ${product.price.toFixed(2)}</td>
-                <td class="quantity-cell">
+                <td>${product.category}</td>
+                <td>${product.item_description}</td>
+                <td>${product.packaging}</td>
+                <td>PHP ${product.price.toFixed(2)}</td>
+                <td>
                     <input type="number" 
                         class="summary-quantity" 
                         value="${product.quantity}" 
                         min="1"
                         max="200"
-                        oninput="if(this.value > 200) this.value = 200;"
                         data-index="${index}">
                 </td>
             </tr>
@@ -144,20 +143,43 @@ function updateOrderSummary() {
     $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`);
     
     // Add event listener for quantity changes in summary
-    $('.summary-quantity').on('change', function() {
+    $('.summary-quantity').on('change input', function() {
         const index = $(this).data('index');
-        const newQuantity = parseInt($(this).val(), 10);
+        let newQuantity = parseInt($(this).val(), 10);
         
-        if (newQuantity > 0) {
-            // Automatically cap at 200
-            selectedProducts[index].quantity = Math.min(newQuantity, 200);
-            updateSummaryTotal(); // Update only the total rather than refreshing the entire summary
+        if (isNaN(newQuantity) || newQuantity < 1) {
+            newQuantity = 1;
+            $(this).val(1);
+        } else if (newQuantity > 200) {
+            newQuantity = 200;
+            $(this).val(200);
+        }
+        
+        selectedProducts[index].quantity = newQuantity;
+        updateSummaryTotal();
+    });
+}
+
+// Function to update just the summary total without rebuilding the entire table
+function updateSummaryTotal() {
+    let total = 0;
+    selectedProducts.forEach(product => {
+        total += product.price * product.quantity;
+    });
+    $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`);
+}
+
+// Add the global input handler to the document.ready function
+$(document).ready(function() {
+    // ...existing code...
+    
+    // Add a global input event handler to restrict all number inputs in the app to max 200
+    $(document).on('input', 'input[type="number"]', function() {
+        if (parseInt(this.value) > 200) {
+            this.value = 200;
         }
     });
-
-    // Add the CSS styles for the table cells to ensure proper layout
-    addTableStyles();
-}
+});
 
 // Function to add CSS styles to ensure proper table layout
 function addTableStyles() {

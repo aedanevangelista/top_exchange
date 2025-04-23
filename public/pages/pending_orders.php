@@ -357,84 +357,84 @@ if ($result && $result->num_rows > 0) {
         </div>
     </div>
 
-    <style>
-        /* Raw Materials table styling */
-        .raw-materials-container {
+   <style>
+        /* Only add scrolling to the Order Summary table and not the whole modal */
+        .order-summary {
+            margin-top: 20px;
             margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            max-height: 400px;
-            overflow-y: auto;
         }
         
-        .raw-materials-container h3 {
-            margin-top: 0;
-            color: #333;
-            font-size: 1.1em;
-            margin-bottom: 10px;
-        }
-        
-        .materials-table-container {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-        }
-        
-        .materials-table {
+        /* Make only the tbody section of the summary table scrollable */
+        .summary-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.9em;
-            margin-bottom: 15px;
+            table-layout: fixed;
         }
         
-        .materials-table th, 
-        .materials-table td {
-            padding: 8px 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
+        .summary-table tbody {
+            display: block;
+            max-height: 250px;
+            overflow-y: auto;
         }
         
-        .materials-table th {
-            background-color: #f1f1f1;
-            position: sticky;
-            top: 0;
-            z-index: 1;
+        .summary-table thead, 
+        .summary-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
         }
         
-        .material-sufficient {
-            color: #28a745;
-            font-weight: bold;
+        .summary-table thead {
+            width: calc(100% - 17px); /* Compensate for scrollbar width */
         }
         
-        .material-insufficient {
-            color: #dc3545;
-            font-weight: bold;
+        /* Column widths for better layout */
+        .summary-table th:nth-child(1),
+        .summary-table td:nth-child(1) {
+            width: 20%;
         }
         
-        .materials-status {
+        .summary-table th:nth-child(2),
+        .summary-table td:nth-child(2) {
+            width: 30%;
+        }
+        
+        .summary-table th:nth-child(3),
+        .summary-table td:nth-child(3) {
+            width: 15%;
+        }
+        
+        .summary-table th:nth-child(4),
+        .summary-table td:nth-child(4) {
+            width: 15%;
+        }
+        
+        .summary-table th:nth-child(5),
+        .summary-table td:nth-child(5) {
+            width: 20%;
+        }
+        
+        /* Keep the total fixed at the bottom of the summary */
+        .summary-total {
             margin-top: 10px;
-            padding: 8px 12px;
-            border-radius: 4px;
+            text-align: right;
             font-weight: bold;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
         }
         
-        .status-sufficient {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+        /* Style for quantity inputs */
+        .summary-quantity {
+            width: 80px;
+            max-width: 100%;
+            text-align: center;
         }
         
-        .status-insufficient {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        /* Make modal larger to fit tables */
-        #statusModal .modal-content {
-            max-width: 700px;
-            width: 90%;
+        /* Prevent text overflow in table cells */
+        .summary-table td {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
     </style>
 
