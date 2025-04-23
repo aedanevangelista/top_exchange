@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Apr 21, 2025 at 04:46 PM
+-- Generation Time: Apr 23, 2025 at 05:26 PM
 -- Server version: 10.11.10-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -51,7 +51,8 @@ INSERT INTO `accounts` (`id`, `username`, `password`, `created_at`, `role`, `sta
 (62, 'Ryan', '123', '2025-03-09 07:14:07', 'Admin', 'Archived', NULL, NULL),
 (68, 'Test', '123', '2025-03-30 08:44:21', 'Secretary', 'Archived', NULL, NULL),
 (69, 'aedanpogi', '123', '2025-03-30 14:22:26', 'Admin', 'Active', NULL, NULL),
-(70, 'asddd', '123', '2025-03-30 15:42:31', 'Admin', 'Active', NULL, NULL);
+(70, 'asddd', '123', '2025-03-30 15:42:31', 'Admin', 'Active', NULL, NULL),
+(71, 'staff', '123', '2025-04-23 08:01:07', 'Staff', 'Active', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -101,8 +102,40 @@ CREATE TABLE `clients_accounts` (
 INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company`, `company_address`, `business_proof`, `status`, `balance`, `created_at`, `client_session_id`, `client_last_login`, `verification_code`, `code_expires_at`) VALUES
 (17, 'aedanevangelista', '$2y$10$jBu29UPrI.tiA6RY78Sfmeq3MX07il.3QHNi/5yLJp4pPPRR2u1eW', 'aedanevangelista@gmail.com', '0912345678', 'NCR', 'Quezon City', 'Top Exchange', '', '[\"\\/uploads\\/aedanevangelista\\/67ea26c320cf1_BeefFilletSauce.png\"]', 'Pending', 0.00, '2025-03-31 05:23:15', NULL, NULL, NULL, NULL),
 (18, 'aedanpogi', '$2y$10$8gTpS4G2a5./WFrpYVavL.OJYt.rF2d4Cqvi1QzKeTXbSxWWwWe5O', 'aedanpogi@gmail.com', '09185585149', 'NCR', 'Quezon City', '', '', '[\"\\/uploads\\/aedanpogi\\/67ea344a30392_BeancurdRoll.png\",\"\\/uploads\\/aedanpogi\\/67ea344a30655_BeefFilletSauce.png\",\"\\/uploads\\/aedanpogi\\/67ea344a3083b_BeefSiomai.png\"]', 'Active', 0.00, '2025-03-31 06:20:58', NULL, NULL, NULL, NULL),
-(19, 'Boters', '$2y$10$ZCuwFddafUAQjSSkGiW1u.fn3L5oomcUGr/scGq/7KP7gwHsJHJHa', 'jefferson45santonia@gmail.com', '09185585149', 'Metro Manila', 'Quezon City', '', '10 Aguinaldo', '[\"\\/uploads\\/Boters\\/RadishCake.png\"]', 'Active', 0.00, '2025-04-17 05:58:45', NULL, NULL, '964336', '2025-04-20 00:53:12'),
-(20, 'Ryan', '$2y$10$j7do4aHoJGhm7q98GMYV8uLjw7bxz6kBYvsvVjoYR.giafGEXuLGi', 'ryanfrancisrodriguez02@gmail.com', '09154864843', 'NCR', 'Quezon City', '', '1-B Palomaria Street Veterans Village Project 7 ', '[\"\\/uploads\\/Ryan\\/FlowChart.drawio.png\"]', 'Active', 0.00, '2025-04-17 12:14:15', NULL, NULL, NULL, NULL);
+(19, 'Boters', '$2y$10$ZCuwFddafUAQjSSkGiW1u.fn3L5oomcUGr/scGq/7KP7gwHsJHJHa', 'jefferson45santonia@gmail.com', '09185585149', 'Metro Manila', 'Quezon City', '', '10 Aguinaldo', '[\"\\/uploads\\/Boters\\/RadishCake.png\"]', 'Active', 0.00, '2025-04-17 05:58:45', NULL, NULL, NULL, NULL),
+(20, 'Ryan', '$2y$10$j7do4aHoJGhm7q98GMYV8uLjw7bxz6kBYvsvVjoYR.giafGEXuLGi', 'ryanfrancisrodriguez02@gmail.com', '09154864843', 'NCR', 'Quezon City', '', '1-B Palomaria Street Veterans Village Project 7 ', '[\"\\/uploads\\/Ryan\\/FlowChart.drawio.png\"]', 'Active', 0.00, '2025-04-17 12:14:15', NULL, NULL, NULL, NULL),
+(21, 'maamcristylen', '$2y$10$MEx8fUB6GcMBUGyTUE2V3eYaeivKVvq4JD3dvpFvnjem2yZ55PPmy', 'esporsadocristylen09@gmail.com', '123456789101112', 'NCR', 'Quezon  City', 'STI College Munoz-EDSA', '123 STI College Munoz-EDSA', '[\"\\/uploads\\/maamcristylen\\/Untitled design (1).png\"]', 'Active', 0.00, '2025-04-23 08:07:25', NULL, NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `drivers`
+--
+
+CREATE TABLE `drivers` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `address` text NOT NULL,
+  `contact_no` varchar(50) NOT NULL,
+  `availability` enum('Available','Not Available') NOT NULL DEFAULT 'Available',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `manufacturing_logs`
+--
+
+CREATE TABLE `manufacturing_logs` (
+  `log_id` int(11) NOT NULL,
+  `po_number` varchar(50) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `product_name` varchar(255) NOT NULL,
+  `quantity` int(11) NOT NULL,
+  `created_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -168,7 +201,24 @@ INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_dat
 (57, 'aedanevangelista-8', 'aedanevangelista', '2025-04-15', '2025-04-23', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
 (58, 'Ryan-1', 'Ryan', '2025-04-17', '2025-04-18', '1-B Palomaria Street Veterans Village Project 7', '[{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":10}]', 2700.00, 'Active', '09154864843', '', 'Bank Transfer', 2700.00, 0.00, 60, '[]', NULL, '[[true,true,true,true,true,true,false,false,false,false]]', '[60]'),
 (59, 'aedanpogi-1', 'aedanpogi', '2025-04-19', '2025-04-23', 'No company address available', '[{\"product_id\":17,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Special Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":260,\"quantity\":5},{\"product_id\":16,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Regular Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":180,\"quantity\":5},{\"product_id\":18,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Kutchay Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":275,\"quantity\":5}]', 3575.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(60, 'Ryan-2', 'Ryan', '2025-04-19', '2025-04-23', '1-B Palomaria Street Veterans Village Project 7 ', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":4,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Large)\",\"packaging\":\"6pcs/pack\",\"price\":235,\"quantity\":5},{\"product_id\":5,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs/pack\",\"price\":250,\"quantity\":5}]', 6800.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL);
+(60, 'Ryan-2', 'Ryan', '2025-04-19', '2025-04-23', '1-B Palomaria Street Veterans Village Project 7 ', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":4,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Large)\",\"packaging\":\"6pcs/pack\",\"price\":235,\"quantity\":5},{\"product_id\":5,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs/pack\",\"price\":250,\"quantity\":5}]', 6800.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(61, 'Boters-1', 'Boters', '2025-04-21', '2025-04-22', '10 Aguinaldo', '[{\"product_id\":7,\"category\":\"\",\"item_description\":\"Bola Bola Siopao (Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"310.00\",\"quantity\":1}]', 360.00, 'Completed', '09185585149', '', 'Cash on Delivery', 310.00, 50.00, 100, '[0]', NULL, '[[true]]', '[100]'),
+(69, 'aedanpogi-2', 'aedanpogi', '2025-04-23', '2025-04-30', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":430}]', 120400.00, 'Rejected', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `order_status_logs`
+--
+
+CREATE TABLE `order_status_logs` (
+  `log_id` int(11) NOT NULL,
+  `po_number` varchar(50) NOT NULL,
+  `old_status` varchar(20) NOT NULL,
+  `new_status` varchar(20) NOT NULL,
+  `changed_by` varchar(50) NOT NULL,
+  `changed_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -198,7 +248,10 @@ INSERT INTO `pages` (`page_id`, `page_name`, `file_path`) VALUES
 (9, 'Payment History', 'payment_history.php'),
 (12, 'Raw Materials', 'raw_materials.php'),
 (13, 'Pending Orders', 'pending_orders.php'),
-(14, 'Department Forecast', 'department_forecast.php');
+(14, 'Department Forecast', 'department_forecast.php'),
+(16, 'Staff', ''),
+(17, 'Drivers', 'drivers.php'),
+(18, 'Rejected Orders', 'rejected_orders.php');
 
 -- --------------------------------------------------------
 
@@ -332,7 +385,8 @@ INSERT INTO `products` (`product_id`, `category`, `product_name`, `item_descript
 (70, 'Noodles & Wrappers', 'Beancurd Wrapper', 'Beancurd Wrapper', '1kg/pack', 1600.00, 0, '', '/uploads/products/Beancurd_Wrapper/product_image.png', NULL),
 (71, 'Noodles & Wrappers', 'Spring Roll Wrapper', 'Spring Roll Wrapper', '25pcs/pack', 90.00, 0, '', '/uploads/products/Spring_Roll_Wrapper/product_image.png', NULL),
 (72, 'Noodles & Wrappers', 'Gyoza Wrapper', 'Gyoza Wrapper (Minimum 10 Packs)', '250g/pack', 70.00, 0, '', '/uploads/products/Gyoza_Wrapper__Minimum_10_Packs_/product_image.png', NULL),
-(82, 'Pork', 'Sisig', 'Sisig (Small)', '100g', 500.00, 0, '0', '/uploads/products/Sisig__Small_/product_image.png', NULL);
+(82, 'Pork', 'Sisig', 'Sisig (Small)', '100g', 500.00, 0, '0', '/uploads/products/Sisig__Small_/product_image.png', NULL),
+(83, 'Dimsum & Dumplings', 'Xiao Long Bao', 'Xiao Long Bao (A)', '6pcs/pack', 300.00, 0, '0', '/uploads/products/Xiao_Long_Bao__A_/product_image.png', NULL);
 
 -- --------------------------------------------------------
 
@@ -356,7 +410,7 @@ INSERT INTO `raw_materials` (`material_id`, `name`, `stock_quantity`, `created_a
 (1, 'Chicken Meat', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:59'),
 (2, 'Chicken Feet', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:53'),
 (3, 'Chicken Breading', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:51'),
-(4, 'Chicken Diced Seasoned', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:53'),
+(4, 'Chicken Diced Seasoned', 9610.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
 (5, 'Chicken Lemon Seasoned', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:57'),
 (6, 'Chicken Leg Boneless', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:35:54'),
 (7, 'Chicken Leg Quarter', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:35:56'),
@@ -376,7 +430,7 @@ INSERT INTO `raw_materials` (`material_id`, `name`, `stock_quantity`, `created_a
 (21, 'Pork Sweet & Sour Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:53'),
 (22, 'Porkloin', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:55'),
 (23, 'Pork Spareribs', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:52'),
-(24, 'Minced Pork', 67500.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
+(24, 'Minced Pork', 47780.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
 (25, 'Siao Long Pao (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:01'),
 (26, 'Wanton (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:13'),
 (27, 'Veg. Spring Roll (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:11'),
@@ -390,7 +444,7 @@ INSERT INTO `raw_materials` (`material_id`, `name`, `stock_quantity`, `created_a
 (35, 'Beef Short Plates', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:42'),
 (36, 'Beef Sliced Seasoned', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:44'),
 (37, 'Beef Tenderloin Seasoned', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:45'),
-(38, 'Shrimp', 99800.00, '2025-04-07 16:57:58', '2025-04-19 07:56:26'),
+(38, 'Shrimp', 99440.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
 (39, 'Crabstick', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:05'),
 (40, 'Scallop', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:59'),
 (41, 'Dried Japanese Scallop', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:36:11'),
@@ -404,21 +458,21 @@ INSERT INTO `raw_materials` (`material_id`, `name`, `stock_quantity`, `created_a
 (49, 'Cream Dory Fillet', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:06'),
 (50, 'Cream Dory Fish Skin', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:07'),
 (51, 'Tai Tai Fish', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:08'),
-(52, 'Soy Sauce', 97775.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
+(52, 'Soy Sauce', 96490.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
 (53, 'Japanese Soy Sauce', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:26'),
-(54, 'Hoisin Sauce', 8980.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(55, 'Star Anise', 258.50, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(56, 'Butter (Anchor)', 9010.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
+(54, 'Hoisin Sauce', 8227.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
+(55, 'Star Anise', 237.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
+(56, 'Butter (Anchor)', 8233.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
 (57, 'Margarine Buttercup (Buttercup)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:29'),
 (58, 'Cheese Quickmelt (Magnolia)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:48'),
 (59, 'Cheese Unsalted (Magnolia)', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:35:50'),
 (60, 'Cheese (Eden)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:47'),
 (61, 'Dark Chocolate Bar', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:10'),
-(62, 'Flour', 67450.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(63, 'Sugar', 98075.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(64, 'Yeast', 99885.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(65, 'Baking Powder', 10084.50, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
-(66, 'Milk', 8180.00, '2025-04-07 16:57:58', '2025-04-19 07:57:41'),
+(62, 'Flour', 41420.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
+(63, 'Sugar', 96829.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
+(64, 'Yeast', 99622.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
+(65, 'Baking Powder', 9821.50, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
+(66, 'Milk', 6877.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
 (67, 'Glutinous Rice', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:21'),
 (68, 'Chestnut', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:35:51'),
 (69, 'Tofu', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:09'),
@@ -453,11 +507,31 @@ CREATE TABLE `roles` (
 --
 
 INSERT INTO `roles` (`role_id`, `role_name`, `status`, `pages`) VALUES
-(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory, Orders, Order History, Payment History, Forecast, Raw Materials, Pending Orders, Department Forecast'),
-(2, 'Manager', 'active', 'Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, Forecast, Raw Materials, Pending Orders, Department Forecast'),
-(3, 'Secretary', 'active', 'Customers, Dashboard, Inventory, Order History, Orders, Payment History, Raw Materials, Pending Orders'),
-(4, 'Accountant', 'active', 'Dashboard, Order History, Orders, Payment History, Pending Orders'),
-(36, 'aed', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, User Roles, Raw Materials, Pending Orders');
+(1, 'Admin', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, User Roles, Inventory, Orders, Order History, Payment History, Forecast, Raw Materials, Pending Orders, Department Forecast, Staff, Drivers, Rejected Orders'),
+(2, 'Manager', 'active', 'Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, Forecast, Raw Materials, Pending Orders, Department Forecast, Staff, Drivers, Rejected Orders'),
+(3, 'Secretary', 'active', 'Customers, Dashboard, Inventory, Order History, Orders, Payment History, Raw Materials, Pending Orders, Rejected Orders'),
+(4, 'Accountant', 'active', 'Dashboard, Order History, Orders, Payment History, Pending Orders, Rejected Orders'),
+(36, 'aed', 'active', 'Accounts - Admin, Accounts - Clients, Customers, Dashboard, Inventory, Order History, Orders, Payment History, User Roles, Raw Materials, Pending Orders, Rejected Orders'),
+(38, 'Staff', 'active', 'Dashboard, Inventory, Order History, Orders, Pending Orders, Raw Materials');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `walkin_products`
+--
+
+CREATE TABLE `walkin_products` (
+  `product_id` int(11) NOT NULL,
+  `category` varchar(50) NOT NULL,
+  `product_name` varchar(255) DEFAULT NULL,
+  `item_description` varchar(255) NOT NULL,
+  `packaging` varchar(50) DEFAULT NULL,
+  `price` decimal(10,2) NOT NULL,
+  `stock_quantity` int(11) NOT NULL DEFAULT 0,
+  `additional_description` text DEFAULT NULL,
+  `product_image` varchar(255) DEFAULT NULL,
+  `ingredients` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Indexes for dumped tables
@@ -485,6 +559,18 @@ ALTER TABLE `clients_accounts`
   ADD UNIQUE KEY `unique_username` (`username`);
 
 --
+-- Indexes for table `drivers`
+--
+ALTER TABLE `drivers`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `manufacturing_logs`
+--
+ALTER TABLE `manufacturing_logs`
+  ADD PRIMARY KEY (`log_id`);
+
+--
 -- Indexes for table `monthly_payments`
 --
 ALTER TABLE `monthly_payments`
@@ -497,6 +583,13 @@ ALTER TABLE `monthly_payments`
 ALTER TABLE `orders`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `po_number` (`po_number`);
+
+--
+-- Indexes for table `order_status_logs`
+--
+ALTER TABLE `order_status_logs`
+  ADD PRIMARY KEY (`log_id`),
+  ADD KEY `po_number` (`po_number`);
 
 --
 -- Indexes for table `pages`
@@ -540,6 +633,12 @@ ALTER TABLE `roles`
   ADD UNIQUE KEY `unique_role` (`role_name`);
 
 --
+-- Indexes for table `walkin_products`
+--
+ALTER TABLE `walkin_products`
+  ADD PRIMARY KEY (`product_id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -547,7 +646,7 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=71;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
 
 --
 -- AUTO_INCREMENT for table `balance_history`
@@ -559,7 +658,19 @@ ALTER TABLE `balance_history`
 -- AUTO_INCREMENT for table `clients_accounts`
 --
 ALTER TABLE `clients_accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+
+--
+-- AUTO_INCREMENT for table `drivers`
+--
+ALTER TABLE `drivers`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `manufacturing_logs`
+--
+ALTER TABLE `manufacturing_logs`
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `monthly_payments`
@@ -571,13 +682,19 @@ ALTER TABLE `monthly_payments`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
+
+--
+-- AUTO_INCREMENT for table `order_status_logs`
+--
+ALTER TABLE `order_status_logs`
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `pages`
 --
 ALTER TABLE `pages`
-  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `page_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `payment_history`
@@ -595,7 +712,7 @@ ALTER TABLE `payment_status_history`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=83;
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=84;
 
 --
 -- AUTO_INCREMENT for table `raw_materials`
@@ -607,7 +724,13 @@ ALTER TABLE `raw_materials`
 -- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+  MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+
+--
+-- AUTO_INCREMENT for table `walkin_products`
+--
+ALTER TABLE `walkin_products`
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
