@@ -1132,7 +1132,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     // Variables to store the current PO for PDF generation
     let currentPOData = null;
     
-function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+    function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
     try {
         // Store current PO data
         currentPOData = {
@@ -1144,7 +1144,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             deliveryAddress,
             ordersJson,
             totalAmount,
-            specialInstructions  // Add special instructions to stored data
+            specialInstructions  // Keep for reference but don't display in PDF
         };
         
         // Populate the hidden PDF content silently
@@ -1161,16 +1161,9 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             maximumFractionDigits: 2
         });
         
-        // Add special instructions if they exist
+        // Hide special instructions section regardless of content
         const instructionsSection = document.getElementById('printInstructionsSection');
-        const instructionsContent = document.getElementById('printSpecialInstructions');
-        
-        if (specialInstructions && specialInstructions.trim().length > 0) {
-            instructionsContent.textContent = specialInstructions;
-            instructionsSection.style.display = 'block';
-        } else {
-            instructionsSection.style.display = 'none';
-        }
+        instructionsSection.style.display = 'none';
         
         // Parse and populate order items
         const orderItems = JSON.parse(ordersJson);
@@ -1229,9 +1222,80 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         alert('Error preparing PDF data');
     }
 }
-
     // Function to generate Purchase Order PDF
-    function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+   function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+    try {
+        // Store current PO data for later use
+        currentPOData = {
+            poNumber,
+            username,
+            company,
+            orderDate,
+            deliveryDate,
+            deliveryAddress,
+            ordersJson,
+            totalAmount,
+            specialInstructions  // Keep for reference but don't display in PDF
+        };
+        
+        // Set basic information
+        document.getElementById('printCompany').textContent = company || 'No Company Name';
+        document.getElementById('printPoNumber').textContent = poNumber;
+        document.getElementById('printUsername').textContent = username;
+        document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
+        document.getElementById('printOrderDate').textContent = orderDate;
+        document.getElementById('printDeliveryDate').textContent = deliveryDate;
+        
+        // Hide the special instructions section regardless of content
+        const instructionsSection = document.getElementById('printInstructionsSection');
+        instructionsSection.style.display = 'none';
+        
+        // Format the total amount with commas and decimals
+        document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        
+        // Parse and populate order items
+        const orderItems = JSON.parse(ordersJson);
+        const orderItemsBody = document.getElementById('printOrderItems');
+        
+        // Clear previous content
+        orderItemsBody.innerHTML = '';
+        
+        // Add items to the table
+        orderItems.forEach(item => {
+            const row = document.createElement('tr');
+            
+            // Calculate item total
+            const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+            
+            row.innerHTML = `
+                <td>${item.category || ''}</td>
+                <td>${item.item_description}</td>
+                <td>${item.packaging || ''}</td>
+                <td>${item.quantity}</td>
+                <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}</td>
+                <td>PHP ${itemTotal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}</td>
+            `;
+            
+            orderItemsBody.appendChild(row);
+        });
+        
+        // Show the PDF preview
+        document.getElementById('pdfPreview').style.display = 'block';
+        
+    } catch (e) {
+        console.error('Error preparing PDF data:', e);
+        alert('Error preparing PDF data');
+    }
+}
         try {
             // Store current PO data for later use
             currentPOData = {
