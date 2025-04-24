@@ -972,72 +972,276 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }, 5000);
     }
     
-    // UPDATED: Enhanced viewOrderDetails function with better JSON handling
-    function viewOrderDetails(ordersJson) {
+// UPDATED: Enhanced viewOrderDetails function with better JSON handling
+function viewOrderDetails(ordersJson) {
+    try {
+        console.log("Raw orders data:", ordersJson); // Debug: Log the raw data
+        
+        // Try to parse the JSON string
+        let orderDetails;
+        
         try {
-            console.log("Raw orders data:", ordersJson); // Debug: Log the raw data
+            // First attempt to parse as is
+            orderDetails = JSON.parse(ordersJson);
+        } catch (parseError) {
+            console.error("Initial JSON parse error:", parseError);
             
-            // Try to parse the JSON string
-            let orderDetails;
-            
+            // Try to fix common JSON issues
             try {
-                // First attempt to parse as is
-                orderDetails = JSON.parse(ordersJson);
-            } catch (parseError) {
-                console.error("Initial JSON parse error:", parseError);
-                
-                // Try to fix common JSON issues
+                // Replace escaped single quotes with regular single quotes
+                const fixedJson = ordersJson.replace(/\\'/g, "'");
+                orderDetails = JSON.parse(fixedJson);
+                console.log("Parsed after fixing escaped quotes");
+            } catch (error) {
+                // If that failed, try another approach
                 try {
-                    // Replace escaped single quotes with regular single quotes
-                    const fixedJson = ordersJson.replace(/\\'/g, "'");
-                    orderDetails = JSON.parse(fixedJson);
-                    console.log("Parsed after fixing escaped quotes");
-                } catch (error) {
-                    // If that failed, try another approach
-                    try {
-                        // Sometimes the data might be double-encoded
-                        orderDetails = JSON.parse(JSON.parse(ordersJson));
-                        console.log("Parsed after double parsing");
-                    } catch (doubleError) {
-                        throw new Error("Could not parse order details: " + parseError.message);
-                    }
+                    // Sometimes the data might be double-encoded
+                    orderDetails = JSON.parse(JSON.parse(ordersJson));
+                    console.log("Parsed after double parsing");
+                } catch (doubleError) {
+                    throw new Error("Could not parse order details: " + parseError.message);
                 }
             }
+        }
+        
+        // Check if orderDetails is actually an array
+        if (!Array.isArray(orderDetails)) {
+            console.error("Order details is not an array:", orderDetails);
+            throw new Error("Invalid order details format: expected an array");
+        }
+        
+        const orderDetailsBody = document.getElementById('orderDetailsBody');
+        
+        // Clear previous content
+        orderDetailsBody.innerHTML = '';
+        
+        // Add each product to the table
+        orderDetails.forEach(product => {
+            const row = document.createElement('tr');
             
-            // Check if orderDetails is actually an array
-            if (!Array.isArray(orderDetails)) {
-                console.error("Order details is not an array:", orderDetails);
-                throw new Error("Invalid order details format: expected an array");
+            row.innerHTML = `
+                <td>${product.category || 'N/A'}</td>
+                <td>${product.item_description || 'N/A'}</td>
+                <td>${product.packaging || 'N/A'}</td>
+                <td>PHP ${parseFloat(product.price || 0).toFixed(2)}</td>
+                <td>${product.quantity || 0}</td>
+            `;
+            
+            orderDetailsBody.appendChild(row);
+        });
+        
+        // Show modal
+        document.getElementById('orderDetailsModal').style.display = 'flex';
+    } catch (e) {
+        console.error('Error parsing order details:', e);
+        showToast('Error displaying order details: ' + e.message, 'error');
+    }
+}
+
+// UPDATED: Enhanced printPurchaseOrder function
+function printPurchaseOrder(poNumber) {
+    // Show loading message or spinner
+    showToast("Generating Purchase Order...", "info");
+    
+    // Fetch order details from the server
+    fetch(`/backend/get_po_details.php?po_number=${poNumber}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Failed to fetch PO details");
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                console.log("Order data received:", data.order); // Debug line
+                console.log("Raw orders field:", data.order.orders); // Debug line
+                generatePDF(data.order);
+            } else {
+                showToast("Error: " + data.message, "error");
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            showToast("Error generating Purchase Order: " + error.message, "error");
+        });
+}
+
+// UPDATED: Enhanced generatePDF function with better JSON handling
+function generatePDF(order) {
+    try {
+        // Make sure jsPDF is available
+        if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+            showToast("PDF library not loaded. Please refresh the page.", "error");
+            return;
+        }
+        
+        // Initialize PDF
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Set up document properties
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 20;
+        let yPos = margin;
+        
+        // Add company header
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text(order.company || 'N/A', margin, yPos);
+        yPos += 10;
+        
+        // Add PO Number with bold label and normal text value
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PO #:', margin, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(order.po_number, margin + 25, yPos);
+        yPos += 7;
+        
+        // Add Username with bold label and normal text value
+        doc.setFont('helvetica', 'bold');
+        doc.text('User:', margin, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(order.username, margin + 25, yPos);
+        yPos += 7;
+        
+        // Add Delivery Address with bold label and normal text value
+        doc.setFont('helvetica', 'bold');
+        doc.text('Delivery Address:', margin, yPos);
+        
+        // Split long address into multiple lines if needed
+        const deliveryAddress = doc.splitTextToSize(order.delivery_address, pageWidth - (margin * 2) - 40);
+        doc.setFont('helvetica', 'normal');
+        doc.text(deliveryAddress, margin + 40, yPos);
+        
+        // Adjust yPos based on how many lines the address takes
+        yPos += (deliveryAddress.length * 7) + 5;
+        
+        // Add right side information
+        doc.setFontSize(12);
+        
+        // Add Order Date on right side with bold label and normal text value
+        doc.setFont('helvetica', 'bold');
+        doc.text('Order Date:', pageWidth - margin - 55, margin + 10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(order.order_date, pageWidth - margin, margin + 10, { align: 'right' });
+        
+        // Add Delivery Date on right side with bold label and normal text value
+        doc.setFont('helvetica', 'bold');
+        doc.text('Delivery Date:', pageWidth - margin - 55, margin + 17);
+        doc.setFont('helvetica', 'normal');
+        doc.text(order.delivery_date, pageWidth - margin, margin + 17, { align: 'right' });
+        
+        // Add a separator line
+        doc.setDrawColor(200);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 10;
+        
+        // UPDATED: More robust order items handling
+        let orderItems = [];
+        let tableData = [];
+        
+        try {
+            // Check the type of order.orders and handle accordingly
+            if (typeof order.orders === 'string') {
+                try {
+                    // First attempt to parse as is
+                    orderItems = JSON.parse(order.orders);
+                } catch (parseError) {
+                    console.error("Initial JSON parse error:", parseError);
+                    
+                    // Try to fix common JSON issues
+                    try {
+                        // Replace escaped single quotes with regular single quotes
+                        const fixedJson = order.orders.replace(/\\'/g, "'");
+                        orderItems = JSON.parse(fixedJson);
+                        console.log("Parsed after fixing escaped quotes");
+                    } catch (error) {
+                        // If that failed, try another approach
+                        try {
+                            // Sometimes the data might be double-encoded
+                            orderItems = JSON.parse(JSON.parse(order.orders));
+                            console.log("Parsed after double parsing");
+                        } catch (doubleError) {
+                            throw new Error("Could not parse order items: " + parseError.message);
+                        }
+                    }
+                }
+            } else if (Array.isArray(order.orders)) {
+                orderItems = order.orders;
+            } else {
+                console.error("Order items is neither a string nor an array:", order.orders);
+                throw new Error("Invalid order items format");
             }
             
-            const orderDetailsBody = document.getElementById('orderDetailsBody');
+            // Make sure orderItems is an array before using map
+            if (!Array.isArray(orderItems)) {
+                console.error("Order items is not an array after parsing:", orderItems);
+                throw new Error("Order items is not an array");
+            }
             
-            // Clear previous content
-            orderDetailsBody.innerHTML = '';
+            // Create table data
+            tableData = orderItems.map(item => [
+                item.category || 'N/A',
+                item.item_description || 'N/A',
+                item.packaging || 'N/A',
+                `PHP ${parseFloat(item.price || 0).toFixed(2)}`,
+                item.quantity?.toString() || '0',
+                `PHP ${(parseFloat(item.price || 0) * parseInt(item.quantity || 0)).toFixed(2)}`
+            ]);
+        } catch (error) {
+            console.error("Error processing order items:", error);
+            console.log("Order items content:", order.orders);
             
-            // Add each product to the table
-            orderDetails.forEach(product => {
-                const row = document.createElement('tr');
-                
-                row.innerHTML = `
-                    <td>${product.category || 'N/A'}</td>
-                    <td>${product.item_description || 'N/A'}</td>
-                    <td>${product.packaging || 'N/A'}</td>
-                    <td>PHP ${parseFloat(product.price || 0).toFixed(2)}</td>
-                    <td>${product.quantity || 0}</td>
-                `;
-                
-                orderDetailsBody.appendChild(row);
-            });
-            
-            // Show modal
-            document.getElementById('orderDetailsModal').style.display = 'flex';
-        } catch (e) {
-            console.error('Error parsing order details:', e);
-            showToast('Error displaying order details: ' + e.message, 'error');
+            // Fallback: create a single row with error message
+            tableData = [["Error", "Could not process order items", "", "", "", ""]];
+            showToast("Warning: Could not process order items properly. PDF may be incomplete.", "warning");
         }
+        
+        const tableHeaders = [['Category', 'Product', 'Packaging', 'Price', 'Quantity', 'Subtotal']];
+        
+        // Add the table
+        doc.autoTable({
+            startY: yPos,
+            head: tableHeaders,
+            body: tableData,
+            theme: 'striped',
+            styles: {
+                fontSize: 10,
+                cellPadding: 3
+            },
+            headStyles: {
+                fillColor: [51, 51, 51],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold'
+            },
+            columnStyles: {
+                5: { halign: 'right' }  // Align subtotal to right
+            }
+        });
+        
+        // Add total amount
+        const finalY = doc.lastAutoTable.finalY + 10;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Total Amount:', pageWidth - margin - 70, finalY);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`PHP ${parseFloat(order.total_amount).toFixed(2)}`, pageWidth - margin, finalY, { align: 'right' });
+        
+        // Add footer
+        const footerY = doc.internal.pageSize.getHeight() - 10;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100);
+        doc.text(`Generated at ${new Date().toLocaleString()}`, pageWidth / 2, footerY, { align: 'center' });
+        
+        // Save the PDF with a meaningful filename
+        doc.save(`PO_${order.po_number}.pdf`);
+        showToast("Purchase Order generated successfully!", "success");
+    } catch (error) {
+        console.error("Error generating PDF:", error);
+        showToast("Error generating PDF: " + error.message, "error");
     }
-
+}
     function closeOrderDetailsModal() {
         document.getElementById('orderDetailsModal').style.display = 'none';
     }
