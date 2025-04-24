@@ -699,6 +699,44 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         max-height: 90vh; /* 90% of the viewport height */
         overflow-y: auto; /* Add scroll if content exceeds max height */
     }
+
+    /* PO PDF layout - improved for better rendering */
+.po-container {
+    font-family: Arial, sans-serif;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: white;
+    page-break-inside: avoid;
+}
+
+/* Force table to respect page breaks */
+.po-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+    page-break-inside: auto;
+}
+
+.po-table tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+}
+
+.po-table td, .po-table th {
+    page-break-inside: avoid;
+}
+
+/* Ensure content doesn't get cut off by allowing wrapping */
+.po-table th, .po-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
     </style>
 </head>
 <body>
@@ -817,7 +855,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <div id="pdfPreview">
         <div class="pdf-container">
             <button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button>
-            <div id="contentToDownload">
+            <div id="contentToDownload" style="page-break-after: always;">
                 <div class="po-container">
                     <div class="po-header">
                         <div class="po-company" id="printCompany"></div>
@@ -838,10 +876,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <span class="po-detail-label">Delivery Address:</span>
                                 <span id="printDeliveryAddress"></span>
                             </div>
-                            <!-- <div class="po-detail-row" id="printInstructionsSection">
+                            <div class="po-detail-row" id="printInstructionsSection">
                                 <span class="po-detail-label">Special Instructions:</span>
-                                <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
-                            </div> -->
+                                <span id="printSpecialInstructions" style="white-space: pre-wrap; word-wrap: break-word;"></span>
+                            </div>
                         </div>
                         
                         <div class="po-right">
@@ -1133,6 +1171,16 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     let currentPOData = null;
     
 function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+    showPDFLoading();
+    html2pdf().set(opt).from(element).save().then(() => {
+        hidePDFLoading();
+        showToast(...);
+        // rest of your code
+    }).catch(error => {
+        hidePDFLoading();
+        // error handling
+    });
+    
     try {
         // Store current PO data
         currentPOData = {
@@ -1175,10 +1223,10 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         // Parse and populate order items
         const orderItems = JSON.parse(ordersJson);
         const orderItemsBody = document.getElementById('printOrderItems');
-        
+
         // Clear previous content
         orderItemsBody.innerHTML = '';
-        
+
         // Add items to the table
         orderItems.forEach(item => {
             const row = document.createElement('tr');
@@ -1186,20 +1234,39 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             // Calculate item total
             const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
             
-            row.innerHTML = `
-                <td>${item.category || ''}</td>
-                <td>${item.item_description}</td>
-                <td>${item.packaging || ''}</td>
-                <td>${item.quantity}</td>
-                <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                })}</td>
-                <td>PHP ${itemTotal.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                })}</td>
-            `;
+            // Create cells with proper word-wrapping
+            const categoryCell = document.createElement('td');
+            categoryCell.textContent = item.category || '';
+            
+            const productCell = document.createElement('td');
+            productCell.textContent = item.item_description;
+            productCell.style.wordBreak = 'break-word';
+            
+            const packagingCell = document.createElement('td');
+            packagingCell.textContent = item.packaging || '';
+            
+            const quantityCell = document.createElement('td');
+            quantityCell.textContent = item.quantity;
+            
+            const priceCell = document.createElement('td');
+            priceCell.textContent = `PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}`;
+            
+            const totalCell = document.createElement('td');
+            totalCell.textContent = `PHP ${itemTotal.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}`;
+            
+            // Append cells to row
+            row.appendChild(categoryCell);
+            row.appendChild(productCell);
+            row.appendChild(packagingCell);
+            row.appendChild(quantityCell);
+            row.appendChild(priceCell);
+            row.appendChild(totalCell);
             
             orderItemsBody.appendChild(row);
         });
@@ -1207,13 +1274,23 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         // Get the element to convert to PDF
         const element = document.getElementById('contentToDownload');
         
-        // Configure html2pdf options
+        // Configure html2pdf options with improved settings
         const opt = {
-            margin:       [10, 10, 10, 10],
-            filename:     `PO_${poNumber}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            margin: [15, 15, 15, 15], // Increased margins
+            filename: `PO_${poNumber}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+                scale: 2,
+                useCORS: true,
+                letterRendering: true
+            },
+            jsPDF: { 
+                unit: 'mm', 
+                format: 'a4', 
+                orientation: 'portrait',
+                compress: true 
+            },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } // Better page break handling
         };
         
         // Generate and download PDF directly
@@ -1274,10 +1351,10 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             // Parse and populate order items
             const orderItems = JSON.parse(ordersJson);
             const orderItemsBody = document.getElementById('printOrderItems');
-            
+
             // Clear previous content
             orderItemsBody.innerHTML = '';
-            
+
             // Add items to the table
             orderItems.forEach(item => {
                 const row = document.createElement('tr');
@@ -1285,20 +1362,39 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                 // Calculate item total
                 const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
                 
-                row.innerHTML = `
-                    <td>${item.category || ''}</td>
-                    <td>${item.item_description}</td>
-                    <td>${item.packaging || ''}</td>
-                    <td>${item.quantity}</td>
-                    <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    })}</td>
-                    <td>PHP ${itemTotal.toLocaleString('en-US', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    })}</td>
-                `;
+                // Create cells with proper word-wrapping
+                const categoryCell = document.createElement('td');
+                categoryCell.textContent = item.category || '';
+                
+                const productCell = document.createElement('td');
+                productCell.textContent = item.item_description;
+                productCell.style.wordBreak = 'break-word';
+                
+                const packagingCell = document.createElement('td');
+                packagingCell.textContent = item.packaging || '';
+                
+                const quantityCell = document.createElement('td');
+                quantityCell.textContent = item.quantity;
+                
+                const priceCell = document.createElement('td');
+                priceCell.textContent = `PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}`;
+                
+                const totalCell = document.createElement('td');
+                totalCell.textContent = `PHP ${itemTotal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}`;
+                
+                // Append cells to row
+                row.appendChild(categoryCell);
+                row.appendChild(productCell);
+                row.appendChild(packagingCell);
+                row.appendChild(quantityCell);
+                row.appendChild(priceCell);
+                row.appendChild(totalCell);
                 
                 orderItemsBody.appendChild(row);
             });
@@ -1319,6 +1415,16 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
     
     // Function to download the PDF
     function downloadPDF() {
+        showPDFLoading();
+        html2pdf().set(opt).from(element).save().then(() => {
+            hidePDFLoading();
+            showToast(...);
+            // rest of your code
+        }).catch(error => {
+            hidePDFLoading();
+            // error handling
+        });
+
         if (!currentPOData) {
             alert('No PO data available for download.');
             return;
@@ -1712,6 +1818,22 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                 closeSpecialInstructions();
             }
         });
+
+        function showPDFLoading() {
+            // Create and show loading message
+            const loadingMsg = document.createElement('div');
+            loadingMsg.id = 'pdfLoadingMessage';
+            loadingMsg.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: white; padding: 20px; border-radius: 5px; z-index: 2000;';
+            loadingMsg.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+            document.body.appendChild(loadingMsg);
+        }
+
+        function hidePDFLoading() {
+            const loadingMsg = document.getElementById('pdfLoadingMessage');
+            if (loadingMsg) {
+                loadingMsg.remove();
+            }
+        }
 
     </script>
     <script>
