@@ -60,6 +60,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <title>Rejected Orders</title>
     <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="/css/sidebar.css">
+    <link rel="stylesheet" href="/css/toast.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
@@ -88,6 +89,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
         .search-container .search-btn:hover {
             background-color: #2471a3;
+        }
+        
+        .main-content {
+            padding-top: 0;
         }
         
         .orders-header {
@@ -119,12 +124,75 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
 
         th.sortable:hover {
-            background-color:rgb(51, 51, 51);
+            background-color: #f5f5f5;
         }
 
         th.sortable .fa-sort-up,
         th.sortable .fa-sort-down {
             color: #2980b9;
+        }
+        
+        /* Status modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 500px;
+            width: 80%;
+        }
+
+        .status-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .modal-status-btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .modal-status-btn.active {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .modal-status-btn.pending {
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .modal-footer {
+            margin-top: 15px;
+            text-align: right;
+        }
+
+        .modal-cancel-btn {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -171,6 +239,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             </a>
                         </th>
                         <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -189,15 +258,44 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td>
                                     <span class="status-badge status-rejected"><?= htmlspecialchars($order['status']) ?></span>
                                 </td>
+                                <td class="action-buttons">
+                                    <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
+                                        <i class="fas fa-exchange-alt"></i> Change Status
+                                    </button>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="no-orders">No rejected orders found.</td>
+                            <td colspan="9" class="no-orders">No rejected orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+    
+    <!-- Status Modal -->
+    <div id="statusModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Change Status</h2>
+            <p id="statusMessage"></p>
+            <div class="status-buttons">
+                <button onclick="changeStatus('Active')" class="modal-status-btn active">
+                    <i class="fas fa-check"></i> Active
+                </button>
+                <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
+                    <i class="fas fa-clock"></i> Pending
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeStatusModal()" class="modal-cancel-btn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
         </div>
     </div>
 
@@ -230,6 +328,64 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     </div>
 
     <script>
+        let currentPoNumber = '';
+        
+        function openStatusModal(poNumber, username) {
+            currentPoNumber = poNumber;
+            document.getElementById('statusMessage').textContent = `Change status for order ${poNumber} (${username})`;
+            document.getElementById('statusModal').style.display = 'flex';
+        }
+
+        function closeStatusModal() {
+            document.getElementById('statusModal').style.display = 'none';
+        }
+
+        function changeStatus(status) {
+            // Send AJAX request to update status
+            fetch('/backend/update_order_status.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `po_number=${currentPoNumber}&status=${status}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Status updated successfully', 'success');
+                    // Reload the page after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('Error updating status: ' + data.message, 'error');
+                }
+                closeStatusModal();
+            })
+            .catch(error => {
+                showToast('Error updating status: ' + error, 'error');
+                closeStatusModal();
+            });
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                    <div class="message">${message}</div>
+                </div>
+                <i class="fas fa-times close" onclick="this.parentElement.remove()"></i>
+            `;
+            document.getElementById('toast-container').appendChild(toast);
+            
+            // Automatically remove the toast after 5 seconds
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+
         function viewOrderDetails(ordersJson) {
             try {
                 const orderDetails = JSON.parse(ordersJson);
