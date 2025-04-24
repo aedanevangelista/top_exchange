@@ -22,21 +22,30 @@ if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
 // Fetch active clients for the dropdown
 $clients = [];
 $clients_with_company_address = []; // Array to store clients with their company addresses
-$stmt = $conn->prepare("SELECT username, company_address FROM clients_accounts WHERE status = 'active'");
+$clients_with_company = []; // Array to store clients with their company names
+
+$stmt = $conn->prepare("SELECT username, company_address, company FROM clients_accounts WHERE status = 'active'");
 if ($stmt === false) {
     die('Prepare failed: ' . htmlspecialchars($conn->error));
 }
 $stmt->execute();
-$stmt->bind_result($username, $company_address);
+$stmt->bind_result($username, $company_address, $company);
 while ($stmt->fetch()) {
     $clients[] = $username;
     $clients_with_company_address[$username] = $company_address;
+    $clients_with_company[$username] = $company;
 }
 $stmt->close();
 
 // Fetch only pending orders for display in the table with sorting
 $orders = []; // Initialize $orders as an empty array
-$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status FROM orders WHERE status = 'Pending'";
+
+// Modified query to join with clients_accounts to get the company information
+$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, 
+        COALESCE(o.company, c.company) as company
+        FROM orders o
+        LEFT JOIN clients_accounts c ON o.username = c.username
+        WHERE o.status = 'Pending'";
 
 // Add sorting
 $sql .= " ORDER BY {$sort_column} {$sort_direction}";
@@ -377,6 +386,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 Username <?= getSortIcon('username', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
+                        <!-- Added Company column -->
+                        <th>Company</th>
                         <th class="sortable">
                             <a href="<?= getSortUrl('order_date', $sort_column, $sort_direction) ?>">
                                 Order Date <?= getSortIcon('order_date', $sort_column, $sort_direction) ?>
@@ -404,6 +415,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             <tr>
                                 <td><?= htmlspecialchars($order['po_number']) ?></td>
                                 <td><?= htmlspecialchars($order['username']) ?></td>
+                                <!-- Display company information -->
+                                <td><?= htmlspecialchars($order['company'] ?: 'No Company') ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_address']) ?></td>
@@ -415,7 +428,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <span class="status-badge status-pending"><?= htmlspecialchars($order['status']) ?></span>
                                 </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 </td>
@@ -423,7 +436,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="no-orders">No pending orders found.</td>
+                            <td colspan="10" class="no-orders">No pending orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -441,12 +454,21 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber()">
+                    <select id="username" name="username" required onchange="generatePONumber(); updateCompany();">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
-                            <option value="<?= htmlspecialchars($client) ?>" data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"><?= htmlspecialchars($client) ?></option>
+                            <option value="<?= htmlspecialchars($client) ?>" 
+                                data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
+                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>">
+                                <?= htmlspecialchars($client) ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
+                    
+                    <!-- Added company field -->
+                    <label for="company">Company:</label>
+                    <input type="text" id="company" name="company" placeholder="Company name will appear here">
+                    
                     <label for="order_date">Order Date:</label>
                     <input type="text" id="order_date" name="order_date" readonly>
                     <label for="delivery_date">Delivery Date:</label>
@@ -978,6 +1000,15 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     function closeOrderDetailsModal() {
         document.getElementById('orderDetailsModal').style.display = 'none';
     }
+    
+    // Add function to update company name when username changes
+    function updateCompany() {
+        const selectedOption = document.getElementById('username').selectedOptions[0];
+        if (selectedOption) {
+            const company = selectedOption.getAttribute('data-company') || '';
+            document.getElementById('company').value = company;
+        }
+    }
     </script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
@@ -1016,6 +1047,31 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     }
                 });
             });
+            
+            // Initialize company field if needed
+            $('#username').change(function() {
+                updateCompany();
+            });
+            
+            // Make sure prepareOrderData includes company field
+            window.originalPrepareOrderData = window.prepareOrderData;
+            window.prepareOrderData = function() {
+                if (window.originalPrepareOrderData) {
+                    window.originalPrepareOrderData();
+                }
+                
+                // Ensure company is included
+                const company = document.getElementById('company').value;
+                const ordersInput = document.getElementById('orders');
+                if (ordersInput.value) {
+                    try {
+                        const ordersData = JSON.parse(ordersInput.value);
+                        ordersInput.value = JSON.stringify(ordersData);
+                    } catch (e) {
+                        console.error("Error preparing order data:", e);
+                    }
+                }
+            };
         });
     </script> 
 </body>
