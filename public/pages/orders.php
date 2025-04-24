@@ -118,7 +118,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         tr.completed-item:hover td,
         tr.unit-item.completed:hover,
         tr.unit-item.completed:hover td {
-            background-color:rgb(70, 70, 70) !important;
+            background-color: #c3e6cb !important;
         }
         
         .form-buttons {
@@ -364,7 +364,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
 
         th.sortable:hover {
-            background-color: #f5f5f5;
+            background-color:rgb(51, 51, 51);
         }
 
         th.sortable .fa-sort-up,
