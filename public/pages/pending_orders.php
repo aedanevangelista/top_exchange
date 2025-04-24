@@ -708,9 +708,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     </select>
                     
                     <!-- Added company field -->
-                    <label for="company">Company:</label>
-                    <input type="text" id="company" name="company" placeholder="Company name will appear here">
-                    
+                    <label for="company">Company:</label>                    
                     <label for="order_date">Order Date:</label>
                     <input type="text" id="order_date" name="order_date" readonly>
                     <label for="delivery_date">Delivery Date:</label>
