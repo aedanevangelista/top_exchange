@@ -593,8 +593,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 <!-- Add download PO button -->
-                                <button class="download-btn" onclick="generatePO('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company']) ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['total_amount']) ?>')">
-                                    <i class="fas fa-file-pdf"></i> PO
+                                <button class="download-btn" onclick="generatePO('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company']) ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>', '<?= htmlspecialchars($order['total_amount']) ?>')">
+                                    <i class="fas fa-file-pdf"></i> Download PDF
                                 </button>
                                 </td>
                             </tr>
@@ -912,6 +912,92 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     // Variables to store the current PO for PDF generation
     let currentPOData = null;
     
+function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount) {
+    try {
+        // Store current PO data
+        currentPOData = {
+            poNumber,
+            username,
+            company,
+            orderDate,
+            deliveryDate,
+            deliveryAddress,
+            ordersJson,
+            totalAmount
+        };
+        
+        // Populate the hidden PDF content silently
+        document.getElementById('printCompany').textContent = company || 'No Company Name';
+        document.getElementById('printPoNumber').textContent = poNumber;
+        document.getElementById('printUsername').textContent = username;
+        document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
+        document.getElementById('printOrderDate').textContent = orderDate;
+        document.getElementById('printDeliveryDate').textContent = deliveryDate;
+        
+        // Format the total amount
+        document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        
+        // Parse and populate order items
+        const orderItems = JSON.parse(ordersJson);
+        const orderItemsBody = document.getElementById('printOrderItems');
+        
+        // Clear previous content
+        orderItemsBody.innerHTML = '';
+        
+        // Add items to the table
+        orderItems.forEach(item => {
+            const row = document.createElement('tr');
+            
+            // Calculate item total
+            const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+            
+            row.innerHTML = `
+                <td>${item.category || ''}</td>
+                <td>${item.item_description}</td>
+                <td>${item.packaging || ''}</td>
+                <td>${item.quantity}</td>
+                <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}</td>
+                <td>PHP ${itemTotal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}</td>
+            `;
+            
+            orderItemsBody.appendChild(row);
+        });
+        
+        // Get the element to convert to PDF
+        const element = document.getElementById('contentToDownload');
+        
+        // Configure html2pdf options
+        const opt = {
+            margin:       [10, 10, 10, 10],
+            filename:     `PO_${poNumber}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        // Generate and download PDF directly
+        html2pdf().set(opt).from(element).save().then(() => {
+            showToast(`Purchase Order ${poNumber} has been downloaded.`, 'success');
+        }).catch(error => {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF. Please try again.');
+        });
+        
+    } catch (e) {
+        console.error('Error preparing PDF data:', e);
+        alert('Error preparing PDF data');
+    }
+}
+
     // Function to generate Purchase Order PDF
     function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount) {
         try {
