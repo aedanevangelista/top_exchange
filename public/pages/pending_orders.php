@@ -664,7 +664,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['delivery_address']) ?></td>
                                 <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
                                 <i class="fas fa-clipboard-list"></i>    
-                                View Orders</button></td>
+                                Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <!-- Add Special Instructions column with view button -->
                                 <td>
