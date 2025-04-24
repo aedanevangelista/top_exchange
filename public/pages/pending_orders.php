@@ -162,10 +162,6 @@ if ($result && $result->num_rows > 0) {
             background-color: #2471a3;
         }
         
-        .main-content {
-            padding-top: 0;
-        }
-        
         .orders-header {
             display: flex;
             justify-content: space-between;
@@ -183,6 +179,7 @@ if ($result && $result->num_rows > 0) {
         }
         
         .raw-materials-container h3 {
+            margin-top: 0;
             margin-bottom: 10px;
             color: #333;
         }
@@ -270,7 +267,7 @@ if ($result && $result->num_rows > 0) {
             padding: 8px 15px;
             border-radius: 4px;
             border: 1px solid #ddd;
-            background-color: #f8f9fa;
+            background-color:rgb(37, 37, 37);
             cursor: pointer;
             font-weight: bold;
         }
