@@ -421,7 +421,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_address']) ?></td>
-                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
+                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars(str_replace("'", "\\'", $order['orders'])) ?>')">
                                 <i class="fas fa-clipboard-list"></i>    
                                 View Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
@@ -429,7 +429,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <span class="status-badge status-pending"><?= htmlspecialchars($order['status']) ?></span>
                                 </td>
                                 <td class="action-buttons">
-                                    <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
+                                    <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(str_replace("'", "\\'", $order['orders'])) ?>')">
                                         <i class="fas fa-exchange-alt"></i> Change Status
                                     </button>
                                     <button class="print-po-btn" onclick="printPurchaseOrder('<?= htmlspecialchars($order['po_number']) ?>')">
@@ -972,23 +972,59 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }, 5000);
     }
     
+    // UPDATED: Enhanced viewOrderDetails function with better JSON handling
     function viewOrderDetails(ordersJson) {
         try {
-            const orderDetails = JSON.parse(ordersJson);
+            console.log("Raw orders data:", ordersJson); // Debug: Log the raw data
+            
+            // Try to parse the JSON string
+            let orderDetails;
+            
+            try {
+                // First attempt to parse as is
+                orderDetails = JSON.parse(ordersJson);
+            } catch (parseError) {
+                console.error("Initial JSON parse error:", parseError);
+                
+                // Try to fix common JSON issues
+                try {
+                    // Replace escaped single quotes with regular single quotes
+                    const fixedJson = ordersJson.replace(/\\'/g, "'");
+                    orderDetails = JSON.parse(fixedJson);
+                    console.log("Parsed after fixing escaped quotes");
+                } catch (error) {
+                    // If that failed, try another approach
+                    try {
+                        // Sometimes the data might be double-encoded
+                        orderDetails = JSON.parse(JSON.parse(ordersJson));
+                        console.log("Parsed after double parsing");
+                    } catch (doubleError) {
+                        throw new Error("Could not parse order details: " + parseError.message);
+                    }
+                }
+            }
+            
+            // Check if orderDetails is actually an array
+            if (!Array.isArray(orderDetails)) {
+                console.error("Order details is not an array:", orderDetails);
+                throw new Error("Invalid order details format: expected an array");
+            }
+            
             const orderDetailsBody = document.getElementById('orderDetailsBody');
             
             // Clear previous content
             orderDetailsBody.innerHTML = '';
             
+            // Add each product to the table
             orderDetails.forEach(product => {
                 const row = document.createElement('tr');
                 
                 row.innerHTML = `
-                    <td>${product.category}</td>
-                    <td>${product.item_description}</td>
-                    <td>${product.packaging}</td>
-                    <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
-                    <td>${product.quantity}</td>
+                    <td>${product.category || 'N/A'}</td>
+                    <td>${product.item_description || 'N/A'}</td>
+                    <td>${product.packaging || 'N/A'}</td>
+                    <td>PHP ${parseFloat(product.price || 0).toFixed(2)}</td>
+                    <td>${product.quantity || 0}</td>
                 `;
                 
                 orderDetailsBody.appendChild(row);
@@ -998,7 +1034,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             document.getElementById('orderDetailsModal').style.display = 'flex';
         } catch (e) {
             console.error('Error parsing order details:', e);
-            alert('Error displaying order details');
+            showToast('Error displaying order details: ' + e.message, 'error');
         }
     }
 
@@ -1071,7 +1107,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         logFormData();
     });
     
-    // Add the function to print a purchase order
+    // UPDATED: Enhanced printPurchaseOrder function
     function printPurchaseOrder(poNumber) {
         // Show loading message or spinner
         showToast("Generating Purchase Order...", "info");
@@ -1170,14 +1206,36 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             doc.line(margin, yPos, pageWidth - margin, yPos);
             yPos += 10;
             
-            // Add order items table - FIXED CODE SECTION BELOW
+            // UPDATED: More robust order items handling
             let orderItems = [];
             let tableData = [];
             
             try {
-                // First, check if order.orders is already an array or needs parsing
+                // Check the type of order.orders and handle accordingly
                 if (typeof order.orders === 'string') {
-                    orderItems = JSON.parse(order.orders);
+                    try {
+                        // First attempt to parse as is
+                        orderItems = JSON.parse(order.orders);
+                    } catch (parseError) {
+                        console.error("Initial JSON parse error:", parseError);
+                        
+                        // Try to fix common JSON issues
+                        try {
+                            // Replace escaped single quotes with regular single quotes
+                            const fixedJson = order.orders.replace(/\\'/g, "'");
+                            orderItems = JSON.parse(fixedJson);
+                            console.log("Parsed after fixing escaped quotes");
+                        } catch (error) {
+                            // If that failed, try another approach
+                            try {
+                                // Sometimes the data might be double-encoded
+                                orderItems = JSON.parse(JSON.parse(order.orders));
+                                console.log("Parsed after double parsing");
+                            } catch (doubleError) {
+                                throw new Error("Could not parse order items: " + parseError.message);
+                            }
+                        }
+                    }
                 } else if (Array.isArray(order.orders)) {
                     orderItems = order.orders;
                 } else {
@@ -1193,12 +1251,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 
                 // Create table data
                 tableData = orderItems.map(item => [
-                    item.category || '',
-                    item.item_description,
-                    item.packaging,
-                    `PHP ${parseFloat(item.price).toFixed(2)}`,
-                    item.quantity.toString(),
-                    `PHP ${(parseFloat(item.price) * parseInt(item.quantity)).toFixed(2)}`
+                    item.category || 'N/A',
+                    item.item_description || 'N/A',
+                    item.packaging || 'N/A',
+                    `PHP ${parseFloat(item.price || 0).toFixed(2)}`,
+                    item.quantity?.toString() || '0',
+                    `PHP ${(parseFloat(item.price || 0) * parseInt(item.quantity || 0)).toFixed(2)}`
                 ]);
             } catch (error) {
                 console.error("Error processing order items:", error);
@@ -1206,6 +1264,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 
                 // Fallback: create a single row with error message
                 tableData = [["Error", "Could not process order items", "", "", "", ""]];
+                showToast("Warning: Could not process order items properly. PDF may be incomplete.", "warning");
             }
             
             const tableHeaders = [['Category', 'Product', 'Packaging', 'Price', 'Quantity', 'Subtotal']];
