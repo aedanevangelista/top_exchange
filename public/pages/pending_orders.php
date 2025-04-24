@@ -9,7 +9,7 @@ $sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'order_date';
 $sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'DESC';
 
 // Validate sort column to prevent SQL injection
-$allowed_columns = ['po_number', 'username', 'order_date', 'delivery_date', 'total_amount'];
+$allowed_columns = ['po_number', 'username', 'company', 'order_date', 'delivery_date', 'total_amount'];
 if (!in_array($sort_column, $allowed_columns)) {
     $sort_column = 'order_date'; // Default sort column
 }
@@ -47,8 +47,12 @@ $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.deliver
         LEFT JOIN clients_accounts c ON o.username = c.username
         WHERE o.status = 'Pending'";
 
-// Add sorting
-$sql .= " ORDER BY {$sort_column} {$sort_direction}";
+// Add sorting - Handle special case for company column which comes from a COALESCE
+if ($sort_column === 'company') {
+    $sql .= " ORDER BY company {$sort_direction}";
+} else {
+    $sql .= " ORDER BY o.{$sort_column} {$sort_direction}";
+}
 
 $stmt = $conn->prepare($sql);
 $stmt->execute();
@@ -386,12 +390,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 Username <?= getSortIcon('username', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
+                        <!-- Modified Company column to be sortable -->
                         <th class="sortable">
                             <a href="<?= getSortUrl('company', $sort_column, $sort_direction) ?>">
                                 Company <?= getSortIcon('company', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
-                        <th>Company</th>
                         <th class="sortable">
                             <a href="<?= getSortUrl('order_date', $sort_column, $sort_direction) ?>">
                                 Order Date <?= getSortIcon('order_date', $sort_column, $sort_direction) ?>
