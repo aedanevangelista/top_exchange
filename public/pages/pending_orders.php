@@ -1171,15 +1171,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     let currentPOData = null;
     
 function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
-    showPDFLoading();
-    html2pdf().set(opt).from(element).save().then(() => {
-        hidePDFLoading();
-        showToast(...);
-        // rest of your code
-    }).catch(error => {
-        hidePDFLoading();
-        // error handling
-    });
     
     try {
         // Store current PO data
@@ -1415,16 +1406,6 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
     
     // Function to download the PDF
     function downloadPDF() {
-        showPDFLoading();
-        html2pdf().set(opt).from(element).save().then(() => {
-            hidePDFLoading();
-            showToast(...);
-            // rest of your code
-        }).catch(error => {
-            hidePDFLoading();
-            // error handling
-        });
-
         if (!currentPOData) {
             alert('No PO data available for download.');
             return;
