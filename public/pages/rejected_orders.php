@@ -160,7 +160,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .modal-status-btn {
             padding: 10px 15px;
             border: none;
-            border-radius: 4px;
+            border-radius: 40px;
             cursor: pointer;
             font-weight: bold;
             display: flex;
@@ -169,13 +169,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
 
         .modal-status-btn.active {
-            background-color: #28a745;
+            background-color: #ffc107;
             color: white;
         }
 
         .modal-status-btn.pending {
-            background-color: #ffc107;
-            color: black;
+            background-color: #2471a3;
+            color: white;
         }
 
         .modal-footer {
@@ -186,8 +186,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .modal-cancel-btn {
             padding: 8px 15px;
             border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: #f8f9fa;
+            border-radius: 40px;
+            background-color:rgb(27, 27, 27);
             cursor: pointer;
         }
     </style>
