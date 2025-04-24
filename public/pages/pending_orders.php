@@ -307,15 +307,15 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         
         .modal-cancel-btn {
             padding: 8px 15px;
-            border-radius: 4px;
+            border-radius: 40px;
             border: 1px solid #ddd;
-            background-color: #f8f9fa;
+            background-color:rgb(43, 43, 43);
             cursor: pointer;
             font-weight: bold;
         }
         
         .modal-cancel-btn:hover {
-            background-color: #e9ecef;
+            background-color:rgb(53, 53, 53);
         }
         
         /* Sortable table headers */
