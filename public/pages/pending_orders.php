@@ -521,7 +521,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             font-size: 16px;
         }
 
-         .instructions-btn {
+    .instructions-btn {
         padding: 6px 12px;
         background-color: #28a745;
         color: white;
@@ -529,8 +529,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         border-radius: 4px;
         cursor: pointer;
         font-size: 14px;
+        min-width: 60px;
+        text-align: center;
     }
-    
+
     .instructions-btn:hover {
         background-color: #218838;
     }
@@ -670,10 +672,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td>
                                     <?php if (!empty($order['special_instructions'])): ?>
                                         <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
-                                            <i class="fas fa-sticky-note"></i> View Instructions
+                                            View
                                         </button>
                                     <?php else: ?>
-                                        <span class="no-instructions">No special instructions</span>
+                                        <span class="no-instructions">None</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons">
