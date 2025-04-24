@@ -570,6 +570,9 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         animation: modalFadeIn 0.3s ease-in-out;
         overflow: hidden;
+        max-height: 90vh; /* 90% of the viewport height */
+        overflow-y: auto; /* Add scroll if content exceeds max height */
+        margin: 5vh auto; /* Center vertically with 5% top margin */
     }
 
     @keyframes modalFadeIn {
@@ -679,6 +682,23 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         color: #6c757d;
         font-style: italic;
     }
+
+    /* Style for the special instructions textarea */
+    #special_instructions {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        resize: vertical; /* Allow vertical resizing only */
+        font-family: inherit;
+        margin-bottom: 15px;
+    }
+
+    /* Update overlay-content max height */
+    .overlay-content {
+        max-height: 90vh; /* 90% of the viewport height */
+        overflow-y: auto; /* Add scroll if content exceeds max height */
+    }
     </style>
 </head>
 <body>
@@ -761,20 +781,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
-                                <button class="download-btn" onclick="downloadPODirectly(
-                                    '<?= htmlspecialchars($order['po_number']) ?>', 
-                                    '<?= htmlspecialchars($order['username']) ?>', 
-                                    '<?= htmlspecialchars($order['company']) ?>', 
-                                    '<?= htmlspecialchars($order['order_date']) ?>', 
-                                    '<?= htmlspecialchars($order['delivery_date']) ?>', 
-                                    '<?= htmlspecialchars($order['delivery_address']) ?>', 
-                                    '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
-                                    '<?= htmlspecialchars($order['total_amount']) ?>', 
-                                    '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
-                                )">
+                                <button class="download-btn" onclick="downloadPODirectly('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company']) ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>', '<?= htmlspecialchars($order['total_amount']) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>')">
                                     <i class="fas fa-file-pdf"></i> Download PDF
                                 </button>
                                 </td>
@@ -818,12 +828,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <span class="po-detail-label">Delivery Address:</span>
                                 <span id="printDeliveryAddress"></span>
                             </div>
-
-                            <div class="po-detail-row" id="printInstructionsSection" style="margin-top: 10px; display: none;">
+                            <div class="po-detail-row" id="printInstructionsSection">
                                 <span class="po-detail-label">Special Instructions:</span>
                                 <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
                             </div>
-
                         </div>
                         
                         <div class="po-right">
@@ -916,6 +924,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     </div>
                     
                     <input type="hidden" name="delivery_address" id="delivery_address">
+
+                    <!-- Add special instructions field -->
+                    <label for="special_instructions">Special Instructions:</label>
+                    <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
                     
                     <div class="centered-button">
                         <button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()">
@@ -1210,7 +1222,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
 }
 
     // Function to generate Purchase Order PDF
-        function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+    function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
         try {
             // Store current PO data for later use
             currentPOData = {
@@ -1725,8 +1737,11 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                         console.error("Error preparing order data:", e);
                     }
                 }
+                
+                // Include special instructions in form data
+                const specialInstructions = document.getElementById('special_instructions').value;
+                // No need for a hidden field since the textarea already has the name attribute
             };
-        });
 
          function viewSpecialInstructions(poNumber, instructions) {
             document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
