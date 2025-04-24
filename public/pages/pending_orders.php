@@ -1045,7 +1045,31 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         
         document.getElementById('delivery_address').value = deliveryAddressValue;
+        
+        // Make sure we're properly setting the company value
+        if (!document.getElementById('company').value) {
+            // If no company name is available, set it to empty string to avoid null issues
+            document.getElementById('company').value = '';
+        }
+        
+        // Return true to allow form submission
+        return true;
     };
+    
+    // Add this function to see what's being submitted
+    function logFormData() {
+        const formData = new FormData(document.getElementById('addOrderForm'));
+        console.log("Form data being submitted:");
+        for (let [key, value] of formData.entries()) {
+            console.log(`${key}: ${value}`);
+        }
+    }
+    
+    // Add this event listener to your form
+    document.getElementById('addOrderForm').addEventListener('submit', function(e) {
+        // Don't prevent default - just log the data
+        logFormData();
+    });
     
     // Add the new function to print a purchase order
     function printPurchaseOrder(poNumber) {
@@ -1073,7 +1097,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             });
     }
     
-    // Function to generate the PDF
+    // Function to generate the PDF with updated layout
     function generatePDF(order) {
         try {
             // Make sure jsPDF is available
@@ -1097,20 +1121,47 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             doc.text(order.company || 'N/A', margin, yPos);
             yPos += 10;
             
-            // Add PO Number
+            // Add PO Number with bold label and normal text value
             doc.setFontSize(12);
-            doc.text(`PO #: ${order.po_number}`, margin, yPos);
+            doc.setFont('helvetica', 'bold');
+            doc.text('PO #:', margin, yPos);
+            doc.setFont('helvetica', 'normal');
+            doc.text(order.po_number, margin + 25, yPos);
             yPos += 7;
             
-            // Add Username
-            doc.text(`User: ${order.username}`, margin, yPos);
-            yPos += 15;
+            // Add Username with bold label and normal text value
+            doc.setFont('helvetica', 'bold');
+            doc.text('User:', margin, yPos);
+            doc.setFont('helvetica', 'normal');
+            doc.text(order.username, margin + 25, yPos);
+            yPos += 7;
+            
+            // Add Delivery Address with bold label and normal text value
+            doc.setFont('helvetica', 'bold');
+            doc.text('Delivery Address:', margin, yPos);
+            
+            // Split long address into multiple lines if needed
+            const deliveryAddress = doc.splitTextToSize(order.delivery_address, pageWidth - (margin * 2) - 40);
+            doc.setFont('helvetica', 'normal');
+            doc.text(deliveryAddress, margin + 40, yPos);
+            
+            // Adjust yPos based on how many lines the address takes
+            yPos += (deliveryAddress.length * 7) + 5;
             
             // Add right side information
             doc.setFontSize(12);
-            doc.text(`Order Date: ${order.order_date}`, pageWidth - margin, yPos - 22, { align: 'right' });
-            doc.text(`Delivery Date: ${order.delivery_date}`, pageWidth - margin, yPos - 15, { align: 'right' });
-            doc.text(`Delivery Address: ${order.delivery_address}`, pageWidth - margin, yPos - 8, { align: 'right' });
+            
+            // Add Order Date on right side with bold label and normal text value
+            doc.setFont('helvetica', 'bold');
+            doc.text('Order Date:', pageWidth - margin - 55, margin + 10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(order.order_date, pageWidth - margin, margin + 10, { align: 'right' });
+            
+            // Add Delivery Date on right side with bold label and normal text value
+            doc.setFont('helvetica', 'bold');
+            doc.text('Delivery Date:', pageWidth - margin - 55, margin + 17);
+            doc.setFont('helvetica', 'normal');
+            doc.text(order.delivery_date, pageWidth - margin, margin + 17, { align: 'right' });
             
             // Add a separator line
             doc.setDrawColor(200);
@@ -1152,7 +1203,9 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             // Add total amount
             const finalY = doc.lastAutoTable.finalY + 10;
             doc.setFont('helvetica', 'bold');
-            doc.text(`Total Amount: PHP ${parseFloat(order.total_amount).toFixed(2)}`, pageWidth - margin, finalY, { align: 'right' });
+            doc.text('Total Amount:', pageWidth - margin - 70, finalY);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`PHP ${parseFloat(order.total_amount).toFixed(2)}`, pageWidth - margin, finalY, { align: 'right' });
             
             // Add footer
             const footerY = doc.internal.pageSize.getHeight() - 10;

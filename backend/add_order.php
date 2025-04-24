@@ -31,7 +31,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Failed to prepare statement: ' . $conn->error);
         }
 
-        $insertOrder->bind_param("ssssssd", $username, $company, $order_date, $delivery_date, $delivery_address, $po_number, $orders, $total_amount);
+        $insertOrder->bind_param("ssssssdd", $username, $company, $order_date, $delivery_date, $delivery_address, $po_number, $orders, $total_amount);
 
         if ($insertOrder->execute()) {
             echo json_encode([
