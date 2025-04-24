@@ -129,7 +129,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         
         /* Account for scrollbar width in header */
         .summary-table thead {
-            width: calc(100% - 17px);
+            width: 100%;
         }
         
         /* Cell styling for proper alignment and text overflow */
