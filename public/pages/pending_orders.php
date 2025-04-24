@@ -386,7 +386,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 Username <?= getSortIcon('username', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
-                        <!-- Added Company column -->
+                        <th class="sortable">
+                            <a href="<?= getSortUrl('company', $sort_column, $sort_direction) ?>">
+                                Company <?= getSortIcon('company', $sort_column, $sort_direction) ?>
+                            </a>
+                        </th>
                         <th>Company</th>
                         <th class="sortable">
                             <a href="<?= getSortUrl('order_date', $sort_column, $sort_direction) ?>">
