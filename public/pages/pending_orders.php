@@ -194,10 +194,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             background-color: #2471a3;
         }
         
-        .main-content {
-            padding-top: 0;
-        }
-        
         .orders-header {
             display: flex;
             justify-content: space-between;
@@ -334,7 +330,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
 
         th.sortable:hover {
-            background-color: #f5f5f5;
+            background-color:rgb(51, 51, 51);
         }
 
         th.sortable .fa-sort-up,
