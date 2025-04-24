@@ -696,7 +696,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber(); updateCompany();">
+                    <select id="username" name="username" required onchange="generatePONumber();">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
@@ -706,9 +706,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    
-                    <!-- Added company field -->
-                    <label for="company">Company:</label>                    
+                                        
                     <label for="order_date">Order Date:</label>
                     <input type="text" id="order_date" name="order_date" readonly>
                     <label for="delivery_date">Delivery Date:</label>
@@ -1438,13 +1436,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
     }
     
     // Add function to update company name when username changes
-    function updateCompany() {
-        const selectedOption = document.getElementById('username').selectedOptions[0];
-        if (selectedOption) {
-            const company = selectedOption.getAttribute('data-company') || '';
-            document.getElementById('company').value = company;
-        }
-    }
+
     </script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
@@ -1496,7 +1488,6 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                 }
                 
                 // Ensure company is included
-                const company = document.getElementById('company').value;
                 const ordersInput = document.getElementById('orders');
                 if (ordersInput.value) {
                     try {
