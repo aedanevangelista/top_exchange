@@ -330,10 +330,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .search-container .search-btn:hover {
             background-color: #2471a3;
         }
-
-        .main-content {
-            padding-top: 0;
-        }
         
         .orders-header {
             display: flex;

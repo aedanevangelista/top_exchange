@@ -4,6 +4,21 @@ include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
 checkRole('Pending Orders'); // Ensure the user has access to the Pending Orders page
 
+// Handle sorting parameters
+$sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'order_date';
+$sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'DESC';
+
+// Validate sort column to prevent SQL injection
+$allowed_columns = ['po_number', 'username', 'order_date', 'delivery_date', 'total_amount'];
+if (!in_array($sort_column, $allowed_columns)) {
+    $sort_column = 'order_date'; // Default sort column
+}
+
+// Validate sort direction
+if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
+    $sort_direction = 'DESC'; // Default to descending
+}
+
 // Fetch active clients for the dropdown
 $clients = [];
 $clients_with_company_address = []; // Array to store clients with their company addresses
@@ -19,12 +34,12 @@ while ($stmt->fetch()) {
 }
 $stmt->close();
 
-// Fetch only pending orders for display in the table
+// Fetch only pending orders for display in the table with sorting
 $orders = []; // Initialize $orders as an empty array
 $sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status FROM orders WHERE status = 'Pending'";
 
-// Order by order_date descending (latest orders first)
-$sql .= " ORDER BY order_date DESC";
+// Add sorting
+$sql .= " ORDER BY {$sort_column} {$sort_direction}";
 
 $stmt = $conn->prepare($sql);
 $stmt->execute();
@@ -32,6 +47,23 @@ $result = $stmt->get_result();
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $orders[] = $row;
+    }
+}
+
+// Helper function to generate sort URL
+function getSortUrl($column, $currentColumn, $currentDirection) {
+    $newDirection = ($column === $currentColumn && $currentDirection === 'ASC') ? 'DESC' : 'ASC';
+    return "?sort=" . urlencode($column) . "&direction=" . urlencode($newDirection);
+}
+
+// Helper function to display sort icon
+function getSortIcon($column, $currentColumn, $currentDirection) {
+    if ($column !== $currentColumn) {
+        return '<i class="fas fa-sort"></i>';
+    } else if ($currentDirection === 'ASC') {
+        return '<i class="fas fa-sort-up"></i>';
+    } else {
+        return '<i class="fas fa-sort-down"></i>';
     }
 }
 ?>
@@ -162,6 +194,10 @@ if ($result && $result->num_rows > 0) {
             background-color: #2471a3;
         }
         
+        .main-content {
+            padding-top: 0;
+        }
+        
         .orders-header {
             display: flex;
             justify-content: space-between;
@@ -267,13 +303,43 @@ if ($result && $result->num_rows > 0) {
             padding: 8px 15px;
             border-radius: 4px;
             border: 1px solid #ddd;
-            background-color:rgb(37, 37, 37);
+            background-color: #f8f9fa;
             cursor: pointer;
             font-weight: bold;
         }
         
         .modal-cancel-btn:hover {
-            background-color:rgb(70, 70, 70);
+            background-color: #e9ecef;
+        }
+        
+        /* Sortable table headers */
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px; /* Space for the icon */
+            user-select: none;
+        }
+
+        th.sortable a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        th.sortable .fas {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+        }
+
+        th.sortable:hover {
+            background-color: #f5f5f5;
+        }
+
+        th.sortable .fa-sort-up,
+        th.sortable .fa-sort-down {
+            color: #2980b9;
         }
     </style>
 </head>
@@ -295,13 +361,33 @@ if ($result && $result->num_rows > 0) {
             <table class="orders-table">
                 <thead>
                     <tr>
-                        <th>PO Number</th>
-                        <th>Username</th>
-                        <th>Order Date</th>
-                        <th>Delivery Date</th>
+                        <th class="sortable">
+                            <a href="<?= getSortUrl('po_number', $sort_column, $sort_direction) ?>">
+                                PO Number <?= getSortIcon('po_number', $sort_column, $sort_direction) ?>
+                            </a>
+                        </th>
+                        <th class="sortable">
+                            <a href="<?= getSortUrl('username', $sort_column, $sort_direction) ?>">
+                                Username <?= getSortIcon('username', $sort_column, $sort_direction) ?>
+                            </a>
+                        </th>
+                        <th class="sortable">
+                            <a href="<?= getSortUrl('order_date', $sort_column, $sort_direction) ?>">
+                                Order Date <?= getSortIcon('order_date', $sort_column, $sort_direction) ?>
+                            </a>
+                        </th>
+                        <th class="sortable">
+                            <a href="<?= getSortUrl('delivery_date', $sort_column, $sort_direction) ?>">
+                                Delivery Date <?= getSortIcon('delivery_date', $sort_column, $sort_direction) ?>
+                            </a>
+                        </th>
                         <th>Delivery Address</th>
                         <th>Orders</th>
-                        <th>Total Amount</th>
+                        <th class="sortable">
+                            <a href="<?= getSortUrl('total_amount', $sort_column, $sort_direction) ?>">
+                                Total Amount <?= getSortIcon('total_amount', $sort_column, $sort_direction) ?>
+                            </a>
+                        </th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -825,14 +911,14 @@ if ($result && $result->num_rows > 0) {
                 } else {
                     alert('Failed to change status: ' + (response.error || 'Unknown error'));
                 }
+                closeStatusModal();
             },
             error: function(xhr, status, error) {
                 console.error('Error:', error);
                 alert('Failed to change status. Please try again.');
+                closeStatusModal();
             }
         });
-        
-        closeStatusModal();
     }
 
     function showToast(message, type = 'info') {
@@ -852,7 +938,7 @@ if ($result && $result->num_rows > 0) {
             toast.remove();
         }, 5000);
     }
-
+    
     function viewOrderDetails(ordersJson) {
         try {
             const orderDetails = JSON.parse(ordersJson);
