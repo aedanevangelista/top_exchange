@@ -1687,7 +1687,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
     
     // Add function to update company name when username changes
 
-    function viewSpecialInstructions(poNumber, instructions) {
+        function viewSpecialInstructions(poNumber, instructions) {
                 document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
                 const contentEl = document.getElementById('instructionsContent');
                 
@@ -1701,6 +1701,18 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                 
                 document.getElementById('specialInstructionsModal').style.display = 'block';
             }
+
+        function closeSpecialInstructions() {
+            document.getElementById('specialInstructionsModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('specialInstructionsModal');
+            if (event.target === modal) {
+                closeSpecialInstructions();
+            }
+        });
 
     </script>
     <script>
@@ -1768,20 +1780,6 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                 document.getElementById('special_instructions_hidden').value = specialInstructions;
                 // No need for a hidden field since the textarea already has the name attribute
             };
-
-        
-        
-        function closeSpecialInstructions() {
-            document.getElementById('specialInstructionsModal').style.display = 'none';
-        }
-        
-        // Close modal when clicking outside
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('specialInstructionsModal');
-            if (event.target === modal) {
-                closeSpecialInstructions();
-            }
-        });
     </script> 
 </body>
 </html>
