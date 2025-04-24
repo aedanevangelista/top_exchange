@@ -699,6 +699,14 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         max-height: 90vh; /* 90% of the viewport height */
         overflow-y: auto; /* Add scroll if content exceeds max height */
     }
+
+    #char_count {
+        display: block;
+        text-align: right;
+        font-size: 0.8em;
+        color: #666;
+        margin-top: 5px;
+    }
     </style>
 </head>
 <body>
@@ -937,8 +945,9 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <input type="hidden" name="special_instructions" id="special_instructions_hidden">
                     <!-- Add special instructions field -->
                     <label for="special_instructions">Special Instructions:</label>
-                    <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
-                    
+                    <textarea id="special_instructions" name="special_instructions" rows="3" maxlength="500" placeholder="Enter any special instructions here..."></textarea>
+                    <span id="char_count">0/500 characters</span>
+               
                     <div class="centered-button">
                         <button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()">
                             <i class="fas fa-box-open"></i> Select Products
@@ -1711,6 +1720,32 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             if (event.target === modal) {
                 closeSpecialInstructions();
             }
+        });
+
+        function updateCharacterCount() {
+            const textarea = document.getElementById('special_instructions');
+            const counter = document.getElementById('char_count');
+            const maxLength = 500;
+            const currentLength = textarea.value.length;
+            
+            counter.textContent = currentLength + '/' + maxLength + ' characters';
+            
+            if (currentLength >= maxLength * 0.9) {
+                counter.style.color = 'red';
+            } else if (currentLength >= maxLength * 0.7) {
+                counter.style.color = 'orange';
+            } else {
+                counter.style.color = '';
+            }
+        }
+
+        // Initialize the counter when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial update of the counter
+            updateCharacterCount();
+            
+            // Add event listener for textarea input
+            document.getElementById('special_instructions').addEventListener('input', updateCharacterCount);
         });
 
     </script>
