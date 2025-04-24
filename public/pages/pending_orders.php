@@ -808,6 +808,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <span class="po-detail-label">Delivery Address:</span>
                                 <span id="printDeliveryAddress"></span>
                             </div>
+
+                            <div class="po-detail-row" id="printInstructionsSection" style="margin-top: 10px; display: none;">
+                                <span class="po-detail-label">Special Instructions:</span>
+                                <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
+                            </div>
+
                         </div>
                         
                         <div class="po-right">
@@ -1095,7 +1101,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     // Variables to store the current PO for PDF generation
     let currentPOData = null;
     
-function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount) {
+function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
     try {
         // Store current PO data
         currentPOData = {
@@ -1106,7 +1112,8 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             deliveryDate,
             deliveryAddress,
             ordersJson,
-            totalAmount
+            totalAmount,
+            specialInstructions  // Add special instructions to stored data
         };
         
         // Populate the hidden PDF content silently
@@ -1122,6 +1129,17 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
+        
+        // Add special instructions if they exist
+        const instructionsSection = document.getElementById('printInstructionsSection');
+        const instructionsContent = document.getElementById('printSpecialInstructions');
+        
+        if (specialInstructions && specialInstructions.trim().length > 0) {
+            instructionsContent.textContent = specialInstructions;
+            instructionsSection.style.display = 'block';
+        } else {
+            instructionsSection.style.display = 'none';
+        }
         
         // Parse and populate order items
         const orderItems = JSON.parse(ordersJson);
@@ -1182,7 +1200,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
 }
 
     // Function to generate Purchase Order PDF
-    function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount) {
+        function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
         try {
             // Store current PO data for later use
             currentPOData = {
@@ -1193,7 +1211,8 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                 deliveryDate,
                 deliveryAddress,
                 ordersJson,
-                totalAmount
+                totalAmount,
+                specialInstructions  // Add special instructions to stored data
             };
             
             // Set basic information
@@ -1203,6 +1222,17 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
             document.getElementById('printOrderDate').textContent = orderDate;
             document.getElementById('printDeliveryDate').textContent = deliveryDate;
+            
+            // Add special instructions if they exist
+            const instructionsSection = document.getElementById('printInstructionsSection');
+            const instructionsContent = document.getElementById('printSpecialInstructions');
+            
+            if (specialInstructions && specialInstructions.trim().length > 0) {
+                instructionsContent.textContent = specialInstructions;
+                instructionsSection.style.display = 'block';
+            } else {
+                instructionsSection.style.display = 'none';
+            }
             
             // Format the total amount with commas and decimals
             document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
