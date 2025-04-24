@@ -784,7 +784,17 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
-                                <button class="download-btn" onclick="downloadPODirectly('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company']) ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>', '<?= htmlspecialchars($order['total_amount']) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>')">
+                                <button class="download-btn" onclick="downloadPODirectly(
+                                    '<?= htmlspecialchars($order['po_number']) ?>', 
+                                    '<?= htmlspecialchars($order['username']) ?>', 
+                                    '<?= htmlspecialchars($order['company']) ?>', 
+                                    '<?= htmlspecialchars($order['order_date']) ?>', 
+                                    '<?= htmlspecialchars($order['delivery_date']) ?>', 
+                                    '<?= htmlspecialchars($order['delivery_address']) ?>', 
+                                    '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
+                                    '<?= htmlspecialchars($order['total_amount']) ?>', 
+                                    '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
+                                )">
                                     <i class="fas fa-file-pdf"></i> Download PDF
                                 </button>
                                 </td>
@@ -924,7 +934,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     </div>
                     
                     <input type="hidden" name="delivery_address" id="delivery_address">
-
+                    <input type="hidden" name="special_instructions" id="special_instructions_hidden">
                     <!-- Add special instructions field -->
                     <label for="special_instructions">Special Instructions:</label>
                     <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
@@ -1740,6 +1750,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                 
                 // Include special instructions in form data
                 const specialInstructions = document.getElementById('special_instructions').value;
+                document.getElementById('special_instructions_hidden').value = specialInstructions;
                 // No need for a hidden field since the textarea already has the name attribute
             };
 
