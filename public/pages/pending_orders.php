@@ -93,6 +93,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <!-- HTML2PDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         /* Main styles for the Order Summary table */
         .order-summary {
@@ -361,53 +363,33 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             color:rgb(255, 255, 255);
         }
         
-        /* Print button styles */
-        .print-btn {
+        /* Download button styles */
+        .download-btn {
             padding: 6px 12px;
-            background-color: #28a745;
+            background-color: #17a2b8;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
+            margin-left: 5px;
         }
         
-        .print-btn:hover {
-            background-color: #218838;
+        .download-btn:hover {
+            background-color: #138496;
         }
         
-        .print-btn i {
+        .download-btn i {
             margin-right: 5px;
         }
         
-        /* Print styles */
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            
-            #printSection, #printSection * {
-                visibility: visible;
-            }
-            
-            #printSection {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-            }
-            
-            .no-print {
-                display: none !important;
-            }
-        }
-        
-        /* Print PO layout */
+        /* PO PDF layout */
         .po-container {
             font-family: Arial, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            background-color: white;
         }
         
         .po-header {
@@ -487,6 +469,54 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             margin-bottom: 10px;
             padding-top: 40px;
         }
+        
+        #pdfPreview {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow: auto;
+        }
+        
+        .pdf-container {
+            background-color: white;
+            width: 80%;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        .close-pdf {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #333;
+        }
+        
+        .pdf-actions {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .download-pdf-btn {
+            padding: 10px 20px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -540,7 +570,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 Total Amount <?= getSortIcon('total_amount', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
-                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -559,23 +588,20 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <i class="fas fa-clipboard-list"></i>    
                                 View Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
-                                <td>
-                                    <span class="status-badge status-pending"><?= htmlspecialchars($order['status']) ?></span>
-                                </td>
                                 <td class="action-buttons">
                                 <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
-                                <!-- Add print PO button -->
-                                <button class="print-btn" onclick="printPO('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company']) ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['total_amount']) ?>')">
-                                    <i class="fas fa-print"></i> Print PO
+                                <!-- Add download PO button -->
+                                <button class="download-btn" onclick="generatePO('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company']) ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['total_amount']) ?>')">
+                                    <i class="fas fa-file-pdf"></i> PO
                                 </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="10" class="no-orders">No pending orders found.</td>
+                            <td colspan="9" class="no-orders">No pending orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -586,72 +612,80 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- PO Print Section (hidden by default) -->
-    <div id="printSection" style="display:none;">
-        <div class="po-container">
-            <div class="po-header">
-                <div class="po-company" id="printCompany"></div>
-                <div class="po-title">Purchase Order</div>
+    <!-- PO PDF Preview Section -->
+    <div id="pdfPreview">
+        <div class="pdf-container">
+            <button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button>
+            <div id="contentToDownload">
+                <div class="po-container">
+                    <div class="po-header">
+                        <div class="po-company" id="printCompany"></div>
+                        <div class="po-title">Purchase Order</div>
+                    </div>
+                    
+                    <div class="po-details">
+                        <div class="po-left">
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">PO Number:</span>
+                                <span id="printPoNumber"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Username:</span>
+                                <span id="printUsername"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Delivery Address:</span>
+                                <span id="printDeliveryAddress"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="po-right">
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Order Date:</span>
+                                <span id="printOrderDate"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Delivery Date:</span>
+                                <span id="printDeliveryDate"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <table class="po-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Product</th>
+                                <th>Packaging</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="printOrderItems">
+                            <!-- Items will be populated here -->
+                        </tbody>
+                    </table>
+                    
+                    <div class="po-total">
+                        Total Amount: PHP <span id="printTotalAmount"></span>
+                    </div>
+                    
+                    <div class="po-signature">
+                        <div class="po-signature-block">
+                            <div class="po-signature-line"></div>
+                            <div>Authorized by</div>
+                        </div>
+                        
+                        <div class="po-signature-block">
+                            <div class="po-signature-line"></div>
+                            <div>Received by</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
-            <div class="po-details">
-                <div class="po-left">
-                    <div class="po-detail-row">
-                        <span class="po-detail-label">PO Number:</span>
-                        <span id="printPoNumber"></span>
-                    </div>
-                    <div class="po-detail-row">
-                        <span class="po-detail-label">Username:</span>
-                        <span id="printUsername"></span>
-                    </div>
-                    <div class="po-detail-row">
-                        <span class="po-detail-label">Delivery Address:</span>
-                        <span id="printDeliveryAddress"></span>
-                    </div>
-                </div>
-                
-                <div class="po-right">
-                    <div class="po-detail-row">
-                        <span class="po-detail-label">Order Date:</span>
-                        <span id="printOrderDate"></span>
-                    </div>
-                    <div class="po-detail-row">
-                        <span class="po-detail-label">Delivery Date:</span>
-                        <span id="printDeliveryDate"></span>
-                    </div>
-                </div>
-            </div>
-            
-            <table class="po-table">
-                <thead>
-                    <tr>
-                        <th>Category</th>
-                        <th>Product</th>
-                        <th>Packaging</th>
-                        <th>Quantity</th>
-                        <th>Unit Price</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody id="printOrderItems">
-                    <!-- Items will be populated here -->
-                </tbody>
-            </table>
-            
-            <div class="po-total">
-                Total Amount: PHP <span id="printTotalAmount"></span>
-            </div>
-            
-            <div class="po-signature">
-                <div class="po-signature-block">
-                    <div class="po-signature-line"></div>
-                    <div>Authorized by</div>
-                </div>
-                
-                <div class="po-signature-block">
-                    <div class="po-signature-line"></div>
-                    <div>Received by</div>
-                </div>
+            <div class="pdf-actions">
+                <button class="download-pdf-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button>
             </div>
         </div>
     </div>
@@ -875,9 +909,24 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
     <script src="/js/orders.js"></script>
     <script>
-    // Function to print Purchase Order
-    function printPO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount) {
+    // Variables to store the current PO for PDF generation
+    let currentPOData = null;
+    
+    // Function to generate Purchase Order PDF
+    function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount) {
         try {
+            // Store current PO data for later use
+            currentPOData = {
+                poNumber,
+                username,
+                company,
+                orderDate,
+                deliveryDate,
+                deliveryAddress,
+                ordersJson,
+                totalAmount
+            };
+            
             // Set basic information
             document.getElementById('printCompany').textContent = company || 'No Company Name';
             document.getElementById('printPoNumber').textContent = poNumber;
@@ -924,15 +973,47 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 orderItemsBody.appendChild(row);
             });
             
-            // Display print section and print
-            document.getElementById('printSection').style.display = 'block';
-            window.print();
-            document.getElementById('printSection').style.display = 'none';
+            // Show the PDF preview
+            document.getElementById('pdfPreview').style.display = 'block';
             
         } catch (e) {
-            console.error('Error preparing print data:', e);
-            alert('Error preparing print data');
+            console.error('Error preparing PDF data:', e);
+            alert('Error preparing PDF data');
         }
+    }
+    
+    // Function to close PDF preview
+    function closePDFPreview() {
+        document.getElementById('pdfPreview').style.display = 'none';
+    }
+    
+    // Function to download the PDF
+    function downloadPDF() {
+        if (!currentPOData) {
+            alert('No PO data available for download.');
+            return;
+        }
+        
+        // Get the element to convert to PDF
+        const element = document.getElementById('contentToDownload');
+        
+        // Configure html2pdf options
+        const opt = {
+            margin:       [10, 10, 10, 10],
+            filename:     `PO_${currentPOData.poNumber}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        // Generate and download PDF
+        html2pdf().set(opt).from(element).save().then(() => {
+            showToast(`Purchase Order ${currentPOData.poNumber} has been downloaded as PDF.`, 'success');
+            closePDFPreview();
+        }).catch(error => {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF. Please try again.');
+        });
     }
     
     window.openStatusModal = function(poNumber, username, ordersJson) {
