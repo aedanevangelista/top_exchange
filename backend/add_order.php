@@ -18,7 +18,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Validate that orders is valid JSON
         $decoded_orders = json_decode($orders, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Invalid order data format');
+            throw new Exception('Invalid order data format: ' . json_last_error_msg());
         }
 
         // Insert into orders table (now including company)

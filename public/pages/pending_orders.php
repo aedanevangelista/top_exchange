@@ -455,7 +455,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <div id="addOrderOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-plus"></i> Add New Order</h2>
-            <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
+            <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php" onsubmit="return prepareOrderData();">
                 <div class="left-section">
                     <label for="username">Username:</label>
                     <select id="username" name="username" required onchange="generatePONumber(); updateCompanyInfo();">
@@ -972,7 +972,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }, 5000);
     }
     
-// UPDATED: Enhanced viewOrderDetails function with better JSON handling
 function viewOrderDetails(ordersJson) {
     try {
         console.log("Raw orders data:", ordersJson); // Debug: Log the raw data
@@ -987,21 +986,8 @@ function viewOrderDetails(ordersJson) {
             console.error("Initial JSON parse error:", parseError);
             
             // Try to fix common JSON issues
-            try {
-                // Replace escaped single quotes with regular single quotes
-                const fixedJson = ordersJson.replace(/\\'/g, "'");
-                orderDetails = JSON.parse(fixedJson);
-                console.log("Parsed after fixing escaped quotes");
-            } catch (error) {
-                // If that failed, try another approach
-                try {
-                    // Sometimes the data might be double-encoded
-                    orderDetails = JSON.parse(JSON.parse(ordersJson));
-                    console.log("Parsed after double parsing");
-                } catch (doubleError) {
-                    throw new Error("Could not parse order details: " + parseError.message);
-                }
-            }
+            const fixedJson = ordersJson.replace(/\\'/g, "'").replace(/\\"/g, '"');
+            orderDetails = JSON.parse(fixedJson);
         }
         
         // Check if orderDetails is actually an array
@@ -1037,7 +1023,6 @@ function viewOrderDetails(ordersJson) {
         showToast('Error displaying order details: ' + e.message, 'error');
     }
 }
-
 // UPDATED: Enhanced printPurchaseOrder function
 function printPurchaseOrder(poNumber) {
     // Show loading message or spinner
@@ -1264,37 +1249,43 @@ function generatePDF(order) {
     
     // Extend the prepareOrderData function to include company field
     window.prepareOrderData = function() {
-        // Get values from the form
-        const total = calculateCartTotal();
-        document.getElementById('total_amount').value = total.toFixed(2);
-        document.getElementById('orders').value = JSON.stringify(selectedProducts);
-        
-        // Get username and order details for PO number if not already set
-        if (document.getElementById('po_number').value === "") {
-            generatePONumber();
-        }
-        
-        // Set delivery address based on selection
-        const deliveryAddressType = document.getElementById('delivery_address_type').value;
-        let deliveryAddressValue;
-        
-        if (deliveryAddressType === 'company') {
-            deliveryAddressValue = document.getElementById('company_address').value;
-        } else {
-            deliveryAddressValue = document.getElementById('custom_address').value;
-        }
-        
-        document.getElementById('delivery_address').value = deliveryAddressValue;
-        
-        // Make sure we're properly setting the company value
-        if (!document.getElementById('company').value) {
-            // If no company name is available, set it to empty string to avoid null issues
-            document.getElementById('company').value = '';
-        }
-        
-        // Return true to allow form submission
-        return true;
-    };
+    // Get values from the form
+    const total = calculateCartTotal();
+    document.getElementById('total_amount').value = total.toFixed(2);
+    
+    // IMPORTANT: This must happen BEFORE form submission
+    document.getElementById('orders').value = JSON.stringify(selectedProducts);
+    
+    // Get username and order details for PO number if not already set
+    if (document.getElementById('po_number').value === "") {
+        generatePONumber();
+    }
+    
+    // Set delivery address based on selection
+    const deliveryAddressType = document.getElementById('delivery_address_type').value;
+    let deliveryAddressValue;
+    
+    if (deliveryAddressType === 'company') {
+        deliveryAddressValue = document.getElementById('company_address').value;
+    } else {
+        deliveryAddressValue = document.getElementById('custom_address').value;
+    }
+    
+    document.getElementById('delivery_address').value = deliveryAddressValue;
+    
+    // Make sure we're properly setting the company value
+    if (!document.getElementById('company').value) {
+        // If no company name is available, set it to empty string to avoid null issues
+        document.getElementById('company').value = '';
+    }
+    
+    // Log what's being submitted for debugging
+    console.log("Products being submitted:", selectedProducts);
+    console.log("JSON string:", document.getElementById('orders').value);
+    
+    // Return true to allow form submission
+    return true;
+};
     
     // Add this function to see what's being submitted
     function logFormData() {
