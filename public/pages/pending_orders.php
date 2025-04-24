@@ -116,7 +116,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         
         /* Account for scrollbar width in header */
         .summary-table thead {
-            width: 100%;
+            width: calc(100% - 17px);
         }
         
         /* Cell styling for proper alignment and text overflow */
@@ -355,11 +355,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         th.sortable .fa-sort-down {
             color:rgb(255, 255, 255);
         }
-        
-        .overlay-content {
-            max-height: 80vh;
-        }
-    </style> 
+    </style>
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
@@ -1075,7 +1071,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         logFormData();
     });
     
-    // Add the new function to print a purchase order
+    // Add the function to print a purchase order
     function printPurchaseOrder(poNumber) {
         // Show loading message or spinner
         showToast("Generating Purchase Order...", "info");
@@ -1090,6 +1086,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             })
             .then(data => {
                 if (data.success) {
+                    console.log("Order data received:", data.order); // Debug line
+                    console.log("Raw orders field:", data.order.orders); // Debug line
                     generatePDF(data.order);
                 } else {
                     showToast("Error: " + data.message, "error");
@@ -1172,17 +1170,45 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             doc.line(margin, yPos, pageWidth - margin, yPos);
             yPos += 10;
             
-            // Add order items table
-            const orderItems = JSON.parse(order.orders);
+            // Add order items table - FIXED CODE SECTION BELOW
+            let orderItems = [];
+            let tableData = [];
+            
+            try {
+                // First, check if order.orders is already an array or needs parsing
+                if (typeof order.orders === 'string') {
+                    orderItems = JSON.parse(order.orders);
+                } else if (Array.isArray(order.orders)) {
+                    orderItems = order.orders;
+                } else {
+                    console.error("Order items is neither a string nor an array:", order.orders);
+                    throw new Error("Invalid order items format");
+                }
+                
+                // Make sure orderItems is an array before using map
+                if (!Array.isArray(orderItems)) {
+                    console.error("Order items is not an array after parsing:", orderItems);
+                    throw new Error("Order items is not an array");
+                }
+                
+                // Create table data
+                tableData = orderItems.map(item => [
+                    item.category || '',
+                    item.item_description,
+                    item.packaging,
+                    `PHP ${parseFloat(item.price).toFixed(2)}`,
+                    item.quantity.toString(),
+                    `PHP ${(parseFloat(item.price) * parseInt(item.quantity)).toFixed(2)}`
+                ]);
+            } catch (error) {
+                console.error("Error processing order items:", error);
+                console.log("Order items content:", order.orders);
+                
+                // Fallback: create a single row with error message
+                tableData = [["Error", "Could not process order items", "", "", "", ""]];
+            }
+            
             const tableHeaders = [['Category', 'Product', 'Packaging', 'Price', 'Quantity', 'Subtotal']];
-            const tableData = orderItems.map(item => [
-                item.category || '',
-                item.item_description,
-                item.packaging,
-                `PHP ${parseFloat(item.price).toFixed(2)}`,
-                item.quantity.toString(),
-                `PHP ${(parseFloat(item.price) * parseInt(item.quantity)).toFixed(2)}`
-            ]);
             
             // Add the table
             doc.autoTable({
