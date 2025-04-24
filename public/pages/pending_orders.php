@@ -1117,7 +1117,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <div class="instructions-header">
                 <h3>Special Instructions</h3>
                 <div class="instructions-po-number" id="instructionsPoNumber"></div>
-                <span class="close-instructions" onclick="closeSpecialInstructions()">&times;</span>
             </div>
             <div class="instructions-body" id="instructionsContent">
                 <!-- Instructions will be displayed here -->
