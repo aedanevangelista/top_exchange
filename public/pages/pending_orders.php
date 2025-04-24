@@ -49,9 +49,12 @@ $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.deliver
 
 // Add sorting - Handle special case for company column which comes from a COALESCE
 if ($sort_column === 'company') {
-    $sql .= " ORDER BY company {$sort_direction}";
+    $sql .= " ORDER BY company {$sort_direction}, o.po_number DESC";
+} else if ($sort_column === 'order_date' || $sort_column === 'delivery_date') {
+    // For date columns, add a secondary sort by po_number to ensure latest added appears first when dates are the same
+    $sql .= " ORDER BY o.{$sort_column} {$sort_direction}, o.po_number DESC";
 } else {
-    $sql .= " ORDER BY o.{$sort_column} {$sort_direction}";
+    $sql .= " ORDER BY o.{$sort_column} {$sort_direction}, o.order_date DESC, o.po_number DESC";
 }
 
 $stmt = $conn->prepare($sql);
