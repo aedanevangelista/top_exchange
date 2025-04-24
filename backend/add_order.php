@@ -14,6 +14,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $orders = $_POST['orders']; // Keep as JSON string
         $total_amount = $_POST['total_amount'];
 
+        $special_instructions = $_POST['special_instructions'] ?? '';
+
         // Validate that orders is valid JSON
         $decoded_orders = json_decode($orders, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
@@ -22,15 +24,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         // Insert into orders table (now including delivery_address)
         $insertOrder = $conn->prepare("
-            INSERT INTO orders (username, order_date, delivery_date, delivery_address, po_number, orders, total_amount, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')
+            INSERT INTO orders (username, order_date, delivery_date, delivery_address, po_number, orders, total_amount, status, special_instructions) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
         ");
 
         if ($insertOrder === false) {
             throw new Exception('Failed to prepare statement: ' . $conn->error);
         }
 
-        $insertOrder->bind_param("ssssssd", $username, $order_date, $delivery_date, $delivery_address, $po_number, $orders, $total_amount);
+        $insertOrder->bind_param("ssssssds", $username, $order_date, $delivery_date, $delivery_address, $po_number, $orders, $total_amount, $special_instructions);
 
         if ($insertOrder->execute()) {
             echo json_encode([
