@@ -42,16 +42,19 @@ $orders = []; // Initialize $orders as an empty array
 
 // Modified query to join with clients_accounts to get the company information
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, 
-        COALESCE(o.company, c.company) as company
+        o.special_instructions, COALESCE(o.company, c.company) as company
         FROM orders o
         LEFT JOIN clients_accounts c ON o.username = c.username
         WHERE o.status = 'Pending'";
 
 // Add sorting - Handle special case for company column which comes from a COALESCE
 if ($sort_column === 'company') {
-    $sql .= " ORDER BY company {$sort_direction}";
+    $sql .= " ORDER BY company {$sort_direction}, o.po_number DESC";
+} else if ($sort_column === 'order_date' || $sort_column === 'delivery_date') {
+    // For date columns, add a secondary sort by po_number to ensure latest added appears first when dates are the same
+    $sql .= " ORDER BY o.{$sort_column} {$sort_direction}, o.po_number DESC";
 } else {
-    $sql .= " ORDER BY o.{$sort_column} {$sort_direction}";
+    $sql .= " ORDER BY o.{$sort_column} {$sort_direction}, o.order_date DESC, o.po_number DESC";
 }
 
 $stmt = $conn->prepare($sql);
@@ -369,7 +372,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             background-color: #17a2b8;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 40px;
             cursor: pointer;
             font-size: 14px;
             margin-left: 5px;
@@ -517,6 +520,185 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             cursor: pointer;
             font-size: 16px;
         }
+
+    .instructions-btn {
+        padding: 6px 12px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        min-width: 60px;
+        text-align: center;
+    }
+
+    .instructions-btn:hover {
+        background-color: #218838;
+    }
+    
+    .instructions-btn i {
+        margin-right: 5px;
+    }
+    
+    .no-instructions {
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    /* Special Instructions Modal */
+    .instructions-modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.7);
+    }
+    
+    .instructions-modal-content {
+        background-color: #ffffff;
+        margin: 10% auto;
+        padding: 0;
+        border-radius: 8px;
+        width: 60%;
+        max-width: 600px;
+        position: relative;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        animation: modalFadeIn 0.3s ease-in-out;
+        overflow: hidden;
+        max-height: 90vh; /* 90% of the viewport height */
+        overflow-y: auto; /* Add scroll if content exceeds max height */
+        margin: 5vh auto; /* Center vertically with 5% top margin */
+    }
+
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .close-instructions {
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        font-size: 20px;
+        color: white;
+        opacity: 0.8;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    
+    .close-instructions:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+        opacity: 1;
+    }
+    
+    .instructions-header {
+        background-color: #2980b9;
+        color: white;
+        padding: 15px 20px;
+        position: relative;
+    }
+
+    .instructions-header h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .instructions-po-number {
+        font-size: 14px;
+        margin-top: 5px;
+        opacity: 0.9;
+    }
+    
+    .instructions-body {
+        padding: 20px;
+        max-height: 300px;
+        overflow-y: auto;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #eaeaea;
+    }
+    
+    .instructions-body.empty {
+        color: #6c757d;
+        font-style: italic;
+        text-align: center;
+        padding: 40px 20px;
+    }
+    
+    .instructions-footer {
+        padding: 15px 20px;
+        text-align: right;
+        background-color: #ffffff;
+    }
+    
+    .close-instructions-btn {
+        background-color: #2980b9;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+    }
+    
+    .close-instructions-btn:hover {
+        background-color: #2471a3;
+    }
+    
+    /* Make button look consistent with other buttons */
+    .instructions-btn {
+        padding: 6px 12px;
+        background-color: #2980b9;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        min-width: 60px;
+        text-align: center;
+        transition: background-color 0.2s;
+    }
+    
+    .instructions-btn:hover {
+        background-color: #2471a3;
+    }
+    
+    .no-instructions {
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    /* Style for the special instructions textarea */
+    #special_instructions {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        resize: vertical; /* Allow vertical resizing only */
+        font-family: inherit;
+        margin-bottom: 15px;
+    }
+
+    /* Update overlay-content max height */
+    .overlay-content {
+        max-height: 90vh; /* 90% of the viewport height */
+        overflow-y: auto; /* Add scroll if content exceeds max height */
+    }
     </style>
 </head>
 <body>
@@ -570,6 +752,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 Total Amount <?= getSortIcon('total_amount', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
+                        <th>Special Instructions</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -579,20 +762,39 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             <tr>
                                 <td><?= htmlspecialchars($order['po_number']) ?></td>
                                 <td><?= htmlspecialchars($order['username']) ?></td>
-                                <!-- Display company information -->
                                 <td><?= htmlspecialchars($order['company'] ?: 'No Company') ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_address']) ?></td>
                                 <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
                                 <i class="fas fa-clipboard-list"></i>    
-                                View Orders</button></td>
+                                Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
+                                <!-- Add Special Instructions column with view button -->
+                                <td>
+                                    <?php if (!empty($order['special_instructions'])): ?>
+                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
+                                            View
+                                        </button>
+                                    <?php else: ?>
+                                        <span class="no-instructions">None</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
-                                <button class="download-btn" onclick="downloadPODirectly('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company']) ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['total_amount']) ?>')">
+                                <button class="download-btn" onclick="downloadPODirectly(
+                                    '<?= htmlspecialchars($order['po_number']) ?>', 
+                                    '<?= htmlspecialchars($order['username']) ?>', 
+                                    '<?= htmlspecialchars($order['company']) ?>', 
+                                    '<?= htmlspecialchars($order['order_date']) ?>', 
+                                    '<?= htmlspecialchars($order['delivery_date']) ?>', 
+                                    '<?= htmlspecialchars($order['delivery_address']) ?>', 
+                                    '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
+                                    '<?= htmlspecialchars($order['total_amount']) ?>', 
+                                    '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
+                                )">
                                     <i class="fas fa-file-pdf"></i> Download PDF
                                 </button>
                                 </td>
@@ -600,7 +802,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="no-orders">No pending orders found.</td>
+                            <td colspan="10" class="no-orders">No pending orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -635,6 +837,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             <div class="po-detail-row">
                                 <span class="po-detail-label">Delivery Address:</span>
                                 <span id="printDeliveryAddress"></span>
+                            </div>
+                            <div class="po-detail-row" id="printInstructionsSection">
+                                <span class="po-detail-label">Special Instructions:</span>
+                                <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
                             </div>
                         </div>
                         
@@ -696,7 +902,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber(); updateCompany();">
+                    <select id="username" name="username" required onchange="generatePONumber();">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
@@ -706,10 +912,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    
-                    <!-- Added company field -->
-
-                    
+                                        
                     <label for="order_date">Order Date:</label>
                     <input type="text" id="order_date" name="order_date" readonly>
                     <label for="delivery_date">Delivery Date:</label>
@@ -731,6 +934,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     </div>
                     
                     <input type="hidden" name="delivery_address" id="delivery_address">
+                    <input type="hidden" name="special_instructions" id="special_instructions_hidden">
+                    <!-- Add special instructions field -->
+                    <label for="special_instructions">Special Instructions:</label>
+                    <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
                     
                     <div class="centered-button">
                         <button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()">
@@ -905,12 +1112,27 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
+    <div id="specialInstructionsModal" class="instructions-modal">
+        <div class="instructions-modal-content">
+            <div class="instructions-header">
+                <h3>Special Instructions</h3>
+                <div class="instructions-po-number" id="instructionsPoNumber"></div>
+            </div>
+            <div class="instructions-body" id="instructionsContent">
+                <!-- Instructions will be displayed here -->
+            </div>
+            <div class="instructions-footer">
+                <button type="button" class="close-instructions-btn" onclick="closeSpecialInstructions()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/orders.js"></script>
     <script>
     // Variables to store the current PO for PDF generation
     let currentPOData = null;
     
-function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount) {
+function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
     try {
         // Store current PO data
         currentPOData = {
@@ -921,7 +1143,8 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             deliveryDate,
             deliveryAddress,
             ordersJson,
-            totalAmount
+            totalAmount,
+            specialInstructions  // Add special instructions to stored data
         };
         
         // Populate the hidden PDF content silently
@@ -937,6 +1160,17 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
+        
+        // Add special instructions if they exist
+        const instructionsSection = document.getElementById('printInstructionsSection');
+        const instructionsContent = document.getElementById('printSpecialInstructions');
+        
+        if (specialInstructions && specialInstructions.trim().length > 0) {
+            instructionsContent.textContent = specialInstructions;
+            instructionsSection.style.display = 'block';
+        } else {
+            instructionsSection.style.display = 'none';
+        }
         
         // Parse and populate order items
         const orderItems = JSON.parse(ordersJson);
@@ -997,7 +1231,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
 }
 
     // Function to generate Purchase Order PDF
-    function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount) {
+    function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
         try {
             // Store current PO data for later use
             currentPOData = {
@@ -1008,7 +1242,8 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                 deliveryDate,
                 deliveryAddress,
                 ordersJson,
-                totalAmount
+                totalAmount,
+                specialInstructions  // Add special instructions to stored data
             };
             
             // Set basic information
@@ -1018,6 +1253,17 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
             document.getElementById('printOrderDate').textContent = orderDate;
             document.getElementById('printDeliveryDate').textContent = deliveryDate;
+            
+            // Add special instructions if they exist
+            const instructionsSection = document.getElementById('printInstructionsSection');
+            const instructionsContent = document.getElementById('printSpecialInstructions');
+            
+            if (specialInstructions && specialInstructions.trim().length > 0) {
+                instructionsContent.textContent = specialInstructions;
+                instructionsSection.style.display = 'block';
+            } else {
+                instructionsSection.style.display = 'none';
+            }
             
             // Format the total amount with commas and decimals
             document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
@@ -1439,13 +1685,34 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
     }
     
     // Add function to update company name when username changes
-    function updateCompany() {
-        const selectedOption = document.getElementById('username').selectedOptions[0];
-        if (selectedOption) {
-            const company = selectedOption.getAttribute('data-company') || '';
-            document.getElementById('company').value = company;
+
+        function viewSpecialInstructions(poNumber, instructions) {
+                document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
+                const contentEl = document.getElementById('instructionsContent');
+                
+                if (instructions && instructions.trim().length > 0) {
+                    contentEl.textContent = instructions;
+                    contentEl.classList.remove('empty');
+                } else {
+                    contentEl.textContent = 'No special instructions provided for this order.';
+                    contentEl.classList.add('empty');
+                }
+                
+                document.getElementById('specialInstructionsModal').style.display = 'block';
+            }
+
+        function closeSpecialInstructions() {
+            document.getElementById('specialInstructionsModal').style.display = 'none';
         }
-    }
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('specialInstructionsModal');
+            if (event.target === modal) {
+                closeSpecialInstructions();
+            }
+        });
+
     </script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
@@ -1497,7 +1764,6 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                 }
                 
                 // Ensure company is included
-                const company = document.getElementById('company').value;
                 const ordersInput = document.getElementById('orders');
                 if (ordersInput.value) {
                     try {
@@ -1507,8 +1773,12 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                         console.error("Error preparing order data:", e);
                     }
                 }
+                
+                // Include special instructions in form data
+                const specialInstructions = document.getElementById('special_instructions').value;
+                document.getElementById('special_instructions_hidden').value = specialInstructions;
+                // No need for a hidden field since the textarea already has the name attribute
             };
-        });
     </script> 
 </body>
 </html>
