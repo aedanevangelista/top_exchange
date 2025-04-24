@@ -677,7 +677,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons">
-                                <!-- Existing buttons... -->
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
+                                    <i class="fas fa-exchange-alt"></i> Change Status
+                                </button>
+                                <button class="download-btn" onclick="downloadPODirectly('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company']) ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['total_amount']) ?>')">
+                                    <i class="fas fa-file-pdf"></i> Download PDF
+                                </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
