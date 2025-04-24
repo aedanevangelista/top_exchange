@@ -838,10 +838,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <span class="po-detail-label">Delivery Address:</span>
                                 <span id="printDeliveryAddress"></span>
                             </div>
-                            <div class="po-detail-row" id="printInstructionsSection">
+                            <!-- <div class="po-detail-row" id="printInstructionsSection">
                                 <span class="po-detail-label">Special Instructions:</span>
                                 <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
-                            </div>
+                            </div> -->
                         </div>
                         
                         <div class="po-right">
