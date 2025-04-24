@@ -360,6 +360,133 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         th.sortable .fa-sort-down {
             color:rgb(255, 255, 255);
         }
+        
+        /* Print button styles */
+        .print-btn {
+            padding: 6px 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .print-btn:hover {
+            background-color: #218838;
+        }
+        
+        .print-btn i {
+            margin-right: 5px;
+        }
+        
+        /* Print styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            
+            #printSection, #printSection * {
+                visibility: visible;
+            }
+            
+            #printSection {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+        }
+        
+        /* Print PO layout */
+        .po-container {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .po-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .po-company {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .po-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        
+        .po-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .po-left, .po-right {
+            width: 48%;
+        }
+        
+        .po-detail-row {
+            margin-bottom: 10px;
+        }
+        
+        .po-detail-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 120px;
+        }
+        
+        .po-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        .po-table th, .po-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .po-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .po-total {
+            text-align: right;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        
+        .po-signature {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 50px;
+        }
+        
+        .po-signature-block {
+            width: 40%;
+            text-align: center;
+        }
+        
+        .po-signature-line {
+            border-bottom: 1px solid #000;
+            margin-bottom: 10px;
+            padding-top: 40px;
+        }
     </style>
 </head>
 <body>
@@ -439,6 +566,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
+                                <!-- Add print PO button -->
+                                <button class="print-btn" onclick="printPO('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company']) ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['total_amount']) ?>')">
+                                    <i class="fas fa-print"></i> Print PO
+                                </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -454,6 +585,76 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
+
+    <!-- PO Print Section (hidden by default) -->
+    <div id="printSection" style="display:none;">
+        <div class="po-container">
+            <div class="po-header">
+                <div class="po-company" id="printCompany"></div>
+                <div class="po-title">Purchase Order</div>
+            </div>
+            
+            <div class="po-details">
+                <div class="po-left">
+                    <div class="po-detail-row">
+                        <span class="po-detail-label">PO Number:</span>
+                        <span id="printPoNumber"></span>
+                    </div>
+                    <div class="po-detail-row">
+                        <span class="po-detail-label">Username:</span>
+                        <span id="printUsername"></span>
+                    </div>
+                    <div class="po-detail-row">
+                        <span class="po-detail-label">Delivery Address:</span>
+                        <span id="printDeliveryAddress"></span>
+                    </div>
+                </div>
+                
+                <div class="po-right">
+                    <div class="po-detail-row">
+                        <span class="po-detail-label">Order Date:</span>
+                        <span id="printOrderDate"></span>
+                    </div>
+                    <div class="po-detail-row">
+                        <span class="po-detail-label">Delivery Date:</span>
+                        <span id="printDeliveryDate"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <table class="po-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Product</th>
+                        <th>Packaging</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="printOrderItems">
+                    <!-- Items will be populated here -->
+                </tbody>
+            </table>
+            
+            <div class="po-total">
+                Total Amount: PHP <span id="printTotalAmount"></span>
+            </div>
+            
+            <div class="po-signature">
+                <div class="po-signature-block">
+                    <div class="po-signature-line"></div>
+                    <div>Authorized by</div>
+                </div>
+                
+                <div class="po-signature-block">
+                    <div class="po-signature-line"></div>
+                    <div>Received by</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Overlay Form for Adding New Order -->
     <div id="addOrderOverlay" class="overlay" style="display: none;">
@@ -674,6 +875,66 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
     <script src="/js/orders.js"></script>
     <script>
+    // Function to print Purchase Order
+    function printPO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount) {
+        try {
+            // Set basic information
+            document.getElementById('printCompany').textContent = company || 'No Company Name';
+            document.getElementById('printPoNumber').textContent = poNumber;
+            document.getElementById('printUsername').textContent = username;
+            document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
+            document.getElementById('printOrderDate').textContent = orderDate;
+            document.getElementById('printDeliveryDate').textContent = deliveryDate;
+            
+            // Format the total amount with commas and decimals
+            document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            
+            // Parse and populate order items
+            const orderItems = JSON.parse(ordersJson);
+            const orderItemsBody = document.getElementById('printOrderItems');
+            
+            // Clear previous content
+            orderItemsBody.innerHTML = '';
+            
+            // Add items to the table
+            orderItems.forEach(item => {
+                const row = document.createElement('tr');
+                
+                // Calculate item total
+                const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+                
+                row.innerHTML = `
+                    <td>${item.category || ''}</td>
+                    <td>${item.item_description}</td>
+                    <td>${item.packaging || ''}</td>
+                    <td>${item.quantity}</td>
+                    <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    })}</td>
+                    <td>PHP ${itemTotal.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    })}</td>
+                `;
+                
+                orderItemsBody.appendChild(row);
+            });
+            
+            // Display print section and print
+            document.getElementById('printSection').style.display = 'block';
+            window.print();
+            document.getElementById('printSection').style.display = 'none';
+            
+        } catch (e) {
+            console.error('Error preparing print data:', e);
+            alert('Error preparing print data');
+        }
+    }
+    
     window.openStatusModal = function(poNumber, username, ordersJson) {
         $('#statusMessage').text('Change order status for ' + poNumber);
         $('#statusModal').data('po_number', poNumber).show();
@@ -990,7 +1251,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <td>${product.category}</td>
                     <td>${product.item_description}</td>
                     <td>${product.packaging}</td>
-                    <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
+                    <td>PHP ${parseFloat(product.price).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    })}</td>
                     <td>${product.quantity}</td>
                 `;
                 
@@ -1026,7 +1290,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             // Search functionality
             $("#searchInput").on("input", function() {
                 let searchText = $(this).val().toLowerCase().trim();
-                console.log("Searching for:", searchText); // Debug line
 
                 $(".orders-table tbody tr").each(function() {
                     let row = $(this);
