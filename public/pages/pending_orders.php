@@ -315,7 +315,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         
         .modal-cancel-btn:hover {
-            background-color:rgb(53, 53, 53);
+            background-color:rgb(61, 61, 61);
         }
         
         /* Sortable table headers */
