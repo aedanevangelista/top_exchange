@@ -707,6 +707,31 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         color: #666;
         margin-top: 5px;
     }
+
+    /* Special instructions styling in the PDF */
+    #printInstructionsSection {
+        display: block; /* Change from flex to block layout */
+        margin-top: 15px;
+        page-break-inside: avoid; /* Try to avoid breaking across pages */
+    }
+
+    #printInstructionsSection .po-detail-label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    #printSpecialInstructions {
+        display: block;
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        width: 100%;
+        max-width: 100%;
+        padding: 5px 0;
+        line-height: 1.4;
+        font-size: 0.9em;
+    }
     </style>
 </head>
 <body>
@@ -847,8 +872,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <span id="printDeliveryAddress"></span>
                             </div>
                             <div class="po-detail-row" id="printInstructionsSection">
-                                <span class="po-detail-label">Special Instructions:</span>
-                                <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
+                                <div class="po-detail-label">Special Instructions:</div>
+                                <div id="printInstructionsSection" style="margin-top: 20px; margin-bottom: 20px;">
+                                    <h3 style="margin-bottom: 8px;">Special Instructions:</h3>
+                                    <div id="printSpecialInstructions" style="white-space: pre-wrap; word-break: break-word; border: 1px solid #ddd; padding: 10px; background-color: #f9f9f9;"></div>
+                                </div>
                             </div>
                         </div>
                         
@@ -1174,8 +1202,15 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         const instructionsSection = document.getElementById('printInstructionsSection');
         const instructionsContent = document.getElementById('printSpecialInstructions');
         
+        // Update this code in both locations (around line 1166 and around line 1258)
         if (specialInstructions && specialInstructions.trim().length > 0) {
-            instructionsContent.textContent = specialInstructions;
+            // Sanitize and format the instructions for display
+            const safeInstructions = specialInstructions
+                .trim()
+                .replace(/\r\n/g, '\n') // Normalize line breaks
+                .replace(/\n{3,}/g, '\n\n'); // Replace multiple blank lines with just two
+            
+            instructionsContent.textContent = safeInstructions;
             instructionsSection.style.display = 'block';
         } else {
             instructionsSection.style.display = 'none';
@@ -1218,13 +1253,24 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         
         // Configure html2pdf options
         const opt = {
-            margin:       [10, 10, 10, 10],
+            margin:       [15, 15, 15, 15], // Slightly larger margins
             filename:     `PO_${poNumber}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            html2canvas:  { 
+                scale: 2, 
+                useCORS: true,
+                letterRendering: true,
+                allowTaint: true
+            },
+            jsPDF:        { 
+                unit: 'mm', 
+                format: 'a4', 
+                orientation: 'portrait',
+                compress: true,
+                textColor: '#000000'
+            }
         };
-        
+
         // Generate and download PDF directly
         html2pdf().set(opt).from(element).save().then(() => {
             showToast(`Purchase Order ${poNumber} has been downloaded.`, 'success');
