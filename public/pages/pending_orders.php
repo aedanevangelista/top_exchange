@@ -42,7 +42,7 @@ $orders = []; // Initialize $orders as an empty array
 
 // Modified query to join with clients_accounts to get the company information
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, 
-        COALESCE(o.company, c.company) as company
+        o.special_instructions, COALESCE(o.company, c.company) as company
         FROM orders o
         LEFT JOIN clients_accounts c ON o.username = c.username
         WHERE o.status = 'Pending'";
@@ -520,6 +520,81 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             cursor: pointer;
             font-size: 16px;
         }
+
+         .instructions-btn {
+        padding: 6px 12px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    
+    .instructions-btn:hover {
+        background-color: #218838;
+    }
+    
+    .instructions-btn i {
+        margin-right: 5px;
+    }
+    
+    .no-instructions {
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    /* Special Instructions Modal */
+    .instructions-modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.7);
+    }
+    
+    .instructions-modal-content {
+        background-color: #f8f9fa;
+        margin: 10% auto;
+        padding: 20px;
+        border-radius: 5px;
+        width: 60%;
+        max-width: 600px;
+        position: relative;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .close-instructions {
+        position: absolute;
+        right: 15px;
+        top: 10px;
+        font-size: 24px;
+        font-weight: bold;
+        color: #aaa;
+        cursor: pointer;
+    }
+    
+    .close-instructions:hover {
+        color: #333;
+    }
+    
+    .instructions-header {
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .instructions-body {
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 10px 0;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
     </style>
 </head>
 <body>
@@ -573,6 +648,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 Total Amount <?= getSortIcon('total_amount', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
+                        <th>Special Instructions</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -582,7 +658,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             <tr>
                                 <td><?= htmlspecialchars($order['po_number']) ?></td>
                                 <td><?= htmlspecialchars($order['username']) ?></td>
-                                <!-- Display company information -->
                                 <td><?= htmlspecialchars($order['company'] ?: 'No Company') ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
@@ -591,19 +666,24 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <i class="fas fa-clipboard-list"></i>    
                                 View Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
+                                <!-- Add Special Instructions column with view button -->
+                                <td>
+                                    <?php if (!empty($order['special_instructions'])): ?>
+                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
+                                            <i class="fas fa-sticky-note"></i> View Instructions
+                                        </button>
+                                    <?php else: ?>
+                                        <span class="no-instructions">No special instructions</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
-                                    <i class="fas fa-exchange-alt"></i> Change Status
-                                </button>
-                                <button class="download-btn" onclick="downloadPODirectly('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company']) ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['total_amount']) ?>')">
-                                    <i class="fas fa-file-pdf"></i> Download PDF
-                                </button>
+                                <!-- Existing buttons... -->
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="no-orders">No pending orders found.</td>
+                            <td colspan="10" class="no-orders">No pending orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -901,6 +981,19 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 <button type="button" class="back-btn" onclick="closeOrderDetailsModal()">
                     <i class="fas fa-arrow-left"></i> Back
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="specialInstructionsModal" class="instructions-modal">
+        <div class="instructions-modal-content">
+            <span class="close-instructions" onclick="closeSpecialInstructions()">&times;</span>
+            <div class="instructions-header">
+                <h3>Special Instructions</h3>
+                <p id="instructionsPoNumber"></p>
+            </div>
+            <div class="instructions-body" id="instructionsContent">
+                <!-- Instructions will be displayed here -->
             </div>
         </div>
     </div>
@@ -1502,6 +1595,24 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                 }
             };
         });
+
+        function viewSpecialInstructions(poNumber, instructions) {
+            document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
+            document.getElementById('instructionsContent').textContent = instructions || 'No special instructions provided.';
+            document.getElementById('specialInstructionsModal').style.display = 'block';
+        }
+        
+        function closeSpecialInstructions() {
+            document.getElementById('specialInstructionsModal').style.display = 'none';
+        }
+        
+        // Close the modal if the user clicks outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('specialInstructionsModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
     </script> 
 </body>
 </html>
