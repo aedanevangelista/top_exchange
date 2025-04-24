@@ -273,7 +273,7 @@ if ($result && $result->num_rows > 0) {
         }
         
         .modal-cancel-btn:hover {
-            background-color: #e9ecef;
+            background-color:rgb(70, 70, 70);
         }
     </style>
 </head>
