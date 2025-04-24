@@ -372,7 +372,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             background-color: #17a2b8;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 40px;
             cursor: pointer;
             font-size: 14px;
             margin-left: 5px;
@@ -560,42 +560,124 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     }
     
     .instructions-modal-content {
-        background-color: #f8f9fa;
+        background-color: #ffffff;
         margin: 10% auto;
-        padding: 20px;
-        border-radius: 5px;
+        padding: 0;
+        border-radius: 8px;
         width: 60%;
         max-width: 600px;
         position: relative;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        animation: modalFadeIn 0.3s ease-in-out;
+        overflow: hidden;
+    }
+
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
     }
     
     .close-instructions {
         position: absolute;
         right: 15px;
-        top: 10px;
-        font-size: 24px;
-        font-weight: bold;
-        color: #aaa;
+        top: 15px;
+        font-size: 20px;
+        color: white;
+        opacity: 0.8;
         cursor: pointer;
+        transition: all 0.2s ease;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
     }
     
     .close-instructions:hover {
-        color: #333;
+        background-color: rgba(255, 255, 255, 0.2);
+        opacity: 1;
     }
     
     .instructions-header {
-        margin-bottom: 15px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #ddd;
+        background-color: #2980b9;
+        color: white;
+        padding: 15px 20px;
+        position: relative;
+    }
+
+    .instructions-header h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .instructions-po-number {
+        font-size: 14px;
+        margin-top: 5px;
+        opacity: 0.9;
     }
     
     .instructions-body {
+        padding: 20px;
         max-height: 300px;
         overflow-y: auto;
-        padding: 10px 0;
+        line-height: 1.6;
         white-space: pre-wrap;
         word-wrap: break-word;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #eaeaea;
+    }
+    
+    .instructions-body.empty {
+        color: #6c757d;
+        font-style: italic;
+        text-align: center;
+        padding: 40px 20px;
+    }
+    
+    .instructions-footer {
+        padding: 15px 20px;
+        text-align: right;
+        background-color: #ffffff;
+    }
+    
+    .close-instructions-btn {
+        background-color: #2980b9;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+    }
+    
+    .close-instructions-btn:hover {
+        background-color: #2471a3;
+    }
+    
+    /* Make button look consistent with other buttons */
+    .instructions-btn {
+        padding: 6px 12px;
+        background-color: #2980b9;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        min-width: 60px;
+        text-align: center;
+        transition: background-color 0.2s;
+    }
+    
+    .instructions-btn:hover {
+        background-color: #2471a3;
+    }
+    
+    .no-instructions {
+        color: #6c757d;
+        font-style: italic;
     }
     </style>
 </head>
@@ -994,13 +1076,16 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
     <div id="specialInstructionsModal" class="instructions-modal">
         <div class="instructions-modal-content">
-            <span class="close-instructions" onclick="closeSpecialInstructions()">&times;</span>
             <div class="instructions-header">
                 <h3>Special Instructions</h3>
-                <p id="instructionsPoNumber"></p>
+                <div class="instructions-po-number" id="instructionsPoNumber"></div>
+                <span class="close-instructions" onclick="closeSpecialInstructions()">&times;</span>
             </div>
             <div class="instructions-body" id="instructionsContent">
                 <!-- Instructions will be displayed here -->
+            </div>
+            <div class="instructions-footer">
+                <button type="button" class="close-instructions-btn" onclick="closeSpecialInstructions()">Close</button>
             </div>
         </div>
     </div>
@@ -1603,9 +1688,18 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             };
         });
 
-        function viewSpecialInstructions(poNumber, instructions) {
+         function viewSpecialInstructions(poNumber, instructions) {
             document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
-            document.getElementById('instructionsContent').textContent = instructions || 'No special instructions provided.';
+            const contentEl = document.getElementById('instructionsContent');
+            
+            if (instructions && instructions.trim().length > 0) {
+                contentEl.textContent = instructions;
+                contentEl.classList.remove('empty');
+            } else {
+                contentEl.textContent = 'No special instructions provided for this order.';
+                contentEl.classList.add('empty');
+            }
+            
             document.getElementById('specialInstructionsModal').style.display = 'block';
         }
         
@@ -1613,13 +1707,13 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             document.getElementById('specialInstructionsModal').style.display = 'none';
         }
         
-        // Close the modal if the user clicks outside of it
-        window.onclick = function(event) {
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
             const modal = document.getElementById('specialInstructionsModal');
             if (event.target === modal) {
-                modal.style.display = 'none';
+                closeSpecialInstructions();
             }
-        }
+        });
     </script> 
 </body>
 </html>
