@@ -355,7 +355,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         th.sortable .fa-sort-down {
             color:rgb(255, 255, 255);
         }
-    </style>
+        
+        .overlay-content {
+            max-height: 80vh;
+        }
+    </style> 
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
