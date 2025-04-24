@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Apr 23, 2025 at 05:26 PM
+-- Generation Time: Apr 24, 2025 at 04:44 PM
 -- Server version: 10.11.10-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -101,7 +101,7 @@ CREATE TABLE `clients_accounts` (
 
 INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company`, `company_address`, `business_proof`, `status`, `balance`, `created_at`, `client_session_id`, `client_last_login`, `verification_code`, `code_expires_at`) VALUES
 (17, 'aedanevangelista', '$2y$10$jBu29UPrI.tiA6RY78Sfmeq3MX07il.3QHNi/5yLJp4pPPRR2u1eW', 'aedanevangelista@gmail.com', '0912345678', 'NCR', 'Quezon City', 'Top Exchange', '', '[\"\\/uploads\\/aedanevangelista\\/67ea26c320cf1_BeefFilletSauce.png\"]', 'Pending', 0.00, '2025-03-31 05:23:15', NULL, NULL, NULL, NULL),
-(18, 'aedanpogi', '$2y$10$8gTpS4G2a5./WFrpYVavL.OJYt.rF2d4Cqvi1QzKeTXbSxWWwWe5O', 'aedanpogi@gmail.com', '09185585149', 'NCR', 'Quezon City', '', '', '[\"\\/uploads\\/aedanpogi\\/67ea344a30392_BeancurdRoll.png\",\"\\/uploads\\/aedanpogi\\/67ea344a30655_BeefFilletSauce.png\",\"\\/uploads\\/aedanpogi\\/67ea344a3083b_BeefSiomai.png\"]', 'Active', 0.00, '2025-03-31 06:20:58', NULL, NULL, NULL, NULL),
+(18, 'aedanpogi', '$2y$10$d4RGV6odNkDvDMCwI9NcjeLIhiLsdy8R8mffGUPMnWulbxrQhXYWy', 'aedanpogi@gmail.com', '09185585149', 'NCR', 'Quezon City', 'ABC Corp', '123', '[\"\\/uploads\\/aedanpogi\\/67ea344a30392_BeancurdRoll.png\",\"\\/uploads\\/aedanpogi\\/67ea344a30655_BeefFilletSauce.png\",\"\\/uploads\\/aedanpogi\\/67ea344a3083b_BeefSiomai.png\"]', 'Active', 0.00, '2025-03-31 06:20:58', NULL, NULL, NULL, NULL),
 (19, 'Boters', '$2y$10$ZCuwFddafUAQjSSkGiW1u.fn3L5oomcUGr/scGq/7KP7gwHsJHJHa', 'jefferson45santonia@gmail.com', '09185585149', 'Metro Manila', 'Quezon City', '', '10 Aguinaldo', '[\"\\/uploads\\/Boters\\/RadishCake.png\"]', 'Active', 0.00, '2025-04-17 05:58:45', NULL, NULL, NULL, NULL),
 (20, 'Ryan', '$2y$10$j7do4aHoJGhm7q98GMYV8uLjw7bxz6kBYvsvVjoYR.giafGEXuLGi', 'ryanfrancisrodriguez02@gmail.com', '09154864843', 'NCR', 'Quezon City', '', '1-B Palomaria Street Veterans Village Project 7 ', '[\"\\/uploads\\/Ryan\\/FlowChart.drawio.png\"]', 'Active', 0.00, '2025-04-17 12:14:15', NULL, NULL, NULL, NULL),
 (21, 'maamcristylen', '$2y$10$MEx8fUB6GcMBUGyTUE2V3eYaeivKVvq4JD3dvpFvnjem2yZ55PPmy', 'esporsadocristylen09@gmail.com', '123456789101112', 'NCR', 'Quezon  City', 'STI College Munoz-EDSA', '123 STI College Munoz-EDSA', '[\"\\/uploads\\/maamcristylen\\/Untitled design (1).png\"]', 'Active', 0.00, '2025-04-23 08:07:25', NULL, NULL, NULL, NULL);
@@ -137,6 +137,15 @@ CREATE TABLE `manufacturing_logs` (
   `created_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `manufacturing_logs`
+--
+
+INSERT INTO `manufacturing_logs` (`log_id`, `po_number`, `product_id`, `product_name`, `quantity`, `created_at`) VALUES
+(1, 'Boters-2', 11, 'Cuaopao', 1, '2025-04-24 11:11:48'),
+(2, 'Boters-2', 45, 'Pumpkin Cake 1.5kg', 4, '2025-04-24 11:11:48'),
+(3, 'Boters-2', 43, 'Radish Cake 1.5kg', 1, '2025-04-24 11:11:48');
+
 -- --------------------------------------------------------
 
 --
@@ -158,6 +167,13 @@ CREATE TABLE `monthly_payments` (
   `payment_type` enum('Internal','External') DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `monthly_payments`
+--
+
+INSERT INTO `monthly_payments` (`id`, `username`, `month`, `year`, `total_amount`, `payment_status`, `created_at`, `updated_at`, `remaining_balance`, `proof_image`, `payment_method`, `payment_type`) VALUES
+(830, 'aedanpogi', 1, 2025, 0.00, 'Fully Paid', '2025-04-24 02:11:24', '2025-04-24 02:11:24', 0.00, NULL, NULL, NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -168,6 +184,7 @@ CREATE TABLE `orders` (
   `id` int(11) NOT NULL,
   `po_number` varchar(255) NOT NULL,
   `username` varchar(255) NOT NULL,
+  `company` varchar(255) DEFAULT NULL,
   `order_date` date NOT NULL,
   `delivery_date` date NOT NULL,
   `delivery_address` varchar(255) DEFAULT NULL,
@@ -190,20 +207,26 @@ CREATE TABLE `orders` (
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `po_number`, `username`, `order_date`, `delivery_date`, `delivery_address`, `orders`, `total_amount`, `status`, `contact_number`, `special_instructions`, `payment_method`, `subtotal`, `delivery_fee`, `progress`, `completed_items`, `item_progress_data`, `quantity_progress_data`, `item_progress_percentages`) VALUES
-(50, 'aedanevangelista-1', 'aedanevangelista', '2025-03-31', '2025-04-02', 'assdasdsad', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 3025.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(51, 'aedanevangelista-2', 'aedanevangelista', '2025-03-31', '2025-04-02', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":17,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Special Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":260,\"quantity\":5}]', 2700.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1]', NULL, NULL, NULL),
-(52, 'aedanevangelista-3', 'aedanevangelista', '2025-04-09', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0]', NULL, NULL, NULL),
-(53, 'aedanevangelista-4', 'aedanevangelista', '2025-04-10', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":55},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":4,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Large)\",\"packaging\":\"6pcs/pack\",\"price\":235,\"quantity\":5}]', 19550.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1,2,3]', NULL, NULL, NULL),
-(54, 'aedanevangelista-5', 'aedanevangelista', '2025-04-12', '2025-04-14', 'No company address available', '[{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 4375.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1,2]', '[{\"progress\":0},{\"progress\":0},{\"progress\":0}]', '[[true,true,true,true,true],[true,true,true,true,true],[true,true,true,true,true]]', '[100,100,100]'),
-(55, 'aedanevangelista-6', 'aedanevangelista', '2025-04-15', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":55}]', 15400.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(56, 'aedanevangelista-7', 'aedanevangelista', '2025-04-15', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(57, 'aedanevangelista-8', 'aedanevangelista', '2025-04-15', '2025-04-23', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(58, 'Ryan-1', 'Ryan', '2025-04-17', '2025-04-18', '1-B Palomaria Street Veterans Village Project 7', '[{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":10}]', 2700.00, 'Active', '09154864843', '', 'Bank Transfer', 2700.00, 0.00, 60, '[]', NULL, '[[true,true,true,true,true,true,false,false,false,false]]', '[60]'),
-(59, 'aedanpogi-1', 'aedanpogi', '2025-04-19', '2025-04-23', 'No company address available', '[{\"product_id\":17,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Special Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":260,\"quantity\":5},{\"product_id\":16,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Regular Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":180,\"quantity\":5},{\"product_id\":18,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Kutchay Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":275,\"quantity\":5}]', 3575.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(60, 'Ryan-2', 'Ryan', '2025-04-19', '2025-04-23', '1-B Palomaria Street Veterans Village Project 7 ', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":4,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Large)\",\"packaging\":\"6pcs/pack\",\"price\":235,\"quantity\":5},{\"product_id\":5,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs/pack\",\"price\":250,\"quantity\":5}]', 6800.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(61, 'Boters-1', 'Boters', '2025-04-21', '2025-04-22', '10 Aguinaldo', '[{\"product_id\":7,\"category\":\"\",\"item_description\":\"Bola Bola Siopao (Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"310.00\",\"quantity\":1}]', 360.00, 'Completed', '09185585149', '', 'Cash on Delivery', 310.00, 50.00, 100, '[0]', NULL, '[[true]]', '[100]'),
-(69, 'aedanpogi-2', 'aedanpogi', '2025-04-23', '2025-04-30', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":430}]', 120400.00, 'Rejected', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL);
+INSERT INTO `orders` (`id`, `po_number`, `username`, `company`, `order_date`, `delivery_date`, `delivery_address`, `orders`, `total_amount`, `status`, `contact_number`, `special_instructions`, `payment_method`, `subtotal`, `delivery_fee`, `progress`, `completed_items`, `item_progress_data`, `quantity_progress_data`, `item_progress_percentages`) VALUES
+(50, 'aedanevangelista-1', 'aedanevangelista', NULL, '2025-03-31', '2025-04-02', 'assdasdsad', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5}]', 3025.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(51, 'aedanevangelista-2', 'aedanevangelista', NULL, '2025-03-31', '2025-04-02', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":17,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Special Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":260,\"quantity\":5}]', 2700.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1]', NULL, NULL, NULL),
+(52, 'aedanevangelista-3', 'aedanevangelista', NULL, '2025-04-09', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0]', NULL, NULL, NULL),
+(53, 'aedanevangelista-4', 'aedanevangelista', NULL, '2025-04-10', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":55},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":4,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Large)\",\"packaging\":\"6pcs/pack\",\"price\":235,\"quantity\":5}]', 19550.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1,2,3]', NULL, NULL, NULL),
+(54, 'aedanevangelista-5', 'aedanevangelista', NULL, '2025-04-12', '2025-04-14', 'No company address available', '[{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 4375.00, 'Completed', NULL, NULL, NULL, 0.00, 0.00, 100, '[0,1,2]', '[{\"progress\":0},{\"progress\":0},{\"progress\":0}]', '[[true,true,true,true,true],[true,true,true,true,true],[true,true,true,true,true]]', '[100,100,100]'),
+(55, 'aedanevangelista-6', 'aedanevangelista', NULL, '2025-04-15', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":55}]', 15400.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(56, 'aedanevangelista-7', 'aedanevangelista', NULL, '2025-04-15', '2025-04-16', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(57, 'aedanevangelista-8', 'aedanevangelista', NULL, '2025-04-15', '2025-04-23', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5}]', 1400.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 60, '[]', NULL, '[[true,true,true,false,false]]', '[60]'),
+(58, 'Ryan-1', 'Ryan', NULL, '2025-04-17', '2025-04-18', '1-B Palomaria Street Veterans Village Project 7', '[{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":10}]', 2700.00, 'Completed', '09154864843', '', 'Bank Transfer', 2700.00, 0.00, 60, '[]', NULL, '[[true,true,true,true,true,true,false,false,false,false]]', '[60]'),
+(59, 'aedanpogi-1', 'aedanpogi', NULL, '2025-04-19', '2025-04-23', 'No company address available', '[{\"product_id\":17,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Special Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":260,\"quantity\":5},{\"product_id\":16,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Regular Sharksfin Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":180,\"quantity\":5},{\"product_id\":18,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Kutchay Dumpling\",\"packaging\":\"30pcs/pack\",\"price\":275,\"quantity\":5}]', 3575.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(60, 'Ryan-2', 'Ryan', NULL, '2025-04-19', '2025-04-23', '1-B Palomaria Street Veterans Village Project 7 ', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":5},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":5},{\"product_id\":3,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs/pack\",\"price\":270,\"quantity\":5},{\"product_id\":4,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Large)\",\"packaging\":\"6pcs/pack\",\"price\":235,\"quantity\":5},{\"product_id\":5,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (B Med)\",\"packaging\":\"10pcs/pack\",\"price\":250,\"quantity\":5}]', 6800.00, 'Active', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(61, 'Boters-1', 'Boters', NULL, '2025-04-21', '2025-04-22', '10 Aguinaldo', '[{\"product_id\":7,\"category\":\"\",\"item_description\":\"Bola Bola Siopao (Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"310.00\",\"quantity\":1}]', 360.00, 'Completed', '09185585149', '', 'Cash on Delivery', 310.00, 50.00, 100, '[0]', NULL, '[[true]]', '[100]'),
+(69, 'aedanpogi-2', 'aedanpogi', NULL, '2025-04-23', '2025-04-30', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":430}]', 120400.00, 'Rejected', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(70, 'aedanpogi-3', 'aedanpogi', NULL, '2025-04-23', '2025-04-25', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":53},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":200}]', 79840.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(71, 'Boters-2', 'Boters', NULL, '2025-04-24', '2025-04-25', '10 Aguinaldo', '[{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":1},{\"product_id\":11,\"category\":\"\",\"item_description\":\"Cuaopao\",\"packaging\":\"10pcs\\/pack\",\"price\":\"125.00\",\"quantity\":1},{\"product_id\":45,\"category\":\"\",\"item_description\":\"Pumpkin Cake 1.5kg\",\"packaging\":\"1.5kg\",\"price\":\"370.00\",\"quantity\":4},{\"product_id\":43,\"category\":\"\",\"item_description\":\"Radish Cake 1.5kg\",\"packaging\":\"1.5kg\",\"price\":\"370.00\",\"quantity\":1}]', 2245.00, 'Active', '09185585149', '', 'Cash on Delivery', 2245.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(72, 'aedanpogi-4', 'aedanpogi', 'ABC Corp', '2025-04-25', '2025-04-30', '123', '0', 9600.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(73, 'aedanpogi-5', 'aedanpogi', 'ABC Corp', '2025-04-25', '2025-04-30', '123', '0', 5550.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(74, 'aedanpogi-6', 'aedanpogi', 'ABC Corp', '2025-04-25', '2025-04-25', 'asdasdasdasd', '0', 6800.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
+(75, 'aedanpogi-7', 'aedanpogi', 'ABC Corp', '2025-04-25', '2025-04-28', '234234', '0', 15400.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -289,6 +312,13 @@ CREATE TABLE `payment_status_history` (
   `changed_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `payment_status_history`
+--
+
+INSERT INTO `payment_status_history` (`id`, `username`, `month`, `year`, `old_status`, `new_status`, `changed_by`, `changed_at`) VALUES
+(17, 'aedanpogi', 1, 2025, 'Unpaid', 'Fully Paid', 'system', '2025-04-24 02:11:24');
+
 -- --------------------------------------------------------
 
 --
@@ -315,7 +345,7 @@ CREATE TABLE `products` (
 INSERT INTO `products` (`product_id`, `category`, `product_name`, `item_description`, `packaging`, `price`, `stock_quantity`, `additional_description`, `product_image`, `ingredients`) VALUES
 (1, 'Siopao', 'Asado Siopao', 'Asado Siopao (A Large)', '6pcs/pack', 280.00, 100, '', '/uploads/products/Asado_Siopao__A_Large_/product_image.png', '[[\"Minced Pork\", 480], [\"Soy Sauce\", 30], [\"Sugar\", 30], [\"Hoisin Sauce\", 18], [\"Star Anise\", 0.6], [\"Flour\", 600], [\"Yeast\", 6], [\"Milk\", 30], [\"Butter (Anchor)\", 18], [\"Baking Powder\", 6]]'),
 (2, 'Siopao', 'Asado Siopao', 'Asado Siopao (A Med)', '10pcs/pack', 325.00, 100, '', '/uploads/products/Asado_Siopao__A_Med_/product_image.png', '[[\"Minced Pork\", 800], [\"Soy Sauce\", 50], [\"Sugar\", 50], [\"Hoisin Sauce\", 30], [\"Star Anise\", 1], [\"Flour\", 1000], [\"Yeast\", 10], [\"Milk\", 50], [\"Butter (Anchor)\", 30], [\"Baking Powder\", 10]]'),
-(3, 'Siopao', 'Asado Siopao', 'Asado Siopao (A Small)', '15pcs/pack', 270.00, 100, '', '/uploads/products/Asado_Siopao__A_Small_/product_image.png', '[[\"Minced Pork\", 1200], [\"Soy Sauce\", 75], [\"Sugar\", 75], [\"Hoisin Sauce\", 45], [\"Star Anise\", 1.5], [\"Flour\", 1500], [\"Yeast\", 15], [\"Milk\", 75], [\"Butter (Anchor)\", 45], [\"Baking Powder\", 15]]'),
+(3, 'Siopao', 'Asado Siopao', 'Asado Siopao (A Small)', '15pcs/pack', 270.00, 99, '', '/uploads/products/Asado_Siopao__A_Small_/product_image.png', '[[\"Minced Pork\", 1200], [\"Soy Sauce\", 75], [\"Sugar\", 75], [\"Hoisin Sauce\", 45], [\"Star Anise\", 1.5], [\"Flour\", 1500], [\"Yeast\", 15], [\"Milk\", 75], [\"Butter (Anchor)\", 45], [\"Baking Powder\", 15]]'),
 (4, 'Siopao', 'Asado Siopao', 'Asado Siopao (B Large)', '6pcs/pack', 235.00, 100, '', '/uploads/products/Asado_Siopao__B_Large_/product_image.png', '[[\"Minced Pork\", 480], [\"Soy Sauce\", 30], [\"Sugar\", 30], [\"Hoisin Sauce\", 18], [\"Star Anise\", 0.6], [\"Flour\", 600], [\"Yeast\", 6], [\"Milk\", 30], [\"Butter (Anchor)\", 18], [\"Baking Powder\", 6]]'),
 (5, 'Siopao', 'Asado Siopao', 'Asado Siopao (B Med)', '10pcs/pack', 250.00, 100, '', '/uploads/products/Asado_Siopao__B_Med_/product_image.png', '[[\"Minced Pork\", 800], [\"Soy Sauce\", 50], [\"Sugar\", 50], [\"Hoisin Sauce\", 30], [\"Star Anise\", 1], [\"Flour\", 1000], [\"Yeast\", 10], [\"Milk\", 50], [\"Butter (Anchor)\", 30], [\"Baking Powder\", 10]]'),
 (6, 'Siopao', 'Asado Siopao', 'Asado Siopao (B Small)', '15pcs/pack', 205.00, 100, '', '/uploads/products/Asado_Siopao__B_Small_/product_image.png', '[[\"Minced Pork\", 1200], [\"Soy Sauce\", 75], [\"Sugar\", 75], [\"Hoisin Sauce\", 45], [\"Star Anise\", 1.5], [\"Flour\", 1500], [\"Yeast\", 15], [\"Milk\", 75], [\"Butter (Anchor)\", 45], [\"Baking Powder\", 15]]'),
@@ -430,7 +460,7 @@ INSERT INTO `raw_materials` (`material_id`, `name`, `stock_quantity`, `created_a
 (21, 'Pork Sweet & Sour Seasoned', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:53'),
 (22, 'Porkloin', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:55'),
 (23, 'Pork Spareribs', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:52'),
-(24, 'Minced Pork', 47780.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
+(24, 'Minced Pork', 45680.00, '2025-04-07 16:57:58', '2025-04-24 11:11:48'),
 (25, 'Siao Long Pao (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:01'),
 (26, 'Wanton (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:13'),
 (27, 'Veg. Spring Roll (Ham)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:11'),
@@ -458,21 +488,21 @@ INSERT INTO `raw_materials` (`material_id`, `name`, `stock_quantity`, `created_a
 (49, 'Cream Dory Fillet', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:06'),
 (50, 'Cream Dory Fish Skin', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:07'),
 (51, 'Tai Tai Fish', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:08'),
-(52, 'Soy Sauce', 96490.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
+(52, 'Soy Sauce', 96420.00, '2025-04-07 16:57:58', '2025-04-24 11:11:48'),
 (53, 'Japanese Soy Sauce', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:26'),
-(54, 'Hoisin Sauce', 8227.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
+(54, 'Hoisin Sauce', 8197.00, '2025-04-07 16:57:58', '2025-04-24 11:11:48'),
 (55, 'Star Anise', 237.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
-(56, 'Butter (Anchor)', 8233.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
+(56, 'Butter (Anchor)', 8123.00, '2025-04-07 16:57:58', '2025-04-24 11:11:48'),
 (57, 'Margarine Buttercup (Buttercup)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:29'),
 (58, 'Cheese Quickmelt (Magnolia)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:48'),
 (59, 'Cheese Unsalted (Magnolia)', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:35:50'),
 (60, 'Cheese (Eden)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:47'),
 (61, 'Dark Chocolate Bar', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:10'),
-(62, 'Flour', 41420.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
-(63, 'Sugar', 96829.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
-(64, 'Yeast', 99622.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
-(65, 'Baking Powder', 9821.50, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
-(66, 'Milk', 6877.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
+(62, 'Flour', 39520.00, '2025-04-07 16:57:58', '2025-04-24 11:11:48'),
+(63, 'Sugar', 96659.00, '2025-04-07 16:57:58', '2025-04-24 11:11:48'),
+(64, 'Yeast', 99612.00, '2025-04-07 16:57:58', '2025-04-24 11:11:48'),
+(65, 'Baking Powder', 9811.50, '2025-04-07 16:57:58', '2025-04-24 11:11:48'),
+(66, 'Milk', 6827.00, '2025-04-07 16:57:58', '2025-04-24 11:11:48'),
 (67, 'Glutinous Rice', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:21'),
 (68, 'Chestnut', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:35:51'),
 (69, 'Tofu', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:09'),
@@ -670,19 +700,19 @@ ALTER TABLE `drivers`
 -- AUTO_INCREMENT for table `manufacturing_logs`
 --
 ALTER TABLE `manufacturing_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `monthly_payments`
 --
 ALTER TABLE `monthly_payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=830;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=831;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
 
 --
 -- AUTO_INCREMENT for table `order_status_logs`
@@ -706,7 +736,7 @@ ALTER TABLE `payment_history`
 -- AUTO_INCREMENT for table `payment_status_history`
 --
 ALTER TABLE `payment_status_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `products`
