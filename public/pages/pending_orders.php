@@ -732,6 +732,42 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         line-height: 1.4;
         font-size: 0.9em;
     }
+
+    @media print {
+        .po-table {
+            width: 100%;
+            border-collapse: collapse;
+            page-break-inside: auto;
+        }
+        
+        .po-table thead {
+            display: table-header-group;
+        }
+        
+        .po-table tbody {
+            display: table-row-group;
+        }
+        
+        .po-table tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        
+        .po-table th, 
+        .po-table td {
+            page-break-inside: avoid;
+        }
+    }
+
+    /* Additional table styles for proper PDF rendering */
+    .po-table {
+        table-layout: fixed;
+        width: 100%;
+    }
+
+    #printOrderItems tr {
+        page-break-inside: avoid !important;
+    }
     </style>
 </head>
 <body>
@@ -1251,25 +1287,38 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         // Get the element to convert to PDF
         const element = document.getElementById('contentToDownload');
         
+        const tableRows = document.querySelectorAll('#printOrderItems tr');
+        tableRows.forEach(row => {
+            row.style.pageBreakInside = 'avoid';
+        });
+
+        // Also apply a max-height to the table to ensure it's properly paginated
+        const orderTable = document.querySelector('.po-table');
+        orderTable.style.pageBreakInside = 'auto'; // Allow page breaks between rows if needed
+
         // Configure html2pdf options
         const opt = {
-            margin:       [15, 15, 15, 15], // Slightly larger margins
-            filename:     `PO_${poNumber}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { 
+            margin: [15, 15, 15, 15], // Slightly larger margins
+            filename: `PO_${poNumber}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
                 scale: 2, 
                 useCORS: true,
                 letterRendering: true,
                 allowTaint: true
             },
-            jsPDF:        { 
+            jsPDF: { 
                 unit: 'mm', 
                 format: 'a4', 
                 orientation: 'portrait',
                 compress: true,
                 textColor: '#000000'
-            }
+            },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } // Add this line
         };
+
+
+
 
         // Generate and download PDF directly
         html2pdf().set(opt).from(element).save().then(() => {
