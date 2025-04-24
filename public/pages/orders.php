@@ -118,7 +118,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         tr.completed-item:hover td,
         tr.unit-item.completed:hover,
         tr.unit-item.completed:hover td {
-            background-color: #c3e6cb !important;
+            background-color:rgb(70, 70, 70) !important;
         }
         
         .form-buttons {
