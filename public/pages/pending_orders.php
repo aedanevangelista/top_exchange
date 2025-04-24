@@ -764,17 +764,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
-                                <button class="download-btn" onclick="downloadPODirectly(
-                                    '<?= htmlspecialchars($order['po_number']) ?>', 
-                                    '<?= htmlspecialchars($order['username']) ?>', 
-                                    '<?= htmlspecialchars($order['company']) ?>', 
-                                    '<?= htmlspecialchars($order['order_date']) ?>', 
-                                    '<?= htmlspecialchars($order['delivery_date']) ?>', 
-                                    '<?= htmlspecialchars($order['delivery_address']) ?>', 
-                                    '<?= htmlspecialchars($order['orders']) ?>', 
-                                    '<?= htmlspecialchars($order['total_amount']) ?>', 
-                                    '<?= htmlspecialchars($order['special_instructions']) ?>'
-                                )">
+                                <button class="download-btn" onclick="downloadPODirectly('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company']) ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['total_amount']) ?>')">
                                     <i class="fas fa-file-pdf"></i> Download PDF
                                 </button>
                                 </td>
@@ -797,64 +787,74 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <div id="pdfPreview">
         <div class="pdf-container">
             <button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button>
-                <div id="contentToDownload">
-                    <div class="po-container">
-                        <div class="po-header">
-                            <div class="po-company" id="printCompany"></div>
-                            <div class="po-title">Purchase Order</div>
-                        </div>
-                        
-                        <div class="po-details">
-                            <div class="po-left">
-                                <div class="po-detail-row">
-                                    <span class="po-detail-label">PO Number:</span>
-                                    <span id="printPoNumber"></span>
-                                </div>
-                                <div class="po-detail-row">
-                                    <span class="po-detail-label">Username:</span>
-                                    <span id="printUsername"></span>
-                                </div>
-                                <div class="po-detail-row">
-                                    <span class="po-detail-label">Delivery Address:</span>
-                                    <span id="printDeliveryAddress"></span>
-                                </div>
-                                <!-- Add Special Instructions section -->
-                                <div class="po-detail-row special-instructions-row" id="printSpecialInstructionsRow">
-                                    <span class="po-detail-label">Special Instructions:</span>
-                                    <span id="printSpecialInstructions"></span>
-                                </div>
+            <div id="contentToDownload">
+                <div class="po-container">
+                    <div class="po-header">
+                        <div class="po-company" id="printCompany"></div>
+                        <div class="po-title">Purchase Order</div>
+                    </div>
+                    
+                    <div class="po-details">
+                        <div class="po-left">
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">PO Number:</span>
+                                <span id="printPoNumber"></span>
                             </div>
-                            
-                            <div class="po-right">
-                                <div class="po-detail-row">
-                                    <span class="po-detail-label">Order Date:</span>
-                                    <span id="printOrderDate"></span>
-                                </div>
-                                <div class="po-detail-row">
-                                    <span class="po-detail-label">Delivery Date:</span>
-                                    <span id="printDeliveryDate"></span>
-                                </div>
-                                <div class="po-detail-row">
-                                    <span class="po-detail-label">Current Date:</span>
-                                    <span id="printCurrentDate"><?= date('Y-m-d H:i:s') ?></span>
-                                </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Username:</span>
+                                <span id="printUsername"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Delivery Address:</span>
+                                <span id="printDeliveryAddress"></span>
                             </div>
                         </div>
                         
-                        <!-- Rest of the PDF content remains the same -->
-                        <table class="po-table">
-                            <!-- ... -->
-                        </table>
-                        
-                        <div class="po-total">
-                            Total Amount: PHP <span id="printTotalAmount"></span>
+                        <div class="po-right">
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Order Date:</span>
+                                <span id="printOrderDate"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Delivery Date:</span>
+                                <span id="printDeliveryDate"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <table class="po-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Product</th>
+                                <th>Packaging</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="printOrderItems">
+                            <!-- Items will be populated here -->
+                        </tbody>
+                    </table>
+                    
+                    <div class="po-total">
+                        Total Amount: PHP <span id="printTotalAmount"></span>
+                    </div>
+                    
+                    <div class="po-signature">
+                        <div class="po-signature-block">
+                            <div class="po-signature-line"></div>
+                            <div>Authorized by</div>
                         </div>
                         
-                        <div class="po-signature">
-                            <!-- ... -->
+                        <div class="po-signature-block">
+                            <div class="po-signature-line"></div>
+                            <div>Received by</div>
                         </div>
                     </div>
                 </div>
+            </div>
             <div class="pdf-actions">
                 <button class="download-pdf-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button>
             </div>
@@ -1713,18 +1713,6 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             if (event.target === modal) {
                 closeSpecialInstructions();
             }
-        });
-        
-        // Escape key to close modal
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' && document.getElementById('specialInstructionsModal').style.display === 'block') {
-                closeSpecialInstructions();
-            }
-        });
-        
-        // Stop event propagation on modal content click to prevent closing
-        document.querySelector('.instructions-modal-content').addEventListener('click', function(event) {
-            event.stopPropagation();
         });
     </script> 
 </body>
