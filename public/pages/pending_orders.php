@@ -1687,6 +1687,21 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
     
     // Add function to update company name when username changes
 
+    function viewSpecialInstructions(poNumber, instructions) {
+                document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
+                const contentEl = document.getElementById('instructionsContent');
+                
+                if (instructions && instructions.trim().length > 0) {
+                    contentEl.textContent = instructions;
+                    contentEl.classList.remove('empty');
+                } else {
+                    contentEl.textContent = 'No special instructions provided for this order.';
+                    contentEl.classList.add('empty');
+                }
+                
+                document.getElementById('specialInstructionsModal').style.display = 'block';
+            }
+
     </script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
@@ -1754,20 +1769,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
                 // No need for a hidden field since the textarea already has the name attribute
             };
 
-         function viewSpecialInstructions(poNumber, instructions) {
-            document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
-            const contentEl = document.getElementById('instructionsContent');
-            
-            if (instructions && instructions.trim().length > 0) {
-                contentEl.textContent = instructions;
-                contentEl.classList.remove('empty');
-            } else {
-                contentEl.textContent = 'No special instructions provided for this order.';
-                contentEl.classList.add('empty');
-            }
-            
-            document.getElementById('specialInstructionsModal').style.display = 'block';
-        }
+        
         
         function closeSpecialInstructions() {
             document.getElementById('specialInstructionsModal').style.display = 'none';
