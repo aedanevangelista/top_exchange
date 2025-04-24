@@ -129,7 +129,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         
         /* Account for scrollbar width in header */
         .summary-table thead {
-            width: 100%;
+            width: calc(100% - 17px);
         }
         
         /* Cell styling for proper alignment and text overflow */
@@ -699,75 +699,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         max-height: 90vh; /* 90% of the viewport height */
         overflow-y: auto; /* Add scroll if content exceeds max height */
     }
-
-    #char_count {
-        display: block;
-        text-align: right;
-        font-size: 0.8em;
-        color: #666;
-        margin-top: 5px;
-    }
-
-    /* Special instructions styling in the PDF */
-    #printInstructionsSection {
-        display: block; /* Change from flex to block layout */
-        margin-top: 15px;
-        page-break-inside: avoid; /* Try to avoid breaking across pages */
-    }
-
-    #printInstructionsSection .po-detail-label {
-        display: block;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-
-    #printSpecialInstructions {
-        display: block;
-        white-space: pre-wrap;
-        word-break: break-word;
-        overflow-wrap: break-word;
-        width: 100%;
-        max-width: 100%;
-        padding: 5px 0;
-        line-height: 1.4;
-        font-size: 0.9em;
-    }
-
-    @media print {
-        .po-table {
-            width: 100%;
-            border-collapse: collapse;
-            page-break-inside: auto;
-        }
-        
-        .po-table thead {
-            display: table-header-group;
-        }
-        
-        .po-table tbody {
-            display: table-row-group;
-        }
-        
-        .po-table tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-        }
-        
-        .po-table th, 
-        .po-table td {
-            page-break-inside: avoid;
-        }
-    }
-
-    /* Additional table styles for proper PDF rendering */
-    .po-table {
-        table-layout: fixed;
-        width: 100%;
-    }
-
-    #printOrderItems tr {
-        page-break-inside: avoid !important;
-    }
     </style>
 </head>
 <body>
@@ -908,11 +839,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <span id="printDeliveryAddress"></span>
                             </div>
                             <div class="po-detail-row" id="printInstructionsSection">
-                                <div class="po-detail-label">Special Instructions:</div>
-                                <div id="printInstructionsSection" style="margin-top: 20px; margin-bottom: 20px;">
-                                    <h3 style="margin-bottom: 8px;">Special Instructions:</h3>
-                                    <div id="printSpecialInstructions" style="white-space: pre-wrap; word-break: break-word; border: 1px solid #ddd; padding: 10px; background-color: #f9f9f9;"></div>
-                                </div>
+                                <span class="po-detail-label">Special Instructions:</span>
+                                <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
                             </div>
                         </div>
                         
@@ -1009,9 +937,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <input type="hidden" name="special_instructions" id="special_instructions_hidden">
                     <!-- Add special instructions field -->
                     <label for="special_instructions">Special Instructions:</label>
-                    <textarea id="special_instructions" name="special_instructions" rows="3" maxlength="500" placeholder="Enter any special instructions here..."></textarea>
-                    <span id="char_count">0/500 characters</span>
-               
+                    <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
+                    
                     <div class="centered-button">
                         <button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()">
                             <i class="fas fa-box-open"></i> Select Products
@@ -1238,15 +1165,8 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         const instructionsSection = document.getElementById('printInstructionsSection');
         const instructionsContent = document.getElementById('printSpecialInstructions');
         
-        // Update this code in both locations (around line 1166 and around line 1258)
         if (specialInstructions && specialInstructions.trim().length > 0) {
-            // Sanitize and format the instructions for display
-            const safeInstructions = specialInstructions
-                .trim()
-                .replace(/\r\n/g, '\n') // Normalize line breaks
-                .replace(/\n{3,}/g, '\n\n'); // Replace multiple blank lines with just two
-            
-            instructionsContent.textContent = safeInstructions;
+            instructionsContent.textContent = specialInstructions;
             instructionsSection.style.display = 'block';
         } else {
             instructionsSection.style.display = 'none';
@@ -1287,39 +1207,15 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         // Get the element to convert to PDF
         const element = document.getElementById('contentToDownload');
         
-        const tableRows = document.querySelectorAll('#printOrderItems tr');
-        tableRows.forEach(row => {
-            row.style.pageBreakInside = 'avoid';
-        });
-
-        // Also apply a max-height to the table to ensure it's properly paginated
-        const orderTable = document.querySelector('.po-table');
-        orderTable.style.pageBreakInside = 'auto'; // Allow page breaks between rows if needed
-
         // Configure html2pdf options
         const opt = {
-            margin: [15, 15, 15, 15], // Slightly larger margins
-            filename: `PO_${poNumber}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { 
-                scale: 2, 
-                useCORS: true,
-                letterRendering: true,
-                allowTaint: true
-            },
-            jsPDF: { 
-                unit: 'mm', 
-                format: 'a4', 
-                orientation: 'portrait',
-                compress: true,
-                textColor: '#000000'
-            },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } // Add this line
+            margin:       [10, 10, 10, 10],
+            filename:     `PO_${poNumber}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
-
-
-
-
+        
         // Generate and download PDF directly
         html2pdf().set(opt).from(element).save().then(() => {
             showToast(`Purchase Order ${poNumber} has been downloaded.`, 'success');
@@ -1815,32 +1711,6 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             if (event.target === modal) {
                 closeSpecialInstructions();
             }
-        });
-
-        function updateCharacterCount() {
-            const textarea = document.getElementById('special_instructions');
-            const counter = document.getElementById('char_count');
-            const maxLength = 500;
-            const currentLength = textarea.value.length;
-            
-            counter.textContent = currentLength + '/' + maxLength + ' characters';
-            
-            if (currentLength >= maxLength * 0.9) {
-                counter.style.color = 'red';
-            } else if (currentLength >= maxLength * 0.7) {
-                counter.style.color = 'orange';
-            } else {
-                counter.style.color = '';
-            }
-        }
-
-        // Initialize the counter when the page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initial update of the counter
-            updateCharacterCount();
-            
-            // Add event listener for textarea input
-            document.getElementById('special_instructions').addEventListener('input', updateCharacterCount);
         });
 
     </script>
