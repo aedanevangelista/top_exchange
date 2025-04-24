@@ -266,7 +266,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         
         .modal-status-btn {
             padding: 10px 20px;
-            border-radius: 4px;
+            border-radius: 40px;
             border: none;
             cursor: pointer;
             font-weight: bold;
@@ -276,12 +276,22 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         
         .modal-status-btn.active {
-            background-color: #28a745;
+            background-color: #ffc107;
+            color: white;
+        }
+
+        .modal-status-btn.active:hover {
+            background-color:rgb(202, 154, 10);
             color: white;
         }
         
         .modal-status-btn.reject {
             background-color: #dc3545;
+            color: white;
+        }
+
+        .modal-status-btn.reject:hover {
+            background-color:rgb(138, 23, 35);
             color: white;
         }
         
