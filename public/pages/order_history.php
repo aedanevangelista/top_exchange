@@ -4,16 +4,53 @@ include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
 checkRole('Order History'); // Updated from 'Transaction History'
 
-// Fetch completed orders for display
+// Handle sorting parameters
+$sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'order_date';
+$sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'DESC';
+
+// Validate sort column to prevent SQL injection
+$allowed_columns = ['po_number', 'username', 'order_date', 'delivery_date', 'total_amount'];
+if (!in_array($sort_column, $allowed_columns)) {
+    $sort_column = 'order_date'; // Default sort column
+}
+
+// Validate sort direction
+if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
+    $sort_direction = 'DESC'; // Default to descending
+}
+
+// Fetch completed orders for display with sorting
 $orders = []; // Initialize $orders as an empty array
 $sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status 
         FROM orders 
-        WHERE status = 'Completed'
-        ORDER BY order_date DESC";
-$result = $conn->query($sql);
+        WHERE status = 'Completed'";
+
+// Add sorting
+$sql .= " ORDER BY {$sort_column} {$sort_direction}";
+
+$stmt = $conn->prepare($sql);
+$stmt->execute();
+$result = $stmt->get_result();
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $orders[] = $row;
+    }
+}
+
+// Helper function to generate sort URL
+function getSortUrl($column, $currentColumn, $currentDirection) {
+    $newDirection = ($column === $currentColumn && $currentDirection === 'ASC') ? 'DESC' : 'ASC';
+    return "?sort=" . urlencode($column) . "&direction=" . urlencode($newDirection);
+}
+
+// Helper function to display sort icon
+function getSortIcon($column, $currentColumn, $currentDirection) {
+    if ($column !== $currentColumn) {
+        return '<i class="fas fa-sort"></i>';
+    } else if ($currentDirection === 'ASC') {
+        return '<i class="fas fa-sort-up"></i>';
+    } else {
+        return '<i class="fas fa-sort-down"></i>';
     }
 }
 ?>
@@ -26,11 +63,9 @@ if ($result && $result->num_rows > 0) {
     <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>|
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        .main-content {
-            padding-top: 0;
-        }
+
         #orderDetailsHeader {
             padding: 10px;
             margin-bottom: 20px;
@@ -73,6 +108,43 @@ if ($result && $result->num_rows > 0) {
         .search-container .search-btn:hover {
             background-color: #2471a3;
         }
+        
+        /* Sortable table headers */
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px; /* Space for the icon */
+            user-select: none;
+        }
+
+        th.sortable a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        th.sortable .fas {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+        }
+
+        th.sortable:hover {
+            background-color:rgb(51, 51, 51);
+        }
+
+        th.sortable .fa-sort-up,
+        th.sortable .fa-sort-down {
+            color: #2980b9;
+        }
+        
+        .orders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
@@ -80,7 +152,7 @@ if ($result && $result->num_rows > 0) {
     <div class="main-content">
         <div class="orders-header">
             <h1>Order History</h1>
-            <!-- Updated search section to match inventory.php design -->
+            <!-- Search section maintained as-is -->
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Search by PO Number, Username, or Order Date...">
                 <button class="search-btn"><i class="fas fa-search"></i></button>
@@ -90,13 +162,33 @@ if ($result && $result->num_rows > 0) {
             <table class="orders-table">
                 <thead>
                     <tr>
-                        <th>PO Number</th>
-                        <th>Username</th>
-                        <th>Order Date</th>
-                        <th>Delivery Date</th>
+                        <th class="sortable">
+                            <a href="<?= getSortUrl('po_number', $sort_column, $sort_direction) ?>">
+                                PO Number <?= getSortIcon('po_number', $sort_column, $sort_direction) ?>
+                            </a>
+                        </th>
+                        <th class="sortable">
+                            <a href="<?= getSortUrl('username', $sort_column, $sort_direction) ?>">
+                                Username <?= getSortIcon('username', $sort_column, $sort_direction) ?>
+                            </a>
+                        </th>
+                        <th class="sortable">
+                            <a href="<?= getSortUrl('order_date', $sort_column, $sort_direction) ?>">
+                                Order Date <?= getSortIcon('order_date', $sort_column, $sort_direction) ?>
+                            </a>
+                        </th>
+                        <th class="sortable">
+                            <a href="<?= getSortUrl('delivery_date', $sort_column, $sort_direction) ?>">
+                                Delivery Date <?= getSortIcon('delivery_date', $sort_column, $sort_direction) ?>
+                            </a>
+                        </th>
                         <th>Delivery Address</th>
                         <th>Orders</th>
-                        <th>Total Amount</th>
+                        <th class="sortable">
+                            <a href="<?= getSortUrl('total_amount', $sort_column, $sort_direction) ?>">
+                                Total Amount <?= getSortIcon('total_amount', $sort_column, $sort_direction) ?>
+                            </a>
+                        </th>
                         <th>Status</th>
                     </tr>
                 </thead>
