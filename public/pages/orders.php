@@ -365,7 +365,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
         th.sortable .fa-sort-up,
         th.sortable .fa-sort-down {
-            color: #2980b9;
+            color:rgb(255, 255, 255);
         }
     </style>
 </head>
