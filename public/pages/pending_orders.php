@@ -764,7 +764,17 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
-                                <button class="download-btn" onclick="downloadPODirectly('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company']) ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['total_amount']) ?>')">
+                                <button class="download-btn" onclick="downloadPODirectly(
+                                    '<?= htmlspecialchars($order['po_number']) ?>', 
+                                    '<?= htmlspecialchars($order['username']) ?>', 
+                                    '<?= htmlspecialchars($order['company']) ?>', 
+                                    '<?= htmlspecialchars($order['order_date']) ?>', 
+                                    '<?= htmlspecialchars($order['delivery_date']) ?>', 
+                                    '<?= htmlspecialchars($order['delivery_address']) ?>', 
+                                    '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
+                                    '<?= htmlspecialchars($order['total_amount']) ?>', 
+                                    '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
+                                )">
                                     <i class="fas fa-file-pdf"></i> Download PDF
                                 </button>
                                 </td>
