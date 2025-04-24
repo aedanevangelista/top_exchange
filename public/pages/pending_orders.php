@@ -1133,6 +1133,33 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     // Variables to store the current PO for PDF generation
     let currentPOData = null;
     
+    
+        function updateCharacterCount() {
+            const textarea = document.getElementById('special_instructions');
+            const counter = document.getElementById('char_count');
+            const maxLength = 100;
+            const currentLength = textarea.value.length;
+            
+            counter.textContent = currentLength + '/' + maxLength + ' characters';
+            
+            if (currentLength >= maxLength * 0.9) {
+                counter.style.color = 'red';
+            } else if (currentLength >= maxLength * 0.7) {
+                counter.style.color = 'orange';
+            } else {
+                counter.style.color = '';
+            }
+        }
+
+        // Initialize the counter when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial update of the counter
+            updateCharacterCount();
+            
+            // Add event listener for textarea input
+            document.getElementById('special_instructions').addEventListener('input', updateCharacterCount);
+        });
+
 function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
     try {
         // Store current PO data
@@ -1712,32 +1739,6 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             if (event.target === modal) {
                 closeSpecialInstructions();
             }
-        });
-
-        function updateCharacterCount() {
-            const textarea = document.getElementById('special_instructions');
-            const counter = document.getElementById('char_count');
-            const maxLength = 100;
-            const currentLength = textarea.value.length;
-            
-            counter.textContent = currentLength + '/' + maxLength + ' characters';
-            
-            if (currentLength >= maxLength * 0.9) {
-                counter.style.color = 'red';
-            } else if (currentLength >= maxLength * 0.7) {
-                counter.style.color = 'orange';
-            } else {
-                counter.style.color = '';
-            }
-        }
-
-        // Initialize the counter when the page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initial update of the counter
-            updateCharacterCount();
-            
-            // Add event listener for textarea input
-            document.getElementById('special_instructions').addEventListener('input', updateCharacterCount);
         });
 
     </script>
