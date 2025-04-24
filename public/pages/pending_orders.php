@@ -9,7 +9,7 @@ $sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'order_date';
 $sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'DESC';
 
 // Validate sort column to prevent SQL injection
-$allowed_columns = ['po_number', 'username', 'order_date', 'delivery_date', 'total_amount'];
+$allowed_columns = ['po_number', 'username', 'company', 'order_date', 'delivery_date', 'total_amount'];
 if (!in_array($sort_column, $allowed_columns)) {
     $sort_column = 'order_date'; // Default sort column
 }
@@ -22,21 +22,23 @@ if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
 // Fetch active clients for the dropdown
 $clients = [];
 $clients_with_company_address = []; // Array to store clients with their company addresses
-$stmt = $conn->prepare("SELECT username, company_address FROM clients_accounts WHERE status = 'active'");
+$clients_with_company = []; // Array to store clients with their company names
+$stmt = $conn->prepare("SELECT username, company_address, company FROM clients_accounts WHERE status = 'active'");
 if ($stmt === false) {
     die('Prepare failed: ' . htmlspecialchars($conn->error));
 }
 $stmt->execute();
-$stmt->bind_result($username, $company_address);
+$stmt->bind_result($username, $company_address, $company);
 while ($stmt->fetch()) {
     $clients[] = $username;
     $clients_with_company_address[$username] = $company_address;
+    $clients_with_company[$username] = $company;
 }
 $stmt->close();
 
 // Fetch only pending orders for display in the table with sorting
 $orders = []; // Initialize $orders as an empty array
-$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status FROM orders WHERE status = 'Pending'";
+$sql = "SELECT po_number, username, company, order_date, delivery_date, delivery_address, orders, total_amount, status FROM orders WHERE status = 'Pending'";
 
 // Add sorting
 $sql .= " ORDER BY {$sort_column} {$sort_direction}";
@@ -80,6 +82,9 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <!-- Include jsPDF for printing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
         /* Main styles for the Order Summary table */
         .order-summary {
@@ -151,20 +156,23 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             width: 20%;
         }
         
-        /* Style for the total section */
-        .summary-total {
-            margin-top: 10px;
-            text-align: right;
-            font-weight: bold;
-            border-top: 1px solid #ddd;
-            padding-top: 10px;
+        /* Additional styles for print button */
+        .print-po-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 80px;
+            cursor: pointer;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 5px;
         }
         
-        /* Style for quantity input fields */
-        .summary-quantity {
-            width: 80px;
-            max-width: 100%;
-            text-align: center;
+        .print-po-btn:hover {
+            background-color: #45a049;
         }
         
         /* Search Container Styling (exactly as in order_history.php) */
@@ -378,6 +386,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             </a>
                         </th>
                         <th class="sortable">
+                            <a href="<?= getSortUrl('company', $sort_column, $sort_direction) ?>">
+                                Company Name <?= getSortIcon('company', $sort_column, $sort_direction) ?>
+                            </a>
+                        </th>
+                        <th class="sortable">
                             <a href="<?= getSortUrl('order_date', $sort_column, $sort_direction) ?>">
                                 Order Date <?= getSortIcon('order_date', $sort_column, $sort_direction) ?>
                             </a>
@@ -404,6 +417,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             <tr>
                                 <td><?= htmlspecialchars($order['po_number']) ?></td>
                                 <td><?= htmlspecialchars($order['username']) ?></td>
+                                <td><?= htmlspecialchars($order['company'] ?? 'N/A') ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_address']) ?></td>
@@ -415,15 +429,18 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <span class="status-badge status-pending"><?= htmlspecialchars($order['status']) ?></span>
                                 </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
-                                    <i class="fas fa-exchange-alt"></i> Change Status
-                                </button>
+                                    <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
+                                        <i class="fas fa-exchange-alt"></i> Change Status
+                                    </button>
+                                    <button class="print-po-btn" onclick="printPurchaseOrder('<?= htmlspecialchars($order['po_number']) ?>')">
+                                        <i class="fas fa-print"></i> Print PO
+                                    </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="no-orders">No pending orders found.</td>
+                            <td colspan="10" class="no-orders">No pending orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -441,12 +458,22 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber()">
+                    <select id="username" name="username" required onchange="generatePONumber(); updateCompanyInfo();">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
-                            <option value="<?= htmlspecialchars($client) ?>" data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"><?= htmlspecialchars($client) ?></option>
+                            <option 
+                                value="<?= htmlspecialchars($client) ?>" 
+                                data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
+                                data-company-name="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>"
+                            >
+                                <?= htmlspecialchars($client) ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
+
+                    <label for="company">Company Name:</label>
+                    <input type="text" id="company" name="company" readonly>
+                    
                     <label for="order_date">Order Date:</label>
                     <input type="text" id="order_date" name="order_date" readonly>
                     <label for="delivery_date">Delivery Date:</label>
@@ -978,12 +1005,187 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     function closeOrderDetailsModal() {
         document.getElementById('orderDetailsModal').style.display = 'none';
     }
+    
+    // Add the new function to update company information
+    function updateCompanyInfo() {
+        const usernameSelect = document.getElementById('username');
+        const companyInput = document.getElementById('company');
+        const companyAddressInput = document.getElementById('company_address');
+        
+        if (usernameSelect.selectedIndex > 0) {
+            const option = usernameSelect.options[usernameSelect.selectedIndex];
+            companyInput.value = option.getAttribute('data-company-name') || '';
+            companyAddressInput.value = option.getAttribute('data-company-address') || 'No company address available';
+        } else {
+            companyInput.value = '';
+            companyAddressInput.value = '';
+        }
+    }
+    
+    // Extend the prepareOrderData function to include company field
+    window.prepareOrderData = function() {
+        // Get values from the form
+        const total = calculateCartTotal();
+        document.getElementById('total_amount').value = total.toFixed(2);
+        document.getElementById('orders').value = JSON.stringify(selectedProducts);
+        
+        // Get username and order details for PO number if not already set
+        if (document.getElementById('po_number').value === "") {
+            generatePONumber();
+        }
+        
+        // Set delivery address based on selection
+        const deliveryAddressType = document.getElementById('delivery_address_type').value;
+        let deliveryAddressValue;
+        
+        if (deliveryAddressType === 'company') {
+            deliveryAddressValue = document.getElementById('company_address').value;
+        } else {
+            deliveryAddressValue = document.getElementById('custom_address').value;
+        }
+        
+        document.getElementById('delivery_address').value = deliveryAddressValue;
+    };
+    
+    // Add the new function to print a purchase order
+    function printPurchaseOrder(poNumber) {
+        // Show loading message or spinner
+        showToast("Generating Purchase Order...", "info");
+        
+        // Fetch order details from the server
+        fetch(`/backend/get_po_details.php?po_number=${poNumber}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to fetch PO details");
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    generatePDF(data.order);
+                } else {
+                    showToast("Error: " + data.message, "error");
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                showToast("Error generating Purchase Order: " + error.message, "error");
+            });
+    }
+    
+    // Function to generate the PDF
+    function generatePDF(order) {
+        try {
+            // Make sure jsPDF is available
+            if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+                showToast("PDF library not loaded. Please refresh the page.", "error");
+                return;
+            }
+            
+            // Initialize PDF
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Set up document properties
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 20;
+            let yPos = margin;
+            
+            // Add company header
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text(order.company || 'N/A', margin, yPos);
+            yPos += 10;
+            
+            // Add PO Number
+            doc.setFontSize(12);
+            doc.text(`PO #: ${order.po_number}`, margin, yPos);
+            yPos += 7;
+            
+            // Add Username
+            doc.text(`User: ${order.username}`, margin, yPos);
+            yPos += 15;
+            
+            // Add right side information
+            doc.setFontSize(12);
+            doc.text(`Order Date: ${order.order_date}`, pageWidth - margin, yPos - 22, { align: 'right' });
+            doc.text(`Delivery Date: ${order.delivery_date}`, pageWidth - margin, yPos - 15, { align: 'right' });
+            doc.text(`Delivery Address: ${order.delivery_address}`, pageWidth - margin, yPos - 8, { align: 'right' });
+            
+            // Add a separator line
+            doc.setDrawColor(200);
+            doc.line(margin, yPos, pageWidth - margin, yPos);
+            yPos += 10;
+            
+            // Add order items table
+            const orderItems = JSON.parse(order.orders);
+            const tableHeaders = [['Category', 'Product', 'Packaging', 'Price', 'Quantity', 'Subtotal']];
+            const tableData = orderItems.map(item => [
+                item.category || '',
+                item.item_description,
+                item.packaging,
+                `PHP ${parseFloat(item.price).toFixed(2)}`,
+                item.quantity.toString(),
+                `PHP ${(parseFloat(item.price) * parseInt(item.quantity)).toFixed(2)}`
+            ]);
+            
+            // Add the table
+            doc.autoTable({
+                startY: yPos,
+                head: tableHeaders,
+                body: tableData,
+                theme: 'striped',
+                styles: {
+                    fontSize: 10,
+                    cellPadding: 3
+                },
+                headStyles: {
+                    fillColor: [51, 51, 51],
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold'
+                },
+                columnStyles: {
+                    5: { halign: 'right' }  // Align subtotal to right
+                }
+            });
+            
+            // Add total amount
+            const finalY = doc.lastAutoTable.finalY + 10;
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Total Amount: PHP ${parseFloat(order.total_amount).toFixed(2)}`, pageWidth - margin, finalY, { align: 'right' });
+            
+            // Add footer
+            const footerY = doc.internal.pageSize.getHeight() - 10;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100);
+            doc.text(`Generated at ${new Date().toLocaleString()}`, pageWidth / 2, footerY, { align: 'center' });
+            
+            // Save the PDF with a meaningful filename
+            doc.save(`PO_${order.po_number}.pdf`);
+            showToast("Purchase Order generated successfully!", "success");
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            showToast("Error generating PDF: " + error.message, "error");
+        }
+    }
     </script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
     
         // Search functionality (client-side, same as in order_history.php)
         $(document).ready(function() {
+            // Initialize date pickers
+            $("#order_date").datepicker({
+                dateFormat: "yy-mm-dd",
+                defaultDate: new Date()
+            }).datepicker("setDate", new Date());
+            
+            $("#delivery_date").datepicker({
+                dateFormat: "yy-mm-dd",
+                minDate: 0  // Prevent selection of dates before today
+            });
+            
             // Search functionality
             $("#searchInput").on("input", function() {
                 let searchText = $(this).val().toLowerCase().trim();
