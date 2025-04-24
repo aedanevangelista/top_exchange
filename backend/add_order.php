@@ -7,10 +7,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     try {
         // Get POST data
         $username = $_POST['username'];
-        $company = $_POST['company']; // Now using 'company' instead of 'company_name'
         $order_date = $_POST['order_date'];
         $delivery_date = $_POST['delivery_date'];
-        $delivery_address = $_POST['delivery_address'];
+        $delivery_address = $_POST['delivery_address']; // New field for delivery address
         $po_number = $_POST['po_number'];
         $orders = $_POST['orders']; // Keep as JSON string
         $total_amount = $_POST['total_amount'];
@@ -18,22 +17,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Validate that orders is valid JSON
         $decoded_orders = json_decode($orders, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Invalid order data format: ' . json_last_error_msg());
+            throw new Exception('Invalid order data format');
         }
 
-        // Insert into orders table (now including company)
+        // Insert into orders table (now including delivery_address)
         $insertOrder = $conn->prepare("
-            INSERT INTO orders (username, company, order_date, delivery_date, delivery_address, po_number, orders, total_amount, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
+            INSERT INTO orders (username, order_date, delivery_date, delivery_address, po_number, orders, total_amount, status) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')
         ");
 
         if ($insertOrder === false) {
             throw new Exception('Failed to prepare statement: ' . $conn->error);
         }
 
-        // Changed 7th parameter type from d to s for orders
-        $insertOrder->bind_param("ssssssd", $username, $company, $order_date, $delivery_date, $delivery_address, $po_number, $orders, $total_amount);
-        
+        $insertOrder->bind_param("ssssssd", $username, $order_date, $delivery_date, $delivery_address, $po_number, $orders, $total_amount);
+
         if ($insertOrder->execute()) {
             echo json_encode([
                 'success' => true,

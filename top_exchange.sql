@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Apr 24, 2025 at 04:44 PM
+-- Generation Time: Apr 24, 2025 at 04:59 PM
 -- Server version: 10.11.10-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -222,11 +222,7 @@ INSERT INTO `orders` (`id`, `po_number`, `username`, `company`, `order_date`, `d
 (61, 'Boters-1', 'Boters', NULL, '2025-04-21', '2025-04-22', '10 Aguinaldo', '[{\"product_id\":7,\"category\":\"\",\"item_description\":\"Bola Bola Siopao (Large)\",\"packaging\":\"6pcs\\/pack\",\"price\":\"310.00\",\"quantity\":1}]', 360.00, 'Completed', '09185585149', '', 'Cash on Delivery', 310.00, 50.00, 100, '[0]', NULL, '[[true]]', '[100]'),
 (69, 'aedanpogi-2', 'aedanpogi', NULL, '2025-04-23', '2025-04-30', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":430}]', 120400.00, 'Rejected', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
 (70, 'aedanpogi-3', 'aedanpogi', NULL, '2025-04-23', '2025-04-25', 'No company address available', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":53},{\"product_id\":2,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Med)\",\"packaging\":\"10pcs/pack\",\"price\":325,\"quantity\":200}]', 79840.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(71, 'Boters-2', 'Boters', NULL, '2025-04-24', '2025-04-25', '10 Aguinaldo', '[{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":1},{\"product_id\":11,\"category\":\"\",\"item_description\":\"Cuaopao\",\"packaging\":\"10pcs\\/pack\",\"price\":\"125.00\",\"quantity\":1},{\"product_id\":45,\"category\":\"\",\"item_description\":\"Pumpkin Cake 1.5kg\",\"packaging\":\"1.5kg\",\"price\":\"370.00\",\"quantity\":4},{\"product_id\":43,\"category\":\"\",\"item_description\":\"Radish Cake 1.5kg\",\"packaging\":\"1.5kg\",\"price\":\"370.00\",\"quantity\":1}]', 2245.00, 'Active', '09185585149', '', 'Cash on Delivery', 2245.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(72, 'aedanpogi-4', 'aedanpogi', 'ABC Corp', '2025-04-25', '2025-04-30', '123', '0', 9600.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(73, 'aedanpogi-5', 'aedanpogi', 'ABC Corp', '2025-04-25', '2025-04-30', '123', '0', 5550.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(74, 'aedanpogi-6', 'aedanpogi', 'ABC Corp', '2025-04-25', '2025-04-25', 'asdasdasdasd', '0', 6800.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL),
-(75, 'aedanpogi-7', 'aedanpogi', 'ABC Corp', '2025-04-25', '2025-04-28', '234234', '0', 15400.00, 'Pending', NULL, NULL, NULL, 0.00, 0.00, 0, NULL, NULL, NULL, NULL);
+(71, 'Boters-2', 'Boters', NULL, '2025-04-24', '2025-04-25', '10 Aguinaldo', '[{\"product_id\":3,\"category\":\"\",\"item_description\":\"Asado Siopao (A Small)\",\"packaging\":\"15pcs\\/pack\",\"price\":\"270.00\",\"quantity\":1},{\"product_id\":11,\"category\":\"\",\"item_description\":\"Cuaopao\",\"packaging\":\"10pcs\\/pack\",\"price\":\"125.00\",\"quantity\":1},{\"product_id\":45,\"category\":\"\",\"item_description\":\"Pumpkin Cake 1.5kg\",\"packaging\":\"1.5kg\",\"price\":\"370.00\",\"quantity\":4},{\"product_id\":43,\"category\":\"\",\"item_description\":\"Radish Cake 1.5kg\",\"packaging\":\"1.5kg\",\"price\":\"370.00\",\"quantity\":1}]', 2245.00, 'Active', '09185585149', '', 'Cash on Delivery', 2245.00, 0.00, 0, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -712,7 +708,7 @@ ALTER TABLE `monthly_payments`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
 
 --
 -- AUTO_INCREMENT for table `order_status_logs`
