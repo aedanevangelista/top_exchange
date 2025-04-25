@@ -522,7 +522,7 @@ function truncate($text, $max = 15) {
                         <input type="email" id="email" name="email" required placeholder="e.g., johndoe@example.com">
                         
                         <label for="phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
-                        <input type="tel" id="phone" name="phone" placeholder="e.g., +1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
+                        <input type="tel" id="phone" name="phone" placeholder="e.g., 091234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
                     </div>
                     
                     <div class="form-column">
