@@ -28,6 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     $availability = $_POST['availability'];
     $area = $_POST['area']; // Added area field
     
+    // Validate contact number length
+    if (strlen($contact_no) !== 12) {
+        returnJsonResponse(false, false, 'Contact number must be exactly 12 digits.');
+    }
+    
     $checkStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ?");
     $checkStmt->bind_param("s", $name);
     $checkStmt->execute();
@@ -59,6 +64,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     $contact_no = $_POST['contact_no'];
     $availability = $_POST['availability'];
     $area = $_POST['area']; // Added area field
+    
+    // Validate contact number length
+    if (strlen($contact_no) !== 12) {
+        returnJsonResponse(false, false, 'Contact number must be exactly 12 digits.');
+    }
     
     $checkStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ? AND id != ?");
     $checkStmt->bind_param("si", $name, $id);
@@ -144,6 +154,21 @@ if (!empty($status_filter) && !empty($area_filter)) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" href="/css/toast.css">
+    <style>
+        .required-asterisk {
+            color: red;
+            margin-left: 3px;
+        }
+        
+        .error-message {
+            color: red;
+            margin-bottom: 10px;
+        }
+        
+        .form-field-error {
+            border: 1px solid red !important;
+        }
+    </style>
 </head>
 <body>
     <div id="toast-container"></div>
@@ -219,22 +244,28 @@ if (!empty($status_filter) && !empty($area_filter)) {
             <div id="addDriverError" class="error-message"></div>
             <form id="addDriverForm" method="POST" class="account-form" action="">
                 <input type="hidden" name="formType" value="add">
-                <label for="name">Name:</label>
+                <label for="name">Name:<span class="required-asterisk">*</span></label>
                 <input type="text" id="name" name="name" required>
-                <label for="address">Address:</label>
+                
+                <label for="address">Address:<span class="required-asterisk">*</span></label>
                 <input type="text" id="address" name="address" required>
-                <label for="contact_no">Contact No.:</label>
-                <input type="text" id="contact_no" name="contact_no" required>
-                <label for="area">Area:</label>
+                
+                <label for="contact_no">Contact No.:<span class="required-asterisk">*</span></label>
+                <input type="text" id="contact_no" name="contact_no" required maxlength="12" pattern="\d{12}" title="Contact number must be exactly 12 digits">
+                <span id="contactError" class="error-message"></span>
+                
+                <label for="area">Area:<span class="required-asterisk">*</span></label>
                 <select id="area" name="area" required>
                     <option value="North">North</option>
                     <option value="South">South</option>
                 </select>
-                <label for="availability">Availability:</label>
+                
+                <label for="availability">Availability:<span class="required-asterisk">*</span></label>
                 <select id="availability" name="availability" required>
                     <option value="Available">Available</option>
                     <option value="Not Available">Not Available</option>
                 </select>
+                
                 <div class="form-buttons">
                     <button type="button" class="cancel-btn" onclick="closeAddDriverForm()">
                         <i class="fas fa-times"></i> Cancel
@@ -252,22 +283,29 @@ if (!empty($status_filter) && !empty($area_filter)) {
             <form id="editDriverForm" method="POST" class="account-form" action="">
                 <input type="hidden" name="formType" value="edit">
                 <input type="hidden" id="edit-id" name="id"> 
-                <label for="edit-name">Name:</label>
+                
+                <label for="edit-name">Name:<span class="required-asterisk">*</span></label>
                 <input type="text" id="edit-name" name="name" required>
-                <label for="edit-address">Address:</label>
+                
+                <label for="edit-address">Address:<span class="required-asterisk">*</span></label>
                 <input type="text" id="edit-address" name="address" required>
-                <label for="edit-contact_no">Contact No.:</label>
-                <input type="text" id="edit-contact_no" name="contact_no" required>
-                <label for="edit-area">Area:</label>
+                
+                <label for="edit-contact_no">Contact No.:<span class="required-asterisk">*</span></label>
+                <input type="text" id="edit-contact_no" name="contact_no" required maxlength="12" pattern="\d{12}" title="Contact number must be exactly 12 digits">
+                <span id="editContactError" class="error-message"></span>
+                
+                <label for="edit-area">Area:<span class="required-asterisk">*</span></label>
                 <select id="edit-area" name="area" required>
                     <option value="North">North</option>
                     <option value="South">South</option>
                 </select>
-                <label for="edit-availability">Availability:</label>
+                
+                <label for="edit-availability">Availability:<span class="required-asterisk">*</span></label>
                 <select id="edit-availability" name="availability" required>
                     <option value="Available">Available</option>
                     <option value="Not Available">Not Available</option>
                 </select>
+                
                 <div class="form-buttons">
                     <button type="button" class="cancel-btn" onclick="closeEditDriverForm()">
                         <i class="fas fa-times"></i> Cancel
@@ -312,6 +350,8 @@ if (!empty($status_filter) && !empty($area_filter)) {
             document.getElementById('addDriverOverlay').style.display = 'none';
             document.getElementById('addDriverForm').reset();
             document.getElementById('addDriverError').textContent = '';
+            document.getElementById('contactError').textContent = '';
+            document.getElementById('contact_no').classList.remove('form-field-error');
         }
         
         function openEditDriverForm(id, name, address, contact_no, availability, area) {
@@ -327,6 +367,8 @@ if (!empty($status_filter) && !empty($area_filter)) {
         function closeEditDriverForm() {
             document.getElementById('editDriverOverlay').style.display = 'none';
             document.getElementById('editDriverError').textContent = '';
+            document.getElementById('editContactError').textContent = '';
+            document.getElementById('edit-contact_no').classList.remove('form-field-error');
         }
         
         function openStatusModal(id, name) {
@@ -380,9 +422,39 @@ if (!empty($status_filter) && !empty($area_filter)) {
             window.location.href = `?status=${status}&area=${area}`;
         }
         
+        function validateContactNumber(contactInput, errorElement) {
+            const contactValue = contactInput.value.trim();
+            if (contactValue.length !== 12 || !/^\d{12}$/.test(contactValue)) {
+                errorElement.textContent = 'Contact number must be exactly 12 digits.';
+                contactInput.classList.add('form-field-error');
+                return false;
+            }
+            errorElement.textContent = '';
+            contactInput.classList.remove('form-field-error');
+            return true;
+        }
+        
         $(document).ready(function() {
+            // Validate contact number on input
+            $('#contact_no').on('input', function() {
+                validateContactNumber(this, document.getElementById('contactError'));
+            });
+            
+            $('#edit-contact_no').on('input', function() {
+                validateContactNumber(this, document.getElementById('editContactError'));
+            });
+            
             $('#addDriverForm').on('submit', function(e) {
                 e.preventDefault();
+                
+                // Validate contact number before submission
+                const contactInput = document.getElementById('contact_no');
+                const isContactValid = validateContactNumber(contactInput, document.getElementById('contactError'));
+                
+                if (!isContactValid) {
+                    return false;
+                }
+                
                 $.ajax({
                     url: '',
                     type: 'POST',
@@ -407,6 +479,15 @@ if (!empty($status_filter) && !empty($area_filter)) {
             
             $('#editDriverForm').on('submit', function(e) {
                 e.preventDefault();
+                
+                // Validate contact number before submission
+                const contactInput = document.getElementById('edit-contact_no');
+                const isContactValid = validateContactNumber(contactInput, document.getElementById('editContactError'));
+                
+                if (!isContactValid) {
+                    return false;
+                }
+                
                 $.ajax({
                     url: '',
                     type: 'POST',
