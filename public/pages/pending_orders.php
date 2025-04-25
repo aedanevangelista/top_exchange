@@ -195,7 +195,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             padding: 8px 12px;
             border-radius: 20px 0 0 20px;
             border: 1px solid #ddd;
-            font-size: 14px;
+            font-size: 12px;
             width: 220px;
         }
 
@@ -398,7 +398,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             border: none;
             border-radius: 40px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
             margin-left: 5px;
         }
         
@@ -425,13 +425,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         
         .po-company {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             margin-bottom: 10px;
         }
         
         .po-title {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             margin-bottom: 20px;
             text-transform: uppercase;
@@ -476,7 +476,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .po-total {
             text-align: right;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14px;
             margin-bottom: 30px;
         }
         
@@ -523,7 +523,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             position: absolute;
             top: 10px;
             right: 10px;
-            font-size: 20px;
+            font-size: 18px;
             background: none;
             border: none;
             cursor: pointer;
@@ -542,7 +542,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 14px;
         }
 
     .instructions-btn {
@@ -552,7 +552,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         border: none;
         border-radius: 4px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 12px;
         min-width: 60px;
         text-align: center;
     }
@@ -608,7 +608,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         position: absolute;
         right: 15px;
         top: 15px;
-        font-size: 20px;
+        font-size: 18px;
         color: white;
         opacity: 0.8;
         cursor: pointer;
@@ -635,12 +635,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
     .instructions-header h3 {
         margin: 0;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 600;
     }
 
     .instructions-po-number {
-        font-size: 14px;
+        font-size: 12px;
         margin-top: 5px;
         opacity: 0.9;
     }
@@ -676,7 +676,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         padding: 8px 16px;
         border-radius: 4px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 12px;
         transition: background-color 0.2s;
     }
     
@@ -692,7 +692,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         border: none;
         border-radius: 4px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 12px;
         min-width: 60px;
         text-align: center;
         transition: background-color 0.2s;
