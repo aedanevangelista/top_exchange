@@ -79,7 +79,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $business_proof_json = json_encode($business_proof);
 
-    // Replace line 82-83 with this correct version
     $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
     $stmt->bind_param("sssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json);
 
@@ -209,6 +208,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, business_proof = ? WHERE id = ?");
     $stmt->bind_param("sssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json, $id);
+
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
     } else {
@@ -377,6 +377,36 @@ function truncate($text, $max = 15) {
         .two-column-form textarea {
             width: 100%;
         }
+        
+        /* Enhanced company address textarea */
+        textarea#company_address, textarea#edit-company_address {
+            height: 80px; /* Make textarea taller */
+            padding: 10px; /* Add padding inside */
+            font-size: 14px; /* Consistent font size */
+            resize: vertical; /* Allow vertical resizing only */
+            min-height: 80px; /* Set minimum height */
+        }
+        
+        /* Style consistent input borders */
+        input, textarea {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px 12px;
+            transition: border-color 0.3s;
+            outline: none;
+        }
+        
+        input:focus, textarea:focus {
+            border-color: #4d90fe;
+            box-shadow: 0 0 5px rgba(77, 144, 254, 0.5);
+        }
+        
+        /* Style placeholder text */
+        input::placeholder, textarea::placeholder {
+            color: #aaa;
+            padding: 4px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -481,7 +511,9 @@ function truncate($text, $max = 15) {
                 <div class="two-column-form">
                     <div class="form-column">
                         <label for="username">Username: <span class="required">*</span></label>
-                        <input type="text" id="username" name="username" autocomplete="username" required placeholder="e.g., johndoe">
+                        <input type="text" id="username" name="username" autocomplete="username" required 
+                            placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" 
+                            title="Username can only contain letters, numbers, and underscores. Maximum 15 characters.">
                         
                         <label for="password">Password: <span class="required">*</span></label>
                         <input type="password" id="password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
@@ -490,7 +522,7 @@ function truncate($text, $max = 15) {
                         <input type="email" id="email" name="email" required placeholder="e.g., johndoe@example.com">
                         
                         <label for="phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
-                        <input type="text" id="phone" name="phone" placeholder="e.g., +1234567890">
+                        <input type="tel" id="phone" name="phone" placeholder="e.g., +1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
                     </div>
                     
                     <div class="form-column">
@@ -535,7 +567,9 @@ function truncate($text, $max = 15) {
                 <div class="two-column-form">
                     <div class="form-column">
                         <label for="edit-username">Username: <span class="required">*</span></label>
-                        <input type="text" id="edit-username" name="username" autocomplete="username" required placeholder="e.g., johndoe">
+                        <input type="text" id="edit-username" name="username" autocomplete="username" required 
+                            placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" 
+                            title="Username can only contain letters, numbers, and underscores. Maximum 15 characters.">
                         
                         <label for="edit-password">Password: <span class="required">*</span></label>
                         <input type="password" id="edit-password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
@@ -544,7 +578,7 @@ function truncate($text, $max = 15) {
                         <input type="email" id="edit-email" name="email" required placeholder="e.g., johndoe@example.com">
                         
                         <label for="edit-phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
-                        <input type="text" id="edit-phone" name="phone" placeholder="e.g., +1234567890">
+                        <input type="tel" id="edit-phone" name="phone" placeholder="e.g., +1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
                     </div>
                     
                     <div class="form-column">
@@ -629,6 +663,38 @@ function truncate($text, $max = 15) {
         var modal = document.getElementById("myModal");
         modal.style.display = "none";
     }
+    
+    // Client-side validation for username (prevent special characters)
+    document.addEventListener('DOMContentLoaded', function() {
+        const usernameInputs = document.querySelectorAll('#username, #edit-username');
+        
+        usernameInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                // Replace any characters that aren't alphanumeric or underscore
+                this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '');
+                
+                // Enforce max length (redundant with maxlength attribute, but good for extra security)
+                if (this.value.length > 15) {
+                    this.value = this.value.slice(0, 15);
+                }
+            });
+        });
+        
+        // Phone number validation (digits only)
+        const phoneInputs = document.querySelectorAll('#phone, #edit-phone');
+        
+        phoneInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                // Replace any non-digit characters
+                this.value = this.value.replace(/\D/g, '');
+                
+                // Enforce max length (12 digits)
+                if (this.value.length > 12) {
+                    this.value = this.value.slice(0, 12);
+                }
+            });
+        });
+    });
     </script>
 </body>
 </html>
