@@ -79,6 +79,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $business_proof_json = json_encode($business_proof);
 
+    // Replace line 82-83 with this correct version
     $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
     $stmt->bind_param("sssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json);
 
@@ -208,7 +209,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, business_proof = ? WHERE id = ?");
     $stmt->bind_param("sssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json, $id);
-
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
     } else {
@@ -276,7 +276,6 @@ function truncate($text, $max = 15) {
     <link rel="stylesheet" href="/css/accounts_clients.css">
     <link rel="stylesheet" href="/css/toast.css">
     <style>
-
         #myModal {
             display: none;
             position: fixed;
@@ -339,6 +338,44 @@ function truncate($text, $max = 15) {
             font-size: 0.9em;
             color: #666;
             font-style: italic;
+        }
+        
+        /* New styles for the 2-column layout */
+        .two-column-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .form-column {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-divider {
+            width: 1px;
+            background-color: #ddd;
+            margin: 0 auto;
+        }
+        
+        .form-full-width {
+            grid-column: 1 / span 2;
+        }
+        
+        .required {
+            color: #ff0000;
+            font-weight: bold;
+        }
+        
+        .overlay-content {
+            max-width: 800px;
+            width: 90%;
+        }
+        
+        /* Make inputs a bit wider as they have more space now */
+        .two-column-form input, 
+        .two-column-form textarea {
+            width: 100%;
         }
     </style>
 </head>
@@ -440,29 +477,47 @@ function truncate($text, $max = 15) {
             <div id="addAccountError" class="error-message"></div>
             <form id="addAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
                 <input type="hidden" name="formType" value="add">
-                <label for="username">Username: <span class="required">*</span></label>
-                <input type="text" id="username" name="username" autocomplete="username" required placeholder="e.g., johndoe">
-                <label for="password">Password: <span class="required">*</span></label>
-                <input type="password" id="password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
-                <label for="email">Email: <span class="required">*</span></label>
-                <input type="email" id="email" name="email" required placeholder="e.g., johndoe@example.com">
-                <label for="phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
-                <input type="text" id="phone" name="phone" placeholder="e.g., +1234567890">
-                <label for="region">Region: <span class="required">*</span></label>
-                <input type="text" id="region" name="region" required placeholder="e.g., Metro Manila">
-                <label for="city">City: <span class="required">*</span></label>
-                <input type="text" id="city" name="city" required placeholder="e.g., Quezon City">
-                <label for="company">Company: <span class="optional">(optional)</span></label>
-                <input type="text" id="company" name="company" placeholder="e.g., Top Exchange Food Corp">
-                <label for="company_address">Company Address: <span class="required">*</span></label>
-                <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
-                <label for="business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
-                <input type="file" id="business_proof" name="business_proof[]" required accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
-                <div class="form-buttons">
-                    <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                
+                <div class="two-column-form">
+                    <div class="form-column">
+                        <label for="username">Username: <span class="required">*</span></label>
+                        <input type="text" id="username" name="username" autocomplete="username" required placeholder="e.g., johndoe">
+                        
+                        <label for="password">Password: <span class="required">*</span></label>
+                        <input type="password" id="password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
+                        
+                        <label for="email">Email: <span class="required">*</span></label>
+                        <input type="email" id="email" name="email" required placeholder="e.g., johndoe@example.com">
+                        
+                        <label for="phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
+                        <input type="text" id="phone" name="phone" placeholder="e.g., +1234567890">
+                    </div>
+                    
+                    <div class="form-column">
+                        <label for="region">Region: <span class="required">*</span></label>
+                        <input type="text" id="region" name="region" required placeholder="e.g., Metro Manila">
+                        
+                        <label for="city">City: <span class="required">*</span></label>
+                        <input type="text" id="city" name="city" required placeholder="e.g., Quezon City">
+                        
+                        <label for="company">Company: <span class="optional">(optional)</span></label>
+                        <input type="text" id="company" name="company" placeholder="e.g., Top Exchange Food Corp">
+                    </div>
+                    
+                    <div class="form-full-width">
+                        <label for="company_address">Company Address: <span class="required">*</span></label>
+                        <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
+                        
+                        <label for="business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
+                        <input type="file" id="business_proof" name="business_proof[]" required accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
+                        
+                        <div class="form-buttons">
+                            <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                            <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
@@ -476,30 +531,48 @@ function truncate($text, $max = 15) {
                 <input type="hidden" name="formType" value="edit">
                 <input type="hidden" id="edit-id" name="id">
                 <input type="hidden" id="existing-business-proof" name="existing_business_proof">
-                <label for="edit-username">Username: <span class="required">*</span></label>
-                <input type="text" id="edit-username" name="username" autocomplete="username" required placeholder="e.g., johndoe">
-                <label for="edit-password">Password: <span class="required">*</span></label>
-                <input type="password" id="edit-password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
-                <label for="edit-email">Email: <span class="required">*</span></label>
-                <input type="email" id="edit-email" name="email" required placeholder="e.g., johndoe@example.com">
-                <label for="edit-phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
-                <input type="text" id="edit-phone" name="phone" placeholder="e.g., +1234567890">
-                <label for="edit-region">Region: <span class="required">*</span></label>
-                <input type="text" id="edit-region" name="region" required placeholder="e.g., North America">
-                <label for="edit-city">City: <span class="required">*</span></label>
-                <input type="text" id="edit-city" name="city" required placeholder="e.g., New York">
-                <label for="edit-company">Company: <span class="optional">(optional)</span></label>
-                <input type="text" id="edit-company" name="company" placeholder="e.g., ABC Corp">
-                <label for="edit-company_address">Company Address: <span class="required">*</span></label>
-                <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
-                <div id="edit-business-proof-container"></div>
-                <label for="edit-business_proof">Business Proof: <span class="optional">(optional)</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
-                <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
-                <div class="form-buttons">
-                    <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                
+                <div class="two-column-form">
+                    <div class="form-column">
+                        <label for="edit-username">Username: <span class="required">*</span></label>
+                        <input type="text" id="edit-username" name="username" autocomplete="username" required placeholder="e.g., johndoe">
+                        
+                        <label for="edit-password">Password: <span class="required">*</span></label>
+                        <input type="password" id="edit-password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
+                        
+                        <label for="edit-email">Email: <span class="required">*</span></label>
+                        <input type="email" id="edit-email" name="email" required placeholder="e.g., johndoe@example.com">
+                        
+                        <label for="edit-phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
+                        <input type="text" id="edit-phone" name="phone" placeholder="e.g., +1234567890">
+                    </div>
+                    
+                    <div class="form-column">
+                        <label for="edit-region">Region: <span class="required">*</span></label>
+                        <input type="text" id="edit-region" name="region" required placeholder="e.g., North America">
+                        
+                        <label for="edit-city">City: <span class="required">*</span></label>
+                        <input type="text" id="edit-city" name="city" required placeholder="e.g., New York">
+                        
+                        <label for="edit-company">Company: <span class="optional">(optional)</span></label>
+                        <input type="text" id="edit-company" name="company" placeholder="e.g., ABC Corp">
+                    </div>
+                    
+                    <div class="form-full-width">
+                        <label for="edit-company_address">Company Address: <span class="required">*</span></label>
+                        <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
+                        
+                        <div id="edit-business-proof-container"></div>
+                        <label for="edit-business_proof">Business Proof: <span class="optional">(optional)</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
+                        <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
+                        
+                        <div class="form-buttons">
+                            <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                            <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
