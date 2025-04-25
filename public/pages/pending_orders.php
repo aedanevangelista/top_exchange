@@ -255,7 +255,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             padding: 8px;
             text-align: left;
             border: 1px solid #ddd;
-            font-size: 12px;
+            font-size: 14px;
         }
 
         .materials-table thead {
@@ -293,11 +293,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .status-sufficient {
             background-color: #d4edda;
             color: #155724;
+            font-size: 16px;
         }
         
         .status-insufficient {
             background-color: #f8d7da;
             color: #721c24;
+            font-size: 16px;
         }
         
         /* Status modal buttons */
@@ -597,7 +599,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         overflow: hidden;
         max-height: 90vh; /* 90% of the viewport height */
         overflow-y: auto; /* Add scroll if content exceeds max height */
-        margin: 5vh auto; /* Center vertically with 5% top margin */
+        margin: 2vh auto; /* Center vertically with 5% top margin */
     }
 
     @keyframes modalFadeIn {
