@@ -234,18 +234,28 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             color: #333;
         }
         
-        .materials-table {
+        .materials-table tbody {
+            display: block;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .materials-table thead, 
+        .materials-table tbody tr {
+            display: table;
             width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
+            table-layout: fixed;
         }
-        
-        .materials-table th,
-        .materials-table td {
-            padding: 8px;
-            text-align: left;
-            border: 1px solid #ddd;
+
+        .materials-table thead {
+            width: calc(100% - 17px); /* Adjust for scrollbar width */
         }
+
+        .modal-content {
+        max-height: 90vh; /* 90% of viewport height */
+        overflow-y: auto;
+    }>
+            <table class="cart-table
         
         .materials-table th {
             background-color: #f2f2f2;
