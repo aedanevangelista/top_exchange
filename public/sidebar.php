@@ -104,7 +104,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php endif; ?>
 
             <!-- Ordering Menu with Submenus -->
-            <?php if (in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages) || in_array('Pending Orders', $allowedPages)): ?>
+            <?php if (in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages) || in_array('Pending Orders', $allowedPages) || in_array('Deliverable Orders', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
@@ -121,6 +121,11 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <?php if (in_array('Pending Orders', $allowedPages)): ?>
                             <a href="/public/pages/pending_orders.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Pending Orders
+                            </a>
+                        <?php endif; ?>
+                        <?php if (in_array('Deliverable Orders', $allowedPages)): ?>
+                            <a href="/public/pages/deliverable_orders.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> Deliverable Orders
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Rejected Orders', $allowedPages)): ?>
