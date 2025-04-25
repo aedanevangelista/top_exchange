@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     $address = $_POST['address'];
     $contact_no = $_POST['contact_no'];
     $availability = $_POST['availability'];
-    $area = $_POST['area']; // Added area field
+    $area = $_POST['area'];
     
     // Validate contact number length
     if (strlen($contact_no) !== 12) {
@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     }
     $checkStmt->close();
     
-    $stmt = $conn->prepare("INSERT INTO drivers (name, address, contact_no, availability, area) VALUES (?, ?, ?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO drivers (name, address, contact_no, availability, area, current_deliveries) VALUES (?, ?, ?, ?, ?, 0)");
     $stmt->bind_param("sssss", $name, $address, $contact_no, $availability, $area);
     
     if ($stmt->execute()) {
@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     $address = $_POST['address'];
     $contact_no = $_POST['contact_no'];
     $availability = $_POST['availability'];
-    $area = $_POST['area']; // Added area field
+    $area = $_POST['area'];
     
     // Validate contact number length
     if (strlen($contact_no) !== 12) {
@@ -110,10 +110,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     exit;
 }
 
+// Handler for fetching driver deliveries
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($_GET['action']) && $_GET['action'] == 'get_deliveries') {
+    header('Content-Type: application/json');
+    
+    $driver_id = $_GET['driver_id'];
+    $data = [];
+    
+    $stmt = $conn->prepare("
+        SELECT do.po_number, o.username, o.company, o.delivery_date, o.delivery_address, o.total_amount, o.status
+        FROM driver_orders do
+        JOIN orders o ON do.po_number = o.po_number
+        WHERE do.driver_id = ?
+        ORDER BY o.delivery_date DESC
+    ");
+    $stmt->bind_param("i", $driver_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $data[] = $row;
+        }
+        echo json_encode(['success' => true, 'deliveries' => $data]);
+    } else {
+        echo json_encode(['success' => true, 'deliveries' => []]);
+    }
+    
+    $stmt->close();
+    exit;
+}
+
 $status_filter = $_GET['status'] ?? '';
 $area_filter = $_GET['area'] ?? '';
 
-$sql = "SELECT id, name, address, contact_no, availability, area, created_at FROM drivers WHERE 1=1";
+$sql = "SELECT id, name, address, contact_no, availability, area, current_deliveries, created_at FROM drivers WHERE 1=1";
 if (!empty($status_filter)) {
     $sql .= " AND availability = ?";
 }
@@ -168,6 +199,111 @@ if (!empty($status_filter) && !empty($area_filter)) {
         .form-field-error {
             border: 1px solid red !important;
         }
+
+        .delivery-count {
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 10px;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .delivery-count-low {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .delivery-count-medium {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .delivery-count-high {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .deliveries-modal-content {
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .deliveries-table-container {
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .deliveries-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .deliveries-table th, 
+        .deliveries-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .deliveries-table th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+
+        .no-deliveries {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .delivery-status-badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: inline-block;
+        }
+
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-active {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+
+        .status-completed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Button for seeing deliveries */
+        .see-deliveries-btn {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 14px;
+        }
+
+        .see-deliveries-btn:hover {
+            background-color: #138496;
+        }
     </style>
 </head>
 <body>
@@ -204,12 +340,21 @@ if (!empty($status_filter) && !empty($area_filter)) {
                         <th>Contact No.</th>
                         <th>Area</th>
                         <th>Status</th>
+                        <th>Deliveries</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if ($result && $result->num_rows > 0): ?>
-                        <?php while ($row = $result->fetch_assoc()): ?>
+                        <?php while ($row = $result->fetch_assoc()): 
+                            // Determine CSS class for delivery count
+                            $deliveryClass = 'delivery-count-low';
+                            if ($row['current_deliveries'] > 15) {
+                                $deliveryClass = 'delivery-count-high';
+                            } else if ($row['current_deliveries'] > 10) {
+                                $deliveryClass = 'delivery-count-medium';
+                            }
+                        ?>
                             <tr>
                                 <td><?= htmlspecialchars($row['name']) ?></td>
                                 <td><?= htmlspecialchars($row['address']) ?></td>
@@ -217,6 +362,14 @@ if (!empty($status_filter) && !empty($area_filter)) {
                                 <td><?= htmlspecialchars($row['area']) ?></td>
                                 <td class="<?= 'status-' . strtolower(str_replace(' ', '-', $row['availability'])) ?>">
                                     <?= htmlspecialchars($row['availability']) ?>
+                                </td>
+                                <td>
+                                    <span class="delivery-count <?= $deliveryClass ?>">
+                                        <?= $row['current_deliveries'] ?>/20
+                                    </span>
+                                    <button class="see-deliveries-btn" onclick="viewDriverDeliveries(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>')">
+                                        <i class="fas fa-truck"></i> See Deliveries
+                                    </button>
                                 </td>
                                 <td class="action-buttons">
                                     <button class="edit-btn" onclick="openEditDriverForm(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>', '<?= htmlspecialchars(addslashes($row['address'])) ?>', '<?= htmlspecialchars(addslashes($row['contact_no'])) ?>', '<?= htmlspecialchars($row['availability']) ?>', '<?= htmlspecialchars($row['area']) ?>')">
@@ -230,7 +383,7 @@ if (!empty($status_filter) && !empty($area_filter)) {
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="6" class="no-accounts">No drivers found.</td>
+                            <td colspan="7" class="no-accounts">No drivers found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -336,6 +489,34 @@ if (!empty($status_filter) && !empty($area_filter)) {
         </div>
     </div>
 
+    <div id="deliveriesModal" class="overlay" style="display: none;">
+        <div class="overlay-content deliveries-modal-content">
+            <h2><i class="fas fa-truck"></i> <span id="deliveriesModalTitle"></span></h2>
+            <div id="deliveriesTableContainer" class="deliveries-table-container">
+                <table class="deliveries-table" id="deliveriesTable">
+                    <thead>
+                        <tr>
+                            <th>PO Number</th>
+                            <th>Customer</th>
+                            <th>Delivery Date</th>
+                            <th>Delivery Address</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deliveriesTableBody">
+                        <!-- Deliveries will be loaded here via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-buttons single-button">
+                <button class="cancel-btn" onclick="closeDeliveriesModal()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/js/toast.js"></script>
@@ -379,6 +560,68 @@ if (!empty($status_filter) && !empty($area_filter)) {
         
         function closeStatusModal() {
             document.getElementById('statusModal').style.display = 'none';
+        }
+        
+        function viewDriverDeliveries(id, name) {
+            selectedDriverId = id;
+            document.getElementById('deliveriesModalTitle').textContent = `${name}'s Deliveries`;
+            document.getElementById('deliveriesModal').style.display = 'flex';
+            
+            // Clear the table
+            document.getElementById('deliveriesTableBody').innerHTML = '<tr><td colspan="6" class="no-deliveries">Loading deliveries...</td></tr>';
+            
+            // Fetch deliveries data from the server
+            fetch(`?driver_id=${id}&action=get_deliveries`)
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('deliveriesTableBody');
+                    
+                    if (data.success && data.deliveries && data.deliveries.length > 0) {
+                        let html = '';
+                        
+                        data.deliveries.forEach(delivery => {
+                            // Determine status class
+                            let statusClass = 'status-pending';
+                            if (delivery.status === 'Active') statusClass = 'status-active';
+                            else if (delivery.status === 'Completed') statusClass = 'status-completed';
+                            else if (delivery.status === 'Rejected') statusClass = 'status-rejected';
+                            
+                            html += `
+                                <tr>
+                                    <td>${delivery.po_number}</td>
+                                    <td>${delivery.username} ${delivery.company ? '<br>(' + delivery.company + ')' : ''}</td>
+                                    <td>${formatDate(delivery.delivery_date)}</td>
+                                    <td>${delivery.delivery_address}</td>
+                                    <td>${formatCurrency(delivery.total_amount)}</td>
+                                    <td><span class="delivery-status-badge ${statusClass}">${delivery.status}</span></td>
+                                </tr>
+                            `;
+                        });
+                        
+                        tableBody.innerHTML = html;
+                    } else {
+                        tableBody.innerHTML = '<tr><td colspan="6" class="no-deliveries">No deliveries found for this driver</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching deliveries:', error);
+                    document.getElementById('deliveriesTableBody').innerHTML = '<tr><td colspan="6" class="no-deliveries">Error loading deliveries. Please try again.</td></tr>';
+                });
+        }
+        
+        function closeDeliveriesModal() {
+            document.getElementById('deliveriesModal').style.display = 'none';
+        }
+        
+        // Helper function to format date
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+        
+        // Helper function to format currency
+        function formatCurrency(amount) {
+            return '₱' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
         }
         
         function changeStatus(status) {
@@ -435,6 +678,16 @@ if (!empty($status_filter) && !empty($area_filter)) {
         }
         
         $(document).ready(function() {
+            // Handle click events outside modals to close them
+            $(document).on('click', '.overlay', function(event) {
+                if (event.target === this) {
+                    if (this.id === 'addDriverOverlay') closeAddDriverForm();
+                    else if (this.id === 'editDriverOverlay') closeEditDriverForm();
+                    else if (this.id === 'statusModal') closeStatusModal();
+                    else if (this.id === 'deliveriesModal') closeDeliveriesModal();
+                }
+            });
+            
             // Validate contact number on input
             $('#contact_no').on('input', function() {
                 validateContactNumber(this, document.getElementById('contactError'));
