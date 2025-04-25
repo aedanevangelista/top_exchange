@@ -118,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
     $data = [];
     
     $stmt = $conn->prepare("
-        SELECT do.po_number, o.username, o.company, o.delivery_date, o.delivery_address, o.total_amount, o.status
+        SELECT do.po_number, o.orders, o.delivery_date, o.delivery_address, o.status, o.username
         FROM driver_orders do
         JOIN orders o ON do.po_number = o.po_number
         WHERE do.driver_id = ?
@@ -130,7 +130,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
     
     if ($result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-            $data[] = $row;
+            // Parse the JSON orders data
+            $orderItems = json_decode($row['orders'], true);
+            
+            $data[] = [
+                'po_number' => $row['po_number'],
+                'username' => $row['username'],
+                'delivery_date' => $row['delivery_date'],
+                'delivery_address' => $row['delivery_address'],
+                'status' => $row['status'],
+                'items' => $orderItems
+            ];
         }
         echo json_encode(['success' => true, 'deliveries' => $data]);
     } else {
@@ -224,8 +234,8 @@ if (!empty($status_filter) && !empty($area_filter)) {
         }
 
         .deliveries-modal-content {
-            width: 80%;
-            max-width: 800px;
+            width: 90%;
+            max-width: 900px;
             max-height: 80vh;
             overflow: hidden;
             display: flex;
@@ -253,6 +263,7 @@ if (!empty($status_filter) && !empty($area_filter)) {
             background-color: #f2f2f2;
             position: sticky;
             top: 0;
+            z-index: 1;
         }
 
         .no-deliveries {
@@ -303,6 +314,53 @@ if (!empty($status_filter) && !empty($area_filter)) {
 
         .see-deliveries-btn:hover {
             background-color: #138496;
+        }
+        
+        /* Styles for order items expansion */
+        .po-header {
+            background-color: #f9f9f9;
+            cursor: pointer;
+        }
+        
+        .po-header:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .order-items {
+            font-size: 0.9em;
+            border-left: 3px solid #17a2b8;
+            margin: 5px 0 5px 10px;
+        }
+        
+        .order-items table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .order-items th, 
+        .order-items td {
+            padding: 6px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .order-items th {
+            background-color: #f7f7f7;
+            font-weight: 500;
+        }
+        
+        .collapsed .order-items {
+            display: none;
+        }
+        
+        .expand-icon {
+            margin-right: 5px;
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        
+        .collapsed .expand-icon {
+            transform: rotate(-90deg);
         }
     </style>
 </head>
@@ -497,10 +555,8 @@ if (!empty($status_filter) && !empty($area_filter)) {
                     <thead>
                         <tr>
                             <th>PO Number</th>
-                            <th>Customer</th>
                             <th>Delivery Date</th>
                             <th>Delivery Address</th>
-                            <th>Amount</th>
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -562,13 +618,17 @@ if (!empty($status_filter) && !empty($area_filter)) {
             document.getElementById('statusModal').style.display = 'none';
         }
         
+        function toggleOrderItems(element) {
+            element.classList.toggle('collapsed');
+        }
+        
         function viewDriverDeliveries(id, name) {
             selectedDriverId = id;
             document.getElementById('deliveriesModalTitle').textContent = `${name}'s Deliveries`;
             document.getElementById('deliveriesModal').style.display = 'flex';
             
             // Clear the table
-            document.getElementById('deliveriesTableBody').innerHTML = '<tr><td colspan="6" class="no-deliveries">Loading deliveries...</td></tr>';
+            document.getElementById('deliveriesTableBody').innerHTML = '<tr><td colspan="4" class="no-deliveries">Loading deliveries...</td></tr>';
             
             // Fetch deliveries data from the server
             fetch(`?driver_id=${id}&action=get_deliveries`)
@@ -579,33 +639,65 @@ if (!empty($status_filter) && !empty($area_filter)) {
                     if (data.success && data.deliveries && data.deliveries.length > 0) {
                         let html = '';
                         
-                        data.deliveries.forEach(delivery => {
+                        data.deliveries.forEach((delivery, index) => {
                             // Determine status class
                             let statusClass = 'status-pending';
                             if (delivery.status === 'Active') statusClass = 'status-active';
                             else if (delivery.status === 'Completed') statusClass = 'status-completed';
                             else if (delivery.status === 'Rejected') statusClass = 'status-rejected';
                             
+                            // Add the main delivery row (will be clickable to expand/collapse)
                             html += `
-                                <tr>
-                                    <td>${delivery.po_number}</td>
-                                    <td>${delivery.username} ${delivery.company ? '<br>(' + delivery.company + ')' : ''}</td>
+                                <tr class="po-header collapsed" onclick="toggleOrderItems(this)">
+                                    <td><span class="expand-icon">▼</span> ${delivery.po_number}</td>
                                     <td>${formatDate(delivery.delivery_date)}</td>
                                     <td>${delivery.delivery_address}</td>
-                                    <td>${formatCurrency(delivery.total_amount)}</td>
                                     <td><span class="delivery-status-badge ${statusClass}">${delivery.status}</span></td>
                                 </tr>
-                            `;
+                                <tr class="order-items-row">
+                                    <td colspan="4" class="order-items">
+                                        <h4>Order Items from ${delivery.username}</h4>
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Item</th>
+                                                    <th>Packaging</th>
+                                                    <th>Quantity</th>
+                                                    <th>Price</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>`;
+                            
+                            // Add each order item
+                            if (delivery.items && delivery.items.length > 0) {
+                                delivery.items.forEach(item => {
+                                    html += `
+                                        <tr>
+                                            <td>${item.item_description}</td>
+                                            <td>${item.packaging || 'N/A'}</td>
+                                            <td>${item.quantity}</td>
+                                            <td>${formatCurrency(item.price)}</td>
+                                        </tr>`;
+                                });
+                            } else {
+                                html += `<tr><td colspan="4">No items found for this order</td></tr>`;
+                            }
+                            
+                            html += `
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>`;
                         });
                         
                         tableBody.innerHTML = html;
                     } else {
-                        tableBody.innerHTML = '<tr><td colspan="6" class="no-deliveries">No deliveries found for this driver</td></tr>';
+                        tableBody.innerHTML = '<tr><td colspan="4" class="no-deliveries">No deliveries found for this driver</td></tr>';
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching deliveries:', error);
-                    document.getElementById('deliveriesTableBody').innerHTML = '<tr><td colspan="6" class="no-deliveries">Error loading deliveries. Please try again.</td></tr>';
+                    document.getElementById('deliveriesTableBody').innerHTML = '<tr><td colspan="4" class="no-deliveries">Error loading deliveries. Please try again.</td></tr>';
                 });
         }
         
