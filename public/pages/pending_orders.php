@@ -221,11 +221,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         
         /* Materials table styling */
         .raw-materials-container {
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            border: 1px solid #ddd;
+            overflow: visible;
         }
         
         .raw-materials-container h3 {
@@ -233,11 +229,18 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             margin-bottom: 10px;
             color: #333;
         }
+
+        .materials-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
         
         .materials-table tbody {
             display: block;
             max-height: 250px;
             overflow-y: auto;
+            border: 1px solid #ddd;
         }
 
         .materials-table thead, 
@@ -247,14 +250,25 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             table-layout: fixed;
         }
 
-        .materials-table thead {
-            width: calc(100% - 17px); /* Adjust for scrollbar width */
+        .materials-table th,
+        .materials-table td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
         }
 
+        .materials-table thead {
+            background-color: #f2f2f2;
+            display: table;
+            width: calc(100% - 17px); /* Adjust for scrollbar width */
+            table-layout: fixed;
+        }   
+
         .modal-content {
-        max-height: 90vh; /* 90% of viewport height */
-        overflow-y: auto;
-    }>
+            max-height: none;
+            overflow-y: visible;
+            padding-bottom: 20px;
+        }
             <table class="cart-table
         
         .materials-table th {
