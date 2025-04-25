@@ -255,6 +255,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             padding: 8px;
             text-align: left;
             border: 1px solid #ddd;
+            font-size: 12px;
         }
 
         .materials-table thead {
