@@ -548,6 +548,37 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
 
         function changeStatus(status) {
+            // For Completed status, check if a driver has been assigned
+            if (status === 'Completed') {
+                // Fetch the order details to check driver_assigned flag
+                fetch(`/backend/check_order_driver.php?po_number=${currentPoNumber}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (!data.driver_assigned) {
+                                showToast('Error: You must assign a driver to this order before completing it. Please go to Deliverable Orders page.', 'error');
+                                closeStatusModal();
+                                return;
+                            } else {
+                                // Driver is assigned, proceed with status change
+                                updateOrderStatus(status);
+                            }
+                        } else {
+                            showToast('Error checking driver assignment: ' + data.message, 'error');
+                            closeStatusModal();
+                        }
+                    })
+                    .catch(error => {
+                        showToast('Error: ' + error, 'error');
+                        closeStatusModal();
+                    });
+            } else {
+                // For other statuses, proceed directly
+                updateOrderStatus(status);
+            }
+        }
+
+        function updateOrderStatus(status) {
             // Send AJAX request to update status
             fetch('/backend/update_order_status.php', {
                 method: 'POST',
