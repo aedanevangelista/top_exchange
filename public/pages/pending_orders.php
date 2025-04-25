@@ -346,7 +346,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         
         .modal-footer {
-            margin-top: 15px;
+            margin-top: 8px;
             text-align: right;
         }
         
