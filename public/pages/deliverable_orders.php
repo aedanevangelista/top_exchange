@@ -9,7 +9,7 @@ $sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'delivery_date';
 $sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'ASC';
 
 // Validate sort column to prevent SQL injection
-$allowed_columns = ['po_number', 'username', 'delivery_date', 'progress', 'total_amount', 'company'];
+$allowed_columns = ['po_number', 'username', 'delivery_date', 'progress', 'total_amount'];
 if (!in_array($sort_column, $allowed_columns)) {
     $sort_column = 'delivery_date'; // Default sort column
 }
@@ -22,10 +22,8 @@ if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
 // Fetch active orders that are ready for delivery (progress = 100%)
 $orders = []; 
 $sql = "SELECT o.po_number, o.username, o.company, o.delivery_date, o.delivery_address, o.total_amount, 
-               o.status, o.progress, o.driver_assigned, da.id as assignment_id, da.driver_id, d.name as driver_name
+               o.status, o.progress, o.driver_assigned
         FROM orders o
-        LEFT JOIN driver_assignments da ON o.po_number = da.po_number
-        LEFT JOIN drivers d ON da.driver_id = d.id
         WHERE o.status = 'Active' AND o.progress = 100";
 
 // Add sorting
@@ -34,6 +32,24 @@ $sql .= " ORDER BY {$sort_column} {$sort_direction}";
 $result = $conn->query($sql);
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
+        // Get driver information if assigned
+        $driver_info = null;
+        if ($row['driver_assigned']) {
+            $driver_query = "SELECT d.id, d.name, d.area, d.current_deliveries, da.status as assignment_status 
+                            FROM driver_assignments da 
+                            JOIN drivers d ON da.driver_id = d.id 
+                            WHERE da.po_number = ?";
+            $stmt = $conn->prepare($driver_query);
+            $stmt->bind_param("s", $row['po_number']);
+            $stmt->execute();
+            $driver_result = $stmt->get_result();
+            if ($driver_result->num_rows > 0) {
+                $driver_info = $driver_result->fetch_assoc();
+            }
+            $stmt->close();
+        }
+        
+        $row['driver_info'] = $driver_info;
         $orders[] = $row;
     }
 }
@@ -81,29 +97,135 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <style>
-        .driver-select {
-            padding: 6px 12px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            min-width: 200px;
+        /* Consistent styling with other order pages */
+        .orders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
         }
         
-        .assign-btn {
+        /* Search Container Styling (like in order_history.php) */
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-container input {
+            padding: 8px 12px;
+            border-radius: 20px 0 0 20px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            width: 220px;
+        }
+
+        .search-container .search-btn {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 0 20px 20px 0;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .search-container .search-btn:hover {
+            background-color: #2471a3;
+        }
+        
+        /* Sortable table headers */
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px; /* Space for the icon */
+            user-select: none;
+        }
+
+        th.sortable a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        th.sortable .fas {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+        }
+
+        th.sortable:hover {
+            background-color: rgb(51, 51, 51);
+        }
+
+        th.sortable .fa-sort-up,
+        th.sortable .fa-sort-down {
+            color: rgb(255, 255, 255);
+        }
+        
+        /* Status badges */
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            display: inline-block;
+        }
+        
+        .status-active {
+            background-color: #2196F3;
+        }
+        
+        .status-pending {
+            background-color: #FFC107;
+        }
+        
+        .status-completed {
+            background-color: #4CAF50;
+        }
+        
+        .status-rejected {
+            background-color: #F44336;
+        }
+        
+        /* Action buttons */
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .action-btn {
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 4px;
             cursor: pointer;
-            margin-left: 10px;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
         
-        .assign-btn:hover {
-            background-color: #45a049;
+        .action-btn:hover {
+            opacity: 0.9;
         }
         
+        .view-btn {
+            background-color: #2196F3;
+        }
+        
+        .complete-btn {
+            background-color: #4CAF50;
+        }
+        
+        .assign-btn {
+            background-color: #FF9800;
+        }
+        
+        /* Driver badge */
         .driver-badge {
-            padding: 6px 12px;
+            padding: 6px 10px;
             border-radius: 4px;
             background-color: #e3f2fd;
             color: #0d47a1;
@@ -111,6 +233,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             align-items: center;
             gap: 8px;
             font-weight: 500;
+            font-size: 14px;
         }
         
         .driver-badge .area-badge {
@@ -128,13 +251,27 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             border-left: 3px solid #FF9800; /* Orange for South */
         }
         
-        .driver-details span {
-            display: block;
-            font-size: 12px;
-            margin-top: 3px;
-            color: #666;
+        /* Filter controls */
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
         }
         
+        .filter-select {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+        
+        .filter-label {
+            font-size: 14px;
+            margin-right: 5px;
+        }
+        
+        /* Order details row */
         .order-details-row {
             background-color: #f9f9f9;
             display: none;
@@ -161,137 +298,21 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             border-bottom: none;
         }
         
-        .action-btn {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 5px;
-        }
-        
-        .view-btn {
-            background-color: #2196F3;
-            color: white;
-        }
-        
-        .view-btn:hover {
-            background-color: #0b7dda;
-        }
-        
-        .view-details-btn {
-            background: none;
-            border: none;
-            color: #2196F3;
-            cursor: pointer;
-            text-decoration: underline;
-            padding: 0;
-            font-size: 14px;
-        }
-        
-        .driver-status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 5px;
-        }
-        
-        .driver-available {
-            background-color: #4CAF50;
-        }
-        
-        .driver-near-limit {
-            background-color: #FFC107;
-        }
-        
-        .driver-busy {
-            background-color: #F44336;
-        }
-        
-        .delivery-count {
-            font-weight: bold;
-            padding: 3px 8px;
-            border-radius: 10px;
-            display: inline-block;
-            text-align: center;
-        }
-
-        .delivery-count-low {
-            background-color: #d4edda;
-            color: #155724;
-        }
-
-        .delivery-count-medium {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-
-        .delivery-count-high {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        
-        .filter-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .filter-select {
-            padding: 6px 12px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-        
-        .search-container {
-            display: flex;
-            align-items: center;
-            margin-left: auto;
-        }
-
-        .search-container input {
-            padding: 8px 12px;
-            border-radius: 20px 0 0 20px;
-            border: 1px solid #ddd;
-            font-size: 14px;
-            width: 220px;
-        }
-
-        .search-container .search-btn {
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            border-radius: 0 20px 20px 0;
-            padding: 8px 12px;
-            cursor: pointer;
-        }
-
-        .search-container .search-btn:hover {
-            background-color: #2471a3;
-        }
-        
-        .deliverable-orders-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
         /* Assignment Modal */
-        .assignment-modal {
+        .modal {
             display: none;
             position: fixed;
-            top: 0;
+            z-index: 1000;
             left: 0;
+            top: 0;
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
             justify-content: center;
             align-items: center;
         }
         
-        .assignment-modal-content {
+        .modal-content {
             background-color: #fff;
             padding: 20px;
             border-radius: 5px;
@@ -299,7 +320,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             max-width: 90%;
         }
         
-        .assignment-modal-header {
+        .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -308,20 +329,25 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             border-bottom: 1px solid #eee;
         }
         
-        .assignment-modal-header h3 {
+        .modal-header h3 {
             margin: 0;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
-        .assignment-modal-close {
-            background: none;
-            border: none;
-            font-size: 20px;
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
             cursor: pointer;
-            color: #666;
+            line-height: 1;
         }
         
-        .assignment-modal-body {
-            margin-bottom: 20px;
+        .close:hover {
+            color: #555;
         }
         
         .form-group {
@@ -334,52 +360,134 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             font-weight: bold;
         }
         
-        .form-actions {
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        
+        .form-address {
+            background-color: #f5f5f5;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+        
+        .modal-footer {
             display: flex;
             justify-content: flex-end;
             gap: 10px;
+            margin-top: 20px;
         }
         
-        .cancel-btn {
-            background-color: #6c757d;
-            color: white;
-            border: none;
+        .modal-btn {
             padding: 8px 16px;
+            border: none;
             border-radius: 4px;
             cursor: pointer;
+            font-weight: bold;
         }
         
-        .submit-btn {
+        .modal-cancel-btn {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+        
+        .modal-submit-btn {
             background-color: #4CAF50;
             color: white;
-            border: none;
-            padding: 8px 16px;
+        }
+        
+        /* Driver select styling */
+        #driverSelect {
+            padding: 8px 12px;
+            width: 100%;
             border-radius: 4px;
-            cursor: pointer;
+            border: 1px solid #ccc;
         }
         
-        .driver-option {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        .driver-info-display {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            display: none;
         }
         
-        .driver-option-name {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .driver-option-details {
+        .delivery-count {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
             font-size: 12px;
-            color: #666;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        
+        .delivery-count-low {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .delivery-count-medium {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .delivery-count-high {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        /* View details button */
+        .view-details-btn {
+            background: none;
+            border: none;
+            color: #2196F3;
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0;
+        }
+        
+        .view-details-btn:hover {
+            color: #0b7dda;
+        }
+        
+        /* Progress bar styling (consistent with orders.php) */
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            height: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .progress-text {
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            position: absolute;
+            width: 100%;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
-        <div class="deliverable-orders-header">
+        <div class="orders-header">
             <h1>Deliverable Orders</h1>
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
@@ -388,14 +496,15 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
         
         <div class="filter-controls">
+            <span class="filter-label">Filter by:</span>
             <select id="areaFilter" class="filter-select">
-                <option value="">Filter by Area</option>
+                <option value="">All Areas</option>
                 <option value="North">North</option>
                 <option value="South">South</option>
             </select>
             
             <select id="assignmentFilter" class="filter-select">
-                <option value="">Filter by Assignment</option>
+                <option value="">All Assignments</option>
                 <option value="assigned">Assigned</option>
                 <option value="unassigned">Unassigned</option>
             </select>
@@ -416,11 +525,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             </a>
                         </th>
                         <th class="sortable">
-                            <a href="<?= getSortUrl('company', $sort_column, $sort_direction) ?>">
-                                Company <?= getSortIcon('company', $sort_column, $sort_direction) ?>
-                            </a>
-                        </th>
-                        <th class="sortable">
                             <a href="<?= getSortUrl('delivery_date', $sort_column, $sort_direction) ?>">
                                 Delivery Date <?= getSortIcon('delivery_date', $sort_column, $sort_direction) ?>
                             </a>
@@ -432,6 +536,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 Total Amount <?= getSortIcon('total_amount', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
+                        <th>Progress</th>
                         <th>Driver Assignment</th>
                         <th>Actions</th>
                     </tr>
@@ -439,11 +544,17 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 <tbody>
                     <?php if (count($orders) > 0): ?>
                         <?php foreach ($orders as $order): ?>
-                            <tr class="order-row" data-po="<?= htmlspecialchars($order['po_number']) ?>" data-driver-assigned="<?= $order['driver_assigned'] ? 'yes' : 'no' ?>">
+                            <?php 
+                                $driver_info = $order['driver_info']; 
+                                $is_assigned = !empty($driver_info);
+                            ?>
+                            <tr class="order-row" 
+                                data-po="<?= htmlspecialchars($order['po_number']) ?>" 
+                                data-driver-assigned="<?= $is_assigned ? 'yes' : 'no' ?>" 
+                                data-area="<?= htmlspecialchars($driver_info['area'] ?? '') ?>">
                                 <td><?= htmlspecialchars($order['po_number']) ?></td>
                                 <td><?= htmlspecialchars($order['username']) ?></td>
-                                <td><?= htmlspecialchars($order['company'] ?: 'N/A') ?></td>
-                                <td><?= htmlspecialchars($order['delivery_date']) ?></td>
+                                <td><?= htmlspecialchars(date('M d, Y', strtotime($order['delivery_date']))) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_address']) ?></td>
                                 <td>
                                     <button class="view-details-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
@@ -452,32 +563,35 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
-                                    <?php if ($order['driver_assigned'] && $order['driver_id']): ?>
-                                        <div class="driver-badge area-<?= strtolower($order['area'] ?? 'north') ?>">
+                                    <div class="progress-bar-container">
+                                        <div class="progress-bar" style="width: <?= $order['progress'] ?? 0 ?>%"></div>
+                                        <div class="progress-text"><?= $order['progress'] ?? 0 ?>%</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <?php if ($is_assigned): ?>
+                                        <div class="driver-badge area-<?= strtolower($driver_info['area']) ?>">
                                             <i class="fas fa-user-circle"></i> 
-                                            <?= htmlspecialchars($order['driver_name']) ?>
-                                            <span class="area-badge"><?= htmlspecialchars($order['area'] ?? 'N/A') ?></span>
+                                            <?= htmlspecialchars($driver_info['name']) ?>
+                                            <span class="area-badge"><?= htmlspecialchars($driver_info['area']) ?></span>
                                         </div>
                                     <?php else: ?>
-                                        <div class="driver-assignment">
-                                            <button class="assign-btn" onclick="openAssignmentModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>')">
-                                                <i class="fas fa-user-plus"></i> Assign Driver
-                                            </button>
-                                        </div>
+                                        <button class="action-btn assign-btn" onclick="openAssignmentModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>')">
+                                            <i class="fas fa-user-plus"></i> Assign Driver
+                                        </button>
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons">
                                     <button class="action-btn view-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
                                         <i class="fas fa-eye"></i> View
                                     </button>
-                                    <?php if ($order['driver_assigned'] && $order['driver_id']): ?>
-                                        <button class="action-btn assign-btn" onclick="confirmDelivery('<?= htmlspecialchars($order['po_number']) ?>', '<?= (int)$order['driver_id'] ?>')">
+                                    <?php if ($is_assigned): ?>
+                                        <button class="action-btn complete-btn" onclick="confirmDelivery('<?= htmlspecialchars($order['po_number']) ?>', <?= (int)$driver_info['id'] ?>)">
                                             <i class="fas fa-check"></i> Complete
                                         </button>
                                     <?php endif; ?>
                                 </td>
                             </tr>
-                            <!-- Order Details Row (initially hidden) -->
                             <tr id="order-details-<?= htmlspecialchars($order['po_number']) ?>" class="order-details-row">
                                 <td colspan="9">
                                     <div class="order-details-content">
@@ -503,69 +617,64 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <div class="toast-container" id="toast-container"></div>
     
     <!-- Driver Assignment Modal -->
-    <div id="driverAssignmentModal" class="assignment-modal">
-        <div class="assignment-modal-content">
-            <div class="assignment-modal-header">
+    <div id="driverAssignmentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h3><i class="fas fa-truck"></i> Assign Driver</h3>
-                <button class="assignment-modal-close" onclick="closeAssignmentModal()">&times;</button>
+                <span class="close" onclick="closeAssignmentModal()">&times;</span>
             </div>
-            <div class="assignment-modal-body">
-                <form id="assignDriverForm">
-                    <input type="hidden" id="assignOrderPoNumber" name="po_number">
-                    
-                    <div class="form-group">
-                        <label for="delivery_address_display">Delivery Address:</label>
-                        <div id="delivery_address_display" style="padding: 8px; background-color: #f5f5f5; border-radius: 4px;"></div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="driverSelect">Select Driver:</label>
-                        <select id="driverSelect" name="driver_id" class="driver-select" required>
-                            <option value="">-- Select a Driver --</option>
-                            <?php foreach ($drivers as $driver): 
-                                // Determine class based on delivery count
-                                $loadClass = 'driver-available';
-                                if ($driver['current_deliveries'] > 15) {
-                                    $loadClass = 'driver-busy';
-                                } else if ($driver['current_deliveries'] > 10) {
-                                    $loadClass = 'driver-near-limit';
-                                }
-                            ?>
-                                <option value="<?= $driver['id'] ?>" data-area="<?= htmlspecialchars($driver['area']) ?>">
-                                    <div class="driver-option">
-                                        <div class="driver-option-name">
-                                            <span class="driver-status-indicator <?= $loadClass ?>"></span>
-                                            <?= htmlspecialchars($driver['name']) ?>
-                                        </div>
-                                        <div class="driver-option-details">
-                                            <?= htmlspecialchars($driver['area']) ?> | <?= $driver['current_deliveries'] ?>/20
-                                        </div>
-                                    </div>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div id="driverDetails" style="margin-top: 10px; display: none;">
-                            <div class="driver-badge" id="selectedDriverBadge">
-                                <i class="fas fa-user-circle"></i> 
-                                <span id="selectedDriverName"></span>
-                                <span class="area-badge" id="selectedDriverArea"></span>
-                            </div>
-                            <div style="margin-top: 5px;">
-                                <span id="selectedDriverDeliveries" class="delivery-count"></span>
-                            </div>
+            <form id="assignDriverForm">
+                <input type="hidden" id="assignOrderPoNumber" name="po_number">
+                
+                <div class="form-group">
+                    <label for="delivery_address_display">Delivery Address:</label>
+                    <div id="delivery_address_display" class="form-address"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="driverSelect">Select Driver:</label>
+                    <select id="driverSelect" name="driver_id" class="form-control" required>
+                        <option value="">-- Select a Driver --</option>
+                        <?php foreach ($drivers as $driver): 
+                            // Determine class based on delivery count
+                            $loadClass = 'driver-available';
+                            if ($driver['current_deliveries'] > 15) {
+                                $loadClass = 'driver-busy';
+                            } else if ($driver['current_deliveries'] > 10) {
+                                $loadClass = 'driver-near-limit';
+                            }
+                        ?>
+                            <option value="<?= $driver['id'] ?>" 
+                                    data-name="<?= htmlspecialchars($driver['name']) ?>"
+                                    data-area="<?= htmlspecialchars($driver['area']) ?>"
+                                    data-deliveries="<?= $driver['current_deliveries'] ?>">
+                                <?= htmlspecialchars($driver['name']) ?> - 
+                                <?= htmlspecialchars($driver['area']) ?> 
+                                (<?= $driver['current_deliveries'] ?>/20)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <div id="driverDetails" class="driver-info-display">
+                        <div class="driver-badge">
+                            <i class="fas fa-user-circle"></i> 
+                            <span id="selectedDriverName"></span>
+                            <span class="area-badge" id="selectedDriverArea"></span>
+                        </div>
+                        <div style="margin-top: 5px;">
+                            Delivery load: <span id="selectedDriverDeliveries" class="delivery-count"></span>
                         </div>
                     </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="cancel-btn" onclick="closeAssignmentModal()">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>
-                        <button type="submit" class="submit-btn">
-                            <i class="fas fa-check"></i> Assign
-                        </button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="modal-btn modal-cancel-btn" onclick="closeAssignmentModal()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="modal-btn modal-submit-btn">
+                        <i class="fas fa-check"></i> Assign Driver
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -614,7 +723,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <li>
                                     <div>
                                         <strong>${item.item_description}</strong>
-                                        <div>Packaging: ${item.packaging || 'N/A'}</div>
+                                        <div>${item.category} / ${item.packaging || 'N/A'}</div>
                                     </div>
                                     <div>
                                         <div>Quantity: ${item.quantity}</div>
@@ -693,29 +802,25 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 
                 if (this.value) {
                     // Show driver details
+                    const driverName = selectedOption.getAttribute('data-name');
                     const driverArea = selectedOption.getAttribute('data-area');
-                    const driverName = selectedOption.text.trim();
-                    const deliveryCount = driverName.match(/(\d+)\/20/)[1];
+                    const driverDeliveries = selectedOption.getAttribute('data-deliveries');
                     
-                    document.getElementById('selectedDriverName').textContent = driverName.replace(/\s*\|\s*\d+\/20$/, '');
+                    document.getElementById('selectedDriverName').textContent = driverName;
                     document.getElementById('selectedDriverArea').textContent = driverArea;
                     
                     const deliveryCountEl = document.getElementById('selectedDriverDeliveries');
-                    deliveryCountEl.textContent = `${deliveryCount}/20 Deliveries`;
+                    deliveryCountEl.textContent = `${driverDeliveries}/20`;
                     
                     // Set the color class based on delivery count
                     deliveryCountEl.className = 'delivery-count';
-                    if (parseInt(deliveryCount) > 15) {
+                    if (parseInt(driverDeliveries) > 15) {
                         deliveryCountEl.classList.add('delivery-count-high');
-                    } else if (parseInt(deliveryCount) > 10) {
+                    } else if (parseInt(driverDeliveries) > 10) {
                         deliveryCountEl.classList.add('delivery-count-medium');
                     } else {
                         deliveryCountEl.classList.add('delivery-count-low');
                     }
-                    
-                    // Update badge border color based on area
-                    document.getElementById('selectedDriverBadge').className = 
-                        `driver-badge area-${driverArea.toLowerCase()}`;
                     
                     driverDetails.style.display = 'block';
                 } else {
@@ -793,16 +898,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     }
                 }
                 
-                // Check area filter (using driver badge info)
+                // Check area filter
                 if (areaFilter && showRow) {
-                    const driverBadge = row.querySelector('.driver-badge');
-                    if (driverBadge) {
-                        // Check if the driver badge contains the area class
-                        if (!driverBadge.classList.contains(`area-${areaFilter}`)) {
-                            showRow = false;
-                        }
-                    } else {
-                        // If no driver assigned yet, hide if filtering by area
+                    const rowArea = row.dataset.area.toLowerCase();
+                    if (rowArea !== areaFilter) {
                         showRow = false;
                     }
                 }
