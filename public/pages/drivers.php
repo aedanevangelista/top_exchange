@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     $address = $_POST['address'];
     $contact_no = $_POST['contact_no'];
     $availability = $_POST['availability'];
+    $area = $_POST['area']; // Added area field
     
     $checkStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ?");
     $checkStmt->bind_param("s", $name);
@@ -37,8 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     }
     $checkStmt->close();
     
-    $stmt = $conn->prepare("INSERT INTO drivers (name, address, contact_no, availability) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("ssss", $name, $address, $contact_no, $availability);
+    $stmt = $conn->prepare("INSERT INTO drivers (name, address, contact_no, availability, area) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssss", $name, $address, $contact_no, $availability, $area);
     
     if ($stmt->execute()) {
         returnJsonResponse(true, true);
@@ -57,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     $address = $_POST['address'];
     $contact_no = $_POST['contact_no'];
     $availability = $_POST['availability'];
+    $area = $_POST['area']; // Added area field
     
     $checkStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ? AND id != ?");
     $checkStmt->bind_param("si", $name, $id);
@@ -68,8 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     }
     $checkStmt->close();
     
-    $stmt = $conn->prepare("UPDATE drivers SET name = ?, address = ?, contact_no = ?, availability = ? WHERE id = ?");
-    $stmt->bind_param("ssssi", $name, $address, $contact_no, $availability, $id);
+    $stmt = $conn->prepare("UPDATE drivers SET name = ?, address = ?, contact_no = ?, availability = ?, area = ? WHERE id = ?");
+    $stmt->bind_param("sssssi", $name, $address, $contact_no, $availability, $area, $id);
     
     if ($stmt->execute()) {
         returnJsonResponse(true, true);
@@ -99,16 +101,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
 }
 
 $status_filter = $_GET['status'] ?? '';
+$area_filter = $_GET['area'] ?? '';
 
-$sql = "SELECT id, name, address, contact_no, availability, created_at FROM drivers";
+$sql = "SELECT id, name, address, contact_no, availability, area, created_at FROM drivers WHERE 1=1";
 if (!empty($status_filter)) {
-    $sql .= " WHERE availability = ?";
+    $sql .= " AND availability = ?";
+}
+if (!empty($area_filter)) {
+    $sql .= " AND area = ?";
 }
 $sql .= " ORDER BY name ASC";
 
-if (!empty($status_filter)) {
+if (!empty($status_filter) && !empty($area_filter)) {
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ss", $status_filter, $area_filter);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} elseif (!empty($status_filter)) {
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $status_filter);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} elseif (!empty($area_filter)) {
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $area_filter);
     $stmt->execute();
     $result = $stmt->get_result();
 } else {
@@ -142,6 +158,13 @@ if (!empty($status_filter)) {
                     <option value="Available" <?= $status_filter == 'Available' ? 'selected' : '' ?>>Available</option>
                     <option value="Not Available" <?= $status_filter == 'Not Available' ? 'selected' : '' ?>>Not Available</option>
                 </select>
+                
+                <label for="areaFilter">Filter by Area:</label>
+                <select id="areaFilter" onchange="filterByArea()">
+                    <option value="">All</option>
+                    <option value="North" <?= $area_filter == 'North' ? 'selected' : '' ?>>North</option>
+                    <option value="South" <?= $area_filter == 'South' ? 'selected' : '' ?>>South</option>
+                </select>
             </div>
             <button onclick="openAddDriverForm()" class="add-account-btn">
                 <i class="fas fa-user-plus"></i> Add New Driver
@@ -154,6 +177,7 @@ if (!empty($status_filter)) {
                         <th>Name</th>
                         <th>Address</th>
                         <th>Contact No.</th>
+                        <th>Area</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -165,11 +189,12 @@ if (!empty($status_filter)) {
                                 <td><?= htmlspecialchars($row['name']) ?></td>
                                 <td><?= htmlspecialchars($row['address']) ?></td>
                                 <td><?= htmlspecialchars($row['contact_no']) ?></td>
+                                <td><?= htmlspecialchars($row['area']) ?></td>
                                 <td class="<?= 'status-' . strtolower(str_replace(' ', '-', $row['availability'])) ?>">
                                     <?= htmlspecialchars($row['availability']) ?>
                                 </td>
                                 <td class="action-buttons">
-                                    <button class="edit-btn" onclick="openEditDriverForm(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>', '<?= htmlspecialchars(addslashes($row['address'])) ?>', '<?= htmlspecialchars(addslashes($row['contact_no'])) ?>', '<?= $row['availability'] ?>')">
+                                    <button class="edit-btn" onclick="openEditDriverForm(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>', '<?= htmlspecialchars(addslashes($row['address'])) ?>', '<?= htmlspecialchars(addslashes($row['contact_no'])) ?>', '<?= htmlspecialchars($row['availability']) ?>', '<?= htmlspecialchars($row['area']) ?>')">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
                                     <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>')">
@@ -180,7 +205,7 @@ if (!empty($status_filter)) {
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="5" class="no-accounts">No drivers found.</td>
+                            <td colspan="6" class="no-accounts">No drivers found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -200,6 +225,11 @@ if (!empty($status_filter)) {
                 <input type="text" id="address" name="address" required>
                 <label for="contact_no">Contact No.:</label>
                 <input type="text" id="contact_no" name="contact_no" required>
+                <label for="area">Area:</label>
+                <select id="area" name="area" required>
+                    <option value="North">North</option>
+                    <option value="South">South</option>
+                </select>
                 <label for="availability">Availability:</label>
                 <select id="availability" name="availability" required>
                     <option value="Available">Available</option>
@@ -228,6 +258,11 @@ if (!empty($status_filter)) {
                 <input type="text" id="edit-address" name="address" required>
                 <label for="edit-contact_no">Contact No.:</label>
                 <input type="text" id="edit-contact_no" name="contact_no" required>
+                <label for="edit-area">Area:</label>
+                <select id="edit-area" name="area" required>
+                    <option value="North">North</option>
+                    <option value="South">South</option>
+                </select>
                 <label for="edit-availability">Availability:</label>
                 <select id="edit-availability" name="availability" required>
                     <option value="Available">Available</option>
@@ -266,6 +301,134 @@ if (!empty($status_filter)) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/js/toast.js"></script>
-    <script src="/js/drivers.js"></script>
+    <script>
+        let selectedDriverId = null;
+        
+        function openAddDriverForm() {
+            document.getElementById('addDriverOverlay').style.display = 'flex';
+        }
+        
+        function closeAddDriverForm() {
+            document.getElementById('addDriverOverlay').style.display = 'none';
+            document.getElementById('addDriverForm').reset();
+            document.getElementById('addDriverError').textContent = '';
+        }
+        
+        function openEditDriverForm(id, name, address, contact_no, availability, area) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-name').value = name;
+            document.getElementById('edit-address').value = address;
+            document.getElementById('edit-contact_no').value = contact_no;
+            document.getElementById('edit-availability').value = availability;
+            document.getElementById('edit-area').value = area;
+            document.getElementById('editDriverOverlay').style.display = 'flex';
+        }
+        
+        function closeEditDriverForm() {
+            document.getElementById('editDriverOverlay').style.display = 'none';
+            document.getElementById('editDriverError').textContent = '';
+        }
+        
+        function openStatusModal(id, name) {
+            selectedDriverId = id;
+            document.getElementById('statusMessage').textContent = `Change status for driver: ${name}`;
+            document.getElementById('statusModal').style.display = 'flex';
+        }
+        
+        function closeStatusModal() {
+            document.getElementById('statusModal').style.display = 'none';
+        }
+        
+        function changeStatus(status) {
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: {
+                    ajax: true,
+                    formType: 'status',
+                    id: selectedDriverId,
+                    status: status
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        showToast('Status updated successfully', 'success');
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        showToast(response.message || 'Failed to update status', 'error');
+                    }
+                    closeStatusModal();
+                },
+                error: function() {
+                    showToast('An error occurred while processing your request', 'error');
+                    closeStatusModal();
+                }
+            });
+        }
+        
+        function filterByStatus() {
+            const status = document.getElementById('statusFilter').value;
+            const area = document.getElementById('areaFilter').value;
+            window.location.href = `?status=${status}&area=${area}`;
+        }
+        
+        function filterByArea() {
+            const status = document.getElementById('statusFilter').value;
+            const area = document.getElementById('areaFilter').value;
+            window.location.href = `?status=${status}&area=${area}`;
+        }
+        
+        $(document).ready(function() {
+            $('#addDriverForm').on('submit', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: '',
+                    type: 'POST',
+                    data: $(this).serialize() + '&ajax=true',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            showToast('Driver added successfully', 'success');
+                            closeAddDriverForm();
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 2000);
+                        } else {
+                            $('#addDriverError').text(response.message || 'Error adding driver.');
+                        }
+                    },
+                    error: function() {
+                        $('#addDriverError').text('An error occurred while processing your request.');
+                    }
+                });
+            });
+            
+            $('#editDriverForm').on('submit', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: '',
+                    type: 'POST',
+                    data: $(this).serialize() + '&ajax=true',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            showToast('Driver updated successfully', 'success');
+                            closeEditDriverForm();
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 2000);
+                        } else {
+                            $('#editDriverError').text(response.message || 'Error updating driver.');
+                        }
+                    },
+                    error: function() {
+                        $('#editDriverError').text('An error occurred while processing your request.');
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>
