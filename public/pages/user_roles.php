@@ -10,45 +10,29 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Fetch roles and pages
+// Fetch roles
 $roles_query = "SELECT * FROM roles ORDER BY (role_name = 'admin') DESC, role_name ASC";
 $roles_result = $conn->query($roles_query);
 if (!$roles_result) {
     die("Error retrieving roles: " . $conn->error);
 }
 
-// Fetch pages with their module information
-$pages_query = "SELECT p.*, m.module_name, m.module_id 
-                FROM pages p 
-                LEFT JOIN modules m ON p.module_id = m.module_id 
-                ORDER BY m.module_name, p.page_name";
+// Fetch pages and group by module_id
+$pages_query = "SELECT * FROM pages ORDER BY module_id, page_name";
 $pages_result = $conn->query($pages_query);
 if (!$pages_result) {
     die("Error retrieving pages: " . $conn->error);
 }
 
-// Fetch modules
-$modules_query = "SELECT * FROM modules ORDER BY display_order";
-$modules_result = $conn->query($modules_query);
-if (!$modules_result) {
-    die("Error retrieving modules: " . $conn->error);
-}
-
-// Group pages by module for easier handling
+// Group pages by module_id
 $pages_by_module = [];
 while ($page = $pages_result->fetch_assoc()) {
     $module_id = $page['module_id'] ?: 0; // Use 0 for unassigned
     if (!isset($pages_by_module[$module_id])) {
-        $pages_by_module[$module_id] = [
-            'module_name' => $page['module_id'] ? $page['module_name'] : 'Other',
-            'pages' => []
-        ];
+        $pages_by_module[$module_id] = [];
     }
-    $pages_by_module[$module_id]['pages'][] = $page;
+    $pages_by_module[$module_id][] = $page;
 }
-
-// Reset the pointer of roles_result
-$roles_result->data_seek(0);
 
 // Capture error messages
 $errorMessage = "";
@@ -91,6 +75,10 @@ if (isset($_GET['error'])) {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 5px;
+        }
+        .checkbox-container {
+            max-height: 400px;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -152,39 +140,27 @@ if (isset($_GET['error'])) {
                 <label for="roleName">Role Name:</label>
                 <input type="text" id="roleName" name="role_name" required>
                 <br/>
-                <label>Accessible Modules & Pages:</label>
+                <label>Accessible Pages by Module:</label>
                 <div class="checkbox-container">
-                    <?php foreach ($modules_by_module = $conn->query("SELECT * FROM modules ORDER BY display_order") as $module): ?>
+                    <?php foreach ($pages_by_module as $module_id => $pages): ?>
                         <div class="module-section">
                             <div class="module-header">
-                                <input type="checkbox" class="module-checkbox" id="module_<?= $module['module_id'] ?>" 
-                                       value="<?= $module['module_id'] ?>" 
-                                       onchange="toggleModulePages(<?= $module['module_id'] ?>)">
+                                <input type="checkbox" class="module-checkbox" id="module_<?= $module_id ?>" 
+                                       value="<?= $module_id ?>" 
+                                       onchange="toggleModulePages(<?= $module_id ?>)">
                                 <h3 class="module-title">
-                                    <?php if (!empty($module['icon'])): ?>
-                                        <i class="<?= $module['icon'] ?>"></i>
-                                    <?php endif; ?>
-                                    <?= htmlspecialchars($module['module_name']) ?>
+                                    Module <?= $module_id ?>
                                 </h3>
                             </div>
-                            <div class="module-pages" id="pages_module_<?= $module['module_id'] ?>">
-                                <?php
-                                // Get pages for this module
-                                $module_pages_query = "SELECT * FROM pages WHERE module_id = ? ORDER BY page_name";
-                                $module_pages_stmt = $conn->prepare($module_pages_query);
-                                $module_pages_stmt->bind_param("i", $module['module_id']);
-                                $module_pages_stmt->execute();
-                                $module_pages_result = $module_pages_stmt->get_result();
-                                
-                                while ($page = $module_pages_result->fetch_assoc()):
-                                ?>
-                                    <label class="checkbox-label module-<?= $module['module_id'] ?>-page">
-                                        <input type="checkbox" name="page_ids[]" class="page-checkbox module-<?= $module['module_id'] ?>-checkbox" 
+                            <div class="module-pages" id="pages_module_<?= $module_id ?>">
+                                <?php foreach ($pages as $page): ?>
+                                    <label class="checkbox-label module-<?= $module_id ?>-page">
+                                        <input type="checkbox" name="page_ids[]" class="page-checkbox module-<?= $module_id ?>-checkbox" 
                                                value="<?= $page['page_name'] ?>"
-                                               data-module-id="<?= $module['module_id'] ?>"> 
+                                               data-module-id="<?= $module_id ?>"> 
                                         <?= htmlspecialchars($page['page_name']) ?>
                                     </label>
-                                <?php endwhile; ?>
+                                <?php endforeach; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -197,6 +173,89 @@ if (isset($_GET['error'])) {
             </form>
         </div>
     </div>
-    <script src="/js/user_roles.js"></script>
+    <script>
+    function showRoleForm(roleId = '', roleName = '', pages = '') {
+        document.getElementById("roleFormTitle").innerHTML = roleId ? '<i class="fas fa-edit"></i> Edit Role' : '<i class="fas fa-user-plus"></i> Add Role';
+        document.getElementById("actionType").value = roleId ? 'edit' : 'add';
+        document.getElementById("roleId").value = roleId;
+        document.getElementById("roleName").value = roleName;
+        document.getElementById("roleError").style.display = "none";
+        
+        // Uncheck all checkboxes first
+        document.querySelectorAll("input[name='page_ids[]']").forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        document.querySelectorAll(".module-checkbox").forEach(checkbox => {
+            checkbox.checked = false;
+            checkbox.indeterminate = false;
+        });
+        
+        // If editing, check the appropriate boxes
+        if (pages) {
+            let pageArray = pages.split(", ");
+            document.querySelectorAll("input[name='page_ids[]']").forEach(checkbox => {
+                if (pageArray.includes(checkbox.value)) {
+                    checkbox.checked = true;
+                }
+            });
+            
+            // Check if all pages in a module are selected
+            updateModuleCheckboxes();
+        }
+        
+        document.getElementById("roleOverlay").style.display = "block";
+    }
+
+    function hideRoleForm() {
+        document.getElementById("roleOverlay").style.display = "none";
+    }
+
+    // Toggle all pages in a module when the module checkbox is clicked
+    function toggleModulePages(moduleId) {
+        const moduleCheckbox = document.getElementById(`module_${moduleId}`);
+        const pageCheckboxes = document.querySelectorAll(`.module-${moduleId}-checkbox`);
+        
+        pageCheckboxes.forEach(checkbox => {
+            checkbox.checked = moduleCheckbox.checked;
+        });
+    }
+
+    // Update module checkboxes based on page selection
+    function updateModuleCheckboxes() {
+        const modules = document.querySelectorAll('.module-checkbox');
+        
+        modules.forEach(moduleCheckbox => {
+            const moduleId = moduleCheckbox.value;
+            const modulePages = document.querySelectorAll(`.module-${moduleId}-checkbox`);
+            const checkedPages = document.querySelectorAll(`.module-${moduleId}-checkbox:checked`);
+            
+            // If all pages of this module are checked, also check the module checkbox
+            if (modulePages.length > 0 && checkedPages.length === modulePages.length) {
+                moduleCheckbox.checked = true;
+                moduleCheckbox.indeterminate = false;
+            }
+            // If some pages are checked, but not all, make module checkbox indeterminate
+            else if (checkedPages.length > 0) {
+                moduleCheckbox.checked = false;
+                moduleCheckbox.indeterminate = true;
+            }
+            // If no pages are checked, uncheck the module checkbox
+            else {
+                moduleCheckbox.checked = false;
+                moduleCheckbox.indeterminate = false;
+            }
+        });
+    }
+
+    // Add event listeners to page checkboxes to update module status
+    document.addEventListener('DOMContentLoaded', function() {
+        const pageCheckboxes = document.querySelectorAll('.page-checkbox');
+        pageCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateModuleCheckboxes();
+            });
+        });
+    });
+    </script>
 </body>
 </html>
