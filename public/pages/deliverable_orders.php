@@ -2,28 +2,22 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Deliverable Orders'); // Ensure the user has access to the Deliverable Orders page
+checkRole('Orders'); // Ensure user has access to Orders
 
-// Handle sorting parameters
-$sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'delivery_date';
-$sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'ASC';
-
-// Get filter values from URL parameters
-$status_filter = $_GET['status'] ?? '';
-$area_filter = $_GET['area'] ?? '';
-
-// Validate sort column to prevent SQL injection
-$allowed_columns = ['po_number', 'username', 'delivery_date', 'progress', 'total_amount'];
-if (!in_array($sort_column, $allowed_columns)) {
-    $sort_column = 'delivery_date'; // Default sort column
+// Fetch all drivers for the driver assignment dropdown
+$drivers = [];
+$driverStmt = $conn->prepare("SELECT id, name FROM drivers WHERE availability = 'Available' AND current_deliveries < 20 ORDER BY name");
+if ($driverStmt) {
+    $driverStmt->execute();
+    $driverResult = $driverStmt->get_result();
+    while ($row = $driverResult->fetch_assoc()) {
+        $drivers[] = $row;
+    }
+    $driverStmt->close();
 }
 
-// Validate sort direction
-if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
-    $sort_direction = 'ASC'; // Default to ascending for delivery dates
-}
-
-// Build the SQL query with filters
+// Get orders with 'For Delivery' status - Fix the SQL syntax error
+$orders = [];
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, 
         o.orders, o.total_amount, o.status, o.progress, o.driver_assigned, 
         IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
@@ -33,99 +27,22 @@ $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.deliver
         WHERE o.status = 'For Delivery'
         ORDER BY o.delivery_date ASC";
 
-// Add area filter if specified
-if (!empty($area_filter)) {
-    $sql .= " AND o.po_number IN (SELECT da.po_number FROM driver_assignments da 
-                                  JOIN drivers d ON da.driver_id = d.id 
-                                  WHERE d.area = ?)";
-}
-
-// Add driver assigned filter if specified
-if ($status_filter === 'assigned') {
-    $sql .= " AND o.driver_assigned = 1";
-} else if ($status_filter === 'unassigned') {
-    $sql .= " AND o.driver_assigned = 0";
-}
-
-// Add sorting
-$sql .= " ORDER BY {$sort_column} {$sort_direction}";
-
-// Execute query with appropriate parameters
-if (!empty($area_filter)) {
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $area_filter);
-    $stmt->execute();
-    $result = $stmt->get_result();
-} else {
-    $result = $conn->query($sql);
-}
-
-// Fetch orders
-$orders = []; 
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        // Get driver information if assigned
-        $driver_info = null;
-        if ($row['driver_assigned']) {
-            $driver_query = "SELECT d.id, d.name, d.area, d.current_deliveries, da.status as assignment_status 
-                            FROM driver_assignments da 
-                            JOIN drivers d ON da.driver_id = d.id 
-                            WHERE da.po_number = ?";
-            $stmt = $conn->prepare($driver_query);
-            $stmt->bind_param("s", $row['po_number']);
-            $stmt->execute();
-            $driver_result = $stmt->get_result();
-            if ($driver_result->num_rows > 0) {
-                $driver_info = $driver_result->fetch_assoc();
-            }
-            $stmt->close();
+$orderStmt = $conn->prepare($sql);
+if ($orderStmt) {
+    $orderStmt->execute();
+    $orderResult = $orderStmt->get_result();
+    if ($orderResult && $orderResult->num_rows > 0) {
+        while ($row = $orderResult->fetch_assoc()) {
+            $orders[] = $row;
         }
-        
-        $row['driver_info'] = $driver_info;
-        $orders[] = $row;
     }
-}
-
-// Fetch all available drivers (where availability = 'Available' AND current_deliveries < 20)
-$drivers = [];
-$sql = "SELECT id, name, area, current_deliveries FROM drivers 
-        WHERE availability = 'Available' AND current_deliveries < 20
-        ORDER BY name ASC";
-$result = $conn->query($sql);
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $drivers[] = $row;
-    }
-}
-
-// Helper function to generate sort URL
-function getSortUrl($column, $currentColumn, $currentDirection) {
-    global $status_filter, $area_filter;
-    $newDirection = ($column === $currentColumn && $currentDirection === 'ASC') ? 'DESC' : 'ASC';
-    $url = "?sort=" . urlencode($column) . "&direction=" . urlencode($newDirection);
-    
-    // Preserve filters in URL
-    if ($status_filter) {
-        $url .= "&status=" . urlencode($status_filter);
-    }
-    if ($area_filter) {
-        $url .= "&area=" . urlencode($area_filter);
-    }
-    
-    return $url;
-}
-
-// Helper function to display sort icon
-function getSortIcon($column, $currentColumn, $currentDirection) {
-    if ($column !== $currentColumn) {
-        return '<i class="fas fa-sort"></i>';
-    } else if ($currentDirection === 'ASC') {
-        return '<i class="fas fa-sort-up"></i>';
-    } else {
-        return '<i class="fas fa-sort-down"></i>';
-    }
+    $orderStmt->close();
+} else {
+    // For debugging - log the SQL error
+    error_log("SQL Error in deliverable_orders.php: " . $conn->error);
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -134,425 +51,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <title>Deliverable Orders</title>
     <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="/css/sidebar.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" href="/css/toast.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <style>
-        /* Header styling similar to accounts_clients.php */
-        .orders-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .orders-header h1 {
-            color: #333;
-            margin: 0;
-            font-size: 24px;
-        }
-
-        /* Filter section styling from accounts_clients.css */
-        .filter-section {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .filter-section label {
-            font-weight: 500;
-            color: #333;
-        }
-        
-        .filter-section select {
-            padding: 8px 12px;
-            border-radius: 20px;
-            border: 1px solid #ddd;
-            font-size: 14px;
-            min-width: 150px;
-        }
-
-        /* Table styling similar to accounts_clients.css */
-        .orders-table-container {
-            background-color: #ffffff;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        .orders-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-        
-        .orders-table th {
-            background-color: black;
-            color: white;
-            font-weight: bold;
-            padding: 12px;
-            text-align: center;
-            border-bottom: 2px solid #ddd;
-        }
-        
-        .orders-table td {
-            padding: 10px;
-            text-align: center;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        
-        .orders-table tr:hover {
-            background-color: #f9f9f9;
-        }
-
-        /* Search styling to match accounts_clients */
-        .search-container {
-            display: flex;
-            align-items: center;
-        }
-
-        .search-container input {
-            padding: 8px 12px;
-            border-radius: 20px 0 0 20px;
-            border: 1px solid #ddd;
-            font-size: 14px;
-            width: 220px;
-        }
-
-        .search-container .search-btn {
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            border-radius: 0 20px 20px 0;
-            padding: 8px 12px;
-            cursor: pointer;
-        }
-
-        .search-container .search-btn:hover {
-            background-color: #2471a3;
-        }
-        
-        /* The rest of your existing CSS stays the same */
-        /* Sortable table headers */
-        th.sortable {
-            cursor: pointer;
-            position: relative;
-            padding-right: 20px; /* Space for the icon */
-            user-select: none;
-        }
-
-        th.sortable a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        th.sortable .fas {
-            position: absolute;
-            right: 5px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #aaa;
-        }
-
-        th.sortable:hover {
-            background-color: rgb(51, 51, 51);
-        }
-
-        th.sortable .fa-sort-up,
-        th.sortable .fa-sort-down {
-            color: rgb(255, 255, 255);
-        }
-        
-        /* Status badges */
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            color: white;
-            display: inline-block;
-        }
-        
-        .status-active {
-            background-color: #2196F3;
-        }
-        
-        .status-pending {
-            background-color: #FFC107;
-        }
-        
-        .status-completed {
-            background-color: #4CAF50;
-        }
-        
-        .status-rejected {
-            background-color: #F44336;
-        }
-        
-        /* Action buttons styling similar to accounts_clients.css */
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 5px;
-            height: 100%;
-            align-items: center;
-        }
-
-        .action-btn {
-            padding: 6px 14px;
-            font-size: 13px;
-            font-weight: 600;
-            border-radius: 80px;
-            text-decoration: none;
-            transition: background-color 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            border: none;
-            cursor: pointer;
-        }
-        
-        .view-btn {
-            background-color: #2196F3;
-            color: white;
-        }
-        
-        .view-btn:hover {
-            background-color: #0b7dda;
-        }
-        
-        .assign-btn {
-            background-color: #FF9800;
-            color: white;
-        }
-        
-        .assign-btn:hover {
-            background-color: #e68a00;
-        }
-        
-        .complete-btn {
-            background-color: #4CAF50;
-            color: white;
-        }
-        
-        .complete-btn:hover {
-            background-color: #45a049;
-        }
-        
-        /* Driver badge */
-        .driver-badge {
-            padding: 6px 10px;
-            border-radius: 4px;
-            background-color: #e3f2fd;
-            color: #0d47a1;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 500;
-            font-size: 14px;
-        }
-        
-        .driver-badge .area-badge {
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 12px;
-            background-color: #bbdefb;
-        }
-        
-        .area-north {
-            border-left: 3px solid #2196F3; /* Blue for North */
-        }
-        
-        .area-south {
-            border-left: 3px solid #FF9800; /* Orange for South */
-        }
-        
-        /* Order details row */
-        .order-details-row {
-            background-color: #f9f9f9;
-            display: none;
-        }
-        
-        .order-details-content {
-            padding: 15px;
-        }
-        
-        .order-details-list {
-            list-style: none;
-            padding-left: 0;
-            margin: 0;
-        }
-        
-        .order-details-list li {
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .order-details-list li:last-child {
-            border-bottom: none;
-        }
-        
-        /* Assignment Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .modal-content {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 5px;
-            width: 500px;
-            max-width: 90%;
-        }
-        
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .modal-header h3 {
-            margin: 0;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            line-height: 1;
-        }
-        
-        .close:hover {
-            color: #555;
-        }
-        
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        
-        .form-control {
-            width: 100%;
-            padding: 8px 12px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-        
-        .form-address {
-            background-color: #f5f5f5;
-            padding: 8px 12px;
-            border-radius: 4px;
-            border: 1px solid #eee;
-        }
-        
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        
-        .modal-btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        
-        .modal-cancel-btn {
-            background-color: #f1f1f1;
-            color: #333;
-        }
-        
-        .modal-submit-btn {
-            background-color: #4CAF50;
-            color: white;
-        }
-        
-        /* Driver select styling */
-        #driverSelect {
-            padding: 8px 12px;
-            width: 100%;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-        
-        .driver-info-display {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #f5f5f5;
-            border-radius: 4px;
-            display: none;
-        }
-        
-        .delivery-count {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-left: 5px;
-        }
-        
-        .delivery-count-low {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        
-        .delivery-count-medium {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-        
-        .delivery-count-high {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        
-        /* View details button */
-        .view-details-btn {
-            background: none;
-            border: none;
-            color: #2196F3;
-            text-decoration: underline;
-            cursor: pointer;
-            font-size: 14px;
-            padding: 0;
-        }
-        
-        .view-details-btn:hover {
-            color: #0b7dda;
-        }
-        
-        /* Progress bar styling (consistent with orders.php) */
         .progress-bar-container {
             width: 100%;
             background-color: #e0e0e0;
@@ -580,87 +84,188 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             width: 100%;
             text-align: center;
         }
+        
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-container input {
+            padding: 8px 12px;
+            border-radius: 20px 0 0 20px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            width: 220px;
+        }
+
+        .search-container .search-btn {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 0 20px 20px 0;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .search-container .search-btn:hover {
+            background-color: #2471a3;
+        }
+
+        .orders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        /* Status badge styles */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-for-delivery {
+            background-color: #fd7e14;
+            color: white;
+        }
+
+        /* Driver styles */
+        .driver-badge {
+            background-color: #17a2b8;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .driver-btn {
+            background-color: #6610f2;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .driver-btn:hover {
+            background-color: #510bc4;
+        }
+
+        .assign-driver-btn {
+            background-color: #fd7e14;
+        }
+
+        .assign-driver-btn:hover {
+            background-color: #e67211;
+        }
+
+        .complete-delivery-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .complete-delivery-btn:hover {
+            background-color: #218838;
+        }
+        
+        /* Order details modal */
+        .order-details-container {
+            max-height: 70vh;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding-right: 5px;
+        }
+        
+        /* No orders message */
+        .no-orders {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #6c757d;
+        }
+        
+        /* Debug section */
+        .debug-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .debug-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .debug-info {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow: auto;
+        }
+        
+        /* Form buttons */
+        .form-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
-    <div id="toast-container" class="toast-container"></div>
     <div class="main-content">
         <div class="orders-header">
             <h1>Deliverable Orders</h1>
-            <div class="filter-section">
-                <label for="statusFilter">Filter by Status:</label>
-                <select id="statusFilter" onchange="applyFilters()">
-                    <option value="">All</option>
-                    <option value="assigned" <?= $status_filter == 'assigned' ? 'selected' : '' ?>>Assigned</option>
-                    <option value="unassigned" <?= $status_filter == 'unassigned' ? 'selected' : '' ?>>Unassigned</option>
-                </select>
-                
-                <label for="areaFilter">Filter by Area:</label>
-                <select id="areaFilter" onchange="applyFilters()">
-                    <option value="">All</option>
-                    <option value="North" <?= $area_filter == 'North' ? 'selected' : '' ?>>North</option>
-                    <option value="South" <?= $area_filter == 'South' ? 'selected' : '' ?>>South</option>
-                </select>
-            </div>
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
                 <button class="search-btn"><i class="fas fa-search"></i></button>
             </div>
         </div>
-        
         <div class="orders-table-container">
             <table class="orders-table">
                 <thead>
                     <tr>
-                        <th class="sortable">
-                            <a href="<?= getSortUrl('po_number', $sort_column, $sort_direction) ?>">
-                                PO Number <?= getSortIcon('po_number', $sort_column, $sort_direction) ?>
-                            </a>
-                        </th>
-                        <th class="sortable">
-                            <a href="<?= getSortUrl('username', $sort_column, $sort_direction) ?>">
-                                Username <?= getSortIcon('username', $sort_column, $sort_direction) ?>
-                            </a>
-                        </th>
-                        <th class="sortable">
-                            <a href="<?= getSortUrl('delivery_date', $sort_column, $sort_direction) ?>">
-                                Delivery Date <?= getSortIcon('delivery_date', $sort_column, $sort_direction) ?>
-                            </a>
-                        </th>
+                        <th>PO Number</th>
+                        <th>Username</th>
+                        <th>Order Date</th>
+                        <th>Delivery Date</th>
                         <th>Delivery Address</th>
-                        <th>Order Details</th>
-                        <th class="sortable">
-                            <a href="<?= getSortUrl('total_amount', $sort_column, $sort_direction) ?>">
-                                Total Amount <?= getSortIcon('total_amount', $sort_column, $sort_direction) ?>
-                            </a>
-                        </th>
                         <th>Progress</th>
-                        <th>Driver Assignment</th>
+                        <th>Orders</th>
+                        <th>Total Amount</th>
+                        <th>Driver</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (count($orders) > 0): ?>
                         <?php foreach ($orders as $order): ?>
-                            <?php 
-                                $driver_info = $order['driver_info']; 
-                                $is_assigned = !empty($driver_info);
-                            ?>
-                            <tr class="order-row" 
-                                data-po="<?= htmlspecialchars($order['po_number']) ?>" 
-                                data-driver-assigned="<?= $is_assigned ? 'yes' : 'no' ?>" 
-                                data-area="<?= htmlspecialchars($driver_info['area'] ?? '') ?>">
+                            <tr>
                                 <td><?= htmlspecialchars($order['po_number']) ?></td>
                                 <td><?= htmlspecialchars($order['username']) ?></td>
-                                <td><?= htmlspecialchars(date('M d, Y', strtotime($order['delivery_date']))) ?></td>
+                                <td><?= htmlspecialchars($order['order_date']) ?></td>
+                                <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_address']) ?></td>
-                                <td>
-                                    <button class="view-details-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
-                                        <i class="fas fa-eye"></i> View Items
-                                    </button>
-                                </td>
-                                <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
                                     <div class="progress-bar-container">
                                         <div class="progress-bar" style="width: <?= $order['progress'] ?? 0 ?>%"></div>
@@ -668,213 +273,273 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     </div>
                                 </td>
                                 <td>
-                                    <?php if ($is_assigned): ?>
-                                        <div class="driver-badge area-<?= strtolower($driver_info['area']) ?>">
-                                            <i class="fas fa-user-circle"></i> 
-                                            <?= htmlspecialchars($driver_info['name']) ?>
-                                            <span class="area-badge"><?= htmlspecialchars($driver_info['area']) ?></span>
+                                    <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
+                                        <i class="fas fa-clipboard-list"></i>    
+                                        View Order Items
+                                    </button>
+                                </td>
+                                <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
+                                <td>
+                                    <?php if ($order['driver_assigned'] && !empty($order['driver_name'])): ?>
+                                        <div class="driver-badge">
+                                            <i class="fas fa-user"></i> <?= htmlspecialchars($order['driver_name']) ?>
                                         </div>
-                                    <?php else: ?>
-                                        <button class="action-btn assign-btn" onclick="openAssignmentModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>')">
-                                            <i class="fas fa-user-plus"></i> Assign Driver
+                                        <button class="driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', <?= $order['driver_id'] ?>, '<?= htmlspecialchars($order['driver_name']) ?>')">
+                                            <i class="fas fa-exchange-alt"></i> Change
                                         </button>
+                                    <?php else: ?>
+                                        <div>No driver assigned</div>
                                     <?php endif; ?>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-for-delivery"><?= htmlspecialchars($order['status']) ?></span>
                                 </td>
                                 <td class="action-buttons">
-                                    <button class="action-btn view-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
-                                        <i class="fas fa-eye"></i> View
+                                    <button class="complete-delivery-btn" onclick="completeDelivery('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
+                                        <i class="fas fa-check-circle"></i> Complete
                                     </button>
-                                    <?php if ($is_assigned): ?>
-                                        <button class="action-btn complete-btn" onclick="confirmDelivery('<?= htmlspecialchars($order['po_number']) ?>', <?= (int)$driver_info['id'] ?>)">
-                                            <i class="fas fa-check"></i> Complete
-                                        </button>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                            <tr id="order-details-<?= htmlspecialchars($order['po_number']) ?>" class="order-details-row">
-                                <td colspan="9">
-                                    <div class="order-details-content">
-                                        <h3>Order Items</h3>
-                                        <div id="order-items-<?= htmlspecialchars($order['po_number']) ?>">
-                                            Loading order items...
-                                        </div>
-                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="no-orders">No deliverable orders found.</td>
+                            <td colspan="11" class="no-orders">No orders ready for delivery.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
+        
+        <!-- Debug section - Remove in production or toggle with a admin-only flag -->
+        <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
+        <div class="debug-section">
+            <div class="debug-title">Debug Information</div>
+            <div class="debug-info">
+                <?php 
+                    echo "Total 'For Delivery' orders found: " . count($orders) . "\n";
+                    echo "SQL Query: " . $sql . "\n\n";
+                    
+                    // Check what statuses exist in the database
+                    $statusQuery = "SELECT status, COUNT(*) as count FROM orders GROUP BY status";
+                    $statusResult = $conn->query($statusQuery);
+                    
+                    echo "Status counts in database:\n";
+                    if ($statusResult && $statusResult->num_rows > 0) {
+                        while($row = $statusResult->fetch_assoc()) {
+                            echo "- " . $row['status'] . ": " . $row['count'] . "\n";
+                        }
+                    } else {
+                        echo "No status data found\n";
+                    }
+                ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
-    <!-- Driver Assignment Modal -->
-    <div id="driverAssignmentModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-truck"></i> Assign Driver</h3>
-                <span class="close" onclick="closeAssignmentModal()">&times;</span>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Order Details Modal -->
+    <div id="orderDetailsModal" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2><i class="fas fa-box-open"></i> Order Details</h2>
+            <div class="order-details-container">
+                <table class="order-details-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Product</th>
+                            <th>Packaging</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderDetailsBody">
+                        <!-- Order details will be populated here -->
+                    </tbody>
+                </table>
             </div>
-            <form id="assignDriverForm">
-                <input type="hidden" id="assignOrderPoNumber" name="po_number">
-                
-                <div class="form-group">
-                    <label for="delivery_address_display">Delivery Address:</label>
-                    <div id="delivery_address_display" class="form-address"></div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="driverSelect">Select Driver:</label>
-                    <select id="driverSelect" name="driver_id" class="form-control" required>
-                        <option value="">-- Select a Driver --</option>
-                        <?php foreach ($drivers as $driver): 
-                            // Determine class based on delivery count
-                            $loadClass = 'driver-available';
-                            if ($driver['current_deliveries'] > 15) {
-                                $loadClass = 'driver-busy';
-                            } else if ($driver['current_deliveries'] > 10) {
-                                $loadClass = 'driver-near-limit';
-                            }
-                        ?>
-                            <option value="<?= $driver['id'] ?>" 
-                                    data-name="<?= htmlspecialchars($driver['name']) ?>"
-                                    data-area="<?= htmlspecialchars($driver['area']) ?>"
-                                    data-deliveries="<?= $driver['current_deliveries'] ?>">
-                                <?= htmlspecialchars($driver['name']) ?> - 
-                                <?= htmlspecialchars($driver['area']) ?> 
-                                (<?= $driver['current_deliveries'] ?>/20)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <div id="driverDetails" class="driver-info-display">
-                        <div class="driver-badge">
-                            <i class="fas fa-user-circle"></i> 
-                            <span id="selectedDriverName"></span>
-                            <span class="area-badge" id="selectedDriverArea"></span>
-                        </div>
-                        <div style="margin-top: 5px;">
-                            Delivery load: <span id="selectedDriverDeliveries" class="delivery-count"></span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="modal-footer">
-                    <button type="button" class="modal-btn modal-cancel-btn" onclick="closeAssignmentModal()">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button type="submit" class="modal-btn modal-submit-btn">
-                        <i class="fas fa-check"></i> Assign Driver
-                    </button>
-                </div>
-            </form>
+            <div class="form-buttons">
+                <button type="button" class="back-btn" onclick="closeOrderDetailsModal()">
+                    <i class="fas fa-arrow-left"></i> Close
+                </button>
+            </div>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src="/js/toast.js"></script>
+    <!-- Driver Assignment Modal -->
+    <div id="driverModal" class="overlay" style="display: none;">
+        <div class="overlay-content driver-modal-content">
+            <h2><i class="fas fa-user"></i> <span id="driverModalTitle">Change Driver</span></h2>
+            <p id="driverModalMessage"></p>
+            <div class="driver-selection">
+                <label for="driverSelect">Select Driver:</label>
+                <select id="driverSelect">
+                    <option value="0">-- Select a driver --</option>
+                    <?php foreach ($drivers as $driver): ?>
+                        <option value="<?= $driver['id'] ?>"><?= htmlspecialchars($driver['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="driver-modal-buttons">
+                <button class="cancel-btn" onclick="closeDriverModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="save-btn" onclick="assignDriver()">
+                    <i class="fas fa-save"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentPoNumber = '';
-        
-        function openAssignmentModal(poNumber, deliveryAddress) {
-            currentPoNumber = poNumber;
-            document.getElementById('assignOrderPoNumber').value = poNumber;
-            document.getElementById('delivery_address_display').textContent = deliveryAddress;
-            document.getElementById('driverAssignmentModal').style.display = 'flex';
-        }
-        
-        function closeAssignmentModal() {
-            document.getElementById('driverAssignmentModal').style.display = 'none';
-            document.getElementById('assignDriverForm').reset();
-            document.getElementById('driverDetails').style.display = 'none';
-        }
-        
+        let currentDriverId = 0;
+
         function viewOrderDetails(poNumber) {
-            const detailsRow = document.getElementById(`order-details-${poNumber}`);
-            const isVisible = detailsRow.style.display === 'table-row';
+            currentPoNumber = poNumber;
             
-            // Toggle visibility
-            detailsRow.style.display = isVisible ? 'none' : 'table-row';
-            
-            if (!isVisible) {
-                // Fetch order details only if we're showing the row
-                fetchOrderItems(poNumber);
-            }
-        }
-        
-        function fetchOrderItems(poNumber) {
-            const itemsContainer = document.getElementById(`order-items-${poNumber}`);
-            itemsContainer.innerHTML = '<p>Loading order items...</p>';
-            
-            // Fetch the order items from the server
+            // Fetch the order items
             fetch(`/backend/get_order_items.php?po_number=${poNumber}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.items) {
-                        let html = '<ul class="order-details-list">';
-                        
-                        data.items.forEach(item => {
-                            html += `
-                                <li>
-                                    <div>
-                                        <strong>${item.item_description}</strong>
-                                        <div>${item.category} / ${item.packaging || 'N/A'}</div>
-                                    </div>
-                                    <div>
-                                        <div>Quantity: ${item.quantity}</div>
-                                        <div>Price: PHP ${parseFloat(item.price).toFixed(2)}</div>
-                                    </div>
-                                </li>
-                            `;
-                        });
-                        
-                        html += '</ul>';
-                        itemsContainer.innerHTML = html;
-                    } else {
-                        itemsContainer.innerHTML = '<p>No items found for this order</p>';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching order items:', error);
-                    itemsContainer.innerHTML = '<p>Error loading order items. Please try again.</p>';
-                });
-        }
-        
-        function confirmDelivery(poNumber, driverId) {
-            if (confirm('Mark this order as completed? This will update the driver\'s delivery count.')) {
-                completeOrder(poNumber, driverId);
-            }
-        }
-        
-        function completeOrder(poNumber, driverId) {
-            // Send request to complete the order
-            fetch('/backend/complete_order.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `po_number=${poNumber}&driver_id=${driverId}`
-            })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showToast('Order completed successfully!', 'success');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
+                    const orderItems = data.orderItems;
+                    const orderDetailsBody = document.getElementById('orderDetailsBody');
+                    orderDetailsBody.innerHTML = '';
+                    
+                    let totalAmount = 0;
+                    
+                    orderItems.forEach(item => {
+                        const quantity = parseInt(item.quantity) || 0;
+                        const price = parseFloat(item.price) || 0;
+                        const itemTotal = quantity * price;
+                        totalAmount += itemTotal;
+                        
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.category || ''}</td>
+                            <td>${item.item_description}</td>
+                            <td>${item.packaging || ''}</td>
+                            <td>PHP ${price.toFixed(2)}</td>
+                            <td>${quantity}</td>
+                            <td>PHP ${itemTotal.toFixed(2)}</td>
+                        `;
+                        orderDetailsBody.appendChild(row);
+                    });
+                    
+                    // Add a total row
+                    const totalRow = document.createElement('tr');
+                    totalRow.style.fontWeight = 'bold';
+                    totalRow.innerHTML = `
+                        <td colspan="5" style="text-align: right;">Total:</td>
+                        <td>PHP ${totalAmount.toFixed(2)}</td>
+                    `;
+                    orderDetailsBody.appendChild(totalRow);
+                    
+                    document.getElementById('orderDetailsModal').style.display = 'flex';
                 } else {
                     showToast('Error: ' + data.message, 'error');
                 }
             })
             .catch(error => {
                 showToast('Error: ' + error, 'error');
+                console.error('Error fetching order details:', error);
             });
         }
-        
+
+        function closeOrderDetailsModal() {
+            document.getElementById('orderDetailsModal').style.display = 'none';
+        }
+
+        function openDriverModal(poNumber, driverId, driverName) {
+            currentPoNumber = poNumber;
+            currentDriverId = driverId;
+            
+            document.getElementById('driverModalTitle').textContent = 'Change Driver';
+            document.getElementById('driverModalMessage').textContent = `Current driver: ${driverName}`;
+            
+            // Set the current driver in the dropdown
+            const driverSelect = document.getElementById('driverSelect');
+            driverSelect.value = driverId;
+            
+            // Show the modal
+            document.getElementById('driverModal').style.display = 'flex';
+        }
+
+        function closeDriverModal() {
+            document.getElementById('driverModal').style.display = 'none';
+        }
+
+        function assignDriver() {
+            const driverId = document.getElementById('driverSelect').value;
+            
+            if (driverId == 0) {
+                showToast('Please select a driver', 'error');
+                return;
+            }
+            
+            // Show loading state
+            const saveBtn = document.querySelector('#driverModal .save-btn');
+            const originalBtnText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            saveBtn.disabled = true;
+
+            // Send request to assign driver
+            fetch('/backend/assign_driver.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    po_number: currentPoNumber,
+                    driver_id: driverId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Driver updated successfully', 'success');
+                    setTimeout(() => { window.location.reload(); }, 1000);
+                } else {
+                    showToast('Error: ' + (data.message || 'Unknown error'), 'error');
+                    saveBtn.innerHTML = originalBtnText;
+                    saveBtn.disabled = false;
+                }
+                closeDriverModal();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error: Failed to communicate with server', 'error');
+                saveBtn.innerHTML = originalBtnText;
+                saveBtn.disabled = false;
+                closeDriverModal();
+            });
+        }
+
+        function completeDelivery(poNumber, username) {
+            if (confirm(`Mark delivery of order ${poNumber} for ${username} as completed?`)) {
+                fetch('/backend/complete_delivery.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ po_number: poNumber })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Delivery completed successfully', 'success');
+                        setTimeout(() => { window.location.reload(); }, 1000);
+                    } else {
+                        showToast('Error: ' + (data.message || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error: Failed to communicate with server', 'error');
+                });
+            }
+        }
+
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
@@ -887,116 +552,50 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             `;
             document.getElementById('toast-container').appendChild(toast);
             
-            // Automatically remove the toast after 5 seconds
-            setTimeout(() => {
-                toast.remove();
-            }, 5000);
+            setTimeout(() => { toast.remove(); }, 5000);
         }
-        
-        function applyFilters() {
-            const status = document.getElementById('statusFilter').value;
-            const area = document.getElementById('areaFilter').value;
-            window.location.href = `?status=${status}&area=${area}`;
-        }
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            // Handle driver select change
-            document.getElementById('driverSelect').addEventListener('change', function() {
-                const driverDetails = document.getElementById('driverDetails');
-                const selectedOption = this.options[this.selectedIndex];
-                
-                if (this.value) {
-                    // Show driver details
-                    const driverName = selectedOption.getAttribute('data-name');
-                    const driverArea = selectedOption.getAttribute('data-area');
-                    const driverDeliveries = selectedOption.getAttribute('data-deliveries');
+
+        // Search functionality
+        $(document).ready(function() {
+            $("#searchInput").on("input", function() {
+                let searchText = $(this).val().toLowerCase().trim();
+
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
                     
-                    document.getElementById('selectedDriverName').textContent = driverName;
-                    document.getElementById('selectedDriverArea').textContent = driverArea;
-                    
-                    const deliveryCountEl = document.getElementById('selectedDriverDeliveries');
-                    deliveryCountEl.textContent = `${driverDeliveries}/20`;
-                    
-                    // Set the color class based on delivery count
-                    deliveryCountEl.className = 'delivery-count';
-                    if (parseInt(driverDeliveries) > 15) {
-                        deliveryCountEl.classList.add('delivery-count-high');
-                    } else if (parseInt(driverDeliveries) > 10) {
-                        deliveryCountEl.classList.add('delivery-count-medium');
+                    if (text.includes(searchText)) {
+                        row.show();
                     } else {
-                        deliveryCountEl.classList.add('delivery-count-low');
+                        row.hide();
                     }
-                    
-                    driverDetails.style.display = 'block';
-                } else {
-                    driverDetails.style.display = 'none';
-                }
-            });
-            
-            // Handle assignment form submission
-            document.getElementById('assignDriverForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const poNumber = document.getElementById('assignOrderPoNumber').value;
-                const driverId = document.getElementById('driverSelect').value;
-                
-                if (!driverId) {
-                    showToast('Please select a driver', 'error');
-                    return;
-                }
-                
-                // Send request to assign driver to order
-                fetch('/backend/assign_driver.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `po_number=${poNumber}&driver_id=${driverId}`
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast('Driver assigned successfully!', 'success');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
-                    } else {
-                        showToast('Error: ' + data.message, 'error');
-                    }
-                })
-                .catch(error => {
-                    showToast('Error: ' + error, 'error');
                 });
             });
             
-            // Search functionality
-            document.getElementById('searchInput').addEventListener('input', function() {
-                filterOrdersByText(this.value);
-            });
-            
-            document.querySelector('.search-btn').addEventListener('click', function() {
-                filterOrdersByText(document.getElementById('searchInput').value);
-            });
-        });
-        
-        function filterOrdersByText(searchText) {
-            searchText = searchText.toLowerCase().trim();
-            const rows = document.querySelectorAll('tr.order-row');
-            
-            rows.forEach(row => {
-                const detailsRow = document.getElementById(`order-details-${row.dataset.po}`);
-                let rowText = row.textContent.toLowerCase();
+            // Handle search button click
+            $(".search-btn").on("click", function() {
+                let searchText = $("#searchInput").val().toLowerCase().trim();
                 
-                if (rowText.includes(searchText) || searchText === '') {
-                    row.style.display = 'table-row';
-                } else {
-                    row.style.display = 'none';
-                    if (detailsRow) {
-                        detailsRow.style.display = 'none';
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
                     }
+                });
+            });
+
+            // Handle clicks outside modals
+            $(document).on('click', '.overlay', function(event) {
+                if (event.target === this) {
+                    if (this.id === 'orderDetailsModal') closeOrderDetailsModal();
+                    else if (this.id === 'driverModal') closeDriverModal();
                 }
             });
-        }
+        });
     </script>
 </body>
 </html>
