@@ -4,10 +4,10 @@ include("../includes/config.php");
 include("../includes/session.php");
 
 // Check if user is logged in
-if (!isset($_SESSION['username'])) {
+/* if (!isset($_SESSION['username'])) {
     header("Location: ../index.php");
     exit();
-}
+} */
 
 // Check if user's role has permission to access this page
 $role = $_SESSION['role'];
