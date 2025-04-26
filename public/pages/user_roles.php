@@ -2,17 +2,48 @@
 // Include configuration and header files
 include("../includes/config.php");
 include("../includes/session.php");
-include("../includes/header.php");
-include("../includes/navbar.php");
-include("../includes/sidebar.php");
 
-// Comment out the permission check temporarily to allow access
-/*
-if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'Admin') {
+// Check if user is logged in
+/* if (!isset($_SESSION['username'])) {
+    header("Location: ../index.php");
+    exit();
+} */
+
+// Check if user's role has permission to access this page
+$role = $_SESSION['role'];
+$query = "SELECT pages FROM roles WHERE role_name = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("s", $role);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows > 0) {
+    $row = $result->fetch_assoc();
+    $pages = explode(',', $row['pages']);
+    $has_access = false;
+    
+    // Trim each page name and check if 'User Roles' is in the list
+    foreach ($pages as $page) {
+        if (trim($page) == 'User Roles') {
+            $has_access = true;
+            break;
+        }
+    }
+    
+    if (!$has_access) {
+        header("Location: ../index.php");
+        exit();
+    }
+} else {
+    // Role not found
     header("Location: ../index.php");
     exit();
 }
-*/
+
+// Now include the header and navigation components after authentication is complete
+include("../includes/header.php");
+include("../includes/navbar.php");
+include("../includes/sidebar.php");
 
 // Process form submission for adding new role
 if (isset($_POST['add_role'])) {
@@ -296,8 +327,7 @@ if (isset($_POST['delete_role'])) {
                             while ($module = $modules_result->fetch_assoc()) {
                                 echo '<div class="col-md-4 mb-2">';
                                 echo '<div class="custom-control custom-checkbox">';
-                                echo '<input type="checkbox" class="custom-control-input edit-module" id="edit_module_' . $module['module_id'] . '" name="modules[]" value="' . $module['module_id'] . '">';
-                                echo '<label class="custom-control-label" for="edit_module_' . $module['module_id'] . '">';
+                                echo '<input type="checkbox" class="custom-control-input edit-module" id="edit_module_' . $module['module_id'] . '" name="modules[]" value="' . $module['module_id'] . '">';                                echo '<label class="custom-control-label" for="edit_module_' . $module['module_id'] . '">';
                                 echo '<i class="' . $module['icon'] . ' mr-1"></i> ' . $module['display_name'];
                                 echo '</label>';
                                 echo '</div>';
