@@ -1,7 +1,7 @@
 <?php
 session_start();
-include "../backend/db_connection.php";
-include "../backend/check_role.php";
+include "db_connection.php";
+include "check_role.php";
 checkRole('Orders'); // Ensure the user has access to the Orders page
 
 header('Content-Type: application/json');
@@ -35,12 +35,24 @@ try {
     $stmt->execute();
     $stmt->close();
     
-    // If progress is 100%, automatically update status to Completed
+    // If progress is 100%, check if a driver is assigned
     if ($auto_complete && $progress === 100) {
-        $stmt = $conn->prepare("UPDATE orders SET status = 'Completed' WHERE po_number = ?");
+        // First check if a driver is assigned
+        $stmt = $conn->prepare("SELECT driver_assigned FROM orders WHERE po_number = ?");
         $stmt->bind_param("s", $po_number);
         $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $driver_assigned = (bool)$row['driver_assigned'];
         $stmt->close();
+        
+        // Only complete the order if a driver is assigned
+        if ($driver_assigned) {
+            $stmt = $conn->prepare("UPDATE orders SET status = 'Completed' WHERE po_number = ?");
+            $stmt->bind_param("s", $po_number);
+            $stmt->execute();
+            $stmt->close();
+        }
     }
     
     $conn->commit();

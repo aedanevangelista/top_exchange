@@ -997,12 +997,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             document.getElementById('orderDetailsModal').style.display = 'none';
         }
 
+        
         function saveProgressChanges() {
             // Calculate overall progress percentage
             const progressPercentage = updateOverallProgress();
             
-            // Determine if the order should be completed automatically
-            const shouldComplete = progressPercentage === 100;
+            // Determine if the order should be moved to Deliverable Orders
+            const isComplete = progressPercentage === 100;
             
             // Send AJAX request to update progress
             fetch('/backend/update_order_progress.php', {
@@ -1016,21 +1017,21 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     quantity_progress_data: quantityProgressData,
                     item_progress_percentages: itemProgressPercentages,
                     progress: progressPercentage,
-                    auto_complete: shouldComplete
+                    auto_complete: false // Never auto-complete, we'll handle completion separately
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    if (shouldComplete) {
-                        showToast('Order completed successfully!', 'success');
+                    if (isComplete) {
+                        checkDriverAssignment(progressPercentage);
                     } else {
                         showToast('Progress updated successfully', 'success');
+                        // Reload the page after a short delay
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
                     }
-                    // Reload the page after a short delay
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
                 } else {
                     showToast('Error updating progress: ' + data.message, 'error');
                 }
@@ -1038,6 +1039,33 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             .catch(error => {
                 showToast('Error: ' + error, 'error');
             });
+        }
+
+        function checkDriverAssignment(progressPercentage) {
+            fetch(`/backend/check_order_status.php?po_number=${currentPoNumber}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.driver_assigned) {
+                            // Driver is already assigned, proceed with completion
+                            showToast('Order is complete and ready for delivery!', 'success');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            // Driver is not assigned, show message to redirect
+                            showToast('Order progress is 100%. Please assign a driver in Deliverable Orders before completing.', 'info');
+                            setTimeout(() => {
+                                window.location.href = '/public/pages/deliverable_orders.php';
+                            }, 2000);
+                        }
+                    } else {
+                        showToast('Error checking order status: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('Error: ' + error, 'error');
+                });
         }
 
         function showToast(message, type = 'info') {
