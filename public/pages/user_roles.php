@@ -154,28 +154,45 @@ if (isset($_GET['success'])) {
             margin-left: 10px;
         }
 
-        /* Improved modal styles */
+        /* Fixed overlay positioning */
         .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background-color: rgba(0, 0, 0, 0.7);
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
         }
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Improved modal content */
         .overlay-content {
             width: 90%;
             max-width: 700px;
             max-height: 80vh;
-            overflow: auto;
+            overflow-y: auto;
             background: #fff;
             border-radius: 8px;
             padding: 25px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            animation: modalFadeIn 0.3s ease;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+            position: relative;
         }
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: translateY(-30px); }
-            to { opacity: 1; transform: translateY(0); }
+        .overlay.active .overlay-content {
+            transform: translateY(0);
         }
+        
         .overlay-content h2 {
             color: #333;
             margin-top: 0;
@@ -188,14 +205,16 @@ if (isset($_GET['success'])) {
             margin-right: 10px;
         }
         
-        /* Checkbox container improvements */
+        /* Fixed checkbox container */
         .checkbox-container {
             max-height: 50vh;
             overflow-y: auto;
-            padding: 5px;
+            padding: 10px;
             border: 1px solid #e0e0e0;
             border-radius: 5px;
             background: #f9f9f9;
+            width: 100%;
+            box-sizing: border-box; /* Important to include padding in width calculation */
         }
         
         /* Module section improvements */
@@ -207,6 +226,8 @@ if (isset($_GET['success'])) {
             background: white;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             transition: all 0.2s ease;
+            width: 100%; /* Ensure it fills the container width */
+            box-sizing: border-box; /* Include padding in width calculation */
         }
         .module-section:hover {
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
@@ -216,6 +237,7 @@ if (isset($_GET['success'])) {
             align-items: center;
             margin-bottom: 12px;
             cursor: pointer;
+            width: 100%; /* Ensure it fills the container width */
         }
         .module-title {
             margin: 0 0 0 10px;
@@ -224,7 +246,7 @@ if (isset($_GET['success'])) {
             color: #444;
         }
         
-        /* Checkbox styling */
+        /* Better checkbox styling */
         .module-checkbox, .page-checkbox {
             width: 18px;
             height: 18px;
@@ -240,6 +262,7 @@ if (isset($_GET['success'])) {
             gap: 8px;
             padding-top: 5px;
             border-top: 1px dashed #e0e0e0;
+            width: calc(100% - 25px); /* Calculate width minus margin */
         }
         .checkbox-label {
             display: flex;
@@ -258,6 +281,7 @@ if (isset($_GET['success'])) {
             justify-content: flex-end;
             gap: 10px;
             margin-top: 20px;
+            width: 100%;
         }
         .form-buttons button {
             padding: 10px 20px;
@@ -288,6 +312,9 @@ if (isset($_GET['success'])) {
         }
         
         /* Input field styling */
+        .account-form {
+            width: 100%;
+        }
         .account-form label {
             display: block;
             font-weight: bold;
@@ -302,6 +329,7 @@ if (isset($_GET['success'])) {
             border-radius: 5px;
             font-size: 16px;
             transition: border 0.3s;
+            box-sizing: border-box;
         }
         .account-form input[type="text"]:focus {
             border-color: #2196F3;
@@ -371,7 +399,7 @@ if (isset($_GET['success'])) {
             </table>
         </div>
     </div>
-    <div id="roleOverlay" class="overlay" style="display: none;">
+    <div id="roleOverlay" class="overlay">
         <div class="overlay-content">
             <h2 id="roleFormTitle"><i class="fas fa-user-plus"></i> Add Role</h2>
             <p id="roleError" style="color: red; display: <?= $errorMessage ? 'block' : 'none' ?>;"><?= $errorMessage ?></p>
@@ -516,11 +544,15 @@ if (isset($_GET['success'])) {
             updateModuleCheckboxes();
         }
         
-        document.getElementById("roleOverlay").style.display = "block";
+        // Show overlay with proper animation
+        const overlay = document.getElementById("roleOverlay");
+        overlay.classList.add('active');
     }
 
     function hideRoleForm() {
-        document.getElementById("roleOverlay").style.display = "none";
+        // Hide with animation
+        const overlay = document.getElementById("roleOverlay");
+        overlay.classList.remove('active');
     }
 
     // Toggle all pages in a module when the module checkbox is clicked
@@ -541,6 +573,8 @@ if (isset($_GET['success'])) {
         } else {
             modulePages.style.display = 'none';
         }
+        // Stop the event from bubbling up
+        event.stopPropagation();
     }
 
     // Update module checkboxes based on page selection
@@ -589,7 +623,10 @@ if (isset($_GET['success'])) {
             
             fetch('../../backend/roles/manage_roles.php', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             })
             .then(response => {
                 if (!response.ok) {
@@ -598,22 +635,38 @@ if (isset($_GET['success'])) {
                 return response.text();
             })
             .then(data => {
+                // Try to parse as JSON, but handle as text if not valid JSON
+                let jsonData;
+                try {
+                    jsonData = JSON.parse(data);
+                } catch (e) {
+                    // If not valid JSON, just use the text
+                    showToast('Operation completed successfully.', 'success');
+                    hideRoleForm();
+                    setTimeout(() => { window.location.reload(); }, 1500);
+                    return;
+                }
+                
                 // Show success message based on action
-                let message = 'Role changes saved successfully!';
-                if (action === 'add') {
-                    message = `Role "${roleName}" has been added successfully.`;
-                } else if (action === 'edit') {
-                    message = `Role "${roleName}" has been updated successfully.`;
+                let message = jsonData.message || 'Role changes saved successfully!';
+                if (!jsonData.message) {
+                    if (action === 'add') {
+                        message = `Role "${roleName}" has been added successfully.`;
+                    } else if (action === 'edit') {
+                        message = `Role "${roleName}" has been updated successfully.`;
+                    }
                 }
                 
                 // Show toast and reload after a delay
-                showToast(message, 'success');
-                hideRoleForm();
+                showToast(message, jsonData.success ? 'success' : 'error');
                 
-                // Reload page after toast is shown
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                if (jsonData.success) {
+                    hideRoleForm();
+                    // Reload page after toast is shown
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
             })
             .catch(error => {
                 showToast('Error: ' + error.message, 'error');
@@ -631,7 +684,10 @@ if (isset($_GET['success'])) {
                 
                 fetch('../../backend/roles/manage_roles.php', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
                 })
                 .then(response => {
                     if (!response.ok) {
@@ -670,6 +726,13 @@ if (isset($_GET['success'])) {
         <?php if (!empty($successMessage)): ?>
         showToast('<?= addslashes($successMessage) ?>', 'success');
         <?php endif; ?>
+        
+        // Close modal when clicking outside
+        document.getElementById('roleOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideRoleForm();
+            }
+        });
     });
     </script>
 </body>
