@@ -34,9 +34,24 @@ while ($stmt->fetch()) {
 }
 $stmt->close();
 
+// Fetch all drivers for the driver assignment dropdown
+$drivers = [];
+$stmt = $conn->prepare("SELECT id, name FROM drivers WHERE availability = 'Available' AND current_deliveries < 20 ORDER BY name");
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $drivers[] = $row;
+}
+$stmt->close();
+
 // Modified query to only show Active orders with sorting
 $orders = []; // Initialize $orders as an empty array
-$sql = "SELECT po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status, progress FROM orders WHERE status = 'Active'";
+$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress, o.driver_assigned, 
+        IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
+        FROM orders o 
+        LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
+        LEFT JOIN drivers d ON da.driver_id = d.id 
+        WHERE o.status = 'Active'";
 
 // Add sorting
 $sql .= " ORDER BY {$sort_column} {$sort_direction}";
@@ -367,6 +382,68 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         th.sortable .fa-sort-down {
             color:rgb(255, 255, 255);
         }
+
+        /* Driver column styling */
+        .driver-badge {
+            background-color: #17a2b8;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .driver-not-assigned {
+            background-color: #6c757d;
+        }
+
+        .driver-btn {
+            background-color: #6610f2;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .driver-btn:hover {
+            background-color: #510bc4;
+        }
+
+        .assign-driver-btn {
+            background-color: #fd7e14;
+        }
+
+        .assign-driver-btn:hover {
+            background-color: #e67211;
+        }
+
+        /* Driver assignment modal */
+        .driver-modal-content {
+            width: 400px;
+        }
+
+        .driver-selection {
+            margin: 20px 0;
+        }
+
+        .driver-selection select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin-top: 5px;
+        }
+
+        .driver-modal-buttons {
+            display: flex;
+            justify-content: space-between;
+        }
     </style>
 </head>
 <body>
@@ -415,6 +492,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 Total Amount <?= getSortIcon('total_amount', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
+                        <th>Drivers</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -441,6 +519,23 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
+                                    <?php if ($order['driver_assigned'] && !empty($order['driver_name'])): ?>
+                                        <div class="driver-badge">
+                                            <i class="fas fa-user"></i> <?= htmlspecialchars($order['driver_name']) ?>
+                                        </div>
+                                        <button class="driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', <?= $order['driver_id'] ?>, '<?= htmlspecialchars($order['driver_name']) ?>')">
+                                            <i class="fas fa-exchange-alt"></i> Change
+                                        </button>
+                                    <?php else: ?>
+                                        <div class="driver-badge driver-not-assigned">
+                                            <i class="fas fa-user-slash"></i> Not Assigned
+                                        </div>
+                                        <button class="driver-btn assign-driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', 0, '')">
+                                            <i class="fas fa-user-plus"></i> Assign
+                                        </button>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
                                     <span class="status-badge status-active"><?= htmlspecialchars($order['status']) ?></span>
                                 </td>
                                 <td class="action-buttons">
@@ -452,7 +547,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="no-orders">No orders found.</td>
+                            <td colspan="10" class="no-orders">No orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -527,6 +622,31 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
+    <!-- Driver Assignment Modal -->
+    <div id="driverModal" class="overlay" style="display: none;">
+        <div class="overlay-content driver-modal-content">
+            <h2><i class="fas fa-user"></i> <span id="driverModalTitle">Assign Driver</span></h2>
+            <p id="driverModalMessage"></p>
+            <div class="driver-selection">
+                <label for="driverSelect">Select Driver:</label>
+                <select id="driverSelect">
+                    <option value="0">-- Select a driver --</option>
+                    <?php foreach ($drivers as $driver): ?>
+                        <option value="<?= $driver['id'] ?>"><?= htmlspecialchars($driver['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="driver-modal-buttons">
+                <button class="cancel-btn" onclick="closeDriverModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="save-btn" onclick="assignDriver()">
+                    <i class="fas fa-save"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Global variables
         let currentPoNumber = '';
@@ -536,6 +656,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         let itemProgressPercentages = {};
         let itemContributions = {}; // How much each item contributes to the total
         let overallProgress = 0;
+        let currentDriverId = 0;
 
         function openStatusModal(poNumber, username) {
             currentPoNumber = poNumber;
@@ -1016,7 +1137,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     quantity_progress_data: quantityProgressData,
                     item_progress_percentages: itemProgressPercentages,
                     progress: progressPercentage,
-                    auto_complete: shouldComplete
+                    auto_complete: shouldComplete,
+                    driver_id: currentDriverId
                 })
             })
             .then(response => response.json())
@@ -1037,6 +1159,72 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             })
             .catch(error => {
                 showToast('Error: ' + error, 'error');
+            });
+        }
+
+        // Driver Modal Functions
+        function openDriverModal(poNumber, driverId, driverName) {
+            currentPoNumber = poNumber;
+            currentDriverId = driverId;
+            
+            // Update the modal title based on whether we're assigning or changing
+            const modalTitle = document.getElementById('driverModalTitle');
+            if (driverId > 0) {
+                modalTitle.textContent = 'Change Driver Assignment';
+                document.getElementById('driverModalMessage').textContent = `Current driver: ${driverName}`;
+            } else {
+                modalTitle.textContent = 'Assign Driver';
+                document.getElementById('driverModalMessage').textContent = `Select a driver for order ${poNumber}:`;
+            }
+            
+            // Set the current driver in the dropdown if one is assigned
+            const driverSelect = document.getElementById('driverSelect');
+            driverSelect.value = driverId;
+            
+            // Show the modal
+            document.getElementById('driverModal').style.display = 'flex';
+        }
+
+        function closeDriverModal() {
+            document.getElementById('driverModal').style.display = 'none';
+            currentDriverId = 0;
+        }
+
+        function assignDriver() {
+            const driverId = document.getElementById('driverSelect').value;
+            
+            if (driverId == 0) {
+                showToast('Please select a driver', 'error');
+                return;
+            }
+            
+            // Send AJAX request to assign driver
+            fetch('/backend/assign_driver.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    po_number: currentPoNumber,
+                    driver_id: driverId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Driver assigned successfully', 'success');
+                    // Reload the page after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showToast('Error assigning driver: ' + data.message, 'error');
+                }
+                closeDriverModal();
+            })
+            .catch(error => {
+                showToast('Error: ' + error, 'error');
+                closeDriverModal();
             });
         }
 
@@ -1091,6 +1279,14 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         row.hide();
                     }
                 });
+            });
+
+            // Handle clicks outside modals to close them
+            $(document).on('click', '.overlay', function(event) {
+                if (event.target === this) {
+                    if (this.id === 'orderDetailsModal') closeOrderDetailsModal();
+                    else if (this.id === 'driverModal') closeDriverModal();
+                }
             });
         });
     </script>
