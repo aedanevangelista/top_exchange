@@ -271,7 +271,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             min-width: 210px;
         }
         
-        /* Sort indicators and clickable headers - matching orders.php page */
+        /* Sort indicators and clickable headers - updated to match requirements */
         .sort-header {
             cursor: pointer;
             position: relative;
@@ -280,7 +280,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
         }
         
         .sort-header:hover {
-            background-color: #f8f9fa;
+            background-color: #e9ecef; /* Light gray but not white */
         }
         
         .sort-header::after {
@@ -289,17 +289,17 @@ $statusOptions = ['For Delivery', 'In Transit'];
             font-weight: 900;
             position: absolute;
             right: 5px;
-            color: #6c757d;
+            color: #6c757d; /* Gray arrow */
         }
         
         .sort-header.asc::after {
             content: '\f0de';
-            color: #007bff;
+            color: #6c757d; /* Gray arrow when active */
         }
         
         .sort-header.desc::after {
             content: '\f0dd';
-            color: #007bff;
+            color: #6c757d; /* Gray arrow when active */
         }
         
         /* Highlighted delivery date */
