@@ -332,7 +332,7 @@ if (isset($_POST['delete_role'])) {
                                 echo '</label>';
                                 echo '</div>';
                                 
-                                // Get pages for this module
+                                // Get pages for this modules
                                 $pages_query = "SELECT * FROM pages WHERE module_id = " . $module['module_id'] . " ORDER BY page_name";
                                 $pages_result = $conn->query($pages_query);
                                 
