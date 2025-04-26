@@ -367,72 +367,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         th.sortable .fa-sort-down {
             color:rgb(255, 255, 255);
         }
-        .form-control {
-            width: 100%;
-            padding: 8px 12px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            margin-top: 5px;
-        }
-
-        .driver-info-display {
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #f5f5f5;
-            border-radius: 4px;
-            display: none;
-        }
-
-        .driver-badge {
-            padding: 6px 10px;
-            border-radius: 4px;
-            background-color: #e3f2fd;
-            color: #0d47a1;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 500;
-            font-size: 14px;
-        }
-
-        .driver-badge .area-badge {
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 12px;
-            background-color: #bbdefb;
-        }
-
-        .area-north {
-            border-left: 3px solid #2196F3; /* Blue for North */
-        }
-
-        .area-south {
-            border-left: 3px solid #FF9800; /* Orange for South */
-        }
-
-        .delivery-count {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-left: 5px;
-        }
-
-        .delivery-count-low {
-            background-color: #d4edda;
-            color: #155724;
-        }
-
-        .delivery-count-medium {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-
-        .delivery-count-high {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
     </style>
 </head>
 <body>
@@ -558,28 +492,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     </div>
                 </div>
             </div>
-            <div id="driver-assignment-section" class="item-progress-info" style="margin-top: 10px; display: none;">
-                <div class="progress-info-label">Assign Driver for Delivery:</div>
-                <div style="margin-top: 10px;">
-                    <div class="form-group">
-                        <label for="orderDriverSelect">Select Driver:</label>
-                        <select id="orderDriverSelect" class="form-control">
-                            <option value="">-- Select a Driver --</option>
-                            <!-- Drivers will be loaded dynamically -->
-                        </select>
-                    </div>
-                    <div id="orderDriverDetails" class="driver-info-display">
-                        <div class="driver-badge">
-                            <i class="fas fa-user-circle"></i> 
-                            <span id="orderSelectedDriverName"></span>
-                            <span class="area-badge" id="orderSelectedDriverArea"></span>
-                        </div>
-                        <div style="margin-top: 5px;">
-                            Delivery load: <span id="orderSelectedDriverDeliveries" class="delivery-count"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
             <div class="form-buttons">
                 <button type="button" class="back-btn" onclick="closeOrderDetailsModal()">
                     <i class="fas fa-arrow-left"></i> Back
@@ -624,8 +536,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         let itemProgressPercentages = {};
         let itemContributions = {}; // How much each item contributes to the total
         let overallProgress = 0;
-        let availableDrivers = [];
-        let selectedDriverId = null;
 
         function openStatusModal(poNumber, username) {
             currentPoNumber = poNumber;
@@ -835,22 +745,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     
                     // Update overall progress display
                     updateOverallProgressDisplay();
-            
-                    // NEW CODE: Check if order is at 100% progress, show driver select
-                    const driverSection = document.getElementById('driver-assignment-section');
-                    if (overallProgress >= 100) {
-                        // Load available drivers if not loaded yet
-                        if (availableDrivers.length === 0) {
-                            loadAvailableDrivers();
-                        }
-                        driverSection.style.display = 'block';
-                    } else {
-                        driverSection.style.display = 'none';
-                        // Reset driver selection
-                        document.getElementById('orderDriverSelect').value = '';
-                        document.getElementById('orderDriverDetails').style.display = 'none';
-                        selectedDriverId = null;
-                    }
                     
                     document.getElementById('orderDetailsModal').style.display = 'flex';
                 } else {
@@ -1103,34 +997,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             document.getElementById('orderDetailsModal').style.display = 'none';
         }
 
-        
         function saveProgressChanges() {
             // Calculate overall progress percentage
             const progressPercentage = updateOverallProgress();
             
-            // Determine if a driver is selected (for 100% complete orders)
-            const isComplete = progressPercentage === 100;
-            
-            if (isComplete && !selectedDriverId) {
-                // If the order is complete but no driver is selected, ask the user to select one
-                showToast('Please select a driver to complete this order', 'warning');
-                return;
-            }
-            
-            // Prepare the request body
-            const requestBody = {
-                po_number: currentPoNumber,
-                completed_items: completedItems,
-                quantity_progress_data: quantityProgressData,
-                item_progress_percentages: itemProgressPercentages,
-                progress: progressPercentage,
-                auto_complete: isComplete
-            };
-            
-            // Add driver ID if selected
-            if (selectedDriverId) {
-                requestBody.driver_id = selectedDriverId;
-            }
+            // Determine if the order should be completed automatically
+            const shouldComplete = progressPercentage === 100;
             
             // Send AJAX request to update progress
             fetch('/backend/update_order_progress.php', {
@@ -1138,13 +1010,20 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(requestBody)
+                body: JSON.stringify({
+                    po_number: currentPoNumber,
+                    completed_items: completedItems,
+                    quantity_progress_data: quantityProgressData,
+                    item_progress_percentages: itemProgressPercentages,
+                    progress: progressPercentage,
+                    auto_complete: shouldComplete
+                })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    if (isComplete && selectedDriverId) {
-                        showToast('Order completed successfully and driver assigned!', 'success');
+                    if (shouldComplete) {
+                        showToast('Order completed successfully!', 'success');
                     } else {
                         showToast('Progress updated successfully', 'success');
                     }
@@ -1159,33 +1038,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             .catch(error => {
                 showToast('Error: ' + error, 'error');
             });
-        }
-
-        function checkDriverAssignment(progressPercentage) {
-            fetch(`/backend/check_order_status.php?po_number=${currentPoNumber}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        if (data.driver_assigned) {
-                            // Driver is already assigned, proceed with completion
-                            showToast('Order is complete and ready for delivery!', 'success');
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 1000);
-                        } else {
-                            // Driver is not assigned, show message to redirect
-                            showToast('Order progress is 100%. Please assign a driver in Deliverable Orders before completing.', 'info');
-                            setTimeout(() => {
-                                window.location.href = '/public/pages/deliverable_orders.php';
-                            }, 2000);
-                        }
-                    } else {
-                        showToast('Error checking order status: ' + data.message, 'error');
-                    }
-                })
-                .catch(error => {
-                    showToast('Error: ' + error, 'error');
-                });
         }
 
         function showToast(message, type = 'info') {
@@ -1240,85 +1092,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     }
                 });
             });
-        });
-
-        // Function to load available drivers
-        function loadAvailableDrivers() {
-            fetch('/backend/get_available_drivers.php')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        availableDrivers = data.drivers;
-                        const driverSelect = document.getElementById('orderDriverSelect');
-                        
-                        // Clear existing options except the first one
-                        while (driverSelect.options.length > 1) {
-                            driverSelect.remove(1);
-                        }
-                        
-                        // Add options for each driver
-                        availableDrivers.forEach(driver => {
-                            const option = document.createElement('option');
-                            option.value = driver.id;
-                            option.textContent = `${driver.name} - ${driver.area} (${driver.current_deliveries}/20)`;
-                            option.setAttribute('data-name', driver.name);
-                            option.setAttribute('data-area', driver.area);
-                            option.setAttribute('data-deliveries', driver.current_deliveries);
-                            driverSelect.appendChild(option);
-                        });
-                    } else {
-                        console.error('Error loading drivers:', data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching available drivers:', error);
-                });
-        }
-
-        // Function to handle driver selection change
-        function handleDriverSelectChange() {
-            const driverSelect = document.getElementById('orderDriverSelect');
-            const driverDetails = document.getElementById('orderDriverDetails');
-            const selectedOption = driverSelect.options[driverSelect.selectedIndex];
-            
-            if (driverSelect.value) {
-                selectedDriverId = driverSelect.value;
-                // Show driver details
-                const driverName = selectedOption.getAttribute('data-name');
-                const driverArea = selectedOption.getAttribute('data-area');
-                const driverDeliveries = selectedOption.getAttribute('data-deliveries');
-                
-                document.getElementById('orderSelectedDriverName').textContent = driverName;
-                document.getElementById('orderSelectedDriverArea').textContent = driverArea;
-                
-                const deliveryCountEl = document.getElementById('orderSelectedDriverDeliveries');
-                deliveryCountEl.textContent = `${driverDeliveries}/20`;
-                
-                // Set the color class based on delivery count
-                deliveryCountEl.className = 'delivery-count';
-                if (parseInt(driverDeliveries) > 15) {
-                    deliveryCountEl.classList.add('delivery-count-high');
-                } else if (parseInt(driverDeliveries) > 10) {
-                    deliveryCountEl.classList.add('delivery-count-medium');
-                } else {
-                    deliveryCountEl.classList.add('delivery-count-low');
-                }
-                
-                driverDetails.style.display = 'block';
-            } else {
-                selectedDriverId = null;
-                driverDetails.style.display = 'none';
-            }
-        }
-
-        // Add document ready function or update your existing one
-        $(document).ready(function() {
-            // Your existing document.ready code...
-            
-            // Add event listener for driver select change
-            $("#orderDriverSelect").on("change", handleDriverSelectChange);
-            
-            // Keep the rest of your document.ready code...
         });
     </script>
 </body>

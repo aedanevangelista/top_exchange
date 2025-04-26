@@ -576,52 +576,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             width: 100%;
             text-align: center;
         }
-
-        .no-driver-alert {
-            background-color: #fff3cd;
-            color: #856404;
-            border-left: 5px solid #ffeeba;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .no-driver-alert i {
-            font-size: 24px;
-        }
-
-        .no-driver-alert strong {
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .ready-orders {
-            color: #155724;
-            font-weight: bold;
-        }
-
-        .info-badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 50px;
-            background-color: #DAA520;
-            color: white;
-            font-weight: bold;
-            margin-left: 5px;
-        }
-
-        /* Make unassigned orders more visible */
-        tr[data-driver-assigned="no"] {
-            background-color: #fff8e1 !important;
-        }
-
-        tr[data-driver-assigned="no"]:hover {
-            background-color: #fff3cd !important;
-        }
     </style>
 </head>
 <body>
@@ -630,15 +584,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <div class="main-content">
         <div class="orders-header">
             <h1>Deliverable Orders</h1>
-            <div class="no-driver-alert">
-                <i class="fas fa-exclamation-triangle"></i>
-                <div>
-                    <strong>Action Required: Assign Drivers to Completed Orders</strong>
-                    <p>Orders that are 100% complete but don't have a driver assigned need your attention. 
-                    Please assign drivers to allow order completion.</p>
-                    <span class="ready-orders">Ready orders: <span class="info-badge" id="unassigned-count">0</span></span>
-                </div>
-            </div>
             <div class="filter-section">
                 <label for="statusFilter">Filter by Status:</label>
                 <select id="statusFilter" onchange="applyFilters()">
@@ -1048,22 +993,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 }
             });
         }
-
-        function updateUnassignedCounter() {
-            const unassignedOrders = document.querySelectorAll('tr[data-driver-assigned="no"]').length;
-            document.getElementById('unassigned-count').textContent = unassignedOrders;
-            
-            // Show/hide the alert based on if there are unassigned orders
-            const alertDiv = document.querySelector('.no-driver-alert');
-            if (unassignedOrders > 0) {
-                alertDiv.style.display = 'flex';
-            } else {
-                alertDiv.style.display = 'none';
-            }
-        }
-
-        // Run on page load
-        updateUnassignedCounter();
     </script>
 </body>
 </html>
