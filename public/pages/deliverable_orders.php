@@ -319,7 +319,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
         .modal-content h2 {
             color: #333;
             text-align: center;
-            border-bottom: 2px solid #f1f1f1;
+            border-bottom: 2px solidrgb(44, 44, 44);
             padding-bottom: 15px;
             margin-bottom: 20px;
         }
