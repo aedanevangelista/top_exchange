@@ -276,12 +276,12 @@ $statusOptions = ['For Delivery', 'In Transit'];
             cursor: pointer;
             position: relative;
             padding-right: 20px;
-            color: #2980b9;
+            color:rgb(80, 80, 80);
             transition: background-color 0.2s;
         }
         
         .sort-header:hover {
-            background-color: #e9f2fa;
+            background-color:rgb(51, 51, 51);
         }
         
         .sort-header::after {
@@ -295,7 +295,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
         
         .sort-header.asc::after {
             content: '\f0de';
-            color: #2980b9;
+            color:rgb(255, 255, 255);
         }
         
         .sort-header.desc::after {
