@@ -32,6 +32,21 @@ if ($driverStmt) {
     $driverStmt->close();
 }
 
+// Handle sorting
+$sortColumn = $_GET['sort'] ?? 'delivery_date';
+$sortOrder = $_GET['order'] ?? 'ASC';
+
+// Validate sort parameters
+$allowedColumns = ['po_number', 'username', 'order_date', 'delivery_date', 'total_amount', 'status'];
+if (!in_array($sortColumn, $allowedColumns)) {
+    $sortColumn = 'delivery_date';
+}
+
+$allowedOrders = ['ASC', 'DESC'];
+if (!in_array($sortOrder, $allowedOrders)) {
+    $sortOrder = 'ASC';
+}
+
 // Get orders with 'For Delivery' or 'In Transit' status
 $orders = [];
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, 
@@ -41,7 +56,7 @@ $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.deliver
         LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
         LEFT JOIN drivers d ON da.driver_id = d.id 
         WHERE o.status IN ('For Delivery', 'In Transit')
-        ORDER BY o.delivery_date ASC";
+        ORDER BY o.$sortColumn $sortOrder";
 
 $orderStmt = $conn->prepare($sql);
 if ($orderStmt) {
@@ -104,6 +119,18 @@ if ($orderStmt) {
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
 
         /* Status badge styles */
@@ -208,35 +235,17 @@ if ($orderStmt) {
         /* Filter section */
         .filter-section {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
-            margin-bottom: 20px;
+            gap: 10px;
         }
         
-        .filter-section label {
-            margin-right: 10px;
-        }
-        
-        .filter-section select {
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            margin-right: 15px;
-        }
-        
-        /* Highlighted delivery date */
-        .today-delivery {
-            background-color: #fff3cd;
-            font-weight: bold;
-        }
-        
-        /* Status filter buttons */
         .status-filter-btn {
             padding: 8px 15px;
             border-radius: 20px;
             border: none;
             font-size: 14px;
             cursor: pointer;
-            margin-right: 10px;
             transition: all 0.3s;
         }
         
@@ -263,26 +272,67 @@ if ($orderStmt) {
         .action-buttons-cell {
             min-width: 210px;
         }
+        
+        /* Sort indicators and clickable headers */
+        .sort-header {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px;
+        }
+        
+        .sort-header:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .sort-header::after {
+            content: '\f0dc';
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 5px;
+            color: #ccc;
+        }
+        
+        .sort-header.asc::after {
+            content: '\f0de';
+            color: #2980b9;
+        }
+        
+        .sort-header.desc::after {
+            content: '\f0dd';
+            color: #2980b9;
+        }
+        
+        /* Highlighted delivery date */
+        .today-delivery {
+            background-color: #fff3cd;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="orders-header">
-            <h1>Deliverable Orders</h1>
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
-                <button class="search-btn"><i class="fas fa-search"></i></button>
+            <h1 class="page-title">Deliverable Orders</h1>
+            
+            <div class="header-content">
+                <!-- Filter section - moved to the middle -->
+                <div class="filter-section">
+                    <button class="status-filter-btn all active" data-status="all">All</button>
+                    <button class="status-filter-btn for-delivery" data-status="For Delivery">For Delivery</button>
+                    <button class="status-filter-btn in-transit" data-status="In Transit">In Transit</button>
+                </div>
+                
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
+                    <button class="search-btn"><i class="fas fa-search"></i></button>
+                </div>
             </div>
         </div>
         
-        <div class="filter-section">
-            <label>Filter Status:</label>
-            <button class="status-filter-btn all active" data-status="all">All</button>
-            <button class="status-filter-btn for-delivery" data-status="For Delivery">For Delivery</button>
-            <button class="status-filter-btn in-transit" data-status="In Transit">In Transit</button>
-            
-            <label>Today's Date: <?= date('Y-m-d') ?></label>
+        <div class="date-info">
+            <strong>Today's Date:</strong> <?= date('Y-m-d') ?>
             <?php if (isset($auto_transit_count) && $auto_transit_count > 0): ?>
                 <span>(<?= $auto_transit_count ?> orders automatically set to "In Transit" today)</span>
             <?php endif; ?>
@@ -292,16 +342,15 @@ if ($orderStmt) {
             <table class="orders-table">
                 <thead>
                     <tr>
-                        <th>PO Number</th>
-                        <th>Username</th>
-                        <th>Order Date</th>
-                        <th>Delivery Date</th>
+                        <th class="sort-header <?= $sortColumn == 'po_number' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="po_number">PO Number</th>
+                        <th class="sort-header <?= $sortColumn == 'username' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="username">Username</th>
+                        <th class="sort-header <?= $sortColumn == 'order_date' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="order_date">Order Date</th>
+                        <th class="sort-header <?= $sortColumn == 'delivery_date' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="delivery_date">Delivery Date</th>
                         <th>Delivery Address</th>
-                        <!-- Progress column removed -->
                         <th>Orders</th>
-                        <th>Total Amount</th>
+                        <th class="sort-header <?= $sortColumn == 'total_amount' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="total_amount">Total Amount</th>
                         <th>Driver</th>
-                        <th>Status</th>
+                        <th class="sort-header <?= $sortColumn == 'status' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="status">Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -319,7 +368,6 @@ if ($orderStmt) {
                                     <?= $isDeliveryDay ? ' (Today)' : '' ?>
                                 </td>
                                 <td><?= htmlspecialchars($order['delivery_address']) ?></td>
-                                <!-- Progress column removed -->
                                 <td>
                                     <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
                                         <i class="fas fa-clipboard-list"></i>    
@@ -365,7 +413,7 @@ if ($orderStmt) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="no-orders">No orders ready for delivery.</td>
+                            <td colspan="10" class="no-orders">No orders ready for delivery.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -627,7 +675,22 @@ if ($orderStmt) {
             setTimeout(() => { toast.remove(); }, 5000);
         }
 
-        // Search functionality
+        // Sorting functionality
+        document.querySelectorAll('.sort-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const column = this.getAttribute('data-column');
+                let order = 'ASC';
+                
+                // If already sorted by this column, toggle order
+                if (this.classList.contains('asc')) {
+                    order = 'DESC';
+                }
+                
+                window.location.href = `?sort=${column}&order=${order}`;
+            });
+        });
+
+        // Search and filter functionality
         $(document).ready(function() {
             // Status filter buttons
             $('.status-filter-btn').on('click', function() {
