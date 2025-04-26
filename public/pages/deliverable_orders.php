@@ -271,17 +271,16 @@ $statusOptions = ['For Delivery', 'In Transit'];
             min-width: 210px;
         }
         
-        /* Sort indicators and clickable headers - matching other pages */
+        /* Sort indicators and clickable headers - matching orders.php page */
         .sort-header {
             cursor: pointer;
             position: relative;
             padding-right: 20px;
-            color:rgb(80, 80, 80);
             transition: background-color 0.2s;
         }
         
         .sort-header:hover {
-            background-color:rgb(51, 51, 51);
+            background-color: #f8f9fa;
         }
         
         .sort-header::after {
@@ -290,17 +289,17 @@ $statusOptions = ['For Delivery', 'In Transit'];
             font-weight: 900;
             position: absolute;
             right: 5px;
-            background-color:rgb(51, 51, 51);
+            color: #6c757d;
         }
         
         .sort-header.asc::after {
             content: '\f0de';
-            color:rgb(255, 255, 255);
+            color: #007bff;
         }
         
         .sort-header.desc::after {
             content: '\f0dd';
-            background-color:rgb(51, 51, 51);
+            color: #007bff;
         }
         
         /* Highlighted delivery date */
@@ -319,7 +318,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
         .modal-content h2 {
             color: #333;
             text-align: center;
-            border-bottom: 2px solidrgb(44, 44, 44);
+            border-bottom: 2px solid #f1f1f1;
             padding-bottom: 15px;
             margin-bottom: 20px;
         }
