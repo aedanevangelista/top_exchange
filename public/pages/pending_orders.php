@@ -1403,17 +1403,14 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
                         $('#activeStatusBtn').prop('disabled', false);
                     }
                 },
-                eerror: function(xhr, status, error) {
-                    console.error("AJAX Error:", status, error);
-                    console.error("Response Text:", xhr.responseText); // Log the actual response from the server
-                    
+                error: function(xhr, status, error) {
                     $('#rawMaterialsContainer').html(`
                         <h3>Server Error</h3>
-                        <p style="color:red;">Could not connect to server. Error details:</p>
-                        <pre style="background:#f8f8f8;padding:10px;overflow:auto;max-height:200px;font-size:12px;">${xhr.responseText || error}</pre>
+                        <p style="color:red;">Could not connect to server: ${error}</p>
                         <p>Order status can still be changed.</p>
                     `);
                     $('#activeStatusBtn').prop('disabled', false);
+                    console.error("AJAX Error:", status, error);
                 }
             });
         } catch (e) {

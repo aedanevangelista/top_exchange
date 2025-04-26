@@ -16,24 +16,17 @@ header('Content-Type: application/json');
 // Handle both POST and form-data
 $po_number = "";
 $status = "";
-$deduct_materials = false;  // Default value
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['po_number']) && isset($_POST['status'])) {
         $po_number = $_POST['po_number'];
         $status = $_POST['status'];
-        if (isset($_POST['deduct_materials'])) {
-            $deduct_materials = filter_var($_POST['deduct_materials'], FILTER_VALIDATE_BOOLEAN);
-        }
     } else {
         // Try to get data from JSON input
         $jsonData = json_decode(file_get_contents('php://input'), true);
         if (isset($jsonData['po_number']) && isset($jsonData['status'])) {
             $po_number = $jsonData['po_number'];
             $status = $jsonData['status'];
-            if (isset($jsonData['deduct_materials'])) {
-                $deduct_materials = filter_var($jsonData['deduct_materials'], FILTER_VALIDATE_BOOLEAN);
-            }
         }
     }
 }
@@ -79,7 +72,7 @@ try {
     }
     
     // Get current status for logging
-    $stmt = $conn->prepare("SELECT status, orders FROM orders WHERE po_number = ?");
+    $stmt = $conn->prepare("SELECT status FROM orders WHERE po_number = ?");
     $stmt->bind_param("s", $po_number);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -90,15 +83,6 @@ try {
     
     $row = $result->fetch_assoc();
     $old_status = $row['status'];
-    $orders_json = $row['orders'];
-    
-    // Handle deducting materials if needed
-    if ($status === 'Active' && $deduct_materials && $old_status === 'Pending') {
-        // Deduct materials logic here
-        // This would need to parse the orders JSON and update inventory
-        // For now, we'll include a placeholder
-        // You can implement the actual inventory update logic
-    }
     
     // Update the order status
     $update_stmt = $conn->prepare("UPDATE orders SET status = ? WHERE po_number = ?");
@@ -111,23 +95,11 @@ try {
     $log_stmt->bind_param("ssss", $po_number, $old_status, $status, $changed_by);
     $log_stmt->execute();
     
-    // Commit transaction
     $conn->commit();
-    
-    echo json_encode([
-        'success' => true,
-        'message' => 'Status updated successfully',
-        'po_number' => $po_number,
-        'new_status' => $status
-    ]);
-    
+    echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
 } catch (Exception $e) {
-    // Roll back transaction on error
     $conn->rollback();
-    
-    echo json_encode([
-        'success' => false,
-        'message' => $e->getMessage()
-    ]);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
+exit;
 ?>
