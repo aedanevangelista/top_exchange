@@ -318,65 +318,75 @@ $statusOptions = ['For Delivery', 'In Transit'];
         
         .modal-content h2 {
             color: #333;
+            text-align: center;
             border-bottom: 2px solid #f1f1f1;
-            padding-bottom: 10px;
+            padding-bottom: 15px;
             margin-bottom: 20px;
         }
         
         .modal-message {
-            margin: 20px 0;
+            margin: 25px 0;
             font-size: 16px;
             line-height: 1.6;
+            text-align: center;
         }
         
+        /* Updated modal buttons - centered and colored */
         .modal-buttons {
             display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 25px;
         }
         
         .btn-no, .btn-yes {
-            padding: 10px 15px;
-            border-radius: 4px;
+            padding: 10px 25px;
+            border-radius: 25px;
             border: none;
             cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
+            font-size: 16px;
+            transition: all 0.3s;
+            min-width: 120px;
         }
         
         .btn-no {
-            background-color: #f1f1f1;
-            color: #333;
+            background-color: #dc3545;
+            color: white;
         }
         
         .btn-no:hover {
-            background-color: #e1e1e1;
+            background-color: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         
         .btn-yes {
-            background-color: #2980b9;
+            background-color: #28a745;
             color: white;
         }
         
         .btn-yes:hover {
-            background-color: #2471a3;
+            background-color: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         
-        .btn-yes.transit {
-            background-color: #17a2b8;
+        /* Status pill in modal */
+        .status-pill {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 25px;
+            font-weight: bold;
+            margin: 0 3px;
+            color: white;
         }
         
-        .btn-yes.transit:hover {
-            background-color: #138496;
-        }
-        
-        .btn-yes.delivery {
+        .status-pill.for-delivery {
             background-color: #fd7e14;
         }
         
-        .btn-yes.delivery:hover {
-            background-color: #e67211;
+        .status-pill.in-transit {
+            background-color: #17a2b8;
         }
         
         /* Driver modal styling */
@@ -405,36 +415,41 @@ $statusOptions = ['For Delivery', 'In Transit'];
         
         .driver-modal-buttons {
             display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 25px;
         }
         
         .cancel-btn, .save-btn {
-            padding: 10px 15px;
-            border-radius: 4px;
+            padding: 10px 25px;
+            border-radius: 25px;
             border: none;
             cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
+            font-size: 16px;
+            transition: all 0.3s;
+            min-width: 120px;
         }
         
         .cancel-btn {
-            background-color: #f1f1f1;
-            color: #333;
+            background-color: #dc3545;
+            color: white;
         }
         
         .cancel-btn:hover {
-            background-color: #e1e1e1;
+            background-color: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         
         .save-btn {
-            background-color: #2980b9;
+            background-color: #28a745;
             color: white;
         }
         
         .save-btn:hover {
-            background-color: #2471a3;
+            background-color: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         
         .date-info {
@@ -614,10 +629,10 @@ $statusOptions = ['For Delivery', 'In Transit'];
             </div>
             <div class="driver-modal-buttons">
                 <button class="cancel-btn" onclick="closeDriverModal()">
-                    <i class="fas fa-times"></i> Cancel
+                    <i class="fas fa-times"></i> No
                 </button>
                 <button class="save-btn" onclick="assignDriver()">
-                    <i class="fas fa-save"></i> Save
+                    <i class="fas fa-check"></i> Yes
                 </button>
             </div>
         </div>
@@ -653,7 +668,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                     <i class="fas fa-times"></i> No
                 </button>
                 <button id="confirmCompleteOrder" class="btn-yes">
-                    <i class="fas fa-check"></i> Yes, Complete
+                    <i class="fas fa-check"></i> Yes
                 </button>
             </div>
         </div>
@@ -696,14 +711,12 @@ $statusOptions = ['For Delivery', 'In Transit'];
             
             if (newStatus === 'In Transit') {
                 modalTitle.textContent = 'Mark as In Transit';
-                modalMessage.innerHTML = `Are you sure you want to mark order <strong>${poNumber}</strong> as <strong>In Transit</strong>?`;
+                modalMessage.innerHTML = `Are you sure you want to mark order <strong>${poNumber}</strong> as <span class="status-pill in-transit">In Transit</span>?`;
                 statusIcon.className = 'fas fa-truck';
-                confirmBtn.className = 'btn-yes transit';
             } else {
                 modalTitle.textContent = 'Mark as For Delivery';
-                modalMessage.innerHTML = `Are you sure you want to mark order <strong>${poNumber}</strong> as <strong>For Delivery</strong>?`;
+                modalMessage.innerHTML = `Are you sure you want to mark order <strong>${poNumber}</strong> as <span class="status-pill for-delivery">For Delivery</span>?`;
                 statusIcon.className = 'fas fa-warehouse';
-                confirmBtn.className = 'btn-yes delivery';
             }
             
             // Set up confirmation button
