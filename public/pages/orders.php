@@ -444,6 +444,41 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             display: flex;
             justify-content: space-between;
         }
+
+        .modal-status-btn.delivery {
+            background-color: #fd7e14;
+            color: white;
+        }
+
+        .modal-status-btn.delivery:hover {
+            background-color: #e67211;
+        }
+
+        .modal-status-btn.rejected {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .modal-status-btn.rejected:hover {
+            background-color: #c82333;
+        }
+
+        .status-for-delivery {
+            background-color: #fd7e14;
+            color: white;
+        }
+
+        /* Style for deliverable orders in deliverable_orders.php */
+        .deliverable-orders-container {
+            margin-top: 20px;
+        }
+
+        .deliverable-orders-title {
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #fd7e14;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -610,8 +645,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
                     <i class="fas fa-clock"></i> Pending
                 </button>
-                <button onclick="changeStatus('Completed')" class="modal-status-btn complete">
-                    <i class="fas fa-check-circle"></i> Complete
+                <button onclick="changeStatus('For Delivery')" class="modal-status-btn delivery">
+                    <i class="fas fa-truck"></i> For Delivery
+                </button>
+                <button onclick="changeStatus('Rejected')" class="modal-status-btn rejected">
+                    <i class="fas fa-times-circle"></i> Reject
                 </button>
             </div>
             <div class="modal-footer">
@@ -669,15 +707,15 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
 
         function changeStatus(status) {
-            // For Completed status, check if a driver has been assigned
-            if (status === 'Completed') {
+            // For 'For Delivery' status, check if a driver has been assigned
+            if (status === 'For Delivery') {
                 // Fetch the order details to check driver_assigned flag
                 fetch(`/backend/check_order_driver.php?po_number=${currentPoNumber}`)
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
                             if (!data.driver_assigned) {
-                                showToast('Error: You must assign a driver to this order before completing it. Please go to Deliverable Orders page.', 'error');
+                                showToast('Error: You must assign a driver to this order before marking it for delivery.', 'error');
                                 closeStatusModal();
                                 return;
                             } else {
@@ -711,7 +749,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showToast('Status updated successfully', 'success');
+                    let message = 'Status updated successfully';
+                    if (status === 'For Delivery') {
+                        message = 'Order marked for delivery successfully';
+                    } else if (status === 'Rejected') {
+                        message = 'Order rejected successfully';
+                    }
+                    showToast(message, 'success');
                     // Reload the page after a short delay
                     setTimeout(() => {
                         window.location.reload();
@@ -1122,8 +1166,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             // Calculate overall progress percentage
             const progressPercentage = updateOverallProgress();
             
-            // Determine if the order should be completed automatically
-            const shouldComplete = progressPercentage === 100;
+            // Determine if the order should be marked for delivery automatically when at 100%
+            const shouldMarkForDelivery = progressPercentage === 100;
             
             // Send AJAX request to update progress
             fetch('/backend/update_order_progress.php', {
@@ -1137,15 +1181,15 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     quantity_progress_data: quantityProgressData,
                     item_progress_percentages: itemProgressPercentages,
                     progress: progressPercentage,
-                    auto_complete: shouldComplete,
+                    auto_delivery: shouldMarkForDelivery, // changed from auto_complete to auto_delivery
                     driver_id: currentDriverId
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    if (shouldComplete) {
-                        showToast('Order completed successfully!', 'success');
+                    if (shouldMarkForDelivery) {
+                        showToast('Order is ready for delivery!', 'success');
                     } else {
                         showToast('Progress updated successfully', 'success');
                     }
