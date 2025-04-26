@@ -2,7 +2,13 @@
 session_start();
 include "db_connection.php";
 include "check_role.php";
-checkApiRole('Department Forecast');
+
+// Using hasAccess instead of the missing checkApiRole function
+if (!hasAccess('Department Forecast')) {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Access denied']);
+    exit;
+}
 
 header('Content-Type: application/json');
 
