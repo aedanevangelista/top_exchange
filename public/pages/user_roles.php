@@ -10,29 +10,64 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Fetch roles
+// Fetch roles and pages
 $roles_query = "SELECT * FROM roles ORDER BY (role_name = 'admin') DESC, role_name ASC";
 $roles_result = $conn->query($roles_query);
 if (!$roles_result) {
     die("Error retrieving roles: " . $conn->error);
 }
 
-// Fetch pages and group by module_id
-$pages_query = "SELECT * FROM pages ORDER BY module_id, page_name";
+// Fetch pages
+$pages_query = "SELECT * FROM pages ORDER BY page_name";
 $pages_result = $conn->query($pages_query);
 if (!$pages_result) {
     die("Error retrieving pages: " . $conn->error);
 }
 
-// Group pages by module_id
-$pages_by_module = [];
-while ($page = $pages_result->fetch_assoc()) {
-    $module_id = $page['module_id'] ?: 0; // Use 0 for unassigned
-    if (!isset($pages_by_module[$module_id])) {
-        $pages_by_module[$module_id] = [];
-    }
-    $pages_by_module[$module_id][] = $page;
+// Get all unique module names
+$modules_query = "SELECT DISTINCT module FROM pages WHERE module IS NOT NULL AND module != '' ORDER BY module";
+$modules_result = $conn->query($modules_query);
+if (!$modules_result) {
+    die("Error retrieving modules: " . $conn->error);
 }
+
+// Group pages by module
+$pages_by_module = [];
+$modules_list = [];
+
+// First, collect all modules
+while ($module = $modules_result->fetch_assoc()) {
+    $module_name = $module['module'];
+    $modules_list[$module_name] = [
+        'name' => $module_name,
+        'pages' => []
+    ];
+}
+
+// Add 'Unassigned' as a module for pages without a module
+$modules_list['Unassigned'] = [
+    'name' => 'Unassigned',
+    'pages' => []
+];
+
+// Reset the pages result
+$pages_result->data_seek(0);
+
+// Now group pages by module
+while ($page = $pages_result->fetch_assoc()) {
+    $module_name = !empty($page['module']) ? $page['module'] : 'Unassigned';
+    // Handle case where the module might not be in our list (though it should be)
+    if (!isset($modules_list[$module_name])) {
+        $modules_list[$module_name] = [
+            'name' => $module_name,
+            'pages' => []
+        ];
+    }
+    $modules_list[$module_name]['pages'][] = $page;
+}
+
+// Reset the roles result
+$roles_result->data_seek(0);
 
 // Capture error messages
 $errorMessage = "";
@@ -79,6 +114,10 @@ if (isset($_GET['error'])) {
         .checkbox-container {
             max-height: 400px;
             overflow-y: auto;
+        }
+        /* Add icons to modules */
+        .module-icon {
+            margin-right: 5px;
         }
     </style>
 </head>
@@ -142,27 +181,30 @@ if (isset($_GET['error'])) {
                 <br/>
                 <label>Accessible Pages by Module:</label>
                 <div class="checkbox-container">
-                    <?php foreach ($pages_by_module as $module_id => $pages): ?>
-                        <div class="module-section">
-                            <div class="module-header">
-                                <input type="checkbox" class="module-checkbox" id="module_<?= $module_id ?>" 
-                                       value="<?= $module_id ?>" 
-                                       onchange="toggleModulePages(<?= $module_id ?>)">
-                                <h3 class="module-title">
-                                    Module <?= $module_id ?>
-                                </h3>
+                    <?php foreach ($modules_list as $module_name => $module_data): ?>
+                        <?php if (!empty($module_data['pages'])): ?>
+                            <div class="module-section">
+                                <div class="module-header">
+                                    <input type="checkbox" class="module-checkbox" id="module_<?= htmlspecialchars(str_replace(' ', '_', $module_name)) ?>" 
+                                           value="<?= htmlspecialchars($module_name) ?>" 
+                                           onchange="toggleModulePages('<?= htmlspecialchars(str_replace(' ', '_', $module_name)) ?>')">
+                                    <h3 class="module-title">
+                                        <i class="fas fa-folder module-icon"></i>
+                                        <?= htmlspecialchars($module_name) ?>
+                                    </h3>
+                                </div>
+                                <div class="module-pages" id="pages_module_<?= htmlspecialchars(str_replace(' ', '_', $module_name)) ?>">
+                                    <?php foreach ($module_data['pages'] as $page): ?>
+                                        <label class="checkbox-label module-<?= htmlspecialchars(str_replace(' ', '_', $module_name)) ?>-page">
+                                            <input type="checkbox" name="page_ids[]" class="page-checkbox module-<?= htmlspecialchars(str_replace(' ', '_', $module_name)) ?>-checkbox" 
+                                                   value="<?= htmlspecialchars($page['page_name']) ?>"
+                                                   data-module="<?= htmlspecialchars($module_name) ?>"> 
+                                            <?= htmlspecialchars($page['page_name']) ?>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
-                            <div class="module-pages" id="pages_module_<?= $module_id ?>">
-                                <?php foreach ($pages as $page): ?>
-                                    <label class="checkbox-label module-<?= $module_id ?>-page">
-                                        <input type="checkbox" name="page_ids[]" class="page-checkbox module-<?= $module_id ?>-checkbox" 
-                                               value="<?= $page['page_name'] ?>"
-                                               data-module-id="<?= $module_id ?>"> 
-                                        <?= htmlspecialchars($page['page_name']) ?>
-                                    </label>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
+                        <?php endif; ?>
                     <?php endforeach; ?>
                 </div>
                 <br/>
@@ -222,10 +264,8 @@ if (isset($_GET['error'])) {
 
     // Update module checkboxes based on page selection
     function updateModuleCheckboxes() {
-        const modules = document.querySelectorAll('.module-checkbox');
-        
-        modules.forEach(moduleCheckbox => {
-            const moduleId = moduleCheckbox.value;
+        document.querySelectorAll('.module-checkbox').forEach(moduleCheckbox => {
+            const moduleId = moduleCheckbox.id.replace('module_', '');
             const modulePages = document.querySelectorAll(`.module-${moduleId}-checkbox`);
             const checkedPages = document.querySelectorAll(`.module-${moduleId}-checkbox:checked`);
             
