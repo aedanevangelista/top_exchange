@@ -1191,15 +1191,45 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
 
         function assignDriver() {
-            const driverId = document.getElementById('driverSelect').value;
-            
-            if (driverId == 0) {
-                showToast('Please select a driver', 'error');
-                return;
-            }
-            
-            // Send AJAX request to assign driver
-            fetch('/backend/assign_driver.php', {
+    const driverSelect = document.getElementById('driverSelect');
+    const driverId = parseInt(driverSelect.value);
+    
+    if (driverId === 0 || isNaN(driverId)) {
+        showToast('Please select a driver', 'error');
+        return;
+    }
+    
+    // Show a loading state
+    const saveBtn = document.querySelector('#driverModal .save-btn');
+    const originalBtnText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assigning...';
+    saveBtn.disabled = true;
+    
+    // Debug output
+    console.log("Sending request to assign driver:", {
+        po_number: currentPoNumber,
+        driver_id: driverId
+    });
+    
+    // Create FormData object
+    const formData = new FormData();
+    formData.append('po_number', currentPoNumber);
+    formData.append('driver_id', driverId);
+    
+    // First try with FormData
+    fetch('/backend/assign_driver.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Driver assigned successfully', 'success');
+            setTimeout(() => { window.location.reload(); }, 1000);
+        } else {
+            // If FormData fails, try with JSON
+            console.log("FormData method failed, trying JSON");
+            return fetch('/backend/assign_driver.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1208,25 +1238,31 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     po_number: currentPoNumber,
                     driver_id: driverId
                 })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('Driver assigned successfully', 'success');
-                    // Reload the page after a short delay
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                } else {
-                    showToast('Error assigning driver: ' + data.message, 'error');
-                }
-                closeDriverModal();
-            })
-            .catch(error => {
-                showToast('Error: ' + error, 'error');
-                closeDriverModal();
-            });
+            }).then(response => response.json());
         }
+        return null; // Signal that we don't need to continue
+    })
+    .then(data => {
+        if (data === null) return; // Skip if first attempt succeeded
+        
+        if (data.success) {
+            showToast('Driver assigned successfully', 'success');
+            setTimeout(() => { window.location.reload(); }, 1000);
+        } else {
+            showToast('Error assigning driver: ' + (data.message || 'Unknown error'), 'error');
+            saveBtn.innerHTML = originalBtnText;
+            saveBtn.disabled = false;
+        }
+        closeDriverModal();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error: Failed to communicate with server. Please try again.', 'error');
+        saveBtn.innerHTML = originalBtnText;
+        saveBtn.disabled = false;
+        closeDriverModal();
+    });
+}
 
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
