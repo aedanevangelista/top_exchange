@@ -92,12 +92,17 @@ try {
         $checkDriverAssignedStmt->bind_param("s", $po_number);
         $checkDriverAssignedStmt->execute();
         $checkDriverAssignedResult = $checkDriverAssignedStmt->get_result();
+        
+        if ($checkDriverAssignedResult->num_rows === 0) {
+            throw new Exception("Order not found");
+        }
+        
         $row = $checkDriverAssignedResult->fetch_assoc();
         $driver_assigned = (bool)$row['driver_assigned'];
         $checkDriverAssignedStmt->close();
         
-        // If a driver is assigned, update order status to "For Delivery"
-        if ($driver_assigned) {
+        // If a driver is assigned and progress is 100%, update order status to "For Delivery"
+        if ($driver_assigned && $progress === 100) {
             $updateStatusStmt = $conn->prepare("UPDATE orders SET status = 'For Delivery' WHERE po_number = ?");
             $updateStatusStmt->bind_param("s", $po_number);
             $updateStatusStmt->execute();

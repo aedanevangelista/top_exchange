@@ -479,6 +479,67 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             border-bottom: 2px solid #fd7e14;
             color: #333;
         }
+
+        #status-loading {
+    margin: 15px 0;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    text-align: center;
+    color: #495057;
+}
+
+.modal-status-btn {
+    margin: 5px;
+    padding: 10px 15px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.modal-status-btn.active {
+    background-color: #28a745;
+    color: white;
+}
+
+.modal-status-btn.active:hover {
+    background-color: #218838;
+}
+
+.modal-status-btn.pending {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.modal-status-btn.pending:hover {
+    background-color: #e0a800;
+}
+
+.modal-status-btn.delivery {
+    background-color: #fd7e14;
+    color: white;
+}
+
+.modal-status-btn.delivery:hover {
+    background-color: #e67211;
+}
+
+.modal-status-btn.rejected {
+    background-color: #dc3545;
+    color: white;
+}
+
+.modal-status-btn.rejected:hover {
+    background-color: #c82333;
+}
+
+.modal-status-btn:disabled,
+.modal-cancel-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
     </style>
 </head>
 <body>
@@ -707,35 +768,69 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
 
         function changeStatus(status) {
-            // For 'For Delivery' status, check if a driver has been assigned
-            if (status === 'For Delivery') {
-                // Fetch the order details to check driver_assigned flag
-                fetch(`/backend/check_order_driver.php?po_number=${currentPoNumber}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            if (!data.driver_assigned) {
-                                showToast('Error: You must assign a driver to this order before marking it for delivery.', 'error');
-                                closeStatusModal();
-                                return;
-                            } else {
-                                // Driver is assigned, proceed with status change
-                                updateOrderStatus(status);
-                            }
-                        } else {
-                            showToast('Error checking driver assignment: ' + data.message, 'error');
-                            closeStatusModal();
-                        }
-                    })
-                    .catch(error => {
-                        showToast('Error: ' + error, 'error');
+    // For 'For Delivery' status, check if a driver has been assigned and progress is 100%
+    if (status === 'For Delivery') {
+        // Show a loading indicator
+        const modalContent = document.querySelector('.modal-content');
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'status-loading';
+        loadingDiv.style.textAlign = 'center';
+        loadingDiv.style.margin = '10px 0';
+        loadingDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking requirements...';
+        modalContent.appendChild(loadingDiv);
+        
+        // Disable all buttons while checking
+        const buttons = document.querySelectorAll('.modal-status-btn, .modal-cancel-btn');
+        buttons.forEach(btn => btn.disabled = true);
+        
+        // Fetch the order details to check driver_assigned flag and progress
+        fetch(`/backend/check_order_driver.php?po_number=${currentPoNumber}`)
+            .then(response => response.json())
+            .then(data => {
+                // Remove loading indicator
+                document.getElementById('status-loading').remove();
+                // Re-enable buttons
+                buttons.forEach(btn => btn.disabled = false);
+                
+                if (data.success) {
+                    // Check if driver is assigned
+                    if (!data.driver_assigned) {
+                        showToast('Error: You must assign a driver to this order before marking it for delivery.', 'error');
                         closeStatusModal();
-                    });
-            } else {
-                // For other statuses, proceed directly
-                updateOrderStatus(status);
-            }
-        }
+                        return;
+                    }
+                    
+                    // Check if progress is 100%
+                    if (data.progress < 100) {
+                        showToast('Error: Order progress must be 100% before marking it for delivery.', 'error');
+                        closeStatusModal();
+                        return;
+                    }
+                    
+                    // Both requirements are met, proceed with status change
+                    updateOrderStatus(status);
+                } else {
+                    showToast('Error checking order requirements: ' + data.message, 'error');
+                    closeStatusModal();
+                }
+            })
+            .catch(error => {
+                // Remove loading indicator
+                if (document.getElementById('status-loading')) {
+                    document.getElementById('status-loading').remove();
+                }
+                // Re-enable buttons
+                buttons.forEach(btn => btn.disabled = false);
+                
+                console.error('Error:', error);
+                showToast('Error checking requirements: ' + error, 'error');
+                closeStatusModal();
+            });
+    } else {
+        // For other statuses, proceed directly
+        updateOrderStatus(status);
+    }
+}
 
         function updateOrderStatus(status) {
             // Send AJAX request to update status
