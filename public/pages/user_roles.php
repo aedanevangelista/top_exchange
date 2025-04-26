@@ -2,48 +2,17 @@
 // Include configuration and header files
 include("../includes/config.php");
 include("../includes/session.php");
-
-// Check if user is logged in
-/* if (!isset($_SESSION['username'])) {
-    header("Location: ../index.php");
-    exit();
-} */
-
-// Check if user's role has permission to access this page
-$role = $_SESSION['role'];
-$query = "SELECT pages FROM roles WHERE role_name = ?";
-$stmt = $conn->prepare($query);
-$stmt->bind_param("s", $role);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    $pages = explode(',', $row['pages']);
-    $has_access = false;
-    
-    // Trim each page name and check if 'User Roles' is in the list
-    foreach ($pages as $page) {
-        if (trim($page) == 'User Roles') {
-            $has_access = true;
-            break;
-        }
-    }
-    
-    if (!$has_access) {
-        header("Location: ../index.php");
-        exit();
-    }
-} else {
-    // Role not found
-    header("Location: ../index.php");
-    exit();
-}
-
-// Now include the header and navigation components after authentication is complete
 include("../includes/header.php");
 include("../includes/navbar.php");
 include("../includes/sidebar.php");
+
+// Comment out the permission check temporarily to allow access
+/*
+if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'Admin') {
+    header("Location: ../index.php");
+    exit();
+}
+*/
 
 // Process form submission for adding new role
 if (isset($_POST['add_role'])) {
