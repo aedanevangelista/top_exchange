@@ -8,6 +8,10 @@ checkRole('Deliverable Orders'); // Ensure the user has access to the Deliverabl
 $sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'delivery_date';
 $sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'ASC';
 
+// Get filter values from URL parameters
+$status_filter = $_GET['status'] ?? '';
+$area_filter = $_GET['area'] ?? '';
+
 // Validate sort column to prevent SQL injection
 $allowed_columns = ['po_number', 'username', 'delivery_date', 'progress', 'total_amount'];
 if (!in_array($sort_column, $allowed_columns)) {
@@ -19,17 +23,41 @@ if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
     $sort_direction = 'ASC'; // Default to ascending for delivery dates
 }
 
-// Fetch active orders that are ready for delivery (progress = 100%)
-$orders = []; 
+// Build the SQL query with filters
 $sql = "SELECT o.po_number, o.username, o.company, o.delivery_date, o.delivery_address, o.total_amount, 
                o.status, o.progress, o.driver_assigned
         FROM orders o
         WHERE o.status = 'Active' AND o.progress = 100";
 
+// Add area filter if specified
+if (!empty($area_filter)) {
+    $sql .= " AND o.po_number IN (SELECT da.po_number FROM driver_assignments da 
+                                 JOIN drivers d ON da.driver_id = d.id 
+                                 WHERE d.area = ?)";
+}
+
+// Add driver assigned filter if specified
+if ($status_filter === 'assigned') {
+    $sql .= " AND o.driver_assigned = 1";
+} else if ($status_filter === 'unassigned') {
+    $sql .= " AND o.driver_assigned = 0";
+}
+
 // Add sorting
 $sql .= " ORDER BY {$sort_column} {$sort_direction}";
 
-$result = $conn->query($sql);
+// Execute query with appropriate parameters
+if (!empty($area_filter)) {
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $area_filter);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    $result = $conn->query($sql);
+}
+
+// Fetch orders
+$orders = []; 
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         // Get driver information if assigned
@@ -68,8 +96,19 @@ if ($result && $result->num_rows > 0) {
 
 // Helper function to generate sort URL
 function getSortUrl($column, $currentColumn, $currentDirection) {
+    global $status_filter, $area_filter;
     $newDirection = ($column === $currentColumn && $currentDirection === 'ASC') ? 'DESC' : 'ASC';
-    return "?sort=" . urlencode($column) . "&direction=" . urlencode($newDirection);
+    $url = "?sort=" . urlencode($column) . "&direction=" . urlencode($newDirection);
+    
+    // Preserve filters in URL
+    if ($status_filter) {
+        $url .= "&status=" . urlencode($status_filter);
+    }
+    if ($area_filter) {
+        $url .= "&area=" . urlencode($area_filter);
+    }
+    
+    return $url;
 }
 
 // Helper function to display sort icon
@@ -103,6 +142,27 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+        }
+        
+        /* Filter Section (matches drivers.php) */
+        .filter-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-section label {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .filter-section select {
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background-color: white;
+            min-width: 150px;
         }
         
         /* Search Container Styling (like in order_history.php) */
@@ -249,26 +309,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         
         .area-south {
             border-left: 3px solid #FF9800; /* Orange for South */
-        }
-        
-        /* Filter controls */
-        .filter-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            align-items: center;
-        }
-        
-        .filter-select {
-            padding: 6px 12px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            font-size: 14px;
-        }
-        
-        .filter-label {
-            font-size: 14px;
-            margin-right: 5px;
         }
         
         /* Order details row */
@@ -495,18 +535,19 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             </div>
         </div>
         
-        <div class="filter-controls">
-            <span class="filter-label">Filter by:</span>
-            <select id="areaFilter" class="filter-select">
-                <option value="">All Areas</option>
-                <option value="North">North</option>
-                <option value="South">South</option>
+        <div class="filter-section">
+            <label for="statusFilter">Filter by Status:</label>
+            <select id="statusFilter" onchange="applyFilters()">
+                <option value="">All</option>
+                <option value="assigned" <?= $status_filter == 'assigned' ? 'selected' : '' ?>>Assigned</option>
+                <option value="unassigned" <?= $status_filter == 'unassigned' ? 'selected' : '' ?>>Unassigned</option>
             </select>
             
-            <select id="assignmentFilter" class="filter-select">
-                <option value="">All Assignments</option>
-                <option value="assigned">Assigned</option>
-                <option value="unassigned">Unassigned</option>
+            <label for="areaFilter">Filter by Area:</label>
+            <select id="areaFilter" onchange="applyFilters()">
+                <option value="">All</option>
+                <option value="North" <?= $area_filter == 'North' ? 'selected' : '' ?>>North</option>
+                <option value="South" <?= $area_filter == 'South' ? 'selected' : '' ?>>South</option>
             </select>
         </div>
         
@@ -794,6 +835,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             }, 5000);
         }
         
+        function applyFilters() {
+            const status = document.getElementById('statusFilter').value;
+            const area = document.getElementById('areaFilter').value;
+            window.location.href = `?status=${status}&area=${area}`;
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
             // Handle driver select change
             document.getElementById('driverSelect').addEventListener('change', function() {
@@ -864,62 +911,31 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 });
             });
             
-            // Filter functionality
-            document.getElementById('areaFilter').addEventListener('change', filterOrders);
-            document.getElementById('assignmentFilter').addEventListener('change', filterOrders);
-            
             // Search functionality
             document.getElementById('searchInput').addEventListener('input', function() {
-                filterOrders();
+                filterOrdersByText(this.value);
             });
             
             document.querySelector('.search-btn').addEventListener('click', function() {
-                filterOrders();
+                filterOrdersByText(document.getElementById('searchInput').value);
             });
         });
         
-        function filterOrders() {
-            const areaFilter = document.getElementById('areaFilter').value.toLowerCase();
-            const assignmentFilter = document.getElementById('assignmentFilter').value;
-            const searchText = document.getElementById('searchInput').value.toLowerCase();
-            
+        function filterOrdersByText(searchText) {
+            searchText = searchText.toLowerCase().trim();
             const rows = document.querySelectorAll('tr.order-row');
             
             rows.forEach(row => {
                 const detailsRow = document.getElementById(`order-details-${row.dataset.po}`);
-                let showRow = true;
+                let rowText = row.textContent.toLowerCase();
                 
-                // Check assignment filter
-                if (assignmentFilter) {
-                    const isAssigned = row.dataset.driverAssigned === 'yes';
-                    if ((assignmentFilter === 'assigned' && !isAssigned) || 
-                        (assignmentFilter === 'unassigned' && isAssigned)) {
-                        showRow = false;
+                if (rowText.includes(searchText) || searchText === '') {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                    if (detailsRow) {
+                        detailsRow.style.display = 'none';
                     }
-                }
-                
-                // Check area filter
-                if (areaFilter && showRow) {
-                    const rowArea = row.dataset.area.toLowerCase();
-                    if (rowArea !== areaFilter) {
-                        showRow = false;
-                    }
-                }
-                
-                // Check search text
-                if (searchText && showRow) {
-                    const rowText = row.textContent.toLowerCase();
-                    if (!rowText.includes(searchText)) {
-                        showRow = false;
-                    }
-                }
-                
-                // Show or hide rows
-                row.style.display = showRow ? 'table-row' : 'none';
-                
-                // Always hide details row when filtering
-                if (detailsRow) {
-                    detailsRow.style.display = 'none';
                 }
             });
         }
