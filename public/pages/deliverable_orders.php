@@ -280,7 +280,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
         }
         
         .sort-header:hover {
-            background-color:rgb(49, 49, 49); /* Light gray but not white */
+            background-color:rgb(51, 51, 51);
         }
         
         .sort-header::after {
