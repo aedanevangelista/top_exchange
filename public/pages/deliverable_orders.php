@@ -24,10 +24,14 @@ if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
 }
 
 // Build the SQL query with filters
-$sql = "SELECT o.po_number, o.username, o.company, o.delivery_date, o.delivery_address, o.total_amount, 
-               o.status, o.progress, o.driver_assigned
-        FROM orders o
-        WHERE o.status = 'Active' AND o.progress = 100";
+$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, 
+        o.orders, o.total_amount, o.status, o.progress, o.driver_assigned, 
+        IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
+        FROM orders o 
+        LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
+        LEFT JOIN drivers d ON da.driver_id = d.id 
+        WHERE o.status = 'For Delivery'
+        ORDER BY o.delivery_date ASC";
 
 // Add area filter if specified
 if (!empty($area_filter)) {
