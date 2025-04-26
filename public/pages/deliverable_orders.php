@@ -280,7 +280,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
         }
         
         .sort-header:hover {
-            background-color: #e9ecef; /* Light gray but not white */
+            background-color:rgb(49, 49, 49); /* Light gray but not white */
         }
         
         .sort-header::after {
@@ -294,12 +294,12 @@ $statusOptions = ['For Delivery', 'In Transit'];
         
         .sort-header.asc::after {
             content: '\f0de';
-            color: #6c757d; /* Gray arrow when active */
+            color:rgb(255, 255, 255); /* Gray arrow when active */
         }
         
         .sort-header.desc::after {
             content: '\f0dd';
-            color: #6c757d; /* Gray arrow when active */
+            color:rgb(255, 255, 255); /* Gray arrow when active */
         }
         
         /* Highlighted delivery date */
