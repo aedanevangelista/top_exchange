@@ -309,18 +309,79 @@ $statusOptions = ['For Delivery', 'In Transit'];
             font-weight: bold;
         }
         
-        /* Driver modal styling */
-        .overlay-content.driver-modal-content {
-            max-width: 450px;
+        /* Modal styling */
+        .overlay-content {
+            max-width: 550px;
             padding: 25px;
             border-radius: 8px;
         }
         
-        .driver-modal-content h2 {
+        .modal-content h2 {
             color: #333;
             border-bottom: 2px solid #f1f1f1;
             padding-bottom: 10px;
             margin-bottom: 20px;
+        }
+        
+        .modal-message {
+            margin: 20px 0;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn-no, .btn-yes {
+            padding: 10px 15px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-no {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+        
+        .btn-no:hover {
+            background-color: #e1e1e1;
+        }
+        
+        .btn-yes {
+            background-color: #2980b9;
+            color: white;
+        }
+        
+        .btn-yes:hover {
+            background-color: #2471a3;
+        }
+        
+        .btn-yes.transit {
+            background-color: #17a2b8;
+        }
+        
+        .btn-yes.transit:hover {
+            background-color: #138496;
+        }
+        
+        .btn-yes.delivery {
+            background-color: #fd7e14;
+        }
+        
+        .btn-yes.delivery:hover {
+            background-color: #e67211;
+        }
+        
+        /* Driver modal styling */
+        .overlay-content.driver-modal-content {
+            max-width: 450px;
         }
         
         .driver-selection {
@@ -408,7 +469,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                         </select>
                     </div>
                     <div class="date-info">
-                        <i class="fas fa-calendar-day"></i> <?= date('Y-m-d') ?>
+                        <i class="fas fa-calendar-day"></i> Today: <?= date('Y-m-d') ?>
                         <?php if (isset($auto_transit_count) && $auto_transit_count > 0): ?>
                             (<?= $auto_transit_count ?> orders auto-updated)
                         <?php endif; ?>
@@ -480,16 +541,16 @@ $statusOptions = ['For Delivery', 'In Transit'];
                                 </td>
                                 <td class="action-buttons-cell">
                                     <?php if ($order['status'] === 'For Delivery'): ?>
-                                        <button class="toggle-transit-btn" onclick="toggleTransitStatus('<?= htmlspecialchars($order['po_number']) ?>', 'In Transit')">
+                                        <button class="toggle-transit-btn" onclick="openStatusChangeModal('<?= htmlspecialchars($order['po_number']) ?>', 'In Transit')">
                                             <i class="fas fa-truck"></i> Mark In Transit
                                         </button>
                                     <?php else: ?>
-                                        <button class="toggle-transit-btn" onclick="toggleTransitStatus('<?= htmlspecialchars($order['po_number']) ?>', 'For Delivery')">
+                                        <button class="toggle-transit-btn" onclick="openStatusChangeModal('<?= htmlspecialchars($order['po_number']) ?>', 'For Delivery')">
                                             <i class="fas fa-warehouse"></i> Mark For Delivery
                                         </button>
                                     <?php endif; ?>
                                     
-                                    <button class="complete-delivery-btn" onclick="completeDelivery('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
+                                    <button class="complete-delivery-btn" onclick="openCompleteModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
                                         <i class="fas fa-check-circle"></i> Complete
                                     </button>
                                 </td>
@@ -561,10 +622,47 @@ $statusOptions = ['For Delivery', 'In Transit'];
             </div>
         </div>
     </div>
+    
+    <!-- Status Change Confirmation Modal -->
+    <div id="statusChangeModal" class="overlay" style="display: none;">
+        <div class="overlay-content modal-content">
+            <h2><i id="statusIcon" class="fas fa-truck"></i> <span id="statusModalTitle">Change Status</span></h2>
+            <div class="modal-message" id="statusModalMessage">
+                Are you sure you want to change the status of this order?
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-no" onclick="closeStatusChangeModal()">
+                    <i class="fas fa-times"></i> No
+                </button>
+                <button id="confirmStatusChange" class="btn-yes">
+                    <i class="fas fa-check"></i> Yes
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Complete Order Confirmation Modal -->
+    <div id="completeOrderModal" class="overlay" style="display: none;">
+        <div class="overlay-content modal-content">
+            <h2><i class="fas fa-check-circle"></i> Complete Delivery</h2>
+            <div class="modal-message" id="completeModalMessage">
+                Are you sure you want to mark this delivery as completed?
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-no" onclick="closeCompleteModal()">
+                    <i class="fas fa-times"></i> No
+                </button>
+                <button id="confirmCompleteOrder" class="btn-yes">
+                    <i class="fas fa-check"></i> Yes, Complete
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
         let currentPoNumber = '';
         let currentDriverId = 0;
+        let currentStatusChange = '';
         
         function filterByStatus() {
             const status = document.getElementById('statusFilter').value;
@@ -586,40 +684,94 @@ $statusOptions = ['For Delivery', 'In Transit'];
             window.location.href = url;
         }
         
-        function toggleTransitStatus(poNumber, newStatus) {
-            // Show confirmation dialog
-            const action = newStatus === 'In Transit' ? 'mark as In Transit' : 'mark as For Delivery';
-            if (confirm(`Are you sure you want to ${action} this order?`)) {
-                // Show loading toast
-                showToast(`Updating order status...`, 'info');
-                
-                fetch('/backend/toggle_transit_status.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        po_number: poNumber,
-                        status: newStatus
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        if (newStatus === 'In Transit') {
-                            showToast('Order marked as In Transit', 'success');
-                        } else {
-                            showToast('Order marked as For Delivery', 'success');
-                        }
-                        // Reload the page after a short delay
-                        setTimeout(() => { window.location.reload(); }, 1000);
-                    } else {
-                        showToast('Error: ' + (data.message || 'Unknown error'), 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showToast('Error: Failed to communicate with server', 'error');
-                });
+        function openStatusChangeModal(poNumber, newStatus) {
+            currentPoNumber = poNumber;
+            currentStatusChange = newStatus;
+            
+            // Set modal title and message based on the status change
+            const modalTitle = document.getElementById('statusModalTitle');
+            const modalMessage = document.getElementById('statusModalMessage');
+            const statusIcon = document.getElementById('statusIcon');
+            const confirmBtn = document.getElementById('confirmStatusChange');
+            
+            if (newStatus === 'In Transit') {
+                modalTitle.textContent = 'Mark as In Transit';
+                modalMessage.innerHTML = `Are you sure you want to mark order <strong>${poNumber}</strong> as <strong>In Transit</strong>?`;
+                statusIcon.className = 'fas fa-truck';
+                confirmBtn.className = 'btn-yes transit';
+            } else {
+                modalTitle.textContent = 'Mark as For Delivery';
+                modalMessage.innerHTML = `Are you sure you want to mark order <strong>${poNumber}</strong> as <strong>For Delivery</strong>?`;
+                statusIcon.className = 'fas fa-warehouse';
+                confirmBtn.className = 'btn-yes delivery';
             }
+            
+            // Set up confirmation button
+            confirmBtn.onclick = function() {
+                toggleTransitStatus(poNumber, newStatus);
+            };
+            
+            // Show modal
+            document.getElementById('statusChangeModal').style.display = 'flex';
+        }
+        
+        function closeStatusChangeModal() {
+            document.getElementById('statusChangeModal').style.display = 'none';
+        }
+        
+        function openCompleteModal(poNumber, username) {
+            currentPoNumber = poNumber;
+            
+            // Set modal message
+            const modalMessage = document.getElementById('completeModalMessage');
+            modalMessage.innerHTML = `Are you sure you want to mark order <strong>${poNumber}</strong> for <strong>${username}</strong> as completed?`;
+            
+            // Set up confirmation button
+            document.getElementById('confirmCompleteOrder').onclick = function() {
+                completeDelivery(poNumber);
+            };
+            
+            // Show modal
+            document.getElementById('completeOrderModal').style.display = 'flex';
+        }
+        
+        function closeCompleteModal() {
+            document.getElementById('completeOrderModal').style.display = 'none';
+        }
+        
+        function toggleTransitStatus(poNumber, newStatus) {
+            // Close modal
+            closeStatusChangeModal();
+            
+            // Show loading toast
+            showToast(`Updating order status...`, 'info');
+            
+            fetch('/backend/toggle_transit_status.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    po_number: poNumber,
+                    status: newStatus
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (newStatus === 'In Transit') {
+                        showToast('Order marked as In Transit', 'success');
+                    } else {
+                        showToast('Order marked as For Delivery', 'success');
+                    }
+                    // Reload the page after a short delay
+                    setTimeout(() => { window.location.reload(); }, 1000);
+                } else {
+                    showToast('Error: ' + (data.message || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error: Failed to communicate with server', 'error');
+            });
         }
 
         function viewOrderDetails(poNumber) {
@@ -741,27 +893,31 @@ $statusOptions = ['For Delivery', 'In Transit'];
             });
         }
 
-        function completeDelivery(poNumber, username) {
-            if (confirm(`Mark delivery of order ${poNumber} for ${username} as completed?`)) {
-                fetch('/backend/complete_delivery.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ po_number: poNumber })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast('Delivery completed successfully', 'success');
-                        setTimeout(() => { window.location.reload(); }, 1000);
-                    } else {
-                        showToast('Error: ' + (data.message || 'Unknown error'), 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showToast('Error: Failed to communicate with server', 'error');
-                });
-            }
+        function completeDelivery(poNumber) {
+            // Close the confirm modal
+            closeCompleteModal();
+            
+            // Show loading toast
+            showToast('Processing completion...', 'info');
+            
+            fetch('/backend/complete_delivery.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ po_number: poNumber })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Delivery completed successfully', 'success');
+                    setTimeout(() => { window.location.reload(); }, 1000);
+                } else {
+                    showToast('Error: ' + (data.message || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error: Failed to communicate with server', 'error');
+            });
         }
 
         function showToast(message, type = 'info') {
@@ -841,6 +997,8 @@ $statusOptions = ['For Delivery', 'In Transit'];
                 if (event.target === this) {
                     if (this.id === 'orderDetailsModal') closeOrderDetailsModal();
                     else if (this.id === 'driverModal') closeDriverModal();
+                    else if (this.id === 'statusChangeModal') closeStatusChangeModal();
+                    else if (this.id === 'completeOrderModal') closeCompleteModal();
                 }
             });
         });
