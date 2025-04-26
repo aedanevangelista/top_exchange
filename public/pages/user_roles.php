@@ -162,21 +162,16 @@ if (isset($_GET['success'])) {
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
             z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
-        }
-        .overlay.active {
-            opacity: 1;
-            visibility: visible;
+            display: none; /* Start hidden */
         }
         
-        /* Improved modal content */
+        /* Center the modal content */
         .overlay-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             width: 90%;
             max-width: 700px;
             max-height: 80vh;
@@ -185,12 +180,6 @@ if (isset($_GET['success'])) {
             border-radius: 8px;
             padding: 25px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            transform: translateY(20px);
-            transition: transform 0.3s;
-            position: relative;
-        }
-        .overlay.active .overlay-content {
-            transform: translateY(0);
         }
         
         .overlay-content h2 {
@@ -205,7 +194,7 @@ if (isset($_GET['success'])) {
             margin-right: 10px;
         }
         
-        /* Fixed checkbox container */
+        /* Checkbox container */
         .checkbox-container {
             max-height: 50vh;
             overflow-y: auto;
@@ -217,7 +206,7 @@ if (isset($_GET['success'])) {
             box-sizing: border-box; /* Important to include padding in width calculation */
         }
         
-        /* Module section improvements */
+        /* Module section styling */
         .module-section {
             border: 1px solid #ddd;
             padding: 15px;
@@ -246,7 +235,7 @@ if (isset($_GET['success'])) {
             color: #444;
         }
         
-        /* Better checkbox styling */
+        /* Checkbox styling */
         .module-checkbox, .page-checkbox {
             width: 18px;
             height: 18px;
@@ -544,15 +533,13 @@ if (isset($_GET['success'])) {
             updateModuleCheckboxes();
         }
         
-        // Show overlay with proper animation
-        const overlay = document.getElementById("roleOverlay");
-        overlay.classList.add('active');
+        // Simply display the overlay
+        document.getElementById("roleOverlay").style.display = "block";
     }
 
     function hideRoleForm() {
-        // Hide with animation
-        const overlay = document.getElementById("roleOverlay");
-        overlay.classList.remove('active');
+        // Simply hide the overlay
+        document.getElementById("roleOverlay").style.display = "none";
     }
 
     // Toggle all pages in a module when the module checkbox is clicked
