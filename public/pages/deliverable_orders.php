@@ -32,6 +32,9 @@ if ($driverStmt) {
     $driverStmt->close();
 }
 
+// Get status filter from query string
+$filterStatus = $_GET['status'] ?? '';
+
 // Handle sorting
 $sortColumn = $_GET['sort'] ?? 'delivery_date';
 $sortOrder = $_GET['order'] ?? 'ASC';
@@ -47,17 +50,22 @@ if (!in_array($sortOrder, $allowedOrders)) {
     $sortOrder = 'ASC';
 }
 
-// Get orders with 'For Delivery' or 'In Transit' status
-$orders = [];
+// Build the SQL query with or without status filter
+$whereClause = "WHERE o.status IN ('For Delivery', 'In Transit')";
+if (!empty($filterStatus)) {
+    $whereClause = "WHERE o.status = '$filterStatus'";
+}
+
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, 
         o.orders, o.total_amount, o.status, o.driver_assigned, 
         IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
         FROM orders o 
         LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
         LEFT JOIN drivers d ON da.driver_id = d.id 
-        WHERE o.status IN ('For Delivery', 'In Transit')
+        $whereClause
         ORDER BY o.$sortColumn $sortOrder";
 
+$orders = [];
 $orderStmt = $conn->prepare($sql);
 if ($orderStmt) {
     $orderStmt->execute();
@@ -75,7 +83,6 @@ if ($orderStmt) {
 
 // Get filter options for status
 $statusOptions = ['For Delivery', 'In Transit'];
-$filterStatus = isset($_GET['status']) ? $_GET['status'] : '';
 ?>
 
 <!DOCTYPE html>
@@ -134,7 +141,31 @@ $filterStatus = isset($_GET['status']) ? $_GET['status'] : '';
         .header-content {
             display: flex;
             align-items: center;
-            gap: 20px;
+            justify-content: space-between;
+            width: 100%;
+        }
+        
+        .filter-section {
+            display: flex;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+        }
+        
+        .filter-label {
+            margin-right: 8px;
+            font-weight: bold;
+        }
+        
+        .filter-select {
+            padding: 8px 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background-color: white;
+            min-width: 150px;
         }
 
         /* Status badge styles */
@@ -234,59 +265,6 @@ $filterStatus = isset($_GET['status']) ? $_GET['status'] : '';
             padding: 20px;
             font-style: italic;
             color: #6c757d;
-        }
-        
-        /* Filter section - matching Accounts.php style */
-        .filter-section {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        
-        .filter-group {
-            display: flex;
-            align-items: center;
-            margin-right: 20px;
-            margin-bottom: 10px;
-        }
-        
-        .filter-label {
-            font-weight: bold;
-            margin-right: 10px;
-        }
-        
-        .filter-select {
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            background-color: white;
-        }
-        
-        .filter-button {
-            padding: 8px 15px;
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-        
-        .filter-button:hover {
-            background-color: #2471a3;
-        }
-        
-        .clear-filter {
-            background-color: #6c757d;
-        }
-        
-        .clear-filter:hover {
-            background-color: #5a6268;
         }
         
         .action-buttons-cell {
@@ -400,11 +378,12 @@ $filterStatus = isset($_GET['status']) ? $_GET['status'] : '';
         
         .date-info {
             margin-bottom: 15px;
-            padding: 10px;
+            padding: 5px 10px;
             background-color: #e9f2fa;
             border-radius: 4px;
             color: #2980b9;
             font-size: 14px;
+            display: inline-block;
         }
     </style>
 </head>
@@ -412,40 +391,34 @@ $filterStatus = isset($_GET['status']) ? $_GET['status'] : '';
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="orders-header">
-            <h1 class="page-title">Deliverable Orders</h1>
-            
             <div class="header-content">
+                <h1 class="page-title">Deliverable Orders</h1>
+                
+                <!-- Filter section in the middle -->
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <span class="filter-label">Status:</span>
+                        <select id="statusFilter" class="filter-select" onchange="filterByStatus()">
+                            <option value="">All</option>
+                            <?php foreach ($statusOptions as $status): ?>
+                                <option value="<?= $status ?>" <?= $filterStatus === $status ? 'selected' : '' ?>>
+                                    <?= $status ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="date-info">
+                        <i class="fas fa-calendar-day"></i> Today: <?= date('Y-m-d') ?>
+                        <?php if (isset($auto_transit_count) && $auto_transit_count > 0): ?>
+                            (<?= $auto_transit_count ?> orders auto-updated)
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
                 <div class="search-container">
                     <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
                     <button class="search-btn"><i class="fas fa-search"></i></button>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Filter section that matches Accounts.php -->
-        <div class="filter-section">
-            <div class="filter-group">
-                <span class="filter-label">Status:</span>
-                <select id="statusFilter" class="filter-select">
-                    <option value="">All</option>
-                    <?php foreach ($statusOptions as $status): ?>
-                        <option value="<?= $status ?>" <?= $filterStatus === $status ? 'selected' : '' ?>>
-                            <?= $status ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            
-            <button id="applyFilter" class="filter-button">Apply Filter</button>
-            <button id="clearFilter" class="filter-button clear-filter">Clear Filter</button>
-            
-            <div style="flex-grow: 1;"></div>
-            
-            <div class="date-info">
-                <strong>Today's Date:</strong> <?= date('Y-m-d') ?>
-                <?php if (isset($auto_transit_count) && $auto_transit_count > 0): ?>
-                    <span>(<?= $auto_transit_count ?> orders automatically set to "In Transit" today)</span>
-                <?php endif; ?>
             </div>
         </div>
         
@@ -592,6 +565,26 @@ $filterStatus = isset($_GET['status']) ? $_GET['status'] : '';
     <script>
         let currentPoNumber = '';
         let currentDriverId = 0;
+        
+        function filterByStatus() {
+            const status = document.getElementById('statusFilter').value;
+            const currentSort = '<?= $sortColumn ?>';
+            const currentOrder = '<?= $sortOrder ?>';
+            
+            let url = '?';
+            const params = [];
+            
+            if (status) {
+                params.push(`status=${encodeURIComponent(status)}`);
+            }
+            
+            if (currentSort && currentOrder) {
+                params.push(`sort=${currentSort}&order=${currentOrder}`);
+            }
+            
+            url += params.join('&');
+            window.location.href = url;
+        }
         
         function toggleTransitStatus(poNumber, newStatus) {
             // Show confirmation dialog
@@ -809,39 +802,6 @@ $filterStatus = isset($_GET['status']) ? $_GET['status'] : '';
             });
         });
 
-        // Filter section functionality
-        document.getElementById('applyFilter').addEventListener('click', function() {
-            const status = document.getElementById('statusFilter').value;
-            const currentSort = '<?= $sortColumn ?>';
-            const currentOrder = '<?= $sortOrder ?>';
-            
-            let url = '?';
-            const params = [];
-            
-            if (status) {
-                params.push(`status=${encodeURIComponent(status)}`);
-            }
-            
-            if (currentSort && currentOrder) {
-                params.push(`sort=${currentSort}&order=${currentOrder}`);
-            }
-            
-            url += params.join('&');
-            window.location.href = url;
-        });
-        
-        document.getElementById('clearFilter').addEventListener('click', function() {
-            const currentSort = '<?= $sortColumn ?>';
-            const currentOrder = '<?= $sortOrder ?>';
-            
-            let url = '?';
-            if (currentSort && currentOrder) {
-                url += `sort=${currentSort}&order=${currentOrder}`;
-            }
-            
-            window.location.href = url;
-        });
-
         // Search functionality
         $(document).ready(function() {
             // Search functionality
@@ -874,20 +834,6 @@ $filterStatus = isset($_GET['status']) ? $_GET['status'] : '';
                         row.hide();
                     }
                 });
-            });
-
-            // Filter on change
-            $("#statusFilter").on("change", function() {
-                const status = $(this).val();
-                
-                if (status === '') {
-                    // Show all
-                    $(".order-row").show();
-                } else {
-                    // Filter by status
-                    $(".order-row").hide();
-                    $(`.order-row[data-status="${status}"]`).show();
-                }
             });
 
             // Handle clicks outside modals
