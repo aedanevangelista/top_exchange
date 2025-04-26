@@ -54,7 +54,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
 }
 
 .menu-item .fa-chevron-down {
-    font-size: 13px; /* Increased by 1px from 12px */
+    font-size: 12px;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 0.8;
 }

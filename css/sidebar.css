@@ -31,7 +31,7 @@
 }
 
 .menu-title {
-    font-size: 13px; /* Increased by 1px from 12px */
+    font-size: 12px; /* Reduced by 2px */
     font-weight: bold;
     color: #aaa;
     margin-bottom: 10px; /* More gap before divider */
@@ -55,7 +55,7 @@ hr {
     background: none;
     border: none;
     color: white;
-    font-size: 14px; /* Increased by 1px from 13px */
+    font-size: 13px; /* Reduced by 2px */
     font-weight: 400;
     padding: 10px 15px; /* Adjusted padding */
     width: 100%;
@@ -107,7 +107,7 @@ hr {
 
 /* Arrow Icon Styling */
 .menu-item .fa-chevron-down {
-    font-size: 13px; /* Increased by 1px from 12px */
+    font-size: 12px;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 0.8;
 }
@@ -124,7 +124,7 @@ hr {
     background: none;
     border: none;
     color: #ddd; /* Lighter color for differentiation */
-    font-size: 13px; /* Increased by 1px from 12px */
+    font-size: 12px; /* Reduced by 2px */
     font-weight: 400;
     padding: 5px 10px; /* Adjusted padding */
     width: 100%;
@@ -167,7 +167,7 @@ hr {
     background: #333;
     padding: 14px;
     border-radius: 5px;
-    font-size: 13px; /* Increased by 1px from 12px */
+    font-size: 12px; /* Reduced by 2px */
     color: white;
     font-weight: bold;
 }
@@ -179,7 +179,7 @@ hr {
     gap: 10px;
     background: #c62828; /* Red logout button */
     color: white;
-    font-size: 14px; /* Increased by 1px from 13px */
+    font-size: 13px; /* Reduced by 2px */
     font-weight: 400;
     padding: 10px 15px; /* Adjusted padding */
     width: 100%;
@@ -197,7 +197,7 @@ hr {
 
 /* Make icons consistent size */
 .sidebar i {
-    font-size: 15px; /* Increased by 1px from 14px */
+    font-size: 14px;
     width: 20px;
     text-align: center;
 }

@@ -726,27 +726,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         max-height: 90vh; /* 90% of the viewport height */
         overflow-y: auto; /* Add scroll if content exceeds max height */
     }
-
-    #contentToDownload {
-        font-size: 14px; /* Adjust this value based on the original font size minus 2px */
-    }
-
-    #contentToDownload .po-table {
-        font-size: 12px; /* Adjust this value based on the original font size minus 2px */
-    }
-
-    /* Adjust other elements if needed */
-    #contentToDownload .po-title {
-        font-size: 16px; /* Original was 18px */
-    }
-
-    #contentToDownload .po-company {
-        font-size: 20px; /* Original was 22px */
-    }
-
-    #contentToDownload .po-total {
-        font-size: 12px; /* Original was 14px */
-    }
     </style>
 </head>
 <body>
