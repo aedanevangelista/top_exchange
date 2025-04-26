@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Apr 26, 2025 at 06:30 PM
+-- Generation Time: Apr 26, 2025 at 07:01 PM
 -- Server version: 10.11.10-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -52,7 +52,8 @@ INSERT INTO `accounts` (`id`, `username`, `password`, `created_at`, `role`, `sta
 (68, 'Test', '123', '2025-03-30 08:44:21', 'Secretary', 'Archived', NULL, NULL),
 (69, 'aedanpogi', '123', '2025-03-30 14:22:26', 'Admin', 'Active', NULL, NULL),
 (70, 'asddd', '123', '2025-03-30 15:42:31', 'Admin', 'Active', NULL, NULL),
-(71, 'staff', '123', '2025-04-23 08:01:07', 'Staff', 'Active', NULL, NULL);
+(71, 'staff', '123', '2025-04-23 08:01:07', 'Staff', 'Active', NULL, NULL),
+(72, 'aedanevangelista', '123', '2025-04-26 18:34:00', 'Admin', 'Active', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -218,34 +219,6 @@ INSERT INTO `manufacturing_logs` (`log_id`, `po_number`, `product_id`, `product_
 -- --------------------------------------------------------
 
 --
--- Table structure for table `modules`
---
-
-CREATE TABLE `modules` (
-  `module_id` int(11) NOT NULL,
-  `module_name` varchar(50) NOT NULL,
-  `display_order` int(11) DEFAULT 0,
-  `icon` varchar(50) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `modules`
---
-
-INSERT INTO `modules` (`module_id`, `module_name`, `display_order`, `icon`) VALUES
-(1, 'Dashboard', 1, 'fas fa-home'),
-(2, 'Production', 2, 'fas fa-industry'),
-(3, 'Ordering', 3, 'fas fa-shopping-cart'),
-(4, 'Payments', 4, 'fas fa-money-bill-wave'),
-(5, 'Sales', 5, 'fas fa-chart-bar'),
-(6, 'Staff', 6, 'fas fa-users-cog'),
-(7, 'Accounts', 7, 'fas fa-user'),
-(8, 'Inventory', 8, 'fas fa-box'),
-(9, 'Other', 99, 'fas fa-ellipsis-h');
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `monthly_payments`
 --
 
@@ -361,29 +334,29 @@ CREATE TABLE `pages` (
   `page_id` int(11) NOT NULL,
   `page_name` varchar(50) NOT NULL,
   `file_path` varchar(100) NOT NULL,
-  `module_id` int(11) DEFAULT NULL
+  `module` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `pages`
 --
 
-INSERT INTO `pages` (`page_id`, `page_name`, `file_path`, `module_id`) VALUES
-(1, 'Accounts - Clients', 'accounts_clients.php', 7),
-(2, 'Accounts - Admin', 'accounts.php', 7),
-(4, 'Dashboard', 'dashboard.php', 1),
-(5, 'Inventory', 'inventory.php', 8),
-(6, 'User Roles', 'user_roles.php', 7),
-(7, 'Orders', 'orders.php', 3),
-(8, 'Order History', 'order_history.php', 3),
-(9, 'Payment History', 'payment_history.php', 4),
-(12, 'Raw Materials', 'raw_materials.php', 8),
-(13, 'Pending Orders', 'pending_orders.php', 3),
-(14, 'Department Forecast', 'department_forecast.php', 2),
-(17, 'Drivers', 'drivers.php', 6),
-(18, 'Rejected Orders', 'rejected_orders.php', 3),
-(19, 'Deliverable Orders', 'deliverable_orders.php', 3),
-(23, 'Forecast', 'forecast.php', 2);
+INSERT INTO `pages` (`page_id`, `page_name`, `file_path`, `module`) VALUES
+(1, 'Accounts - Clients', 'accounts_clients.php', 'Accounts'),
+(2, 'Accounts - Admin', 'accounts.php', 'Accounts'),
+(4, 'Dashboard', 'dashboard.php', 'Dashboard'),
+(5, 'Inventory', 'inventory.php', 'Inventory'),
+(6, 'User Roles', 'user_roles.php', 'Accounts'),
+(7, 'Orders', 'orders.php', 'Ordering'),
+(8, 'Order History', 'order_history.php', 'Ordering'),
+(9, 'Payment History', 'payment_history.php', 'Payments'),
+(12, 'Raw Materials', 'raw_materials.php', 'Inventory'),
+(13, 'Pending Orders', 'pending_orders.php', 'Ordering'),
+(14, 'Department Forecast', 'department_forecast.php', 'Production'),
+(17, 'Drivers', 'drivers.php', 'Staff'),
+(18, 'Rejected Orders', 'rejected_orders.php', 'Ordering'),
+(19, 'Deliverable Orders', 'deliverable_orders.php', 'Ordering'),
+(23, 'Forecast', 'forecast.php', 'Production');
 
 -- --------------------------------------------------------
 
@@ -667,16 +640,11 @@ INSERT INTO `roles` (`role_id`, `role_name`, `status`, `pages`) VALUES
 -- --------------------------------------------------------
 
 --
--- Stand-in structure for view `view_pages_with_modules`
--- (See below for the actual view)
+-- Table structure for table `view_pages_with_modules`
 --
-CREATE TABLE `view_pages_with_modules` (
-`page_id` int(11)
-,`page_name` varchar(50)
-,`file_path` varchar(100)
-,`module_name` varchar(50)
-,`icon` varchar(50)
-);
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`u701062148_top_exchange`@`127.0.0.1` SQL SECURITY DEFINER VIEW `view_pages_with_modules`  AS SELECT `p`.`page_id` AS `page_id`, `p`.`page_name` AS `page_name`, `p`.`file_path` AS `file_path`, `m`.`module_name` AS `module_name`, `m`.`icon` AS `icon` FROM (`pages` `p` left join `modules` `m` on(`p`.`module_id` = `m`.`module_id`)) ORDER BY `m`.`display_order` ASC, `p`.`page_name` ASC ;
+-- Error reading data for table u701062148_top_exchange.view_pages_with_modules: #1064 - You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'FROM `u701062148_top_exchange`.`view_pages_with_modules`' at line 1
 
 -- --------------------------------------------------------
 
@@ -696,15 +664,6 @@ CREATE TABLE `walkin_products` (
   `product_image` varchar(255) DEFAULT NULL,
   `ingredients` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Structure for view `view_pages_with_modules`
---
-DROP TABLE IF EXISTS `view_pages_with_modules`;
-
-CREATE ALGORITHM=UNDEFINED DEFINER=`u701062148_top_exchange`@`127.0.0.1` SQL SECURITY DEFINER VIEW `view_pages_with_modules`  AS SELECT `p`.`page_id` AS `page_id`, `p`.`page_name` AS `page_name`, `p`.`file_path` AS `file_path`, `m`.`module_name` AS `module_name`, `m`.`icon` AS `icon` FROM (`pages` `p` left join `modules` `m` on(`p`.`module_id` = `m`.`module_id`)) ORDER BY `m`.`display_order` ASC, `p`.`page_name` ASC ;
 
 --
 -- Indexes for dumped tables
@@ -760,13 +719,6 @@ ALTER TABLE `manufacturing_logs`
   ADD PRIMARY KEY (`log_id`);
 
 --
--- Indexes for table `modules`
---
-ALTER TABLE `modules`
-  ADD PRIMARY KEY (`module_id`),
-  ADD UNIQUE KEY `module_name` (`module_name`);
-
---
 -- Indexes for table `monthly_payments`
 --
 ALTER TABLE `monthly_payments`
@@ -792,8 +744,7 @@ ALTER TABLE `order_status_logs`
 --
 ALTER TABLE `pages`
   ADD PRIMARY KEY (`page_id`),
-  ADD UNIQUE KEY `page_name` (`page_name`),
-  ADD KEY `idx_pages_module_id` (`module_id`);
+  ADD UNIQUE KEY `page_name` (`page_name`);
 
 --
 -- Indexes for table `payment_history`
@@ -843,7 +794,7 @@ ALTER TABLE `walkin_products`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
 
 --
 -- AUTO_INCREMENT for table `balance_history`
@@ -880,12 +831,6 @@ ALTER TABLE `driver_orders`
 --
 ALTER TABLE `manufacturing_logs`
   MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
-
---
--- AUTO_INCREMENT for table `modules`
---
-ALTER TABLE `modules`
-  MODIFY `module_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `monthly_payments`
@@ -976,12 +921,6 @@ ALTER TABLE `driver_assignments`
 ALTER TABLE `driver_orders`
   ADD CONSTRAINT `driver_orders_ibfk_1` FOREIGN KEY (`driver_id`) REFERENCES `drivers` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `driver_orders_ibfk_2` FOREIGN KEY (`po_number`) REFERENCES `orders` (`po_number`) ON DELETE CASCADE;
-
---
--- Constraints for table `pages`
---
-ALTER TABLE `pages`
-  ADD CONSTRAINT `fk_pages_module` FOREIGN KEY (`module_id`) REFERENCES `modules` (`module_id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `payment_history`

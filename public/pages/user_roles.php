@@ -17,11 +17,38 @@ if (!$roles_result) {
     die("Error retrieving roles: " . $conn->error);
 }
 
-$pages_query = "SELECT * FROM pages ORDER BY page_name";
+// Fetch pages with their module information
+$pages_query = "SELECT p.*, m.module_name, m.module_id 
+                FROM pages p 
+                LEFT JOIN modules m ON p.module_id = m.module_id 
+                ORDER BY m.module_name, p.page_name";
 $pages_result = $conn->query($pages_query);
 if (!$pages_result) {
     die("Error retrieving pages: " . $conn->error);
 }
+
+// Fetch modules
+$modules_query = "SELECT * FROM modules ORDER BY display_order";
+$modules_result = $conn->query($modules_query);
+if (!$modules_result) {
+    die("Error retrieving modules: " . $conn->error);
+}
+
+// Group pages by module for easier handling
+$pages_by_module = [];
+while ($page = $pages_result->fetch_assoc()) {
+    $module_id = $page['module_id'] ?: 0; // Use 0 for unassigned
+    if (!isset($pages_by_module[$module_id])) {
+        $pages_by_module[$module_id] = [
+            'module_name' => $page['module_id'] ? $page['module_name'] : 'Other',
+            'pages' => []
+        ];
+    }
+    $pages_by_module[$module_id]['pages'][] = $page;
+}
+
+// Reset the pointer of roles_result
+$roles_result->data_seek(0);
 
 // Capture error messages
 $errorMessage = "";
@@ -43,6 +70,29 @@ if (isset($_GET['error'])) {
     <link rel="stylesheet" href="/css/user_roles.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .module-section {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .module-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .module-title {
+            margin: 0 0 0 10px;
+            font-weight: bold;
+        }
+        .module-pages {
+            margin-left: 25px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 5px;
+        }
+    </style>
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
@@ -102,13 +152,42 @@ if (isset($_GET['error'])) {
                 <label for="roleName">Role Name:</label>
                 <input type="text" id="roleName" name="role_name" required>
                 <br/>
-                <label>Accessible Pages:</label>
+                <label>Accessible Modules & Pages:</label>
                 <div class="checkbox-container">
-                    <?php while ($page = $pages_result->fetch_assoc()): ?>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="page_ids[]" value="<?= $page['page_name'] ?>"> <?= htmlspecialchars($page['page_name']) ?>
-                        </label>
-                    <?php endwhile; ?>
+                    <?php foreach ($modules_by_module = $conn->query("SELECT * FROM modules ORDER BY display_order") as $module): ?>
+                        <div class="module-section">
+                            <div class="module-header">
+                                <input type="checkbox" class="module-checkbox" id="module_<?= $module['module_id'] ?>" 
+                                       value="<?= $module['module_id'] ?>" 
+                                       onchange="toggleModulePages(<?= $module['module_id'] ?>)">
+                                <h3 class="module-title">
+                                    <?php if (!empty($module['icon'])): ?>
+                                        <i class="<?= $module['icon'] ?>"></i>
+                                    <?php endif; ?>
+                                    <?= htmlspecialchars($module['module_name']) ?>
+                                </h3>
+                            </div>
+                            <div class="module-pages" id="pages_module_<?= $module['module_id'] ?>">
+                                <?php
+                                // Get pages for this module
+                                $module_pages_query = "SELECT * FROM pages WHERE module_id = ? ORDER BY page_name";
+                                $module_pages_stmt = $conn->prepare($module_pages_query);
+                                $module_pages_stmt->bind_param("i", $module['module_id']);
+                                $module_pages_stmt->execute();
+                                $module_pages_result = $module_pages_stmt->get_result();
+                                
+                                while ($page = $module_pages_result->fetch_assoc()):
+                                ?>
+                                    <label class="checkbox-label module-<?= $module['module_id'] ?>-page">
+                                        <input type="checkbox" name="page_ids[]" class="page-checkbox module-<?= $module['module_id'] ?>-checkbox" 
+                                               value="<?= $page['page_name'] ?>"
+                                               data-module-id="<?= $module['module_id'] ?>"> 
+                                        <?= htmlspecialchars($page['page_name']) ?>
+                                    </label>
+                                <?php endwhile; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
                 <br/>
                 <div class="form-buttons">
