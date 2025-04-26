@@ -36,13 +36,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conn->begin_transaction();
 
     try {
+        // Check current status
+        $checkStmt = $conn->prepare("SELECT status FROM orders WHERE po_number = ?");
+        $checkStmt->bind_param("s", $po_number);
+        $checkStmt->execute();
+        $result = $checkStmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            throw new Exception("Order not found");
+        }
+        
+        $row = $result->fetch_assoc();
+        $old_status = $row['status'];
+        
+        // Only allow completing from 'For Delivery' or 'In Transit' status
+        if ($old_status !== 'For Delivery' && $old_status !== 'In Transit') {
+            throw new Exception("Cannot complete order: Order is not in a deliverable state");
+        }
+        
         // 1. Update order status to Completed
-        $updateOrderStmt = $conn->prepare("UPDATE orders SET status = 'Completed' WHERE po_number = ? AND status = 'For Delivery'");
+        $updateOrderStmt = $conn->prepare("UPDATE orders SET status = 'Completed' WHERE po_number = ?");
         $updateOrderStmt->bind_param("s", $po_number);
         $updateOrderStmt->execute();
         
         if ($updateOrderStmt->affected_rows === 0) {
-            throw new Exception("Order not found or not in 'For Delivery' status");
+            throw new Exception("Failed to update order status");
         }
         
         // 2. Update driver assignment status
@@ -68,10 +86,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 5. Log the status change
         $createLogStmt = $conn->prepare(
             "INSERT INTO order_status_logs (po_number, old_status, new_status, changed_by, changed_at) 
-            VALUES (?, 'For Delivery', 'Completed', ?, NOW())"
+            VALUES (?, ?, 'Completed', ?, NOW())"
         );
         $changed_by = $_SESSION['username'] ?? 'system';
-        $createLogStmt->bind_param("ss", $po_number, $changed_by);
+        $createLogStmt->bind_param("sss", $po_number, $old_status, $changed_by);
         $createLogStmt->execute();
         
         $conn->commit();

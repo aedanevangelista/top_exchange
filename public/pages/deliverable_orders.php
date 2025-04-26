@@ -4,6 +4,22 @@ include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
 checkRole('Orders'); // Ensure user has access to Orders
 
+// Get current date for auto-transit
+$current_date = date('Y-m-d');
+
+// Automatically update orders to In Transit if today is delivery day
+$auto_transit_sql = "UPDATE orders SET status = 'In Transit' 
+                     WHERE status = 'For Delivery' 
+                     AND delivery_date = ? 
+                     AND status != 'In Transit'";
+$auto_transit_stmt = $conn->prepare($auto_transit_sql);
+if ($auto_transit_stmt) {
+    $auto_transit_stmt->bind_param("s", $current_date);
+    $auto_transit_stmt->execute();
+    $auto_transit_count = $auto_transit_stmt->affected_rows;
+    $auto_transit_stmt->close();
+}
+
 // Fetch all drivers for the driver assignment dropdown
 $drivers = [];
 $driverStmt = $conn->prepare("SELECT id, name FROM drivers WHERE availability = 'Available' AND current_deliveries < 20 ORDER BY name");
@@ -16,15 +32,15 @@ if ($driverStmt) {
     $driverStmt->close();
 }
 
-// Get orders with 'For Delivery' status - Fix the SQL syntax error
+// Get orders with 'For Delivery' or 'In Transit' status
 $orders = [];
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, 
-        o.orders, o.total_amount, o.status, o.progress, o.driver_assigned, 
+        o.orders, o.total_amount, o.status, o.driver_assigned, 
         IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
         FROM orders o 
         LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
         LEFT JOIN drivers d ON da.driver_id = d.id 
-        WHERE o.status = 'For Delivery'
+        WHERE o.status IN ('For Delivery', 'In Transit')
         ORDER BY o.delivery_date ASC";
 
 $orderStmt = $conn->prepare($sql);
@@ -57,34 +73,6 @@ if ($orderStmt) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <style>
-        .progress-bar-container {
-            width: 100%;
-            background-color: #e0e0e0;
-            border-radius: 4px;
-            height: 20px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background-color: #4CAF50;
-            border-radius: 4px;
-            transition: width 0.5s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .progress-text {
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-            position: absolute;
-            width: 100%;
-            text-align: center;
-        }
-        
         .search-container {
             display: flex;
             align-items: center;
@@ -128,6 +116,11 @@ if ($orderStmt) {
 
         .status-for-delivery {
             background-color: #fd7e14;
+            color: white;
+        }
+        
+        .status-in-transit {
+            background-color: #17a2b8;
             color: white;
         }
 
@@ -181,6 +174,21 @@ if ($orderStmt) {
             background-color: #218838;
         }
         
+        .toggle-transit-btn {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .toggle-transit-btn:hover {
+            background-color: #138496;
+        }
+        
         /* Order details modal */
         .order-details-container {
             max-height: 70vh;
@@ -197,36 +205,63 @@ if ($orderStmt) {
             color: #6c757d;
         }
         
-        /* Debug section */
-        .debug-section {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            display: none;
-        }
-        
-        .debug-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        
-        .debug-info {
-            font-family: monospace;
-            white-space: pre-wrap;
-            background-color: #e9ecef;
-            padding: 10px;
-            border-radius: 4px;
-            max-height: 300px;
-            overflow: auto;
-        }
-        
-        /* Form buttons */
-        .form-buttons {
+        /* Filter section */
+        .filter-section {
             display: flex;
-            justify-content: space-between;
-            margin-top: 20px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .filter-section label {
+            margin-right: 10px;
+        }
+        
+        .filter-section select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin-right: 15px;
+        }
+        
+        /* Highlighted delivery date */
+        .today-delivery {
+            background-color: #fff3cd;
+            font-weight: bold;
+        }
+        
+        /* Status filter buttons */
+        .status-filter-btn {
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: all 0.3s;
+        }
+        
+        .status-filter-btn.active {
+            font-weight: bold;
+            box-shadow: 0 0 0 2px #2980b9;
+        }
+        
+        .status-filter-btn.all {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        
+        .status-filter-btn.for-delivery {
+            background-color: #fd7e14;
+            color: white;
+        }
+        
+        .status-filter-btn.in-transit {
+            background-color: #17a2b8;
+            color: white;
+        }
+        
+        .action-buttons-cell {
+            min-width: 210px;
         }
     </style>
 </head>
@@ -240,6 +275,19 @@ if ($orderStmt) {
                 <button class="search-btn"><i class="fas fa-search"></i></button>
             </div>
         </div>
+        
+        <div class="filter-section">
+            <label>Filter Status:</label>
+            <button class="status-filter-btn all active" data-status="all">All</button>
+            <button class="status-filter-btn for-delivery" data-status="For Delivery">For Delivery</button>
+            <button class="status-filter-btn in-transit" data-status="In Transit">In Transit</button>
+            
+            <label>Today's Date: <?= date('Y-m-d') ?></label>
+            <?php if (isset($auto_transit_count) && $auto_transit_count > 0): ?>
+                <span>(<?= $auto_transit_count ?> orders automatically set to "In Transit" today)</span>
+            <?php endif; ?>
+        </div>
+        
         <div class="orders-table-container">
             <table class="orders-table">
                 <thead>
@@ -249,7 +297,7 @@ if ($orderStmt) {
                         <th>Order Date</th>
                         <th>Delivery Date</th>
                         <th>Delivery Address</th>
-                        <th>Progress</th>
+                        <!-- Progress column removed -->
                         <th>Orders</th>
                         <th>Total Amount</th>
                         <th>Driver</th>
@@ -259,19 +307,19 @@ if ($orderStmt) {
                 </thead>
                 <tbody>
                     <?php if (count($orders) > 0): ?>
-                        <?php foreach ($orders as $order): ?>
-                            <tr>
+                        <?php foreach ($orders as $order): 
+                            $isDeliveryDay = ($order['delivery_date'] === $current_date);
+                        ?>
+                            <tr class="order-row" data-status="<?= htmlspecialchars($order['status']) ?>">
                                 <td><?= htmlspecialchars($order['po_number']) ?></td>
                                 <td><?= htmlspecialchars($order['username']) ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
-                                <td><?= htmlspecialchars($order['delivery_date']) ?></td>
-                                <td><?= htmlspecialchars($order['delivery_address']) ?></td>
-                                <td>
-                                    <div class="progress-bar-container">
-                                        <div class="progress-bar" style="width: <?= $order['progress'] ?? 0 ?>%"></div>
-                                        <div class="progress-text"><?= $order['progress'] ?? 0 ?>%</div>
-                                    </div>
+                                <td class="<?= $isDeliveryDay ? 'today-delivery' : '' ?>">
+                                    <?= htmlspecialchars($order['delivery_date']) ?>
+                                    <?= $isDeliveryDay ? ' (Today)' : '' ?>
                                 </td>
+                                <td><?= htmlspecialchars($order['delivery_address']) ?></td>
+                                <!-- Progress column removed -->
                                 <td>
                                     <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
                                         <i class="fas fa-clipboard-list"></i>    
@@ -292,9 +340,23 @@ if ($orderStmt) {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="status-badge status-for-delivery"><?= htmlspecialchars($order['status']) ?></span>
+                                    <?php if ($order['status'] === 'For Delivery'): ?>
+                                        <span class="status-badge status-for-delivery">For Delivery</span>
+                                    <?php else: ?>
+                                        <span class="status-badge status-in-transit">In Transit</span>
+                                    <?php endif; ?>
                                 </td>
-                                <td class="action-buttons">
+                                <td class="action-buttons-cell">
+                                    <?php if ($order['status'] === 'For Delivery'): ?>
+                                        <button class="toggle-transit-btn" onclick="toggleTransitStatus('<?= htmlspecialchars($order['po_number']) ?>', 'In Transit')">
+                                            <i class="fas fa-truck"></i> Mark In Transit
+                                        </button>
+                                    <?php else: ?>
+                                        <button class="toggle-transit-btn" onclick="toggleTransitStatus('<?= htmlspecialchars($order['po_number']) ?>', 'For Delivery')">
+                                            <i class="fas fa-warehouse"></i> Mark For Delivery
+                                        </button>
+                                    <?php endif; ?>
+                                    
                                     <button class="complete-delivery-btn" onclick="completeDelivery('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
                                         <i class="fas fa-check-circle"></i> Complete
                                     </button>
@@ -303,38 +365,12 @@ if ($orderStmt) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="11" class="no-orders">No orders ready for delivery.</td>
+                            <td colspan="9" class="no-orders">No orders ready for delivery.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
-        
-        <!-- Debug section - Remove in production or toggle with a admin-only flag -->
-        <?php if (isset($_SESSION['is_admin']) && $_SESSION['is_admin']): ?>
-        <div class="debug-section">
-            <div class="debug-title">Debug Information</div>
-            <div class="debug-info">
-                <?php 
-                    echo "Total 'For Delivery' orders found: " . count($orders) . "\n";
-                    echo "SQL Query: " . $sql . "\n\n";
-                    
-                    // Check what statuses exist in the database
-                    $statusQuery = "SELECT status, COUNT(*) as count FROM orders GROUP BY status";
-                    $statusResult = $conn->query($statusQuery);
-                    
-                    echo "Status counts in database:\n";
-                    if ($statusResult && $statusResult->num_rows > 0) {
-                        while($row = $statusResult->fetch_assoc()) {
-                            echo "- " . $row['status'] . ": " . $row['count'] . "\n";
-                        }
-                    } else {
-                        echo "No status data found\n";
-                    }
-                ?>
-            </div>
-        </div>
-        <?php endif; ?>
     </div>
 
     <!-- Toast Container -->
@@ -397,6 +433,42 @@ if ($orderStmt) {
     <script>
         let currentPoNumber = '';
         let currentDriverId = 0;
+        
+        function toggleTransitStatus(poNumber, newStatus) {
+            // Show confirmation dialog
+            const action = newStatus === 'In Transit' ? 'mark as In Transit' : 'mark as For Delivery';
+            if (confirm(`Are you sure you want to ${action} this order?`)) {
+                // Show loading toast
+                showToast(`Updating order status...`, 'info');
+                
+                fetch('/backend/toggle_transit_status.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        po_number: poNumber,
+                        status: newStatus
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (newStatus === 'In Transit') {
+                            showToast('Order marked as In Transit', 'success');
+                        } else {
+                            showToast('Order marked as For Delivery', 'success');
+                        }
+                        // Reload the page after a short delay
+                        setTimeout(() => { window.location.reload(); }, 1000);
+                    } else {
+                        showToast('Error: ' + (data.message || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error: Failed to communicate with server', 'error');
+                });
+            }
+        }
 
         function viewOrderDetails(poNumber) {
             currentPoNumber = poNumber;
@@ -557,14 +629,37 @@ if ($orderStmt) {
 
         // Search functionality
         $(document).ready(function() {
+            // Status filter buttons
+            $('.status-filter-btn').on('click', function() {
+                const status = $(this).data('status');
+                
+                // Update active button styling
+                $('.status-filter-btn').removeClass('active');
+                $(this).addClass('active');
+                
+                // Filter the table
+                if (status === 'all') {
+                    $('.order-row').show();
+                } else {
+                    $('.order-row').hide();
+                    $(`.order-row[data-status="${status}"]`).show();
+                }
+            });
+            
+            // Search functionality
             $("#searchInput").on("input", function() {
                 let searchText = $(this).val().toLowerCase().trim();
-
-                $(".orders-table tbody tr").each(function() {
+                
+                // Respect the current status filter
+                const activeFilter = $('.status-filter-btn.active').data('status');
+                
+                $(".order-row").each(function() {
                     let row = $(this);
                     let text = row.text().toLowerCase();
+                    let rowStatus = row.data('status');
                     
-                    if (text.includes(searchText)) {
+                    // Apply both status filter and search
+                    if ((activeFilter === 'all' || rowStatus === activeFilter) && text.includes(searchText)) {
                         row.show();
                     } else {
                         row.hide();
@@ -575,12 +670,14 @@ if ($orderStmt) {
             // Handle search button click
             $(".search-btn").on("click", function() {
                 let searchText = $("#searchInput").val().toLowerCase().trim();
+                const activeFilter = $('.status-filter-btn.active').data('status');
                 
-                $(".orders-table tbody tr").each(function() {
+                $(".order-row").each(function() {
                     let row = $(this);
                     let text = row.text().toLowerCase();
+                    let rowStatus = row.data('status');
                     
-                    if (text.includes(searchText)) {
+                    if ((activeFilter === 'all' || rowStatus === activeFilter) && text.includes(searchText)) {
                         row.show();
                     } else {
                         row.hide();
