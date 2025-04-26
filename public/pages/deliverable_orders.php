@@ -408,7 +408,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                         </select>
                     </div>
                     <div class="date-info">
-                        <i class="fas fa-calendar-day"></i> Today: <?= date('Y-m-d') ?>
+                        <i class="fas fa-calendar-day"></i> <?= date('Y-m-d') ?>
                         <?php if (isset($auto_transit_count) && $auto_transit_count > 0): ?>
                             (<?= $auto_transit_count ?> orders auto-updated)
                         <?php endif; ?>
