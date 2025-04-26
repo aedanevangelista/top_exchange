@@ -79,6 +79,18 @@ if (isset($_GET['error'])) {
     ];
     $errorMessage = $errors[$_GET['error']] ?? $errors['default'];
 }
+
+// Check for success message
+$successMessage = "";
+if (isset($_GET['success'])) {
+    $successMessages = [
+        'added' => "Role has been added successfully.",
+        'edited' => "Role has been updated successfully.",
+        'archived' => "Role has been archived successfully.",
+        'activated' => "Role has been activated successfully."
+    ];
+    $successMessage = $successMessages[$_GET['success']] ?? "Operation completed successfully.";
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -90,39 +102,228 @@ if (isset($_GET['error'])) {
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* Toast notifications */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+        }
+        .toast {
+            background-color: #333;
+            color: #fff;
+            padding: 15px 25px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease-in-out;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .toast.success {
+            background-color: #4CAF50;
+            border-left: 5px solid #2E7D32;
+        }
+        .toast.error {
+            background-color: #F44336;
+            border-left: 5px solid #C62828;
+        }
+        .toast.info {
+            background-color: #2196F3;
+            border-left: 5px solid #1565C0;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast-icon {
+            margin-right: 12px;
+            font-size: 1.2em;
+        }
+        .toast-message {
+            flex-grow: 1;
+        }
+        .toast-close {
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 1.2em;
+            margin-left: 10px;
+        }
+
+        /* Improved modal styles */
+        .overlay {
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .overlay-content {
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow: auto;
+            background: #fff;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            animation: modalFadeIn 0.3s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .overlay-content h2 {
+            color: #333;
+            margin-top: 0;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .overlay-content h2 i {
+            margin-right: 10px;
+        }
+        
+        /* Checkbox container improvements */
+        .checkbox-container {
+            max-height: 50vh;
+            overflow-y: auto;
+            padding: 5px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        
+        /* Module section improvements */
         .module-section {
             border: 1px solid #ddd;
-            padding: 10px;
+            padding: 15px;
             margin-bottom: 15px;
-            border-radius: 5px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+        .module-section:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         .module-header {
             display: flex;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            cursor: pointer;
         }
         .module-title {
             margin: 0 0 0 10px;
             font-weight: bold;
+            font-size: 1.1em;
+            color: #444;
+        }
+        
+        /* Checkbox styling */
+        .module-checkbox, .page-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .module-checkbox {
+            margin-right: 5px;
         }
         .module-pages {
             margin-left: 25px;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 5px;
+            gap: 8px;
+            padding-top: 5px;
+            border-top: 1px dashed #e0e0e0;
         }
-        .checkbox-container {
-            max-height: 400px;
-            overflow-y: auto;
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
         }
-        /* Add icons to modules */
+        .checkbox-label:hover {
+            background: #f0f0f0;
+        }
+        
+        /* Form controls */
+        .form-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .form-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .form-buttons button i {
+            margin-right: 8px;
+        }
+        .save-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        .save-btn:hover {
+            background: #45a049;
+        }
+        .cancel-btn {
+            background: #f44336;
+            color: white;
+        }
+        .cancel-btn:hover {
+            background: #e53935;
+        }
+        
+        /* Input field styling */
+        .account-form label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        .account-form input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+        .account-form input[type="text"]:focus {
+            border-color: #2196F3;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+        }
+        
+        /* Module icon */
         .module-icon {
-            margin-right: 5px;
+            margin-right: 8px;
+            color: #666;
+            width: 18px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
+    
+    <!-- Toast container -->
+    <div id="toast-container"></div>
+
     <div class="main-content">
         <div class="accounts-header">
             <h1>User Roles Management</h1>
@@ -154,8 +355,9 @@ if (isset($_GET['error'])) {
                                         onclick="showRoleForm('<?= $role['role_id'] ?>', '<?= htmlspecialchars($role['role_name']) ?>', '<?= htmlspecialchars($role['pages']) ?>')">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <form method="POST" action="../../backend/roles/manage_roles.php" style="display:inline;">
+                                    <form method="POST" action="../../backend/roles/manage_roles.php" style="display:inline;" class="status-toggle-form">
                                         <input type="hidden" name="role_id" value="<?= $role['role_id'] ?>">
+                                        <input type="hidden" name="role_name" value="<?= htmlspecialchars($role['role_name']) ?>">
                                         <input type="hidden" name="action" value="<?= $role['status'] == 'active' ? 'archive' : 'activate' ?>">
                                         <button type="submit" class="<?= $role['status'] == 'active' ? 'archive-btn' : 'activate-btn' ?>">
                                             <i class="fas fa-<?= $role['status'] == 'active' ? 'archive' : 'check' ?>"></i> <?= ucfirst($role['status'] == 'active' ? 'Archive' : 'Activate') ?>
@@ -183,13 +385,41 @@ if (isset($_GET['error'])) {
                 <div class="checkbox-container">
                     <?php foreach ($modules_list as $module_name => $module_data): ?>
                         <?php if (!empty($module_data['pages'])): ?>
+                            <?php 
+                                // Determine icon based on module name
+                                $icon = 'fa-folder';
+                                
+                                // Map common module names to specific icons
+                                $moduleIcons = [
+                                    'Dashboard' => 'fa-home',
+                                    'Accounts' => 'fa-user',
+                                    'Orders' => 'fa-shopping-cart',
+                                    'Inventory' => 'fa-box',
+                                    'Payment' => 'fa-money-bill',
+                                    'Production' => 'fa-industry',
+                                    'Staff' => 'fa-users',
+                                    'Forecast' => 'fa-chart-line',
+                                    'Reports' => 'fa-chart-bar',
+                                    'Settings' => 'fa-cog',
+                                    'Unassigned' => 'fa-question-circle'
+                                ];
+                                
+                                // Check if the module name starts with any key in our icon map
+                                foreach ($moduleIcons as $keyword => $moduleIcon) {
+                                    if (stripos($module_name, $keyword) !== false) {
+                                        $icon = $moduleIcon;
+                                        break;
+                                    }
+                                }
+                            ?>
                             <div class="module-section">
-                                <div class="module-header">
+                                <div class="module-header" onclick="toggleModuleVisibility('<?= htmlspecialchars(str_replace(' ', '_', $module_name)) ?>')">
                                     <input type="checkbox" class="module-checkbox" id="module_<?= htmlspecialchars(str_replace(' ', '_', $module_name)) ?>" 
                                            value="<?= htmlspecialchars($module_name) ?>" 
-                                           onchange="toggleModulePages('<?= htmlspecialchars(str_replace(' ', '_', $module_name)) ?>')">
+                                           onchange="toggleModulePages('<?= htmlspecialchars(str_replace(' ', '_', $module_name)) ?>')"
+                                           onclick="event.stopPropagation()">
                                     <h3 class="module-title">
-                                        <i class="fas fa-folder module-icon"></i>
+                                        <i class="fas <?= $icon ?> module-icon"></i>
                                         <?= htmlspecialchars($module_name) ?>
                                     </h3>
                                 </div>
@@ -216,6 +446,47 @@ if (isset($_GET['error'])) {
         </div>
     </div>
     <script>
+    // Toast notification functions
+    function showToast(message, type = 'info') {
+        const toastContainer = document.getElementById('toast-container');
+        
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        // Create icon based on type
+        let icon = 'fa-info-circle';
+        if (type === 'success') icon = 'fa-check-circle';
+        if (type === 'error') icon = 'fa-exclamation-circle';
+        
+        // Create toast content
+        toast.innerHTML = `
+            <div class="toast-icon"><i class="fas ${icon}"></i></div>
+            <div class="toast-message">${message}</div>
+            <button class="toast-close" onclick="closeToast(this.parentElement)"><i class="fas fa-times"></i></button>
+        `;
+        
+        // Add to container
+        toastContainer.appendChild(toast);
+        
+        // Show with animation
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            closeToast(toast);
+        }, 5000);
+    }
+    
+    function closeToast(toast) {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }
+
     function showRoleForm(roleId = '', roleName = '', pages = '') {
         document.getElementById("roleFormTitle").innerHTML = roleId ? '<i class="fas fa-edit"></i> Edit Role' : '<i class="fas fa-user-plus"></i> Add Role';
         document.getElementById("actionType").value = roleId ? 'edit' : 'add';
@@ -262,6 +533,16 @@ if (isset($_GET['error'])) {
         });
     }
 
+    // Toggle the visibility of module pages to collapse/expand
+    function toggleModuleVisibility(moduleId) {
+        const modulePages = document.getElementById(`pages_module_${moduleId}`);
+        if (modulePages.style.display === 'none') {
+            modulePages.style.display = 'grid';
+        } else {
+            modulePages.style.display = 'none';
+        }
+    }
+
     // Update module checkboxes based on page selection
     function updateModuleCheckboxes() {
         document.querySelectorAll('.module-checkbox').forEach(moduleCheckbox => {
@@ -287,14 +568,108 @@ if (isset($_GET['error'])) {
         });
     }
 
-    // Add event listeners to page checkboxes to update module status
+    // Submit the role form with AJAX to prevent page refresh and show toast
     document.addEventListener('DOMContentLoaded', function() {
+        // Set up listeners for page checkboxes
         const pageCheckboxes = document.querySelectorAll('.page-checkbox');
         pageCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', function() {
                 updateModuleCheckboxes();
             });
         });
+
+        // Handle form submissions
+        document.getElementById('roleForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const action = formData.get('action');
+            const roleId = formData.get('role_id');
+            const roleName = formData.get('role_name');
+            
+            fetch('../../backend/roles/manage_roles.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.text();
+            })
+            .then(data => {
+                // Show success message based on action
+                let message = 'Role changes saved successfully!';
+                if (action === 'add') {
+                    message = `Role "${roleName}" has been added successfully.`;
+                } else if (action === 'edit') {
+                    message = `Role "${roleName}" has been updated successfully.`;
+                }
+                
+                // Show toast and reload after a delay
+                showToast(message, 'success');
+                hideRoleForm();
+                
+                // Reload page after toast is shown
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            })
+            .catch(error => {
+                showToast('Error: ' + error.message, 'error');
+            });
+        });
+        
+        // Handle status toggle forms
+        document.querySelectorAll('.status-toggle-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const action = formData.get('action');
+                const roleName = formData.get('role_name');
+                
+                fetch('../../backend/roles/manage_roles.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    // Show success message based on action
+                    let message = '';
+                    if (action === 'archive') {
+                        message = `Role "${roleName}" has been archived.`;
+                    } else if (action === 'activate') {
+                        message = `Role "${roleName}" has been activated.`;
+                    }
+                    
+                    // Show toast and reload after a delay
+                    showToast(message, 'success');
+                    
+                    // Reload page after toast is shown
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                })
+                .catch(error => {
+                    showToast('Error: ' + error.message, 'error');
+                });
+            });
+        });
+        
+        // Show any messages from URL parameters
+        <?php if (!empty($errorMessage)): ?>
+        showToast('<?= addslashes($errorMessage) ?>', 'error');
+        <?php endif; ?>
+        
+        <?php if (!empty($successMessage)): ?>
+        showToast('<?= addslashes($successMessage) ?>', 'success');
+        <?php endif; ?>
     });
     </script>
 </body>
