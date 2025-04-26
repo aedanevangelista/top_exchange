@@ -290,7 +290,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             font-weight: 900;
             position: absolute;
             right: 5px;
-            color: #2980b9;
+            background-color:rgb(51, 51, 51);
         }
         
         .sort-header.asc::after {
@@ -300,7 +300,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
         
         .sort-header.desc::after {
             content: '\f0dd';
-            color: #2980b9;
+            background-color:rgb(51, 51, 51);
         }
         
         /* Highlighted delivery date */
