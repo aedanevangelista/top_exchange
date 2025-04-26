@@ -72,6 +72,10 @@ if ($orderStmt) {
     // For debugging - log the SQL error
     error_log("SQL Error in deliverable_orders.php: " . $conn->error);
 }
+
+// Get filter options for status
+$statusOptions = ['For Delivery', 'In Transit'];
+$filterStatus = isset($_GET['status']) ? $_GET['status'] : '';
 ?>
 
 <!DOCTYPE html>
@@ -232,56 +236,74 @@ if ($orderStmt) {
             color: #6c757d;
         }
         
-        /* Filter section */
+        /* Filter section - matching Accounts.php style */
         .filter-section {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 10px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        .status-filter-btn {
-            padding: 8px 15px;
-            border-radius: 20px;
-            border: none;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s;
+        .filter-group {
+            display: flex;
+            align-items: center;
+            margin-right: 20px;
+            margin-bottom: 10px;
         }
         
-        .status-filter-btn.active {
+        .filter-label {
             font-weight: bold;
-            box-shadow: 0 0 0 2px #2980b9;
+            margin-right: 10px;
         }
         
-        .status-filter-btn.all {
-            background-color: #e9ecef;
-            color: #495057;
+        .filter-select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background-color: white;
         }
         
-        .status-filter-btn.for-delivery {
-            background-color: #fd7e14;
+        .filter-button {
+            padding: 8px 15px;
+            background-color: #2980b9;
             color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
         }
         
-        .status-filter-btn.in-transit {
-            background-color: #17a2b8;
-            color: white;
+        .filter-button:hover {
+            background-color: #2471a3;
+        }
+        
+        .clear-filter {
+            background-color: #6c757d;
+        }
+        
+        .clear-filter:hover {
+            background-color: #5a6268;
         }
         
         .action-buttons-cell {
             min-width: 210px;
         }
         
-        /* Sort indicators and clickable headers */
+        /* Sort indicators and clickable headers - matching other pages */
         .sort-header {
             cursor: pointer;
             position: relative;
             padding-right: 20px;
+            color: #2980b9;
+            transition: background-color 0.2s;
         }
         
         .sort-header:hover {
-            background-color: #f1f1f1;
+            background-color: #e9f2fa;
         }
         
         .sort-header::after {
@@ -290,7 +312,7 @@ if ($orderStmt) {
             font-weight: 900;
             position: absolute;
             right: 5px;
-            color: #ccc;
+            color: #2980b9;
         }
         
         .sort-header.asc::after {
@@ -308,6 +330,82 @@ if ($orderStmt) {
             background-color: #fff3cd;
             font-weight: bold;
         }
+        
+        /* Driver modal styling */
+        .overlay-content.driver-modal-content {
+            max-width: 450px;
+            padding: 25px;
+            border-radius: 8px;
+        }
+        
+        .driver-modal-content h2 {
+            color: #333;
+            border-bottom: 2px solid #f1f1f1;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .driver-selection {
+            margin: 20px 0;
+        }
+        
+        .driver-selection label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        .driver-selection select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background-color: #fff;
+            font-size: 16px;
+        }
+        
+        .driver-modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .cancel-btn, .save-btn {
+            padding: 10px 15px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .cancel-btn {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+        
+        .cancel-btn:hover {
+            background-color: #e1e1e1;
+        }
+        
+        .save-btn {
+            background-color: #2980b9;
+            color: white;
+        }
+        
+        .save-btn:hover {
+            background-color: #2471a3;
+        }
+        
+        .date-info {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #e9f2fa;
+            border-radius: 4px;
+            color: #2980b9;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -317,13 +415,6 @@ if ($orderStmt) {
             <h1 class="page-title">Deliverable Orders</h1>
             
             <div class="header-content">
-                <!-- Filter section - moved to the middle -->
-                <div class="filter-section">
-                    <button class="status-filter-btn all active" data-status="all">All</button>
-                    <button class="status-filter-btn for-delivery" data-status="For Delivery">For Delivery</button>
-                    <button class="status-filter-btn in-transit" data-status="In Transit">In Transit</button>
-                </div>
-                
                 <div class="search-container">
                     <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
                     <button class="search-btn"><i class="fas fa-search"></i></button>
@@ -331,11 +422,31 @@ if ($orderStmt) {
             </div>
         </div>
         
-        <div class="date-info">
-            <strong>Today's Date:</strong> <?= date('Y-m-d') ?>
-            <?php if (isset($auto_transit_count) && $auto_transit_count > 0): ?>
-                <span>(<?= $auto_transit_count ?> orders automatically set to "In Transit" today)</span>
-            <?php endif; ?>
+        <!-- Filter section that matches Accounts.php -->
+        <div class="filter-section">
+            <div class="filter-group">
+                <span class="filter-label">Status:</span>
+                <select id="statusFilter" class="filter-select">
+                    <option value="">All</option>
+                    <?php foreach ($statusOptions as $status): ?>
+                        <option value="<?= $status ?>" <?= $filterStatus === $status ? 'selected' : '' ?>>
+                            <?= $status ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <button id="applyFilter" class="filter-button">Apply Filter</button>
+            <button id="clearFilter" class="filter-button clear-filter">Clear Filter</button>
+            
+            <div style="flex-grow: 1;"></div>
+            
+            <div class="date-info">
+                <strong>Today's Date:</strong> <?= date('Y-m-d') ?>
+                <?php if (isset($auto_transit_count) && $auto_transit_count > 0): ?>
+                    <span>(<?= $auto_transit_count ?> orders automatically set to "In Transit" today)</span>
+                <?php endif; ?>
+            </div>
         </div>
         
         <div class="orders-table-container">
@@ -686,43 +797,62 @@ if ($orderStmt) {
                     order = 'DESC';
                 }
                 
-                window.location.href = `?sort=${column}&order=${order}`;
+                // Preserve any filter when sorting
+                const statusFilter = document.getElementById('statusFilter').value;
+                let url = `?sort=${column}&order=${order}`;
+                
+                if (statusFilter) {
+                    url += `&status=${encodeURIComponent(statusFilter)}`;
+                }
+                
+                window.location.href = url;
             });
         });
 
-        // Search and filter functionality
-        $(document).ready(function() {
-            // Status filter buttons
-            $('.status-filter-btn').on('click', function() {
-                const status = $(this).data('status');
-                
-                // Update active button styling
-                $('.status-filter-btn').removeClass('active');
-                $(this).addClass('active');
-                
-                // Filter the table
-                if (status === 'all') {
-                    $('.order-row').show();
-                } else {
-                    $('.order-row').hide();
-                    $(`.order-row[data-status="${status}"]`).show();
-                }
-            });
+        // Filter section functionality
+        document.getElementById('applyFilter').addEventListener('click', function() {
+            const status = document.getElementById('statusFilter').value;
+            const currentSort = '<?= $sortColumn ?>';
+            const currentOrder = '<?= $sortOrder ?>';
             
+            let url = '?';
+            const params = [];
+            
+            if (status) {
+                params.push(`status=${encodeURIComponent(status)}`);
+            }
+            
+            if (currentSort && currentOrder) {
+                params.push(`sort=${currentSort}&order=${currentOrder}`);
+            }
+            
+            url += params.join('&');
+            window.location.href = url;
+        });
+        
+        document.getElementById('clearFilter').addEventListener('click', function() {
+            const currentSort = '<?= $sortColumn ?>';
+            const currentOrder = '<?= $sortOrder ?>';
+            
+            let url = '?';
+            if (currentSort && currentOrder) {
+                url += `sort=${currentSort}&order=${currentOrder}`;
+            }
+            
+            window.location.href = url;
+        });
+
+        // Search functionality
+        $(document).ready(function() {
             // Search functionality
             $("#searchInput").on("input", function() {
                 let searchText = $(this).val().toLowerCase().trim();
                 
-                // Respect the current status filter
-                const activeFilter = $('.status-filter-btn.active').data('status');
-                
                 $(".order-row").each(function() {
                     let row = $(this);
                     let text = row.text().toLowerCase();
-                    let rowStatus = row.data('status');
                     
-                    // Apply both status filter and search
-                    if ((activeFilter === 'all' || rowStatus === activeFilter) && text.includes(searchText)) {
+                    if (text.includes(searchText)) {
                         row.show();
                     } else {
                         row.hide();
@@ -733,19 +863,31 @@ if ($orderStmt) {
             // Handle search button click
             $(".search-btn").on("click", function() {
                 let searchText = $("#searchInput").val().toLowerCase().trim();
-                const activeFilter = $('.status-filter-btn.active').data('status');
                 
                 $(".order-row").each(function() {
                     let row = $(this);
                     let text = row.text().toLowerCase();
-                    let rowStatus = row.data('status');
                     
-                    if ((activeFilter === 'all' || rowStatus === activeFilter) && text.includes(searchText)) {
+                    if (text.includes(searchText)) {
                         row.show();
                     } else {
                         row.hide();
                     }
                 });
+            });
+
+            // Filter on change
+            $("#statusFilter").on("change", function() {
+                const status = $(this).val();
+                
+                if (status === '') {
+                    // Show all
+                    $(".order-row").show();
+                } else {
+                    // Filter by status
+                    $(".order-row").hide();
+                    $(`.order-row[data-status="${status}"]`).show();
+                }
             });
 
             // Handle clicks outside modals
