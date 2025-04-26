@@ -32,8 +32,8 @@ $sql = "SELECT o.po_number, o.username, o.company, o.delivery_date, o.delivery_a
 // Add area filter if specified
 if (!empty($area_filter)) {
     $sql .= " AND o.po_number IN (SELECT da.po_number FROM driver_assignments da 
-                                 JOIN drivers d ON da.driver_id = d.id 
-                                 WHERE d.area = ?)";
+                                  JOIN drivers d ON da.driver_id = d.id 
+                                  WHERE d.area = ?)";
 }
 
 // Add driver assigned filter if specified
@@ -130,21 +130,26 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <title>Deliverable Orders</title>
     <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="/css/sidebar.css">
-    <link rel="stylesheet" href="/css/toast.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="/css/toast.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <style>
-        /* Consistent styling with other order pages */
+        /* Header styling similar to accounts_clients.php */
         .orders-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
         }
-        
-        /* Filter Section (matches drivers.php) */
+
+        .orders-header h1 {
+            color: #333;
+            margin: 0;
+            font-size: 24px;
+        }
+
+        /* Filter section styling from accounts_clients.css */
         .filter-section {
             display: flex;
             align-items: center;
@@ -159,13 +164,46 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         
         .filter-section select {
             padding: 8px 12px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            background-color: white;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            font-size: 14px;
             min-width: 150px;
         }
+
+        /* Table styling similar to accounts_clients.css */
+        .orders-table-container {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+        }
         
-        /* Search Container Styling (like in order_history.php) */
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .orders-table th {
+            background-color: black;
+            color: white;
+            font-weight: bold;
+            padding: 12px;
+            text-align: center;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        .orders-table td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .orders-table tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        /* Search styling to match accounts_clients */
         .search-container {
             display: flex;
             align-items: center;
@@ -192,6 +230,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             background-color: #2471a3;
         }
         
+        /* The rest of your existing CSS stays the same */
         /* Sortable table headers */
         th.sortable {
             cursor: pointer;
@@ -248,39 +287,54 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             background-color: #F44336;
         }
         
-        /* Action buttons */
+        /* Action buttons styling similar to accounts_clients.css */
         .action-buttons {
             display: flex;
+            justify-content: center;
             gap: 5px;
+            height: 100%;
+            align-items: center;
         }
-        
+
         .action-btn {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            display: inline-flex;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 80px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+            display: flex;
             align-items: center;
             gap: 5px;
-        }
-        
-        .action-btn:hover {
-            opacity: 0.9;
+            border: none;
+            cursor: pointer;
         }
         
         .view-btn {
             background-color: #2196F3;
+            color: white;
         }
         
-        .complete-btn {
-            background-color: #4CAF50;
+        .view-btn:hover {
+            background-color: #0b7dda;
         }
         
         .assign-btn {
             background-color: #FF9800;
+            color: white;
+        }
+        
+        .assign-btn:hover {
+            background-color: #e68a00;
+        }
+        
+        .complete-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .complete-btn:hover {
+            background-color: #45a049;
         }
         
         /* Driver badge */
@@ -526,29 +580,29 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
+    <div id="toast-container" class="toast-container"></div>
     <div class="main-content">
         <div class="orders-header">
             <h1>Deliverable Orders</h1>
+            <div class="filter-section">
+                <label for="statusFilter">Filter by Status:</label>
+                <select id="statusFilter" onchange="applyFilters()">
+                    <option value="">All</option>
+                    <option value="assigned" <?= $status_filter == 'assigned' ? 'selected' : '' ?>>Assigned</option>
+                    <option value="unassigned" <?= $status_filter == 'unassigned' ? 'selected' : '' ?>>Unassigned</option>
+                </select>
+                
+                <label for="areaFilter">Filter by Area:</label>
+                <select id="areaFilter" onchange="applyFilters()">
+                    <option value="">All</option>
+                    <option value="North" <?= $area_filter == 'North' ? 'selected' : '' ?>>North</option>
+                    <option value="South" <?= $area_filter == 'South' ? 'selected' : '' ?>>South</option>
+                </select>
+            </div>
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
                 <button class="search-btn"><i class="fas fa-search"></i></button>
             </div>
-        </div>
-        
-        <div class="filter-section">
-            <label for="statusFilter">Filter by Status:</label>
-            <select id="statusFilter" onchange="applyFilters()">
-                <option value="">All</option>
-                <option value="assigned" <?= $status_filter == 'assigned' ? 'selected' : '' ?>>Assigned</option>
-                <option value="unassigned" <?= $status_filter == 'unassigned' ? 'selected' : '' ?>>Unassigned</option>
-            </select>
-            
-            <label for="areaFilter">Filter by Area:</label>
-            <select id="areaFilter" onchange="applyFilters()">
-                <option value="">All</option>
-                <option value="North" <?= $area_filter == 'North' ? 'selected' : '' ?>>North</option>
-                <option value="South" <?= $area_filter == 'South' ? 'selected' : '' ?>>South</option>
-            </select>
         </div>
         
         <div class="orders-table-container">
@@ -654,9 +708,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
-    <!-- Toast Container -->
-    <div class="toast-container" id="toast-container"></div>
-    
     <!-- Driver Assignment Modal -->
     <div id="driverAssignmentModal" class="modal">
         <div class="modal-content">
@@ -719,6 +770,9 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="/js/toast.js"></script>
     <script>
         let currentPoNumber = '';
         
