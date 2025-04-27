@@ -609,114 +609,76 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <script src="/js/orders.js"></script>
     <script src="/js/pending_orders.js"></script>
     <script>
-        <?php include('../../js/order_processing.js'); ?>
-    
-        // Search functionality (client-side, same as in order_history.php)
-        $(document).ready(function() {
-            // Search functionality
-            $("#searchInput").on("input", function() {
-                let searchText = $(this).val().toLowerCase().trim();
+// Override the form validation to fix the "delivery address" error
+$(document).ready(function() {
+    // Override the existing submit handler
+    $('#addOrderForm').off('submit').on('submit', function(e) {
+        e.preventDefault();
+        
+        if (selectedProducts.length === 0) {
+            alert('Please add products to your order');
+            return;
+        }
 
-                $(".orders-table tbody tr").each(function() {
-                    let row = $(this);
-                    let text = row.text().toLowerCase();
-                    
-                    if (text.includes(searchText)) {
-                        row.show();
-                    } else {
-                        row.hide();
-                    }
-                });
-            });
-            
-            // Handle search button click (same functionality as typing)
-            $(".search-btn").on("click", function() {
-                let searchText = $("#searchInput").val().toLowerCase().trim();
-                
-                $(".orders-table tbody tr").each(function() {
-                    let row = $(this);
-                    let text = row.text().toLowerCase();
-                    
-                    if (text.includes(searchText)) {
-                        row.show();
-                    } else {
-                        row.hide();
-                    }
-                });
-            });
-            
-            // Initialize company field if needed
-            $('#username').change(function() {
-                updateCompany();
-            });
-            
-            // Load address information when a username is selected
-            window.loadAddressInfo = function(username) {
-                if (!username) return;
-                
-                const selectedOption = $(`#username option[value="${username}"]`);
-                
-                // Get address data from the option data attributes
-                const billTo = selectedOption.data('bill-to') || '';
-                const billToAttn = selectedOption.data('bill-to-attn') || '';
-                const shipTo = selectedOption.data('ship-to') || '';
-                const shipToAttn = selectedOption.data('ship-to-attn') || '';
-                
-                // Set hidden field values
-                $('#bill_to').val(billTo);
-                $('#bill_to_attn').val(billToAttn);
-                $('#ship_to').val(shipTo);
-                $('#ship_to_attn').val(shipToAttn);
-                
-                // Display the address info in a readable format
-                let addressHTML = '<div class="address-display">';
-                
-                addressHTML += '<div class="address-section">';
-                addressHTML += '<h4><i class="fas fa-file-invoice"></i> Billing Information</h4>';
-                if (billTo) {
-                    addressHTML += `<p><strong>Bill To:</strong> ${billTo}</p>`;
+        prepareOrderData();
+        
+        // Validate required fields - NO delivery_address check!
+        if (!$('#username').val()) {
+            alert('Please select a username');
+            return;
+        }
+        
+        if (!$('#po_number').val()) {
+            alert('PO number is missing. Please try again.');
+            return;
+        }
+        
+        // Disable the save button to prevent multiple submissions
+        $('.save-btn').prop('disabled', true);
+        
+        // Submit the form via AJAX
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    showToast('Order added successfully!', 'success');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    $('.save-btn').prop('disabled', false);
+                    alert('Error: ' + response.message);
                 }
-                if (billToAttn) {
-                    addressHTML += `<p><strong>Attention:</strong> ${billToAttn}</p>`;
-                }
-                if (!billTo && !billToAttn) {
-                    addressHTML += '<p class="no-info">No billing information available</p>';
-                }
-                addressHTML += '</div>';
-                
-                addressHTML += '<div class="address-section">';
-                addressHTML += '<h4><i class="fas fa-shipping-fast"></i> Shipping Information</h4>';
-                if (shipTo) {
-                    addressHTML += `<p><strong>Ship To:</strong> ${shipTo}</p>`;
-                }
-                if (shipToAttn) {
-                    addressHTML += `<p><strong>Attention:</strong> ${shipToAttn}</p>`;
-                }
-                if (!shipTo && !shipToAttn) {
-                    addressHTML += '<p class="no-info">No shipping information available</p>';
-                }
-                addressHTML += '</div>';
-                
-                addressHTML += '</div>';
-                
-                $('#address-info').html(addressHTML);
-            };
-            
-            // Make sure prepareOrderData includes proper fields
-            window.prepareOrderData = function() {
-                const orderData = JSON.stringify(selectedProducts);
-                $('#orders').val(orderData);
-                const totalAmount = calculateCartTotal();
-                $('#total_amount').val(totalAmount.toFixed(2));
-                
-                // Include special instructions in form data
-                const specialInstructions = $('#special_instructions').val();
-                $('#special_instructions_hidden').val(specialInstructions);
-                
-                // Address information is already set in the hidden fields when username is selected
-            };
+            },
+            error: function(xhr, status, error) {
+                $('.save-btn').prop('disabled', false);
+                console.error("Form submission error:", status, error);
+                console.error("Server response:", xhr.responseText);
+                alert('Error submitting order. Please try again. Details: ' + error);
+            }
         });
-    </script>
+    });
+
+    // Override prepareOrderData to skip delivery_address
+    window.prepareOrderData = function() {
+        const orderData = JSON.stringify(selectedProducts);
+        $('#orders').val(orderData);
+        const totalAmount = calculateCartTotal();
+        $('#total_amount').val(totalAmount.toFixed(2));
+        
+        // Include special instructions in form data
+        const specialInstructions = $('#special_instructions').val();
+        $('#special_instructions_hidden').val(specialInstructions);
+        
+        // We're using bill_to and ship_to directly from the hidden fields
+        // No need to set delivery_address
+        console.log("Order data prepared - Using bill_to: " + $('#bill_to').val() + " and ship_to: " + $('#ship_to').val());
+    };
+});
+</script>
     <style>
         /* Styles for address display */
         .address-info-container {
