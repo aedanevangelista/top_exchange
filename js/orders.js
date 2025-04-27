@@ -454,45 +454,63 @@ $(document).ready(function() {
         updateCartTotal();
     });
 
-    // UPDATED: Form submission without delivery_address validation
-    $('#addOrderForm').on('submit', function(e) {
-        e.preventDefault();
-        
-        if (selectedProducts.length === 0) {
-            alert('Please add products to your order');
-            return;
-        }
+    // UPDATED: Form submission with better error handling
+$('#addOrderForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    if (selectedProducts.length === 0) {
+        alert('Please add products to your order');
+        return;
+    }
 
-        prepareOrderData(); 
-        
-        // Show a toast notification when saving the order
-        const poNumber = $('#po_number').val();
-        const username = $('#username').val();
-        
-        if (poNumber && username) {
-            showToast(`The order: ${poNumber} has been created for ${username}.`, 'success');
-        }
-
-        $.ajax({
-            url: $(this).attr('action'),
-            type: 'POST',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    // Wait a moment for the toast to be visible before reloading
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
-                } else {
-                    alert('Error: ' + response.message);
-                }
-            },
-            error: function() {
-                alert('Error submitting order. Please try again.');
+    prepareOrderData(); 
+    
+    // Show loading state
+    showToast('Submitting order, please wait...', 'info');
+    
+    $.ajax({
+        url: $(this).attr('action'),
+        type: 'POST',
+        data: $(this).serialize(),
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                // Show success message
+                const poNumber = $('#po_number').val();
+                const username = $('#username').val();
+                showToast(`Order ${poNumber} successfully created for ${username}!`, 'success');
+                
+                // Wait before reloading
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                // Show error from server
+                showToast('Error: ' + response.message, 'error');
+                console.error('Server error:', response.message);
             }
-        });
+        },
+        error: function(xhr, status, error) {
+            // Show detailed error information
+            console.error('AJAX Error Status:', status);
+            console.error('Error:', error);
+            console.error('Response Text:', xhr.responseText);
+            
+            try {
+                // Try to parse error JSON if available
+                const errorData = JSON.parse(xhr.responseText);
+                showToast('Error: ' + (errorData.message || 'Unknown server error'), 'error');
+            } catch (e) {
+                // If can't parse JSON, show raw text or generic message
+                if (xhr.responseText) {
+                    showToast('Server error: ' + xhr.responseText.substring(0, 50) + '...', 'error');
+                } else {
+                    showToast('Error submitting order. Check console for details.', 'error');
+                }
+            }
+        }
     });
+});
     
     // Category filter change handler
     $('#inventoryFilter').on('change', function() {
