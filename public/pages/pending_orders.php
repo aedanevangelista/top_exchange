@@ -342,23 +342,34 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <label for="delivery_date">Delivery Date:</label>
                     <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
                     
-                    <!-- New Delivery Address selection -->
-                    <label for="delivery_address_type">Delivery Address:</label>
+                    <label for="delivery_address_type">Address Information:</label>
                     <select id="delivery_address_type" name="delivery_address_type" onchange="toggleDeliveryAddress()">
-                        <option value="company">Company Address</option>
-                        <option value="custom">Custom Address</option>
+                        <option value="company">Use Company Address</option>
+                        <option value="custom">Use Custom Address</option>
                     </select>
-                    
+
                     <div id="company_address_container">
                         <input type="text" id="company_address" name="company_address" readonly placeholder="Company address will appear here">
                     </div>
-                    
+
                     <div id="custom_address_container" style="display: none;">
-                        <textarea id="custom_address" name="custom_address" rows="3" placeholder="Enter delivery address"></textarea>
+                        <div class="address-fields">
+                            <label for="custom_address">Delivery/Billing Address:</label>
+                            <textarea id="custom_address" name="custom_address" rows="3" placeholder="Enter delivery/billing address"></textarea>
+                            
+                            <label for="custom_ship_to_attn">Ship To Attention:</label>
+                            <input type="text" id="custom_ship_to_attn" name="custom_ship_to_attn" placeholder="Ship to attention (optional)">
+                            
+                            <label for="custom_bill_to_attn">Bill To Attention:</label>
+                            <input type="text" id="custom_bill_to_attn" name="custom_bill_to_attn" placeholder="Bill to attention (optional)">
+                        </div>
                     </div>
-                    
+
                     <input type="hidden" name="delivery_address" id="delivery_address">
-                    <input type="hidden" name="special_instructions" id="special_instructions_hidden">
+                    <input type="hidden" name="bill_to" id="bill_to">
+                    <input type="hidden" name="bill_to_attn" id="bill_to_attn">
+                    <input type="hidden" name="ship_to" id="ship_to">
+                    <input type="hidden" name="ship_to_attn" id="ship_to_attn">
                     <!-- Add special instructions field -->
                     <label for="special_instructions">Special Instructions:</label>
                     <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
