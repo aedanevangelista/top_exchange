@@ -270,7 +270,6 @@ function truncate($text, $max = 15) {
     return (strlen($text) > $max) ? substr($text, 0, $max) . '...' : $text;
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -352,7 +351,7 @@ function truncate($text, $max = 15) {
         .two-column-form {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 15px; /* Reduced gap */
         }
         
         .form-column {
@@ -393,20 +392,21 @@ function truncate($text, $max = 15) {
         textarea#company_address, textarea#edit-company_address,
         textarea#bill_to, textarea#edit-bill_to,
         textarea#ship_to, textarea#edit-ship_to {
-            height: 80px; /* Make textarea taller */
-            padding: 10px; /* Add padding inside */
-            font-size: 14px; /* Consistent font size */
+            height: 60px; /* Smaller text areas */
+            padding: 8px; /* Reduced padding */
+            font-size: 13px; /* Smaller font */
             resize: vertical; /* Allow vertical resizing only */
-            min-height: 80px; /* Set minimum height */
+            min-height: 60px; /* Smaller minimum height */
         }
         
         /* Style consistent input borders */
         input, textarea {
             border: 1px solid #ccc;
             border-radius: 4px;
-            padding: 8px 12px;
+            padding: 6px 10px; /* Reduced padding */
             transition: border-color 0.3s;
             outline: none;
+            font-size: 13px; /* Smaller font */
         }
         
         input:focus, textarea:focus {
@@ -658,27 +658,27 @@ function truncate($text, $max = 15) {
         /* Address groups in forms */
         .address-group {
             border: 1px solid #eee;
-            padding: 15px;
+            padding: 12px; /* Reduced padding */
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 15px; /* Reduced margin */
             background-color: #fafafa;
         }
 
         .address-group h3 {
             margin-top: 0;
             color: #4a90e2;
-            font-size: 16px;
-            margin-bottom: 15px;
+            font-size: 14px; /* Reduced font size */
+            margin-bottom: 12px; /* Reduced margin */
             border-bottom: 1px solid #eee;
-            padding-bottom: 8px;
+            padding-bottom: 6px; /* Reduced padding */
         }
         
         /* Attention field styles */
         .attention-field {
             display: flex;
             align-items: center;
-            margin-top: 8px;
-            padding: 8px;
+            margin-top: 6px; /* Reduced margin */
+            padding: 6px; /* Reduced padding */
             background-color: #f1f8ff;
             border-radius: 4px;
             border: 1px solid #d1e6ff;
@@ -686,13 +686,13 @@ function truncate($text, $max = 15) {
         
         .attention-field i {
             color: #4a90e2;
-            margin-right: 8px;
+            margin-right: 6px; /* Reduced margin */
         }
 
         /* Fixed header and footer in modal */
         .modal-header {
             background-color: #ffffff;
-            padding: 20px;
+            padding: 15px; /* Reduced padding */
             border-radius: 8px 8px 0 0;
             border-bottom: 1px solid #eee;
             position: sticky;
@@ -703,11 +703,12 @@ function truncate($text, $max = 15) {
         .modal-header h2 {
             margin: 0;
             padding: 0;
+            font-size: 18px; /* Reduced font size */
         }
 
         .modal-footer {
             background-color: #ffffff;
-            padding: 15px 20px;
+            padding: 12px 15px; /* Reduced padding */
             border-top: 1px solid #eee;
             text-align: right;
             border-radius: 0 0 8px 8px;
@@ -717,7 +718,7 @@ function truncate($text, $max = 15) {
         }
 
         .modal-body {
-            padding: 20px;
+            padding: 15px; /* Reduced padding */
             overflow-y: auto;
             flex: 1; /* Take remaining space */
         }
@@ -726,12 +727,19 @@ function truncate($text, $max = 15) {
         .form-modal-content {
             display: flex;
             flex-direction: column;
-            max-height: 95vh;
-            width: 90%;
-            max-width: 800px;
+            max-height: 85vh; /* Smaller height */
+            width: 80%; /* Smaller width */
+            max-width: 650px; /* Smaller max width */
             background-color: #fff;
             border-radius: 8px;
             overflow: hidden; /* Important to contain child overflow */
+            margin: 0 auto; /* Center the modal */
+        }
+
+        /* Label styling - smaller */
+        label {
+            font-size: 13px; /* Smaller font */
+            margin-bottom: 4px; /* Less spacing */
         }
 
         /* Error message styling */
@@ -739,6 +747,28 @@ function truncate($text, $max = 15) {
             color: #ff3333;
             padding: 5px 0;
             font-size: 14px;
+        }
+        
+        /* Form buttons - smaller */
+        .form-buttons button {
+            padding: 6px 12px; /* Smaller padding */
+            font-size: 13px; /* Smaller font */
+        }
+
+        .save-btn, .cancel-btn {
+            padding: 6px 12px; /* Smaller buttons */
+            font-size: 13px; /* Smaller text */
+        }
+
+        /* Attention cell styles */
+        .attention-cell {
+            display: flex;
+            align-items: center;
+        }
+
+        .attention-cell i {
+            margin-right: 6px;
+            color: #4a90e2;
         }
     </style>
 </head>
@@ -923,9 +953,12 @@ function truncate($text, $max = 15) {
                             <th>Bill To Address</th>
                             <td id="modalBillTo"></td>
                         </tr>
-                        <tr id="billToAttnRow" style="display: none;">
+                        <tr id="billToAttnRow">
                             <th>Attention To</th>
-                            <td id="modalBillToAttn"></td>
+                            <td class="attention-cell">
+                                <i class="fas fa-user"></i>
+                                <span id="modalBillToAttn"></span>
+                            </td>
                         </tr>
                     </table>
                     <div id="noBillingInfo" class="empty-notice" style="display: none;">
@@ -940,9 +973,12 @@ function truncate($text, $max = 15) {
                             <th>Ship To Address</th>
                             <td id="modalShipTo"></td>
                         </tr>
-                        <tr id="shipToAttnRow" style="display: none;">
+                        <tr id="shipToAttnRow">
                             <th>Attention To</th>
-                            <td id="modalShipToAttn"></td>
+                            <td class="attention-cell">
+                                <i class="fas fa-user"></i>
+                                <span id="modalShipToAttn"></span>
+                            </td>
                         </tr>
                     </table>
                     <div id="noShippingInfo" class="empty-notice" style="display: none;">
