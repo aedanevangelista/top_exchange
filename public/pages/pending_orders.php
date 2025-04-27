@@ -566,5 +566,205 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
     <script src="/js/orders.js"></script>
     <script src="/js/pending_orders.js"></script>
+    <script>
+        <?php include('../../js/order_processing.js'); ?>
+    
+        // Add custom script to handle loading client address info
+        function loadClientAddressInfo(username) {
+            if (!username) return;
+            
+            console.log("Loading address info for:", username);
+            
+            const selectedOption = $(`#username option[value="${username}"]`);
+            
+            // Get address data from the option data attributes
+            const billTo = selectedOption.data('bill-to') || '';
+            const billToAttn = selectedOption.data('bill-to-attn') || '';
+            const shipTo = selectedOption.data('ship-to') || '';
+            const shipToAttn = selectedOption.data('ship-to-attn') || '';
+            
+            console.log("Address data loaded:", {
+                billTo: billTo,
+                billToAttn: billToAttn,
+                shipTo: shipTo,
+                shipToAttn: shipToAttn
+            });
+            
+            // Set hidden field values
+            $('#bill_to').val(billTo);
+            $('#bill_to_attn').val(billToAttn);
+            $('#ship_to').val(shipTo);
+            $('#ship_to_attn').val(shipToAttn);
+            
+            // Display the address info in a readable format
+            let addressHTML = '<div class="address-display">';
+            
+            addressHTML += '<div class="address-section">';
+            addressHTML += '<h4><i class="fas fa-file-invoice"></i> Billing Information</h4>';
+            if (billTo) {
+                addressHTML += `<p><strong>Bill To:</strong> ${billTo}</p>`;
+            }
+            if (billToAttn) {
+                addressHTML += `<p><strong>Attention:</strong> ${billToAttn}</p>`;
+            }
+            if (!billTo && !billToAttn) {
+                addressHTML += '<p class="no-info">No billing information available</p>';
+            }
+            addressHTML += '</div>';
+            
+            addressHTML += '<div class="address-section">';
+            addressHTML += '<h4><i class="fas fa-shipping-fast"></i> Shipping Information</h4>';
+            if (shipTo) {
+                addressHTML += `<p><strong>Ship To:</strong> ${shipTo}</p>`;
+            }
+            if (shipToAttn) {
+                addressHTML += `<p><strong>Attention:</strong> ${shipToAttn}</p>`;
+            }
+            if (!shipTo && !shipToAttn) {
+                addressHTML += '<p class="no-info">No shipping information available</p>';
+            }
+            addressHTML += '</div>';
+            
+            addressHTML += '</div>';
+            
+            $('#address-info').html(addressHTML);
+        }
+
+        $(document).ready(function() {
+            // Search functionality
+            $("#searchInput").on("input", function() {
+                let searchText = $(this).val().toLowerCase().trim();
+
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+            });
+            
+            // Handle search button click
+            $(".search-btn").on("click", function() {
+                let searchText = $("#searchInput").val().toLowerCase().trim();
+                
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+            });
+
+            // Make sure prepareOrderData includes proper fields
+            window.prepareOrderData = function() {
+                const orderData = JSON.stringify(selectedProducts);
+                $('#orders').val(orderData);
+                const totalAmount = calculateCartTotal();
+                $('#total_amount').val(totalAmount.toFixed(2));
+                
+                // Include special instructions in form data
+                const specialInstructions = $('#special_instructions').val();
+                $('#special_instructions_hidden').val(specialInstructions);
+                
+                // No need to set delivery_address since we're using bill_to and ship_to directly
+                console.log("Order data prepared with addresses - bill_to:", $('#bill_to').val(), "ship_to:", $('#ship_to').val());
+            };
+            
+            // Initialize PO number generator on page load
+            function generateUniquePoNumber() {
+                // Format: TE-YYYYMMDD-XXXX (TE for Top Exchange, followed by date, followed by 4 random digits)
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const random = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+                
+                return `TE-${year}${month}${day}-${random}`;
+            }
+            
+            // Modified function to generate PO number when username changes
+            window.generatePONumber = function() {
+                const poNumber = generateUniquePoNumber();
+                $('#po_number').val(poNumber);
+                console.log("Generated PO number:", poNumber);
+                
+                // Also set the current date
+                const today = new Date();
+                const formattedDate = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+                $('#order_date').val(formattedDate);
+            };
+        });
+
+        // Override the form submission to ensure we're not checking for delivery_address
+        $('#addOrderForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            // Prepare order data before submitting
+            prepareOrderData();
+            
+            if (selectedProducts.length === 0) {
+                alert('Please add products to your order');
+                return;
+            }
+            
+            // Check if we have either billing or shipping info
+            const billTo = $('#bill_to').val();
+            const shipTo = $('#ship_to').val();
+            
+            console.log("Submitting form with bill_to:", billTo, "and ship_to:", shipTo);
+            
+            if ((!billTo || billTo.trim() === '') && (!shipTo || shipTo.trim() === '')) {
+                alert('No address information available. Please select a different user with address information.');
+                return;
+            }
+            
+            // Validate other required fields
+            if (!$('#username').val()) {
+                alert('Please select a username');
+                return;
+            }
+            
+            if (!$('#po_number').val()) {
+                // Generate a new PO number if it's missing
+                generatePONumber();
+            }
+            
+            // Disable the save button to prevent multiple submissions
+            $('.save-btn').prop('disabled', true);
+            
+            // Submit the form via AJAX
+            $.ajax({
+                url: $(this).attr('action'),
+                type: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        showToast('Order added successfully!', 'success');
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        $('.save-btn').prop('disabled', false);
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('.save-btn').prop('disabled', false);
+                    console.error("Form submission error:", status, error);
+                    console.error("Server response:", xhr.responseText);
+                    alert('Error submitting order. Please try again. Details: ' + error);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
