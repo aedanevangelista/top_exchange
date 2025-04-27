@@ -194,7 +194,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 <button class="download-btn" onclick="downloadPODirectly(
@@ -391,6 +391,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <input type="hidden" name="po_number" id="po_number">
                     <input type="hidden" name="orders" id="orders">
                     <input type="hidden" name="total_amount" id="total_amount">
+                    <!-- Added missing hidden fields for bill_to, bill_to_attn, ship_to, and ship_to_attn -->
+                    <input type="hidden" name="bill_to" id="bill_to">
+                    <input type="hidden" name="bill_to_attn" id="bill_to_attn">
+                    <input type="hidden" name="ship_to" id="ship_to">
+                    <input type="hidden" name="ship_to_attn" id="ship_to_attn">
                 </div>
                 <div class="form-buttons">
 
@@ -668,7 +673,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 // Include special instructions in form data
                 const specialInstructions = document.getElementById('special_instructions').value;
                 document.getElementById('special_instructions_hidden').value = specialInstructions;
-                // No need for a hidden field since the textarea already has the name attribute
+                
+                // Set bill_to and ship_to fields from delivery address
+                const deliveryAddress = $('#delivery_address').val();
+                $('#bill_to').val(deliveryAddress); 
+                $('#ship_to').val(deliveryAddress);
             };
     </script> 
 </body>

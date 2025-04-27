@@ -288,6 +288,10 @@ window.prepareOrderData = function() {
         $('#delivery_address').val($('#custom_address').val());
     }
     
+    // Set bill_to and ship_to fields - these are missing
+    $('#bill_to').val($('#delivery_address').val()); // Use delivery address as billing address by default
+    $('#ship_to').val($('#delivery_address').val()); // Use delivery address as shipping address
+    
     const orderData = JSON.stringify(selectedProducts);
     $('#orders').val(orderData);
     const totalAmount = calculateCartTotal();
