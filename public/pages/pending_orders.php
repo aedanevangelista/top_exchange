@@ -194,7 +194,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 <button class="download-btn" onclick="downloadPODirectly(
@@ -407,6 +407,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <!-- Add special instructions field -->
                     <label for="special_instructions">Special Instructions:</label>
                     <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
+                    <!-- Add hidden field for special instructions -->
+                    <input type="hidden" id="special_instructions_hidden" name="special_instructions_hidden">
                     
                     <div class="centered-button">
                         <button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()">
@@ -436,6 +438,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <input type="hidden" name="po_number" id="po_number">
                     <input type="hidden" name="orders" id="orders">
                     <input type="hidden" name="total_amount" id="total_amount">
+                    <!-- Add hidden company field -->
+                    <input type="hidden" name="company" id="company">
                 </div>
                 <div class="form-buttons">
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
@@ -711,11 +715,23 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     }
                 }
                 
-                // Include special instructions in form data
-                const specialInstructions = document.getElementById('special_instructions').value;
-                document.getElementById('special_instructions_hidden').value = specialInstructions;
-                // No need for a hidden field since the textarea already has the name attribute
+                // Get company value from the selected option
+                const username = document.getElementById('username');
+                const selectedOption = username.options[username.selectedIndex];
+                if (selectedOption && selectedOption.dataset.company) {
+                    document.getElementById('company').value = selectedOption.dataset.company;
+                }
             };
+
+            // Add or update the updateCompany function
+            window.updateCompany = function() {
+                const username = document.getElementById('username');
+                const selectedOption = username.options[username.selectedIndex];
+                if (selectedOption && selectedOption.dataset.company) {
+                    document.getElementById('company').value = selectedOption.dataset.company;
+                }
+            };
+        });
     </script> 
 </body>
 </html>

@@ -37,9 +37,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $bill_to = null;
         $bill_to_attn = null;
         $company_address = null;
+        $company = null;
         
         $getShippingInfo = $conn->prepare("
-            SELECT ship_to, ship_to_attn, bill_to, bill_to_attn, company_address
+            SELECT ship_to, ship_to_attn, bill_to, bill_to_attn, company_address, company
             FROM clients_accounts 
             WHERE username = ?
         ");
@@ -58,6 +59,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $bill_to = $row['bill_to'];
                 $bill_to_attn = $row['bill_to_attn'];
                 $company_address = $row['company_address'];
+                $company = $row['company'];
             } else {
                 error_log("No client found with username: $username");
             }
@@ -79,50 +81,76 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             }
         }
 
-        // Check table structure using a safer method
-        try {
-            // Try the new structure first
+        // First, check if the orders table has the company column
+        $tableInfo = $conn->query("SHOW COLUMNS FROM orders LIKE 'company'");
+        $hasCompanyColumn = ($tableInfo && $tableInfo->num_rows > 0);
+        
+        if ($hasCompanyColumn) {
+            // Use the new structure with company field
             $insertOrder = $conn->prepare("
                 INSERT INTO orders (
                     username, order_date, delivery_date, po_number, orders, 
                     total_amount, status, special_instructions,
-                    ship_to, ship_to_attn, bill_to, bill_to_attn
+                    ship_to, ship_to_attn, bill_to, bill_to_attn, company
                 ) 
-                VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?, ?, ?, ?)
             ");
             
             if ($insertOrder === false) {
-                throw new Exception($conn->error);
+                throw new Exception('Failed to prepare statement (with company): ' . $conn->error);
             }
             
             $insertOrder->bind_param(
-                "sssssdsssss", 
+                "sssssdssssss", 
                 $username, $order_date, $delivery_date, $po_number, 
                 $orders, $total_amount, $special_instructions,
-                $ship_to, $ship_to_attn, $bill_to, $bill_to_attn
+                $ship_to, $ship_to_attn, $bill_to, $bill_to_attn, $company
             );
-        } catch (Exception $e) {
-            // If that fails, try the old structure
-            error_log("Failed to use new table structure: " . $e->getMessage());
-            error_log("Trying old structure...");
-            
-            $insertOrder = $conn->prepare("
-                INSERT INTO orders (
-                    username, order_date, delivery_date, po_number, orders, 
-                    total_amount, status, special_instructions, delivery_address
-                ) 
-                VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?)
-            ");
-            
-            if ($insertOrder === false) {
-                throw new Exception('Failed to prepare statement (old structure): ' . $conn->error);
+        } else {
+            // Try the structure without company field first
+            try {
+                $insertOrder = $conn->prepare("
+                    INSERT INTO orders (
+                        username, order_date, delivery_date, po_number, orders, 
+                        total_amount, status, special_instructions,
+                        ship_to, ship_to_attn, bill_to, bill_to_attn
+                    ) 
+                    VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?, ?, ?)
+                ");
+                
+                if ($insertOrder === false) {
+                    throw new Exception($conn->error);
+                }
+                
+                $insertOrder->bind_param(
+                    "sssssdsssss", 
+                    $username, $order_date, $delivery_date, $po_number, 
+                    $orders, $total_amount, $special_instructions,
+                    $ship_to, $ship_to_attn, $bill_to, $bill_to_attn
+                );
+            } catch (Exception $e) {
+                // If that fails, try the old structure
+                error_log("Failed to use new table structure: " . $e->getMessage());
+                error_log("Trying old structure...");
+                
+                $insertOrder = $conn->prepare("
+                    INSERT INTO orders (
+                        username, order_date, delivery_date, po_number, orders, 
+                        total_amount, status, special_instructions, delivery_address
+                    ) 
+                    VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?)
+                ");
+                
+                if ($insertOrder === false) {
+                    throw new Exception('Failed to prepare statement (old structure): ' . $conn->error);
+                }
+                
+                $insertOrder->bind_param(
+                    "sssssds", 
+                    $username, $order_date, $delivery_date, $po_number, 
+                    $orders, $total_amount, $special_instructions, $delivery_address
+                );
             }
-            
-            $insertOrder->bind_param(
-                "sssssds", 
-                $username, $order_date, $delivery_date, $po_number, 
-                $orders, $total_amount, $special_instructions, $delivery_address
-            );
         }
 
         if ($insertOrder->execute()) {
