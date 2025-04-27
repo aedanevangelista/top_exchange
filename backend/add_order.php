@@ -16,13 +16,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $special_instructions = $_POST['special_instructions'] ?? '';
         
         // Get shipping information from clients_accounts
-        $ship_to = '';
-        $ship_to_attn = '';
-        $bill_to = '';
-        $bill_to_attn = '';
+        $ship_to = null;
+        $ship_to_attn = null;
+        $bill_to = null;
+        $bill_to_attn = null;
         
         $getShippingInfo = $conn->prepare("
-            SELECT ship_to, ship_to_attn, bill_to, bill_to_attn 
+            SELECT ship_to, ship_to_attn, bill_to, bill_to_attn, company_address 
             FROM clients_accounts 
             WHERE username = ?
         ");
@@ -32,6 +32,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
         
         $getShippingInfo->bind_param("s", $username);
+        $company_address = null;
         
         if ($getShippingInfo->execute()) {
             $result = $getShippingInfo->get_result();
@@ -40,9 +41,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $ship_to_attn = $row['ship_to_attn'];
                 $bill_to = $row['bill_to'];
                 $bill_to_attn = $row['bill_to_attn'];
+                $company_address = $row['company_address'];
             }
         }
         $getShippingInfo->close();
+
+        // If bill_to is empty, use company_address as fallback
+        if (empty($bill_to) && !empty($company_address)) {
+            $bill_to = $company_address;
+        }
+        
+        // If ship_to is empty, use bill_to as fallback
+        if (empty($ship_to) && !empty($bill_to)) {
+            $ship_to = $bill_to;
+        }
 
         // Validate that orders is valid JSON
         $decoded_orders = json_decode($orders, true);

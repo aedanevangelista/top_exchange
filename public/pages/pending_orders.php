@@ -24,12 +24,12 @@ $clients = [];
 $clients_with_company_address = []; // Array to store clients with their company addresses
 $clients_with_company = []; // Array to store clients with their company names
 
-$stmt = $conn->prepare("SELECT username, company_address, company FROM clients_accounts WHERE status = 'active'");
+$stmt = $conn->prepare("SELECT username, company_address, company, ship_to, ship_to_attn, bill_to, bill_to_attn FROM clients_accounts WHERE status = 'active'");
 if ($stmt === false) {
     die('Prepare failed: ' . htmlspecialchars($conn->error));
 }
 $stmt->execute();
-$stmt->bind_result($username, $company_address, $company);
+$stmt->bind_result($username, $company_address, $company, $ship_to, $ship_to_attn, $bill_to, $bill_to_attn);
 while ($stmt->fetch()) {
     $clients[] = $username;
     $clients_with_company_address[$username] = $company_address;
@@ -549,422 +549,596 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             font-size: 14px;
         }
 
-    .instructions-btn {
-        padding: 6px 12px;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        min-width: 60px;
-        text-align: center;
-    }
+        .instructions-btn {
+            padding: 6px 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            min-width: 60px;
+            text-align: center;
+        }
 
-    .instructions-btn:hover {
-        background-color: #218838;
-    }
-    
-    .instructions-btn i {
-        margin-right: 5px;
-    }
-    
-    .no-instructions {
-        color: #6c757d;
-        font-style: italic;
-    }
-    
-    /* Special Instructions Modal */
-    .instructions-modal {
-        display: none;
-        position: fixed;
-        z-index: 2000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0, 0, 0, 0.7);
-    }
-    
-    .instructions-modal-content {
-        background-color: #ffffff;
-        margin: 10% auto;
-        padding: 0;
-        border-radius: 8px;
-        width: 60%;
-        max-width: 600px;
-        position: relative;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        animation: modalFadeIn 0.3s ease-in-out;
-        overflow: hidden;
-        max-height: 90vh; /* 90% of the viewport height */
-        overflow-y: auto; /* Add scroll if content exceeds max height */
-        margin: 2vh auto; /* Center vertically with 5% top margin */
-    }
+        .instructions-btn:hover {
+            background-color: #218838;
+        }
+        
+        .instructions-btn i {
+            margin-right: 5px;
+        }
+        
+        .no-instructions {
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        /* Special Instructions Modal */
+        .instructions-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .instructions-modal-content {
+            background-color: #ffffff;
+            margin: 10% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 60%;
+            max-width: 600px;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: modalFadeIn 0.3s ease-in-out;
+            overflow: hidden;
+            max-height: 90vh; /* 90% of the viewport height */
+            overflow-y: auto; /* Add scroll if content exceeds max height */
+            margin: 2vh auto; /* Center vertically with 5% top margin */
+        }
 
-    @keyframes modalFadeIn {
-        from { opacity: 0; transform: translateY(-20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .close-instructions {
-        position: absolute;
-        right: 15px;
-        top: 15px;
-        font-size: 18px;
-        color: white;
-        opacity: 0.8;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        width: 25px;
-        height: 25px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-    }
-    
-    .close-instructions:hover {
-        background-color: rgba(255, 255, 255, 0.2);
-        opacity: 1;
-    }
-    
-    .instructions-header {
-        background-color: #2980b9;
-        color: white;
-        padding: 15px 20px;
-        position: relative;
-    }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .close-instructions {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            font-size: 18px;
+            color: white;
+            opacity: 0.8;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        
+        .close-instructions:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            opacity: 1;
+        }
+        
+        .instructions-header {
+            background-color: #2980b9;
+            color: white;
+            padding: 15px 20px;
+            position: relative;
+        }
 
-    .instructions-header h3 {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 600;
-    }
+        .instructions-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
 
-    .instructions-po-number {
-        font-size: 12px;
-        margin-top: 5px;
-        opacity: 0.9;
-    }
-    
-    .instructions-body {
-        padding: 20px;
-        max-height: 300px;
-        overflow-y: auto;
-        line-height: 1.6;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #eaeaea;
-    }
-    
-    .instructions-body.empty {
-        color: #6c757d;
-        font-style: italic;
-        text-align: center;
-        padding: 40px 20px;
-    }
-    
-    .instructions-footer {
-        padding: 15px 20px;
-        text-align: right;
-        background-color: #ffffff;
-    }
-    
-    .close-instructions-btn {
-        background-color: #2980b9;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        transition: background-color 0.2s;
-    }
-    
-    .close-instructions-btn:hover {
-        background-color: #2471a3;
-    }
-    
-    /* Make button look consistent with other buttons */
-    .instructions-btn {
-        padding: 6px 12px;
-        background-color: #2980b9;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        min-width: 60px;
-        text-align: center;
-        transition: background-color 0.2s;
-    }
-    
-    .instructions-btn:hover {
-        background-color: #2471a3;
-    }
-    
-    .no-instructions {
-        color: #6c757d;
-        font-style: italic;
-    }
+        .instructions-po-number {
+            font-size: 12px;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+        
+        .instructions-body {
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .instructions-body.empty {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .instructions-footer {
+            padding: 15px 20px;
+            text-align: right;
+            background-color: #ffffff;
+        }
+        
+        .close-instructions-btn {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+        
+        .close-instructions-btn:hover {
+            background-color: #2471a3;
+        }
+        
+        /* Make button look consistent with other buttons */
+        .instructions-btn {
+            padding: 6px 12px;
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            min-width: 60px;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+        
+        .instructions-btn:hover {
+            background-color: #2471a3;
+        }
+        
+        .no-instructions {
+            color: #6c757d;
+            font-style: italic;
+        }
 
-    /* Style for the special instructions textarea */
-    #special_instructions {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        resize: vertical; /* Allow vertical resizing only */
-        font-family: inherit;
-        margin-bottom: 15px;
-    }
+        /* Style for the special instructions textarea */
+        #special_instructions {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical; /* Allow vertical resizing only */
+            font-family: inherit;
+            margin-bottom: 15px;
+        }
 
-    /* Update overlay-content max height */
-    .overlay-content {
-        max-height: 90vh; /* 90% of the viewport height */
-        overflow-y: auto; /* Add scroll if content exceeds max height */
-    }
+        /* Update overlay-content max height */
+        .overlay-content {
+            max-height: 90vh; /* 90% of the viewport height */
+            overflow-y: auto; /* Add scroll if content exceeds max height */
+        }
 
-    #contentToDownload {
-        font-size: 13px; /* Adjust this value based on the original font size minus 2px */
-    }
+        #contentToDownload {
+            font-size: 13px; /* Adjust this value based on the original font size minus 2px */
+        }
 
-    #contentToDownload .po-table {
-        font-size: 11px; /* Adjust this value based on the original font size minus 2px */
-    }
+        #contentToDownload .po-table {
+            font-size: 11px; /* Adjust this value based on the original font size minus 2px */
+        }
 
-    /* Adjust other elements if needed */
-    #contentToDownload .po-title {
-        font-size: 16px; /* Original was 18px */
-    }
+        /* Adjust other elements if needed */
+        #contentToDownload .po-title {
+            font-size: 16px; /* Original was 18px */
+        }
 
-    #contentToDownload .po-company {
-        font-size: 19px; /* Original was 22px */
-    }
+        #contentToDownload .po-company {
+            font-size: 19px; /* Original was 22px */
+        }
 
-    #contentToDownload .po-total {
-        font-size: 11px; /* Original was 14px */
-    }
+        #contentToDownload .po-total {
+            font-size: 11px; /* Original was 14px */
+        }
 
-#contentToDownload .po-detail-label {
-    font-size: 11px; /* Reduced from 12px */
-}
-    #addressInfoModal {
-    display: none;
-    position: fixed;
-    z-index: 9999;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: rgba(0,0,0,0.7);
-}
+        #contentToDownload .po-detail-label {
+            font-size: 11px; /* Reduced from 12px */
+        }
 
-    .info-modal-content {
-        background-color: #ffffff;
-        margin: 0;
-        padding: 0;
-        border-radius: 10px;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-        width: 90%;
-        max-width: 700px;
-        max-height: 80vh;
-        animation: modalFadeIn 0.3s;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        display: flex;
-        flex-direction: column;
-    }
+        #addressInfoModal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: rgba(0,0,0,0.7);
+        }
 
-    .info-modal-header {
-        background-color: #4a90e2;
-        color: #fff;
-        padding: 15px 25px;
-        position: relative;
-        display: flex;
-        align-items: center;
-        border-radius: 10px 10px 0 0;
-    }
+        .info-modal-content {
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+            border-radius: 10px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            animation: modalFadeIn 0.3s;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+        }
 
-    .info-modal-header h2 {
-        margin: 0;
-        font-size: 20px;
-        flex: 1;
-        font-weight: 500;
-    }
+        .info-modal-header {
+            background-color: #4a90e2;
+            color: #fff;
+            padding: 15px 25px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            border-radius: 10px 10px 0 0;
+        }
 
-    .info-modal-header h2 i {
-        margin-right: 10px;
-    }
+        .info-modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            flex: 1;
+            font-weight: 500;
+        }
 
-    .info-modal-close {
-        color: #fff;
-        font-size: 24px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.2s;
-        padding: 5px;
-        line-height: 1;
-    }
+        .info-modal-header h2 i {
+            margin-right: 10px;
+        }
 
-    .info-modal-close:hover {
-        transform: scale(1.1);
-    }
+        .info-modal-close {
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 5px;
+            line-height: 1;
+        }
 
-    .info-modal-body {
-        padding: 25px;
-        overflow-y: auto;
-        max-height: calc(80vh - 65px);
-        flex: 1;
-    }
+        .info-modal-close:hover {
+            transform: scale(1.1);
+        }
 
-    .info-section {
-        margin-bottom: 25px;
-        background-color: #f9f9f9;
-        border-radius: 8px;
-        padding: 15px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
+        .info-modal-body {
+            padding: 25px;
+            overflow-y: auto;
+            max-height: calc(80vh - 65px);
+            flex: 1;
+        }
 
-    .info-section:last-child {
-        margin-bottom: 0;
-    }
+        .info-section {
+            margin-bottom: 25px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
 
-    .info-section-title {
-        display: flex;
-        align-items: center;
-        color: #4a90e2;
-        margin-top: 0;
-        margin-bottom: 15px;
-        font-size: 16px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #e0e0e0;
-    }
+        .info-section:last-child {
+            margin-bottom: 0;
+        }
 
-    .info-section-title i {
-        margin-right: 10px;
-        width: 20px;
-        text-align: center;
-    }
+        .info-section-title {
+            display: flex;
+            align-items: center;
+            color: #4a90e2;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
 
-    .info-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 0;
-    }
+        .info-section-title i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
 
-    .info-table th {
-        text-align: left;
-        background-color: #eef5ff;
-        padding: 12px 15px;
-        border: 1px solid #d1e1f9;
-        width: 30%;
-        vertical-align: top;
-        color: #3a5d85;
-        font-weight: 600;
-        font-size: 14px;
-    }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+        }
 
-    .info-table td {
-        padding: 12px 15px;
-        border: 1px solid #d1e1f9;
-        word-break: break-word;
-        vertical-align: top;
-        line-height: 1.5;
-        color: #333;
-        background-color: #fff;
-        font-size: 14px;
-    }
+        .info-table th {
+            text-align: left;
+            background-color: #eef5ff;
+            padding: 12px 15px;
+            border: 1px solid #d1e1f9;
+            width: 30%;
+            vertical-align: top;
+            color: #3a5d85;
+            font-weight: 600;
+            font-size: 14px;
+        }
 
-    .attention-cell {
-        display: flex;
-        align-items: center;
-    }
+        .info-table td {
+            padding: 12px 15px;
+            border: 1px solid #d1e1f9;
+            word-break: break-word;
+            vertical-align: top;
+            line-height: 1.5;
+            color: #333;
+            background-color: #fff;
+            font-size: 14px;
+        }
 
-    .attention-cell i {
-        margin-right: 6px;
-        color: #4a90e2;
-    }
+        .attention-cell {
+            display: flex;
+            align-items: center;
+        }
 
-    .empty-notice {
-        padding: 20px;
-        text-align: center;
-        color: #888;
-        font-style: italic;
-        border: 1px dashed #d1e1f9;
-        border-radius: 6px;
-        font-size: 14px;
-    }
+        .attention-cell i {
+            margin-right: 6px;
+            color: #4a90e2;
+        }
 
-    .view-address-btn {
-        background-color: #4a90e2;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 5px 10px;
-        cursor: pointer;
-        font-size: 12px;
-        transition: all 0.3s;
-    }
+        .empty-notice {
+            padding: 20px;
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            border: 1px dashed #d1e1f9;
+            border-radius: 6px;
+            font-size: 14px;
+        }
 
-    .view-address-btn:hover {
-        background-color: #357abf;
-    }
+        .view-address-btn {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
 
-    /* Shipping Info Section Styles */
-.shipping-info-section {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-}
+        .view-address-btn:hover {
+            background-color: #357abf;
+        }
+        
+        /* Form layout improvements */
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
 
-.shipping-info-section h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 16px;
-    color: #333;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 8px;
-}
+        .form-column {
+            flex: 1;
+        }
 
-.info-row {
-    display: flex;
-    margin-bottom: 10px;
-}
+        .form-column label {
+            display: block;
+            margin-bottom: 8px;
+        }
 
-.info-label {
-    font-weight: bold;
-    width: 150px;
-    color: #555;
-}
+        .form-column input {
+            width: 100%;
+        }
 
-.info-value {
-    flex: 1;
-}
+        /* Improved Shipping Info Section Styles */
+        .shipping-info-container {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
 
-.shipping-note {
-    font-size: 12px;
-    color: #666;
-    margin-top: 15px;
-    font-style: italic;
-    background-color: #f0f8ff;
-    padding: 8px;
-    border-radius: 4px;
-    border-left: 3px solid #2980b9;
-}
+        .shipping-info-header {
+            background-color: #4a90e2;
+            padding: 12px 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
 
-.shipping-note i {
-    margin-right: 5px;
-    color: #2980b9;
-}
+        .shipping-info-header h3 {
+            margin: 0;
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+        .shipping-info-header h3 i {
+            margin-right: 10px;
+        }
+
+        .shipping-info-columns {
+            display: flex;
+            padding: 0;
+        }
+
+        .shipping-info-column {
+            flex: 1;
+            padding: 20px;
+            position: relative;
+        }
+
+        .shipping-info-column:first-child {
+            border-right: 1px solid #f0f0f0;
+            background-color: rgba(74, 144, 226, 0.03);
+        }
+
+        .shipping-info-column h4 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #333;
+            font-weight: 600;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+        }
+
+        .shipping-info-column h4::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background-color: #4a90e2;
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+
+        .info-group {
+            margin-bottom: 15px;
+        }
+
+        .info-group label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .info-field {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 10px 12px;
+            min-height: 20px;
+        }
+
+        .info-field.has-data {
+            background-color: #ffffff;
+            border-color: #bed0e7;
+        }
+
+        .info-field .placeholder {
+            color: #999;
+            font-style: italic;
+            font-size: 13px;
+        }
+
+        .info-field .not-provided {
+            color: #e74c3c;
+            font-style: italic;
+            font-size: 13px;
+        }
+
+        .shipping-info-actions {
+            background-color: #f9f9f9;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .edit-client-btn {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .edit-client-btn:hover:not([disabled]) {
+            background-color: #3982d7;
+        }
+
+        .edit-client-btn:disabled {
+            background-color: #b8d1ed;
+            cursor: not-allowed;
+        }
+
+        .edit-client-btn i {
+            margin-right: 8px;
+        }
+
+        .shipping-note {
+            color: #666;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+        }
+
+        .shipping-note i {
+            margin-right: 8px;
+            color: #f39c12;
+        }
+
+        /* For warning message */
+        .info-warning {
+            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 10px 15px;
+            margin: 15px 20px 0;
+            font-size: 13px;
+            color: #7a5700;
+            display: flex;
+            align-items: center;
+        }
+
+        .info-warning i {
+            margin-right: 10px;
+            color: #f39c12;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .status-complete {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-incomplete {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-partial {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .loading-spinner {
+            display: flex;
+            align-items: center;
+            color: #4a90e2;
+        }
+
+        .loading-spinner i {
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
@@ -1190,7 +1364,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber(); fetchClientInfo();">
+                    <select id="username" name="username" required onchange="fetchClientInfo(); generatePONumber();">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
@@ -1200,42 +1374,74 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         <?php endforeach; ?>
                     </select>
                                     
-                    <label for="order_date">Order Date:</label>
-                    <input type="text" id="order_date" name="order_date" readonly>
-                    <label for="delivery_date">Delivery Date:</label>
-                    <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
-                    
-                    <!-- Shipping Information Display Section -->
-                    <div class="shipping-info-section">
-                        <h3>Shipping Information</h3>
-                        
-                        <div class="info-row">
-                            <div class="info-label">Ship To:</div>
-                            <div id="ship_to_display" class="info-value">Not available</div>
+                    <div class="form-row">
+                        <div class="form-column">
+                            <label for="order_date">Order Date:</label>
+                            <input type="text" id="order_date" name="order_date" readonly>
                         </div>
-                        
-                        <div class="info-row">
-                            <div class="info-label">Ship To Attention:</div>
-                            <div id="ship_to_attn_display" class="info-value">Not available</div>
+                        <div class="form-column">
+                            <label for="delivery_date">Delivery Date:</label>
+                            <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
                         </div>
-                        
-                        <div class="info-row">
-                            <div class="info-label">Bill To:</div>
-                            <div id="bill_to_display" class="info-value">Not available</div>
-                        </div>
-                        
-                        <div class="info-row">
-                            <div class="info-label">Bill To Attention:</div>
-                            <div id="bill_to_attn_display" class="info-value">Not available</div>
-                        </div>
-                        
-                        <p class="shipping-note">
-                            <i class="fas fa-info-circle"></i> 
-                            Shipping information is automatically retrieved from the client's account. 
-                            To update this information, please edit the client's account details.
-                        </p>
                     </div>
                     
+                    <!-- Improved Shipping Information Display Section -->
+                    <div class="shipping-info-container">
+                        <div class="shipping-info-header">
+                            <h3><i class="fas fa-shipping-fast"></i> Shipping & Billing Information</h3>
+                        </div>
+                        
+                        <div class="shipping-info-columns">
+                            <!-- Billing Information Column -->
+                            <div class="shipping-info-column">
+                                <h4>Billing Information</h4>
+                                
+                                <div class="info-group">
+                                    <label>Bill To:</label>
+                                    <div id="bill_to_display" class="info-field">
+                                        <span class="placeholder">Select a client to view billing address</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="info-group">
+                                    <label>Bill To Attention:</label>
+                                    <div id="bill_to_attn_display" class="info-field">
+                                        <span class="placeholder">Select a client to view billing attention</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Shipping Information Column -->
+                            <div class="shipping-info-column">
+                                <h4>Shipping Information</h4>
+                                
+                                <div class="info-group">
+                                    <label>Ship To:</label>
+                                    <div id="ship_to_display" class="info-field">
+                                        <span class="placeholder">Select a client to view shipping address</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="info-group">
+                                    <label>Ship To Attention:</label>
+                                    <div id="ship_to_attn_display" class="info-field">
+                                        <span class="placeholder">Select a client to view shipping attention</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="shipping-info-actions">
+                            <button type="button" id="edit_client_button" class="edit-client-btn" onclick="editClientAddress()" disabled>
+                                <i class="fas fa-user-edit"></i> Edit Client Address
+                            </button>
+                            <div class="shipping-note">
+                                <i class="fas fa-info-circle"></i> 
+                                Shipping information is automatically retrieved from the client's profile.
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Add special instructions field -->
                     <label for="special_instructions">Special Instructions:</label>
                     <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
@@ -1273,7 +1479,9 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
-                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
+                    <button type="submit" class="save-btn">
+                        <i class="fas fa-save"></i> Save
+                    </button>
                 </div>
             </form>
         </div>
