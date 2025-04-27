@@ -674,12 +674,24 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 const specialInstructions = $('#special_instructions').val();
                 $('#special_instructions_hidden').val(specialInstructions);
                 
-                // No need to set delivery_address since we're using bill_to and ship_to directly
                 console.log("Order data prepared with addresses - bill_to:", $('#bill_to').val(), "ship_to:", $('#ship_to').val());
             };
             
-            // Initialize PO number generator on page load
-            function generateUniquePoNumber() {
+            // Initialize datepicker for delivery date
+            $('#delivery_date').datepicker({
+                dateFormat: 'yy-mm-dd',
+                minDate: 0,
+                beforeShowDay: function(date) {
+                    const day = date.getDay();
+                    return [day === 1 || day === 3 || day === 5];
+                }
+            });
+
+            // Set current date for order_date
+            $('#order_date').val(new Date().toISOString().split('T')[0]);
+            
+            // ***IMPORTANT FIX*** Override the generatePONumber function with our own implementation that doesn't rely on server
+            window.generatePONumber = function() {
                 // Format: TE-YYYYMMDD-XXXX (TE for Top Exchange, followed by date, followed by 4 random digits)
                 const now = new Date();
                 const year = now.getFullYear();
@@ -687,39 +699,40 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 const day = String(now.getDate()).padStart(2, '0');
                 const random = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
                 
-                return `TE-${year}${month}${day}-${random}`;
-            }
-            
-            // Modified function to generate PO number when username changes
-            window.generatePONumber = function() {
-                const poNumber = generateUniquePoNumber();
-                $('#po_number').val(poNumber);
+                const poNumber = `TE-${year}${month}${day}-${random}`;
                 console.log("Generated PO number:", poNumber);
                 
+                // Set the PO number field
+                $('#po_number').val(poNumber);
+                
                 // Also set the current date
-                const today = new Date();
-                const formattedDate = today.toISOString().split('T')[0]; // YYYY-MM-DD format
-                $('#order_date').val(formattedDate);
+                $('#order_date').val(`${year}-${month}-${day}`);
             };
+            
+            // Generate a PO number when the page loads
+            setTimeout(function() {
+                if ($('#addOrderForm').is(':visible') && !$('#po_number').val()) {
+                    window.generatePONumber();
+                }
+            }, 500);
         });
 
         // Override the form submission to ensure we're not checking for delivery_address
-        $('#addOrderForm').on('submit', function(e) {
+        $('#addOrderForm').off('submit').on('submit', function(e) {
             e.preventDefault();
             
-            // Prepare order data before submitting
-            prepareOrderData();
-            
+            // Make sure we have products
             if (selectedProducts.length === 0) {
                 alert('Please add products to your order');
                 return;
             }
             
+            // Prepare the order data (including updating hidden fields)
+            prepareOrderData();
+            
             // Check if we have either billing or shipping info
             const billTo = $('#bill_to').val();
             const shipTo = $('#ship_to').val();
-            
-            console.log("Submitting form with bill_to:", billTo, "and ship_to:", shipTo);
             
             if ((!billTo || billTo.trim() === '') && (!shipTo || shipTo.trim() === '')) {
                 alert('No address information available. Please select a different user with address information.');
@@ -732,10 +745,19 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 return;
             }
             
+            // Generate a new PO number if it's missing
             if (!$('#po_number').val()) {
-                // Generate a new PO number if it's missing
                 generatePONumber();
             }
+            
+            // Validate that we now have a PO number
+            if (!$('#po_number').val()) {
+                alert('Could not generate a PO number. Please reload and try again.');
+                return;
+            }
+            
+            console.log('Submitting order with PO number:', $('#po_number').val());
+            console.log('Form data:', $(this).serialize());
             
             // Disable the save button to prevent multiple submissions
             $('.save-btn').prop('disabled', true);
@@ -747,6 +769,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 data: $(this).serialize(),
                 dataType: 'json',
                 success: function(response) {
+                    console.log("Server response:", response);
                     if (response.success) {
                         showToast('Order added successfully!', 'success');
                         setTimeout(function() {
@@ -761,7 +784,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     $('.save-btn').prop('disabled', false);
                     console.error("Form submission error:", status, error);
                     console.error("Server response:", xhr.responseText);
-                    alert('Error submitting order. Please try again. Details: ' + error);
+                    
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        alert('Error submitting order: ' + (response.message || error));
+                    } catch (e) {
+                        alert('Error submitting order. Please try again. Details: ' + error);
+                    }
                 }
             });
         });

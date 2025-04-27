@@ -27,9 +27,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Invalid order data format');
         }
 
+        // Check if the PO number already exists in the database
+        $checkStmt = $conn->prepare("SELECT po_number FROM orders WHERE po_number = ?");
+        if ($checkStmt === false) {
+            throw new Exception('Failed to prepare statement: ' . $conn->error);
+        }
+        
+        $checkStmt->bind_param("s", $po_number);
+        $checkStmt->execute();
+        $checkResult = $checkStmt->get_result();
+        
+        if ($checkResult->num_rows > 0) {
+            throw new Exception('Duplicate entry: PO number already exists. Please try again with a new PO number.');
+        }
+        $checkStmt->close();
+
         // Insert into orders table with billing and shipping fields
         $insertOrder = $conn->prepare("
-            INSERT INTO orders (username, order_date, delivery_date, po_number, orders, total_amount, 
+            INSERT INTO orders (po_number, username, order_date, delivery_date, orders, total_amount, 
                               bill_to, bill_to_attn, ship_to, ship_to_attn, status, special_instructions) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
         ");
@@ -38,7 +53,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Failed to prepare statement: ' . $conn->error);
         }
 
-        $insertOrder->bind_param("sssssdsssss", $username, $order_date, $delivery_date, $po_number, 
+        $insertOrder->bind_param("sssssdsssss", $po_number, $username, $order_date, $delivery_date, 
                               $orders, $total_amount, $bill_to, $bill_to_attn, $ship_to, $ship_to_attn, 
                               $special_instructions);
 
