@@ -375,6 +375,12 @@ function truncate($text, $max = 15) {
             font-weight: bold;
         }
         
+        .optional {
+            color: #666;
+            font-style: italic;
+            font-size: 0.9em;
+        }
+        
         .overlay-content {
             max-width: 800px;
             width: 90%;
@@ -673,21 +679,30 @@ function truncate($text, $max = 15) {
             border-bottom: 1px solid #eee;
             padding-bottom: 6px; /* Reduced padding */
         }
+
+        .attention-title {
+            display: flex;
+            align-items: center;
+            margin: 10px 0 5px 0;
+            font-size: 13px;
+            color: #4a90e2;
+        }
+        
+        .attention-title i {
+            margin-right: 5px;
+        }
         
         /* Attention field styles */
         .attention-field {
-            display: flex;
-            align-items: center;
+            width: 100%;
             margin-top: 6px; /* Reduced margin */
-            padding: 6px; /* Reduced padding */
-            background-color: #f1f8ff;
-            border-radius: 4px;
-            border: 1px solid #d1e6ff;
+            text-align: center;
         }
         
-        .attention-field i {
-            color: #4a90e2;
-            margin-right: 6px; /* Reduced margin */
+        .attention-field input {
+            width: 100%;
+            text-align: center;
+            font-size: 13px;
         }
 
         /* Fixed header and footer in modal */
@@ -716,6 +731,9 @@ function truncate($text, $max = 15) {
             position: sticky;
             bottom: 0;
             z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
         }
 
         .modal-body {
@@ -755,17 +773,11 @@ function truncate($text, $max = 15) {
             font-size: 14px;
         }
         
-        /* Form buttons - centered */
+        /* Form buttons - improved */
         .modal-footer button {
             padding: 8px 16px; /* Better padding */
             font-size: 13px; /* Smaller font */
             min-width: 100px; /* Minimum width for buttons */
-            margin: 0 5px; /* Margin between buttons */
-        }
-
-        .save-btn, .cancel-btn {
-            padding: 8px 16px; /* Better padding */
-            font-size: 13px; /* Smaller text */
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.2s;
@@ -1071,9 +1083,11 @@ function truncate($text, $max = 15) {
                                 <label for="bill_to">Bill To: <span class="optional">(optional)</span></label>
                                 <textarea id="bill_to" name="bill_to" placeholder="Billing address if different from company address"></textarea>
                                 
+                                <div class="attention-title">
+                                    <i class="fas fa-user"></i> Attention To <span class="optional">(optional)</span>
+                                </div>
                                 <div class="attention-field">
-                                    <i class="fas fa-user"></i>
-                                    <input type="text" id="bill_to_attn" name="bill_to_attn" placeholder="Attention To (Person/Department)" title="Contact person for billing inquiries">
+                                    <input type="text" id="bill_to_attn" name="bill_to_attn" placeholder="Contact person for billing inquiries">
                                 </div>
                             </div>
 
@@ -1082,9 +1096,11 @@ function truncate($text, $max = 15) {
                                 <label for="ship_to">Ship To: <span class="optional">(optional)</span></label>
                                 <textarea id="ship_to" name="ship_to" placeholder="Shipping address if different from company address"></textarea>
                                 
+                                <div class="attention-title">
+                                    <i class="fas fa-user"></i> Attention To <span class="optional">(optional)</span>
+                                </div>
                                 <div class="attention-field">
-                                    <i class="fas fa-user"></i>
-                                    <input type="text" id="ship_to_attn" name="ship_to_attn" placeholder="Attention To (Person/Department)" title="Contact person for deliveries">
+                                    <input type="text" id="ship_to_attn" name="ship_to_attn" placeholder="Contact person for deliveries">
                                 </div>
                             </div>
                             
@@ -1158,9 +1174,11 @@ function truncate($text, $max = 15) {
                                 <label for="edit-bill_to">Bill To: <span class="optional">(optional)</span></label>
                                 <textarea id="edit-bill_to" name="bill_to" placeholder="Billing address if different from company address"></textarea>
                                 
+                                <div class="attention-title">
+                                    <i class="fas fa-user"></i> Attention To <span class="optional">(optional)</span>
+                                </div>
                                 <div class="attention-field">
-                                    <i class="fas fa-user"></i>
-                                    <input type="text" id="edit-bill_to_attn" name="bill_to_attn" placeholder="Attention To (Person/Department)" title="Contact person for billing inquiries">
+                                    <input type="text" id="edit-bill_to_attn" name="bill_to_attn" placeholder="Contact person for billing inquiries">
                                 </div>
                             </div>
 
@@ -1169,9 +1187,11 @@ function truncate($text, $max = 15) {
                                 <label for="edit-ship_to">Ship To: <span class="optional">(optional)</span></label>
                                 <textarea id="edit-ship_to" name="ship_to" placeholder="Shipping address if different from company address"></textarea>
                                 
+                                <div class="attention-title">
+                                    <i class="fas fa-user"></i> Attention To <span class="optional">(optional)</span>
+                                </div>
                                 <div class="attention-field">
-                                    <i class="fas fa-user"></i>
-                                    <input type="text" id="edit-ship_to_attn" name="ship_to_attn" placeholder="Attention To (Person/Department)" title="Contact person for deliveries">
+                                    <input type="text" id="edit-ship_to_attn" name="ship_to_attn" placeholder="Contact person for deliveries">
                                 </div>
                             </div>
                             
