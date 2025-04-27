@@ -649,7 +649,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     </div>
 
     <script src="/js/orders.js"></script>
-    <script src="/js/pending_orders"></script>
+    <script src="/js/pending_orders.js"></script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
     
