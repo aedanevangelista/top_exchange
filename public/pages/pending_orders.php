@@ -357,7 +357,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
-                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
+                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
                 </div>
             </form>
         </div>
@@ -677,18 +677,43 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 // No need to set delivery_address since we're using bill_to and ship_to directly
                 console.log("Order data prepared with addresses - bill_to:", $('#bill_to').val(), "ship_to:", $('#ship_to').val());
             };
+            
+            // Initialize PO number generator on page load
+            function generateUniquePoNumber() {
+                // Format: TE-YYYYMMDD-XXXX (TE for Top Exchange, followed by date, followed by 4 random digits)
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const random = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+                
+                return `TE-${year}${month}${day}-${random}`;
+            }
+            
+            // Modified function to generate PO number when username changes
+            window.generatePONumber = function() {
+                const poNumber = generateUniquePoNumber();
+                $('#po_number').val(poNumber);
+                console.log("Generated PO number:", poNumber);
+                
+                // Also set the current date
+                const today = new Date();
+                const formattedDate = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+                $('#order_date').val(formattedDate);
+            };
         });
 
         // Override the form submission to ensure we're not checking for delivery_address
         $('#addOrderForm').on('submit', function(e) {
             e.preventDefault();
             
+            // Prepare order data before submitting
+            prepareOrderData();
+            
             if (selectedProducts.length === 0) {
                 alert('Please add products to your order');
                 return;
             }
-
-            prepareOrderData();
             
             // Check if we have either billing or shipping info
             const billTo = $('#bill_to').val();
@@ -708,8 +733,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             }
             
             if (!$('#po_number').val()) {
-                alert('PO number is missing. Please try again.');
-                return;
+                // Generate a new PO number if it's missing
+                generatePONumber();
             }
             
             // Disable the save button to prevent multiple submissions
