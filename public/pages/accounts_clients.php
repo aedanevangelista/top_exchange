@@ -452,24 +452,31 @@ function truncate($text, $max = 15) {
             top: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
+            overflow: hidden; /* Changed from auto to hidden to remove outer scrollbar */
             background-color: rgba(0,0,0,0.7);
         }
 
         .info-modal-content {
             background-color: #ffffff;
-            margin: 5% auto;
+            margin: 0;
             padding: 0;
             border-radius: 10px;
             box-shadow: 0 8px 30px rgba(0,0,0,0.3);
             width: 90%;
             max-width: 700px;
+            max-height: 80vh; /* Limit the height */
             animation: modalFadeIn 0.3s;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Center the modal */
+            display: flex;
+            flex-direction: column;
         }
 
         @keyframes modalFadeIn {
-            from {opacity: 0; transform: translateY(-20px);}
-            to {opacity: 1; transform: translateY(0);}
+            from {opacity: 0; transform: translate(-50%, -55%);}
+            to {opacity: 1; transform: translate(-50%, -50%);}
         }
 
         .info-modal-header {
@@ -509,7 +516,9 @@ function truncate($text, $max = 15) {
 
         .info-modal-body {
             padding: 25px;
-            max-height: auto; /* No max-height to prevent scroll */
+            overflow-y: auto; /* Add scrollbar only to the body */
+            max-height: calc(80vh - 65px); /* Account for header height */
+            flex: 1;
         }
 
         .info-section {
