@@ -185,7 +185,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <!-- Add Special Instructions column with view button -->
                                 <td>
                                     <?php if (!empty($order['special_instructions'])): ?>
-                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
+                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', 
+                                        '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
                                             <i class="fas fa-comment"></i> View
                                         </button>
                                     <?php else: ?>
