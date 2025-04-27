@@ -443,7 +443,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .po-details {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
         
         .po-left, .po-right {
@@ -451,7 +451,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         
         .po-detail-row {
-            margin-bottom: 10px;
+            margin-bottom: 5px;
+            line-height: 1.3;
         }
         
         .po-detail-label {
@@ -728,11 +729,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     }
 
     #contentToDownload {
-        font-size: 14px; /* Adjust this value based on the original font size minus 2px */
+        font-size: 13px; /* Adjust this value based on the original font size minus 2px */
     }
 
     #contentToDownload .po-table {
-        font-size: 12px; /* Adjust this value based on the original font size minus 2px */
+        font-size: 11px; /* Adjust this value based on the original font size minus 2px */
     }
 
     /* Adjust other elements if needed */
@@ -741,11 +742,16 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     }
 
     #contentToDownload .po-company {
-        font-size: 20px; /* Original was 22px */
+        font-size: 19px; /* Original was 22px */
     }
 
     #contentToDownload .po-total {
-        font-size: 12px; /* Original was 14px */
+        font-size: 11px; /* Original was 14px */
+    }
+
+    #contentToDownload .po-detail-label {
+        width: 115px; /* Slightly reduced width */
+        font-size: 11px; /* Reduced from 12px */
     }
     </style>
 </head>
@@ -841,7 +847,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     '<?= htmlspecialchars($order['delivery_address']) ?>', 
                                     '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
                                     '<?= htmlspecialchars($order['total_amount']) ?>', 
-                                    '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
+                                    '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>',
+                                    '<?= htmlspecialchars($order['bill_to'] ?? '') ?>',
+                                    '<?= htmlspecialchars($order['bill_to_attn'] ?? '') ?>',
+                                    '<?= htmlspecialchars($order['ship_to'] ?? '') ?>',
+                                    '<?= htmlspecialchars($order['ship_to_attn'] ?? '') ?>'
                                 )">
                                     <i class="fas fa-file-pdf"></i> Download PDF
                                 </button>
@@ -886,13 +896,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <span class="po-detail-label">Delivery Address:</span>
                                 <span id="printDeliveryAddress"></span>
                             </div>
-                            <div class="po-detail-row" id="printInstructionsSection">
-                                <span class="po-detail-label">Special Instructions:</span>
-                                <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
-                            </div>
-                        </div>
-                        
-                        <div class="po-right">
                             <div class="po-detail-row">
                                 <span class="po-detail-label">Order Date:</span>
                                 <span id="printOrderDate"></span>
@@ -900,6 +903,25 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             <div class="po-detail-row">
                                 <span class="po-detail-label">Delivery Date:</span>
                                 <span id="printDeliveryDate"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="po-right">
+                            <div class="po-detail-row" id="billToRow">
+                                <span class="po-detail-label">Bill To:</span>
+                                <span id="printBillTo"></span>
+                            </div>
+                            <div class="po-detail-row" id="billToAttnRow">
+                                <span class="po-detail-label">Bill To Attn:</span>
+                                <span id="printBillToAttn"></span>
+                            </div>
+                            <div class="po-detail-row" id="shipToRow">
+                                <span class="po-detail-label">Ship To:</span>
+                                <span id="printShipTo"></span>
+                            </div>
+                            <div class="po-detail-row" id="shipToAttnRow">
+                                <span class="po-detail-label">Ship To Attn:</span>
+                                <span id="printShipToAttn"></span>
                             </div>
                         </div>
                     </div>
@@ -1180,7 +1202,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     // Variables to store the current PO for PDF generation
     let currentPOData = null;
     
-function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions, billTo, billToAttn, shipTo, shipToAttn) {
     try {
         // Store current PO data
         currentPOData = {
@@ -1192,7 +1214,11 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             deliveryAddress,
             ordersJson,
             totalAmount,
-            specialInstructions  // Keep storing this in case you need it elsewhere
+            specialInstructions,
+            billTo,
+            billToAttn,
+            shipTo,
+            shipToAttn
         };
         
         // Populate the hidden PDF content silently
@@ -1203,6 +1229,18 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         document.getElementById('printOrderDate').textContent = orderDate;
         document.getElementById('printDeliveryDate').textContent = deliveryDate;
         
+        // Populate the billing and shipping information
+        document.getElementById('printBillTo').textContent = billTo || 'N/A';
+        document.getElementById('printBillToAttn').textContent = billToAttn || 'N/A';
+        document.getElementById('printShipTo').textContent = shipTo || 'N/A';
+        document.getElementById('printShipToAttn').textContent = shipToAttn || 'N/A';
+        
+        // Hide rows if data is not present
+        document.getElementById('billToRow').style.display = billTo ? 'block' : 'none';
+        document.getElementById('billToAttnRow').style.display = billToAttn ? 'block' : 'none';
+        document.getElementById('shipToRow').style.display = shipTo ? 'block' : 'none';
+        document.getElementById('shipToAttnRow').style.display = shipToAttn ? 'block' : 'none';
+        
         // Format the total amount
         document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
             minimumFractionDigits: 2,
@@ -1211,7 +1249,9 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         
         // Hide special instructions section completely regardless of content
         const instructionsSection = document.getElementById('printInstructionsSection');
-        instructionsSection.style.display = 'none';
+        if (instructionsSection) {
+            instructionsSection.style.display = 'none';
+        }
         
         // Parse and populate order items
         const orderItems = JSON.parse(ordersJson);
@@ -1271,9 +1311,8 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
     }
 }
 
-    // Function to generate Purchase Order PDF
-    // Function to generate Purchase Order PDF
-function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+// Function to generate Purchase Order PDF
+function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions, billTo, billToAttn, shipTo, shipToAttn) {
     try {
         // Store current PO data for later use
         currentPOData = {
@@ -1285,7 +1324,11 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
             deliveryAddress,
             ordersJson,
             totalAmount,
-            specialInstructions  // Add special instructions to stored data
+            specialInstructions,
+            billTo,
+            billToAttn,
+            shipTo,
+            shipToAttn
         };
         
         // Set basic information
@@ -1296,9 +1339,23 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
         document.getElementById('printOrderDate').textContent = orderDate;
         document.getElementById('printDeliveryDate').textContent = deliveryDate;
         
+        // Populate the billing and shipping information
+        document.getElementById('printBillTo').textContent = billTo || 'N/A';
+        document.getElementById('printBillToAttn').textContent = billToAttn || 'N/A';
+        document.getElementById('printShipTo').textContent = shipTo || 'N/A';
+        document.getElementById('printShipToAttn').textContent = shipToAttn || 'N/A';
+        
+        // Hide rows if data is not present
+        document.getElementById('billToRow').style.display = billTo ? 'block' : 'none';
+        document.getElementById('billToAttnRow').style.display = billToAttn ? 'block' : 'none';
+        document.getElementById('shipToRow').style.display = shipTo ? 'block' : 'none';
+        document.getElementById('shipToAttnRow').style.display = shipToAttn ? 'block' : 'none';
+        
         // Hide special instructions section completely
         const instructionsSection = document.getElementById('printInstructionsSection');
-        instructionsSection.style.display = 'none';
+        if (instructionsSection) {
+            instructionsSection.style.display = 'none';
+        }
         
         // Format the total amount with commas and decimals
         document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
