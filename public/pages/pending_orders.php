@@ -21,18 +21,16 @@ if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
 
 // Fetch active clients for the dropdown
 $clients = [];
-$clients_with_company_address = []; // Array to store clients with their company addresses
 $clients_with_company = []; // Array to store clients with their company names
 
-$stmt = $conn->prepare("SELECT username, company_address, company FROM clients_accounts WHERE status = 'active'");
+$stmt = $conn->prepare("SELECT username, company FROM clients_accounts WHERE status = 'active'");
 if ($stmt === false) {
     die('Prepare failed: ' . htmlspecialchars($conn->error));
 }
 $stmt->execute();
-$stmt->bind_result($username, $company_address, $company);
+$stmt->bind_result($username, $company);
 while ($stmt->fetch()) {
     $clients[] = $username;
-    $clients_with_company_address[$username] = $company_address;
     $clients_with_company[$username] = $company;
 }
 $stmt->close();
@@ -330,7 +328,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
-                                data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
                                 data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>">
                                 <?= htmlspecialchars($client) ?>
                             </option>
@@ -342,34 +339,33 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <label for="delivery_date">Delivery Date:</label>
                     <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
                     
-                    <label for="delivery_address_type">Address Information:</label>
-                    <select id="delivery_address_type" name="delivery_address_type" onchange="toggleDeliveryAddress()">
-                        <option value="company">Use Company Address</option>
-                        <option value="custom">Use Custom Address</option>
-                    </select>
-
-                    <div id="company_address_container">
-                        <input type="text" id="company_address" name="company_address" readonly placeholder="Company address will appear here">
+                    <!-- Address Information - New Fields -->
+                    <div class="address-section">
+                        <h3>Billing Information</h3>
+                        <label for="bill_to">Bill To Address:</label>
+                        <textarea id="bill_to" name="bill_to" rows="3" placeholder="Enter billing address"></textarea>
+                        
+                        <label for="bill_to_attn">Bill To Attention:</label>
+                        <input type="text" id="bill_to_attn" name="bill_to_attn" placeholder="Billing attention (optional)">
                     </div>
-
-                    <div id="custom_address_container" style="display: none;">
-                        <div class="address-fields">
-                            <label for="custom_address">Delivery/Billing Address:</label>
-                            <textarea id="custom_address" name="custom_address" rows="3" placeholder="Enter delivery/billing address"></textarea>
-                            
-                            <label for="custom_ship_to_attn">Ship To Attention:</label>
-                            <input type="text" id="custom_ship_to_attn" name="custom_ship_to_attn" placeholder="Ship to attention (optional)">
-                            
-                            <label for="custom_bill_to_attn">Bill To Attention:</label>
-                            <input type="text" id="custom_bill_to_attn" name="custom_bill_to_attn" placeholder="Bill to attention (optional)">
-                        </div>
+                    
+                    <div class="address-section">
+                        <h3>Shipping Information</h3>
+                        <label for="ship_to">Ship To Address:</label>
+                        <textarea id="ship_to" name="ship_to" rows="3" placeholder="Enter shipping address"></textarea>
+                        
+                        <label for="ship_to_attn">Ship To Attention:</label>
+                        <input type="text" id="ship_to_attn" name="ship_to_attn" placeholder="Shipping attention (optional)">
                     </div>
-
-                    <input type="hidden" name="delivery_address" id="delivery_address">
-                    <input type="hidden" name="bill_to" id="bill_to">
-                    <input type="hidden" name="bill_to_attn" id="bill_to_attn">
-                    <input type="hidden" name="ship_to" id="ship_to">
-                    <input type="hidden" name="ship_to_attn" id="ship_to_attn">
+                    
+                    <div class="address-section">
+                        <label>
+                            <input type="checkbox" id="same_as_billing" name="same_as_billing" checked> 
+                            Shipping address same as billing
+                        </label>
+                    </div>
+                    
+                    <input type="hidden" name="special_instructions" id="special_instructions_hidden">
                     <!-- Add special instructions field -->
                     <label for="special_instructions">Special Instructions:</label>
                     <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
@@ -402,14 +398,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <input type="hidden" name="po_number" id="po_number">
                     <input type="hidden" name="orders" id="orders">
                     <input type="hidden" name="total_amount" id="total_amount">
-                    <!-- Added missing hidden fields for bill_to, bill_to_attn, ship_to, and ship_to_attn -->
-                    <input type="hidden" name="bill_to" id="bill_to">
-                    <input type="hidden" name="bill_to_attn" id="bill_to_attn">
-                    <input type="hidden" name="ship_to" id="ship_to">
-                    <input type="hidden" name="ship_to_attn" id="ship_to_attn">
                 </div>
                 <div class="form-buttons">
-
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
@@ -658,78 +648,54 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 });
             });
             
+            // Initialize "Same as billing" checkbox handler
+            $('#same_as_billing').change(function() {
+                if ($(this).is(':checked')) {
+                    // Copy billing info to shipping
+                    $('#ship_to').val($('#bill_to').val());
+                    $('#ship_to_attn').val($('#bill_to_attn').val());
+                    
+                    // Disable shipping fields
+                    $('#ship_to, #ship_to_attn').prop('disabled', true);
+                } else {
+                    // Enable shipping fields
+                    $('#ship_to, #ship_to_attn').prop('disabled', false);
+                }
+            });
+            
+            // Add change event listener to billing fields to auto-update shipping if checkbox is checked
+            $('#bill_to, #bill_to_attn').on('input', function() {
+                if ($('#same_as_billing').is(':checked')) {
+                    if ($(this).attr('id') === 'bill_to') {
+                        $('#ship_to').val($(this).val());
+                    } else {
+                        $('#ship_to_attn').val($(this).val());
+                    }
+                }
+            });
+            
             // Initialize company field if needed
             $('#username').change(function() {
                 updateCompany();
             });
             
-            // Make sure prepareOrderData includes company field
-            window.originalPrepareOrderData = window.prepareOrderData;
-            // Update prepareOrderData function
-window.prepareOrderData = function() {
-    if (window.originalPrepareOrderData) {
-        window.originalPrepareOrderData();
-    }
-    
-    // Handle address information
-    const addressType = $('#delivery_address_type').val();
-    if (addressType === 'company') {
-        const companyAddress = $('#company_address').val();
-        $('#delivery_address').val(companyAddress);
-        $('#bill_to').val(companyAddress);
-        $('#ship_to').val(companyAddress);
-        // No attention values for company address
-        $('#bill_to_attn').val('');
-        $('#ship_to_attn').val('');
-    } else {
-        const customAddress = $('#custom_address').val();
-        $('#delivery_address').val(customAddress);
-        $('#bill_to').val(customAddress);
-        $('#ship_to').val(customAddress);
-        // Set attention values for custom address
-        $('#bill_to_attn').val($('#custom_bill_to_attn').val());
-        $('#ship_to_attn').val($('#custom_ship_to_attn').val());
-    }
-    
-    // Ensure company is included
-    const ordersInput = document.getElementById('orders');
-    if (ordersInput.value) {
-        try {
-            const ordersData = JSON.parse(ordersInput.value);
-            ordersInput.value = JSON.stringify(ordersData);
-        } catch (e) {
-            console.error("Error preparing order data:", e);
-        }
-    }
-    
-    // Include special instructions in form data
-    const specialInstructions = document.getElementById('special_instructions').value;
-    document.getElementById('special_instructions_hidden').value = specialInstructions;
-};
-
-// Updated function to toggle address fields
-window.toggleDeliveryAddress = function() {
-    const addressType = $('#delivery_address_type').val();
-    if (addressType === 'company') {
-        $('#company_address_container').show();
-        $('#custom_address_container').hide();
+            // Make sure prepareOrderData includes proper fields
+            window.prepareOrderData = function() {
+                const orderData = JSON.stringify(selectedProducts);
+                $('#orders').val(orderData);
+                const totalAmount = calculateCartTotal();
+                $('#total_amount').val(totalAmount.toFixed(2));
+                
+                // Include special instructions in form data
+                const specialInstructions = $('#special_instructions').val();
+                $('#special_instructions_hidden').val(specialInstructions);
+            };
+        });
         
-        // Update hidden delivery address field with company address
-        const companyAddress = $('#company_address').val();
-        $('#delivery_address').val(companyAddress);
-        $('#bill_to').val(companyAddress);
-        $('#ship_to').val(companyAddress);
-    } else {
-        $('#company_address_container').hide();
-        $('#custom_address_container').show();
-        
-        // Update hidden delivery address field with custom address
-        const customAddress = $('#custom_address').val();
-        $('#delivery_address').val(customAddress);
-        $('#bill_to').val(customAddress);
-        $('#ship_to').val(customAddress);
-    }
-};
+        // Override the toggleDeliveryAddress function since we don't use it anymore
+        window.toggleDeliveryAddress = function() {
+            // No longer needed, but keep empty function for compatibility
+        };
     </script> 
 </body>
 </html>
