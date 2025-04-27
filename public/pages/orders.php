@@ -491,26 +491,18 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
 .modal-status-btn {
     margin: 5px;
-    padding: 10px 15px;
-    border-radius: 4px;
+    padding: 10px 12px;
+    border-radius: 40px;
     border: none;
     cursor: pointer;
     font-weight: bold;
     transition: background-color 0.3s;
 }
 
-.modal-status-btn.active {
-    background-color: #28a745;
-    color: white;
-}
-
-.modal-status-btn.active:hover {
-    background-color: #218838;
-}
 
 .modal-status-btn.pending {
     background-color: #ffc107;
-    color: #212529;
+    color: white;
 }
 
 .modal-status-btn.pending:hover {
@@ -700,14 +692,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <h2>Change Status</h2>
             <p id="statusMessage"></p>
             <div class="status-buttons">
-                <button onclick="changeStatus('Active')" class="modal-status-btn active">
-                    <i class="fas fa-check"></i> Active
+                <button onclick="changeStatus('For Delivery')" class="modal-status-btn delivery">
+                    <i class="fas fa-truck"></i> For Delivery
                 </button>
                 <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
                     <i class="fas fa-clock"></i> Pending
-                </button>
-                <button onclick="changeStatus('For Delivery')" class="modal-status-btn delivery">
-                    <i class="fas fa-truck"></i> For Delivery
                 </button>
                 <button onclick="changeStatus('Rejected')" class="modal-status-btn rejected">
                     <i class="fas fa-times-circle"></i> Reject
