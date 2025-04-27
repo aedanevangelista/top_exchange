@@ -665,31 +665,71 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             
             // Make sure prepareOrderData includes company field
             window.originalPrepareOrderData = window.prepareOrderData;
-            window.prepareOrderData = function() {
-                if (window.originalPrepareOrderData) {
-                    window.originalPrepareOrderData();
-                }
-                
-                // Ensure company is included
-                const ordersInput = document.getElementById('orders');
-                if (ordersInput.value) {
-                    try {
-                        const ordersData = JSON.parse(ordersInput.value);
-                        ordersInput.value = JSON.stringify(ordersData);
-                    } catch (e) {
-                        console.error("Error preparing order data:", e);
-                    }
-                }
-                
-                // Include special instructions in form data
-                const specialInstructions = document.getElementById('special_instructions').value;
-                document.getElementById('special_instructions_hidden').value = specialInstructions;
-                
-                // Set bill_to and ship_to fields from delivery address
-                const deliveryAddress = $('#delivery_address').val();
-                $('#bill_to').val(deliveryAddress); 
-                $('#ship_to').val(deliveryAddress);
-            };
+            // Update prepareOrderData function
+window.prepareOrderData = function() {
+    if (window.originalPrepareOrderData) {
+        window.originalPrepareOrderData();
+    }
+    
+    // Handle address information
+    const addressType = $('#delivery_address_type').val();
+    if (addressType === 'company') {
+        const companyAddress = $('#company_address').val();
+        $('#delivery_address').val(companyAddress);
+        $('#bill_to').val(companyAddress);
+        $('#ship_to').val(companyAddress);
+        // No attention values for company address
+        $('#bill_to_attn').val('');
+        $('#ship_to_attn').val('');
+    } else {
+        const customAddress = $('#custom_address').val();
+        $('#delivery_address').val(customAddress);
+        $('#bill_to').val(customAddress);
+        $('#ship_to').val(customAddress);
+        // Set attention values for custom address
+        $('#bill_to_attn').val($('#custom_bill_to_attn').val());
+        $('#ship_to_attn').val($('#custom_ship_to_attn').val());
+    }
+    
+    // Ensure company is included
+    const ordersInput = document.getElementById('orders');
+    if (ordersInput.value) {
+        try {
+            const ordersData = JSON.parse(ordersInput.value);
+            ordersInput.value = JSON.stringify(ordersData);
+        } catch (e) {
+            console.error("Error preparing order data:", e);
+        }
+    }
+    
+    // Include special instructions in form data
+    const specialInstructions = document.getElementById('special_instructions').value;
+    document.getElementById('special_instructions_hidden').value = specialInstructions;
+};
+
+// Updated function to toggle address fields
+window.toggleDeliveryAddress = function() {
+    const addressType = $('#delivery_address_type').val();
+    if (addressType === 'company') {
+        $('#company_address_container').show();
+        $('#custom_address_container').hide();
+        
+        // Update hidden delivery address field with company address
+        const companyAddress = $('#company_address').val();
+        $('#delivery_address').val(companyAddress);
+        $('#bill_to').val(companyAddress);
+        $('#ship_to').val(companyAddress);
+    } else {
+        $('#company_address_container').hide();
+        $('#custom_address_container').show();
+        
+        // Update hidden delivery address field with custom address
+        const customAddress = $('#custom_address').val();
+        $('#delivery_address').val(customAddress);
+        $('#bill_to').val(customAddress);
+        $('#ship_to').val(customAddress);
+    }
+};
     </script> 
 </body>
 </html>
