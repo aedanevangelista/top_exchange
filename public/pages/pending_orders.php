@@ -105,7 +105,41 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <!-- HTML2PDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>    
     <style>
+      /* Styles for address display */
+      .address-info-container {
+          border: 1px solid #ddd;
+          border-radius: 5px;
+          padding: 10px;
+          margin-bottom: 20px;
+          background-color: #f9f9f9;
+      }
       
+      .address-display {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 20px;
+      }
+      
+      .address-display .address-section {
+          flex: 1;
+          min-width: 250px;
+      }
+      
+      .address-display h4 {
+          margin-top: 0;
+          border-bottom: 1px solid #ddd;
+          padding-bottom: 5px;
+          color: #333;
+      }
+      
+      .address-display p {
+          margin: 5px 0;
+      }
+      
+      .address-display .no-info {
+          color: #888;
+          font-style: italic;
+      }
     </style>
 </head>
 <body>
@@ -239,84 +273,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         <div class="pdf-container">
             <button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button>
             <div id="contentToDownload">
-                <div class="po-container">
-                    <div class="po-header">
-                        <div class="po-company" id="printCompany"></div>
-                        <div class="po-title">Purchase Order</div>
-                    </div>
-                    
-                    <div class="po-details">
-                        <div class="po-left">
-                            <div class="po-detail-row">
-                                <span class="po-detail-label">PO Number:</span>
-                                <span id="printPoNumber"></span>
-                            </div>
-                            <div class="po-detail-row">
-                                <span class="po-detail-label">Username:</span>
-                                <span id="printUsername"></span>
-                            </div>
-                            <div class="po-detail-row">
-                                <span class="po-detail-label">Order Date:</span>
-                                <span id="printOrderDate"></span>
-                            </div>
-                            <div class="po-detail-row">
-                                <span class="po-detail-label">Delivery Date:</span>
-                                <span id="printDeliveryDate"></span>
-                            </div>
-                        </div>
-                        
-                        <div class="po-right">
-                            <div class="po-detail-row" id="printBillToSection">
-                                <span class="po-detail-label">Bill To:</span>
-                                <span id="printBillTo"></span>
-                            </div>
-                            <div class="po-detail-row" id="printBillToAttnSection">
-                                <span class="po-detail-label">Bill To Attn:</span>
-                                <span id="printBillToAttn"></span>
-                            </div>
-                            <div class="po-detail-row" id="printShipToSection">
-                                <span class="po-detail-label">Ship To:</span>
-                                <span id="printShipTo"></span>
-                            </div>
-                            <div class="po-detail-row" id="printShipToAttnSection">
-                                <span class="po-detail-label">Ship To Attn:</span>
-                                <span id="printShipToAttn"></span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <table class="po-table">
-                        <thead>
-                            <tr>
-                                <th>Category</th>
-                                <th>Product</th>
-                                <th>Packaging</th>
-                                <th>Quantity</th>
-                                <th>Unit Price</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody id="printOrderItems">
-                            <!-- Items will be populated here -->
-                        </tbody>
-                    </table>
-                    
-                    <div class="po-total">
-                        Total Amount: PHP <span id="printTotalAmount"></span>
-                    </div>
-                    
-                    <div class="po-signature">
-                        <div class="po-signature-block">
-                            <div class="po-signature-line"></div>
-                            <div>Authorized by</div>
-                        </div>
-                        
-                        <div class="po-signature-block">
-                            <div class="po-signature-line"></div>
-                            <div>Received by</div>
-                        </div>
-                    </div>
-                </div>
+                <!-- PDF content here -->
             </div>
             <div class="pdf-actions">
                 <button class="download-pdf-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button>
@@ -331,7 +288,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber(); loadAddressInfo(this.value);">
+                    <select id="username" name="username" required onchange="generatePONumber(); loadClientAddressInfo(this.value);">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
@@ -406,6 +363,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
+    
     <!-- Inventory Overlay for Selecting Products -->
     <div id="inventoryOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
@@ -609,112 +567,179 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <script src="/js/orders.js"></script>
     <script src="/js/pending_orders.js"></script>
     <script>
-// Override the form validation to fix the "delivery address" error
-$(document).ready(function() {
-    // Override the existing submit handler
-    $('#addOrderForm').off('submit').on('submit', function(e) {
-        e.preventDefault();
-        
-        if (selectedProducts.length === 0) {
-            alert('Please add products to your order');
-            return;
-        }
-
-        prepareOrderData();
-        
-        // Validate required fields - NO delivery_address check!
-        if (!$('#username').val()) {
-            alert('Please select a username');
-            return;
-        }
-        
-        if (!$('#po_number').val()) {
-            alert('PO number is missing. Please try again.');
-            return;
-        }
-        
-        // Disable the save button to prevent multiple submissions
-        $('.save-btn').prop('disabled', true);
-        
-        // Submit the form via AJAX
-        $.ajax({
-            url: $(this).attr('action'),
-            type: 'POST',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    showToast('Order added successfully!', 'success');
-                    setTimeout(function() {
-                        location.reload();
-                    }, 1500);
-                } else {
-                    $('.save-btn').prop('disabled', false);
-                    alert('Error: ' + response.message);
-                }
-            },
-            error: function(xhr, status, error) {
-                $('.save-btn').prop('disabled', false);
-                console.error("Form submission error:", status, error);
-                console.error("Server response:", xhr.responseText);
-                alert('Error submitting order. Please try again. Details: ' + error);
+        <?php include('../../js/order_processing.js'); ?>
+    
+        // Add custom script to handle loading client address info
+        function loadClientAddressInfo(username) {
+            if (!username) return;
+            
+            console.log("Loading address info for:", username);
+            
+            const selectedOption = $(`#username option[value="${username}"]`);
+            
+            // Get address data from the option data attributes
+            const billTo = selectedOption.data('bill-to') || '';
+            const billToAttn = selectedOption.data('bill-to-attn') || '';
+            const shipTo = selectedOption.data('ship-to') || '';
+            const shipToAttn = selectedOption.data('ship-to-attn') || '';
+            
+            console.log("Address data loaded:", {
+                billTo: billTo,
+                billToAttn: billToAttn,
+                shipTo: shipTo,
+                shipToAttn: shipToAttn
+            });
+            
+            // Set hidden field values
+            $('#bill_to').val(billTo);
+            $('#bill_to_attn').val(billToAttn);
+            $('#ship_to').val(shipTo);
+            $('#ship_to_attn').val(shipToAttn);
+            
+            // Display the address info in a readable format
+            let addressHTML = '<div class="address-display">';
+            
+            addressHTML += '<div class="address-section">';
+            addressHTML += '<h4><i class="fas fa-file-invoice"></i> Billing Information</h4>';
+            if (billTo) {
+                addressHTML += `<p><strong>Bill To:</strong> ${billTo}</p>`;
             }
-        });
-    });
+            if (billToAttn) {
+                addressHTML += `<p><strong>Attention:</strong> ${billToAttn}</p>`;
+            }
+            if (!billTo && !billToAttn) {
+                addressHTML += '<p class="no-info">No billing information available</p>';
+            }
+            addressHTML += '</div>';
+            
+            addressHTML += '<div class="address-section">';
+            addressHTML += '<h4><i class="fas fa-shipping-fast"></i> Shipping Information</h4>';
+            if (shipTo) {
+                addressHTML += `<p><strong>Ship To:</strong> ${shipTo}</p>`;
+            }
+            if (shipToAttn) {
+                addressHTML += `<p><strong>Attention:</strong> ${shipToAttn}</p>`;
+            }
+            if (!shipTo && !shipToAttn) {
+                addressHTML += '<p class="no-info">No shipping information available</p>';
+            }
+            addressHTML += '</div>';
+            
+            addressHTML += '</div>';
+            
+            $('#address-info').html(addressHTML);
+        }
 
-    // Override prepareOrderData to skip delivery_address
-    window.prepareOrderData = function() {
-        const orderData = JSON.stringify(selectedProducts);
-        $('#orders').val(orderData);
-        const totalAmount = calculateCartTotal();
-        $('#total_amount').val(totalAmount.toFixed(2));
-        
-        // Include special instructions in form data
-        const specialInstructions = $('#special_instructions').val();
-        $('#special_instructions_hidden').val(specialInstructions);
-        
-        // We're using bill_to and ship_to directly from the hidden fields
-        // No need to set delivery_address
-        console.log("Order data prepared - Using bill_to: " + $('#bill_to').val() + " and ship_to: " + $('#ship_to').val());
-    };
-});
-</script>
-    <style>
-        /* Styles for address display */
-        .address-info-container {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 10px;
-            margin-bottom: 20px;
-            background-color: #f9f9f9;
-        }
-        
-        .address-display {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        
-        .address-display .address-section {
-            flex: 1;
-            min-width: 250px;
-        }
-        
-        .address-display h4 {
-            margin-top: 0;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-            color: #333;
-        }
-        
-        .address-display p {
-            margin: 5px 0;
-        }
-        
-        .address-display .no-info {
-            color: #888;
-            font-style: italic;
-        }
-    </style>
+        $(document).ready(function() {
+            // Search functionality
+            $("#searchInput").on("input", function() {
+                let searchText = $(this).val().toLowerCase().trim();
+
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+            });
+            
+            // Handle search button click
+            $(".search-btn").on("click", function() {
+                let searchText = $("#searchInput").val().toLowerCase().trim();
+                
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+            });
+
+            // Make sure prepareOrderData includes proper fields
+            window.prepareOrderData = function() {
+                const orderData = JSON.stringify(selectedProducts);
+                $('#orders').val(orderData);
+                const totalAmount = calculateCartTotal();
+                $('#total_amount').val(totalAmount.toFixed(2));
+                
+                // Include special instructions in form data
+                const specialInstructions = $('#special_instructions').val();
+                $('#special_instructions_hidden').val(specialInstructions);
+                
+                // No need to set delivery_address since we're using bill_to and ship_to directly
+                console.log("Order data prepared with addresses - bill_to:", $('#bill_to').val(), "ship_to:", $('#ship_to').val());
+            };
+        });
+
+        // Override the form submission to ensure we're not checking for delivery_address
+        $('#addOrderForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            if (selectedProducts.length === 0) {
+                alert('Please add products to your order');
+                return;
+            }
+
+            prepareOrderData();
+            
+            // Check if we have either billing or shipping info
+            const billTo = $('#bill_to').val();
+            const shipTo = $('#ship_to').val();
+            
+            console.log("Submitting form with bill_to:", billTo, "and ship_to:", shipTo);
+            
+            if ((!billTo || billTo.trim() === '') && (!shipTo || shipTo.trim() === '')) {
+                alert('No address information available. Please select a different user with address information.');
+                return;
+            }
+            
+            // Validate other required fields
+            if (!$('#username').val()) {
+                alert('Please select a username');
+                return;
+            }
+            
+            if (!$('#po_number').val()) {
+                alert('PO number is missing. Please try again.');
+                return;
+            }
+            
+            // Disable the save button to prevent multiple submissions
+            $('.save-btn').prop('disabled', true);
+            
+            // Submit the form via AJAX
+            $.ajax({
+                url: $(this).attr('action'),
+                type: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        showToast('Order added successfully!', 'success');
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        $('.save-btn').prop('disabled', false);
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('.save-btn').prop('disabled', false);
+                    console.error("Form submission error:", status, error);
+                    console.error("Server response:", xhr.responseText);
+                    alert('Error submitting order. Please try again. Details: ' + error);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
