@@ -707,6 +707,7 @@ function truncate($text, $max = 15) {
         /* Fixed header and footer in modal */
         .modal-header {
             background-color: #ffffff;
+            padding-top: 24px;
             padding: 12px; /* Reduced padding */
             text-align: center;
             border-radius: 8px 8px 0 0;
