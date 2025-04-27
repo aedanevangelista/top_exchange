@@ -986,10 +986,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td>
                                     <button class="view-address-btn" onclick="viewAddressInfo(
-                                        '<?= htmlspecialchars(addslashes($order['bill_to'] ?? 'N/A')) ?>',
-                                        '<?= htmlspecialchars(addslashes($order['bill_to_attn'] ?? '')) ?>',
-                                        '<?= htmlspecialchars(addslashes($order['ship_to'] ?? 'N/A')) ?>',
-                                        '<?= htmlspecialchars(addslashes($order['ship_to_attn'] ?? '')) ?>'
+                                        JSON.stringify('<?= htmlspecialchars($order['bill_to'] ?? 'N/A') ?>'),
+                                        JSON.stringify('<?= htmlspecialchars($order['bill_to_attn'] ?? '') ?>'),
+                                        JSON.stringify('<?= htmlspecialchars($order['ship_to'] ?? 'N/A') ?>'),
+                                        JSON.stringify('<?= htmlspecialchars($order['ship_to_attn'] ?? '') ?>')
                                     )">
                                         <i class="fas fa-eye"></i> View Addresses
                                     </button>
@@ -1020,13 +1020,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     '<?= htmlspecialchars($order['company']) ?>', 
                                     '<?= htmlspecialchars($order['order_date']) ?>', 
                                     '<?= htmlspecialchars($order['delivery_date']) ?>', 
-                                    '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
+                                    '<?= htmlspecialchars(json_encode($order['orders'])) ?>', 
                                     '<?= htmlspecialchars($order['total_amount']) ?>', 
-                                    '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>',
-                                    '<?= htmlspecialchars(addslashes($order['bill_to'] ?? '')) ?>',
-                                    '<?= htmlspecialchars(addslashes($order['bill_to_attn'] ?? '')) ?>',
-                                    '<?= htmlspecialchars(addslashes($order['ship_to'] ?? '')) ?>',
-                                    '<?= htmlspecialchars(addslashes($order['ship_to_attn'] ?? '')) ?>'
+                                    '<?= htmlspecialchars(json_encode($order['special_instructions'] ?? '')) ?>',
+                                    '<?= htmlspecialchars(json_encode($order['bill_to'] ?? '')) ?>',
+                                    '<?= htmlspecialchars(json_encode($order['bill_to_attn'] ?? '')) ?>',
+                                    '<?= htmlspecialchars(json_encode($order['ship_to'] ?? '')) ?>',
+                                    '<?= htmlspecialchars(json_encode($order['ship_to_attn'] ?? '')) ?>'
                                 )">
                                     <i class="fas fa-file-pdf"></i> Download PDF
                                 </button>
@@ -1444,6 +1444,14 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     
 function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, ordersJson, totalAmount, specialInstructions, billTo, billToAttn, shipTo, shipToAttn) {
     try {
+        // Parse JSON strings properly
+        let orders = typeof ordersJson === 'string' ? JSON.parse(ordersJson) : ordersJson;
+        let specInstructions = typeof specialInstructions === 'string' ? JSON.parse(specialInstructions) : specialInstructions;
+        let billToAddress = typeof billTo === 'string' ? JSON.parse(billTo) : billTo;
+        let billToAttnField = typeof billToAttn === 'string' ? JSON.parse(billToAttn) : billToAttn;
+        let shipToAddress = typeof shipTo === 'string' ? JSON.parse(shipTo) : shipTo;
+        let shipToAttnField = typeof shipToAttn === 'string' ? JSON.parse(shipToAttn) : shipToAttn;
+        
         // Store current PO data
         currentPOData = {
             poNumber,
@@ -1451,13 +1459,13 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             company,
             orderDate,
             deliveryDate,
-            ordersJson,
+            ordersJson: orders,
             totalAmount,
-            specialInstructions,
-            billTo,
-            billToAttn,
-            shipTo,
-            shipToAttn
+            specialInstructions: specInstructions,
+            billTo: billToAddress,
+            billToAttn: billToAttnField,
+            shipTo: shipToAddress,
+            shipToAttn: shipToAttnField
         };
         
         // Populate the hidden PDF content silently
@@ -2042,10 +2050,18 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
         });
 
         // Address info modal functions
-       function viewAddressInfo(billTo, billToAttn, shipTo, shipToAttn) {
+        function viewAddressInfo(billTo, billToAttn, shipTo, shipToAttn) {
+            // Parse JSON strings properly
+            let billToAddress = typeof billTo === 'string' ? JSON.parse(billTo) : billTo;
+            let billToAttnField = typeof billToAttn === 'string' ? JSON.parse(billToAttn) : billToAttn;
+            let shipToAddress = typeof shipTo === 'string' ? JSON.parse(shipTo) : shipTo;
+            let shipToAttnField = typeof shipToAttn === 'string' ? JSON.parse(shipToAttn) : shipToAttn;
+            
             // Bill To information
-            document.getElementById("modalBillTo").textContent = billTo || 'N/A';
-            document.getElementById("noBillingInfo").style.display = (!billTo && !billToAttn) ? "block" : "none";
+            document.getElementById("modalBillTo").textContent = billToAddress || 'N/A';
+            document.getElementById("noBillingInfo").style.display = (!billToAddress && !billToAttnField) ? "block" : "none";
+            
+            // Rest of function remains the same...
             
             // Bill To Attention with conditional display
             if (billToAttn) {
