@@ -410,7 +410,7 @@ function truncate($text, $max = 15) {
         }
         
         input:focus, textarea:focus {
-            border-color: #4d90fe;
+            border-color: #4a90fe;
             box-shadow: 0 0 5px rgba(77, 144, 254, 0.5);
         }
         
@@ -437,7 +437,7 @@ function truncate($text, $max = 15) {
             background-color: #357abf;
         }
 
-        /* Address Info Modal Styles - Improved UX */
+        /* Improved Info Modal Styles - Unified Design */
         #addressInfoModal, #contactInfoModal {
             display: none;
             position: fixed;
@@ -450,35 +450,47 @@ function truncate($text, $max = 15) {
             background-color: rgba(0,0,0,0.7);
         }
 
-        .address-modal-content, .contact-modal-content {
-            background-color: #fefefe;
+        .info-modal-content {
+            background-color: #ffffff;
             margin: 5% auto;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-            width: 80%;
-            max-width: 800px;
+            padding: 0;
+            border-radius: 10px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 700px;
             max-height: 90vh;
-            overflow-y: auto;
+            overflow: hidden;
+            animation: modalFadeIn 0.3s;
         }
 
-        .address-modal-header, .contact-modal-header {
-            border-bottom: 1px solid #eee;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+        @keyframes modalFadeIn {
+            from {opacity: 0; transform: translateY(-20px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+
+        .info-modal-header {
+            background-color: #4a90e2;
+            color: #fff;
+            padding: 15px 25px;
             position: relative;
             display: flex;
             align-items: center;
+            border-radius: 10px 10px 0 0;
         }
 
-        .address-modal-header h2, .contact-modal-header h2 {
+        .info-modal-header h2 {
             margin: 0;
-            color: #333;
+            font-size: 20px;
             flex: 1;
+            font-weight: 500;
         }
 
-        .address-modal-close, .contact-modal-close {
-            color: #888;
+        .info-modal-header h2 i {
+            margin-right: 10px;
+        }
+
+        .info-modal-close {
+            color: #fff;
             font-size: 24px;
             font-weight: bold;
             cursor: pointer;
@@ -487,58 +499,147 @@ function truncate($text, $max = 15) {
             line-height: 1;
         }
 
-        .address-modal-close:hover, .contact-modal-close:hover {
-            color: #333;
+        .info-modal-close:hover {
+            transform: scale(1.1);
         }
 
-        .address-info-section, .contact-info-section {
+        .info-modal-body {
+            padding: 25px;
+            overflow-y: auto;
+            max-height: calc(90vh - 60px);
+        }
+
+        .info-section {
             margin-bottom: 25px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        .address-info-section h3, .contact-info-section h3 {
+        .info-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-section-title {
+            display: flex;
+            align-items: center;
             color: #4a90e2;
             margin-top: 0;
-            margin-bottom: 10px;
-            font-size: 18px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 8px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
         }
 
-        .address-info-table, .contact-info-table {
+        .info-section-title i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Unified table styling */
+        .info-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 0;
         }
 
-        .address-info-table th, .contact-info-table th {
+        .info-table th {
             text-align: left;
-            background-color: #f9f9f9;
-            padding: 10px;
-            border: 1px solid #eee;
+            background-color: #eef5ff;
+            padding: 12px 15px;
+            border: 1px solid #d1e1f9;
             width: 30%;
             vertical-align: top;
-            color: #555;
+            color: #3a5d85;
+            font-weight: 600;
         }
 
-        .address-info-table td, .contact-info-table td {
-            padding: 10px;
-            border: 1px solid #eee;
+        .info-table td {
+            padding: 12px 15px;
+            border: 1px solid #d1e1f9;
             word-break: break-word;
             vertical-align: top;
             line-height: 1.5;
-        }
-
-        .address-contact-person {
-            background-color: #f1f8ff;
-            padding: 8px 12px;
-            border-radius: 4px;
-            border-left: 4px solid #4a90e2;
-            margin-top: 10px;
-        }
-
-        .address-contact-person strong {
             color: #333;
+            background-color: #fff;
+        }
+
+        /* Contact info styling */
+        .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border: 1px solid #d1e1f9;
+        }
+
+        .contact-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .contact-icon {
+            width: 45px;
+            height: 45px;
+            background-color: #eef5ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4a90e2;
+            font-size: 18px;
+            margin-right: 15px;
+        }
+
+        .contact-text {
+            flex: 1;
+        }
+
+        .contact-value {
+            font-weight: bold;
+            color: #333;
+            font-size: 16px;
+            word-break: break-all;
+        }
+
+        .contact-label {
+            font-size: 13px;
+            color: #777;
+            display: block;
+            margin-top: 5px;
+        }
+
+        /* Attention styling */
+        .attention-person {
+            margin-top: 15px;
+            padding: 12px 15px;
+            background-color: #eef5ff;
+            border-radius: 6px;
+            border-left: 4px solid #4a90e2;
+            display: flex;
+            align-items: center;
+        }
+
+        .attention-person i {
+            color: #4a90e2;
+            margin-right: 10px;
+        }
+
+        .attention-person strong {
+            color: #3a5d85;
             margin-right: 5px;
+        }
+
+        .empty-notice {
+            padding: 20px;
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            border: 1px dashed #d1e1f9;
+            border-radius: 6px;
         }
 
         /* Overlays */
@@ -553,6 +654,7 @@ function truncate($text, $max = 15) {
             display: flex;
             justify-content: center;
             align-items: center;
+            backdrop-filter: blur(3px);
         }
 
         /* Address groups in forms */
@@ -622,36 +724,6 @@ function truncate($text, $max = 15) {
             flex: 1; /* Take remaining space */
         }
 
-        /* Contact info styling */
-        .contact-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .contact-icon {
-            width: 30px;
-            color: #4a90e2;
-            text-align: center;
-            margin-right: 10px;
-        }
-
-        .contact-text {
-            flex: 1;
-        }
-
-        .contact-value {
-            font-weight: bold;
-            color: #333;
-        }
-
-        .contact-label {
-            font-size: 0.8em;
-            color: #777;
-            display: block;
-            margin-top: 3px;
-        }
-
         /* Style for form modals with fixed header and footer */
         .form-modal-content {
             display: flex;
@@ -662,6 +734,13 @@ function truncate($text, $max = 15) {
             background-color: #fff;
             border-radius: 8px;
             overflow: hidden; /* Important to contain child overflow */
+        }
+
+        /* Error message styling */
+        .error-message {
+            color: #ff3333;
+            padding: 5px 0;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -776,87 +855,99 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- Contact Info Modal -->
+    <!-- Improved Contact Info Modal with Unified Design -->
     <div id="contactInfoModal" class="overlay">
-        <div class="contact-modal-content">
-            <div class="contact-modal-header">
+        <div class="info-modal-content">
+            <div class="info-modal-header">
                 <h2><i class="fas fa-address-card"></i> Contact Information</h2>
-                <span class="contact-modal-close" onclick="closeContactInfoModal()">&times;</span>
+                <span class="info-modal-close" onclick="closeContactInfoModal()">&times;</span>
             </div>
             
-            <div class="contact-info-section">
-                <div class="contact-item">
-                    <div class="contact-icon">
-                        <i class="fas fa-envelope"></i>
+            <div class="info-modal-body">
+                <div class="info-section">
+                    <h3 class="info-section-title"><i class="fas fa-user"></i> Contact Details</h3>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="contact-text">
+                            <div class="contact-value" id="modalEmail"></div>
+                            <div class="contact-label">Email Address</div>
+                        </div>
                     </div>
-                    <div class="contact-text">
-                        <div class="contact-value" id="modalEmail"></div>
-                        <div class="contact-label">Email Address</div>
-                    </div>
-                </div>
-                
-                <div class="contact-item">
-                    <div class="contact-icon">
-                        <i class="fas fa-phone"></i>
-                    </div>
-                    <div class="contact-text">
-                        <div class="contact-value" id="modalPhone"></div>
-                        <div class="contact-label">Phone Number</div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <div class="contact-text">
+                            <div class="contact-value" id="modalPhone"></div>
+                            <div class="contact-label">Phone Number</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Improved Address Info Modal -->
+    <!-- Improved Address Info Modal with Unified Design -->
     <div id="addressInfoModal" class="overlay">
-        <div class="address-modal-content">
-            <div class="address-modal-header">
+        <div class="info-modal-content">
+            <div class="info-modal-header">
                 <h2><i class="fas fa-map-marker-alt"></i> Address Information</h2>
-                <span class="address-modal-close" onclick="closeAddressInfoModal()">&times;</span>
+                <span class="info-modal-close" onclick="closeAddressInfoModal()">&times;</span>
             </div>
             
-            <div class="address-info-section">
-                <h3>Company Location</h3>
-                <table class="address-info-table">
-                    <tr>
-                        <th>Company Address:</th>
-                        <td id="modalCompanyAddress"></td>
-                    </tr>
-                    <tr>
-                        <th>Region:</th>
-                        <td id="modalRegion"></td>
-                    </tr>
-                    <tr>
-                        <th>City:</th>
-                        <td id="modalCity"></td>
-                    </tr>
-                </table>
-            </div>
-            
-            <div class="address-info-section">
-                <h3>Billing Information</h3>
-                <table class="address-info-table">
-                    <tr>
-                        <th>Bill To Address:</th>
-                        <td id="modalBillTo"></td>
-                    </tr>
-                </table>
-                <div class="address-contact-person" id="billToAttnSection" style="display: none;">
-                    <i class="fas fa-user"></i> <strong>Attention:</strong> <span id="modalBillToAttn"></span>
+            <div class="info-modal-body">
+                <div class="info-section">
+                    <h3 class="info-section-title"><i class="fas fa-building"></i> Company Location</h3>
+                    <table class="info-table">
+                        <tr>
+                            <th>Company Address</th>
+                            <td id="modalCompanyAddress"></td>
+                        </tr>
+                        <tr>
+                            <th>Region</th>
+                            <td id="modalRegion"></td>
+                        </tr>
+                        <tr>
+                            <th>City</th>
+                            <td id="modalCity"></td>
+                        </tr>
+                    </table>
                 </div>
-            </div>
-            
-            <div class="address-info-section">
-                <h3>Shipping Information</h3>
-                <table class="address-info-table">
-                    <tr>
-                        <th>Ship To Address:</th>
-                        <td id="modalShipTo"></td>
-                    </tr>
-                </table>
-                <div class="address-contact-person" id="shipToAttnSection" style="display: none;">
-                    <i class="fas fa-user"></i> <strong>Attention:</strong> <span id="modalShipToAttn"></span>
+                
+                <div class="info-section">
+                    <h3 class="info-section-title"><i class="fas fa-file-invoice"></i> Billing Information</h3>
+                    <table class="info-table">
+                        <tr>
+                            <th>Bill To Address</th>
+                            <td id="modalBillTo"></td>
+                        </tr>
+                    </table>
+                    <div class="attention-person" id="billToAttnSection" style="display: none;">
+                        <i class="fas fa-user"></i> <strong>Attention:</strong> <span id="modalBillToAttn"></span>
+                    </div>
+                    <div id="noBillingInfo" class="empty-notice" style="display: none;">
+                        No billing address information provided.
+                    </div>
+                </div>
+                
+                <div class="info-section">
+                    <h3 class="info-section-title"><i class="fas fa-shipping-fast"></i> Shipping Information</h3>
+                    <table class="info-table">
+                        <tr>
+                            <th>Ship To Address</th>
+                            <td id="modalShipTo"></td>
+                        </tr>
+                    </table>
+                    <div class="attention-person" id="shipToAttnSection" style="display: none;">
+                        <i class="fas fa-user"></i> <strong>Attention:</strong> <span id="modalShipToAttn"></span>
+                    </div>
+                    <div id="noShippingInfo" class="empty-notice" style="display: none;">
+                        No shipping address information provided.
+                    </div>
                 </div>
             </div>
         </div>
@@ -1098,13 +1189,16 @@ function truncate($text, $max = 15) {
     }
 
     function showAddressInfo(companyAddress, region, city, billTo, billToAttn, shipTo, shipToAttn) {
+        // Company address info
         document.getElementById("modalCompanyAddress").textContent = companyAddress || 'N/A';
         document.getElementById("modalRegion").textContent = region || 'N/A';
         document.getElementById("modalCity").textContent = city || 'N/A';
-        document.getElementById("modalBillTo").textContent = billTo || 'N/A';
-        document.getElementById("modalShipTo").textContent = shipTo || 'N/A';
         
-        // Handle attention fields with visibility
+        // Bill To info with conditional display
+        document.getElementById("modalBillTo").textContent = billTo || 'N/A';
+        document.getElementById("noBillingInfo").style.display = (!billTo && !billToAttn) ? "block" : "none";
+        
+        // Bill To Attention with conditional display
         if (billToAttn) {
             document.getElementById("modalBillToAttn").textContent = billToAttn;
             document.getElementById("billToAttnSection").style.display = "block";
@@ -1112,6 +1206,11 @@ function truncate($text, $max = 15) {
             document.getElementById("billToAttnSection").style.display = "none";
         }
         
+        // Ship To info with conditional display
+        document.getElementById("modalShipTo").textContent = shipTo || 'N/A';
+        document.getElementById("noShippingInfo").style.display = (!shipTo && !shipToAttn) ? "block" : "none";
+        
+        // Ship To Attention with conditional display
         if (shipToAttn) {
             document.getElementById("modalShipToAttn").textContent = shipToAttn;
             document.getElementById("shipToAttnSection").style.display = "block";
