@@ -9,12 +9,40 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $username = $_POST['username'];
         $order_date = $_POST['order_date'];
         $delivery_date = $_POST['delivery_date'];
-        $delivery_address = $_POST['delivery_address']; // New field for delivery address
         $po_number = $_POST['po_number'];
         $orders = $_POST['orders']; // Keep as JSON string
         $total_amount = $_POST['total_amount'];
 
         $special_instructions = $_POST['special_instructions'] ?? '';
+        
+        // Get shipping information from clients_accounts
+        $ship_to = '';
+        $ship_to_attn = '';
+        $bill_to = '';
+        $bill_to_attn = '';
+        
+        $getShippingInfo = $conn->prepare("
+            SELECT ship_to, ship_to_attn, bill_to, bill_to_attn 
+            FROM clients_accounts 
+            WHERE username = ?
+        ");
+        
+        if ($getShippingInfo === false) {
+            throw new Exception('Failed to prepare shipping info statement: ' . $conn->error);
+        }
+        
+        $getShippingInfo->bind_param("s", $username);
+        
+        if ($getShippingInfo->execute()) {
+            $result = $getShippingInfo->get_result();
+            if ($row = $result->fetch_assoc()) {
+                $ship_to = $row['ship_to'];
+                $ship_to_attn = $row['ship_to_attn'];
+                $bill_to = $row['bill_to'];
+                $bill_to_attn = $row['bill_to_attn'];
+            }
+        }
+        $getShippingInfo->close();
 
         // Validate that orders is valid JSON
         $decoded_orders = json_decode($orders, true);
@@ -22,17 +50,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Invalid order data format');
         }
 
-        // Insert into orders table (now including delivery_address)
+        // Insert into orders table with shipping information
         $insertOrder = $conn->prepare("
-            INSERT INTO orders (username, order_date, delivery_date, delivery_address, po_number, orders, total_amount, status, special_instructions) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
+            INSERT INTO orders (
+                username, order_date, delivery_date, po_number, orders, 
+                total_amount, status, special_instructions,
+                ship_to, ship_to_attn, bill_to, bill_to_attn
+            ) 
+            VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?, ?, ?)
         ");
 
         if ($insertOrder === false) {
             throw new Exception('Failed to prepare statement: ' . $conn->error);
         }
 
-        $insertOrder->bind_param("ssssssds", $username, $order_date, $delivery_date, $delivery_address, $po_number, $orders, $total_amount, $special_instructions);
+        $insertOrder->bind_param(
+            "sssssdsssss", 
+            $username, $order_date, $delivery_date, $po_number, 
+            $orders, $total_amount, $special_instructions,
+            $ship_to, $ship_to_attn, $bill_to, $bill_to_attn
+        );
 
         if ($insertOrder->execute()) {
             echo json_encode([

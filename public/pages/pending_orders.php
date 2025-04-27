@@ -916,6 +916,55 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     .view-address-btn:hover {
         background-color: #357abf;
     }
+
+    /* Shipping Info Section Styles */
+.shipping-info-section {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.shipping-info-section h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: #333;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 8px;
+}
+
+.info-row {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.info-label {
+    font-weight: bold;
+    width: 150px;
+    color: #555;
+}
+
+.info-value {
+    flex: 1;
+}
+
+.shipping-note {
+    font-size: 12px;
+    color: #666;
+    margin-top: 15px;
+    font-style: italic;
+    background-color: #f0f8ff;
+    padding: 8px;
+    border-radius: 4px;
+    border-left: 3px solid #2980b9;
+}
+
+.shipping-note i {
+    margin-right: 5px;
+    color: #2980b9;
+}
     </style>
 </head>
 <body>
@@ -1141,39 +1190,52 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber();">
+                    <select id="username" name="username" required onchange="generatePONumber(); fetchClientInfo();">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
-                                data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
                                 data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>">
                                 <?= htmlspecialchars($client) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
-                                        
+                                    
                     <label for="order_date">Order Date:</label>
                     <input type="text" id="order_date" name="order_date" readonly>
                     <label for="delivery_date">Delivery Date:</label>
                     <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
                     
-                    <!-- New Delivery Address selection -->
-                    <label for="delivery_address_type">Delivery Address:</label>
-                    <select id="delivery_address_type" name="delivery_address_type" onchange="toggleDeliveryAddress()">
-                        <option value="company">Company Address</option>
-                        <option value="custom">Custom Address</option>
-                    </select>
-                    
-                    <div id="company_address_container">
-                        <input type="text" id="company_address" name="company_address" readonly placeholder="Company address will appear here">
+                    <!-- Shipping Information Display Section -->
+                    <div class="shipping-info-section">
+                        <h3>Shipping Information</h3>
+                        
+                        <div class="info-row">
+                            <div class="info-label">Ship To:</div>
+                            <div id="ship_to_display" class="info-value">Not available</div>
+                        </div>
+                        
+                        <div class="info-row">
+                            <div class="info-label">Ship To Attention:</div>
+                            <div id="ship_to_attn_display" class="info-value">Not available</div>
+                        </div>
+                        
+                        <div class="info-row">
+                            <div class="info-label">Bill To:</div>
+                            <div id="bill_to_display" class="info-value">Not available</div>
+                        </div>
+                        
+                        <div class="info-row">
+                            <div class="info-label">Bill To Attention:</div>
+                            <div id="bill_to_attn_display" class="info-value">Not available</div>
+                        </div>
+                        
+                        <p class="shipping-note">
+                            <i class="fas fa-info-circle"></i> 
+                            Shipping information is automatically retrieved from the client's account. 
+                            To update this information, please edit the client's account details.
+                        </p>
                     </div>
                     
-                    <div id="custom_address_container" style="display: none;">
-                        <textarea id="custom_address" name="custom_address" rows="3" placeholder="Enter delivery address"></textarea>
-                    </div>
-                    
-                    <input type="hidden" name="delivery_address" id="delivery_address">
-                    <input type="hidden" name="special_instructions" id="special_instructions_hidden">
                     <!-- Add special instructions field -->
                     <label for="special_instructions">Special Instructions:</label>
                     <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
@@ -1208,7 +1270,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <input type="hidden" name="total_amount" id="total_amount">
                 </div>
                 <div class="form-buttons">
-
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
@@ -2078,6 +2139,78 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
         function closeAddressInfoModal() {
             document.getElementById("addressInfoModal").style.display = "none";
         }
+
+        // Function to fetch client shipping information
+function fetchClientInfo() {
+    const username = document.getElementById('username').value;
+    if (!username) return;
+    
+    // Show loading indicators
+    document.getElementById('ship_to_display').textContent = 'Loading...';
+    document.getElementById('ship_to_attn_display').textContent = 'Loading...';
+    document.getElementById('bill_to_display').textContent = 'Loading...';
+    document.getElementById('bill_to_attn_display').textContent = 'Loading...';
+    
+    // Make AJAX request to get client info
+    $.ajax({
+        url: '/backend/get_client_info.php', // Create this file
+        type: 'POST',
+        data: { username: username },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                // Update display fields
+                document.getElementById('ship_to_display').textContent = response.ship_to || 'Not provided';
+                document.getElementById('ship_to_attn_display').textContent = response.ship_to_attn || 'Not provided';
+                document.getElementById('bill_to_display').textContent = response.bill_to || 'Not provided';
+                document.getElementById('bill_to_attn_display').textContent = response.bill_to_attn || 'Not provided';
+                
+                // Show warning if shipping info is missing
+                if (!response.ship_to) {
+                    showToast('Warning: This client has no shipping address in their profile.', 'warning');
+                }
+            } else {
+                // Display error
+                document.getElementById('ship_to_display').textContent = 'Error loading data';
+                document.getElementById('ship_to_attn_display').textContent = 'Error loading data';
+                document.getElementById('bill_to_display').textContent = 'Error loading data';
+                document.getElementById('bill_to_attn_display').textContent = 'Error loading data';
+                
+                showToast('Failed to load client information: ' + response.message, 'error');
+            }
+        },
+        error: function() {
+            // Handle AJAX error
+            document.getElementById('ship_to_display').textContent = 'Error loading data';
+            document.getElementById('ship_to_attn_display').textContent = 'Error loading data';
+            document.getElementById('bill_to_display').textContent = 'Error loading data';
+            document.getElementById('bill_to_attn_display').textContent = 'Error loading data';
+            
+            showToast('Failed to connect to server. Please try again.', 'error');
+        }
+    });
+    
+    // Also update company info
+    updateCompany();
+}
+
+// Update prepare order data function to not include delivery_address
+function prepareOrderData() {
+    // Get cart data
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    
+    // Set orders JSON
+    document.getElementById('orders').value = JSON.stringify(cart);
+    
+    // Calculate and set total amount
+    let total = 0;
+    cart.forEach(item => {
+        total += parseFloat(item.price) * parseInt(item.quantity);
+    });
+    document.getElementById('total_amount').value = total.toFixed(2);
+    
+    return true;
+}
 
     </script>
     <script>
