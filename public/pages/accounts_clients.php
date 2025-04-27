@@ -270,7 +270,6 @@ function truncate($text, $max = 15) {
     return (strlen($text) > $max) ? substr($text, 0, $max) . '...' : $text;
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -724,7 +723,7 @@ function truncate($text, $max = 15) {
 
         .modal-footer {
             background-color: #ffffff;
-            padding: 10px; /* Reduced padding */
+            padding: 8px 10px; /* Reduced padding */
             border-top: 1px solid #eee;
             text-align: center; /* Center the buttons */
             border-radius: 0 0 8px 8px;
@@ -734,30 +733,32 @@ function truncate($text, $max = 15) {
             display: flex;
             justify-content: center;
             gap: 10px;
+            margin-top: auto; /* Push footer to bottom of content */
         }
 
         .modal-body {
             padding: 15px; /* Reduced padding */
             overflow-y: auto; /* Add scrollbar to modal body */
-            max-height: 60vh; /* Limit height to enable scrolling */
-            flex: 1; /* Take remaining space */
+            max-height: calc(85vh - 110px); /* Subtracting approximate header/footer height */
+            height: auto; /* Let content determine height */
         }
 
         /* Style for form modals with fixed header and footer */
         .form-modal-content {
             display: flex;
             flex-direction: column;
-            height: 85vh; /* Fixed height */
-            width: 80%; /* Smaller width */
-            max-width: 650px; /* Smaller max width */
+            max-height: 85vh; /* Changed from fixed height to max-height */
+            height: auto; /* Let content determine height */
+            width: 80%;
+            max-width: 650px;
             background-color: #fff;
             border-radius: 8px;
-            overflow: hidden; /* Important to contain child overflow */
-            margin: auto; /* Center horizontally */
-            position: absolute; /* Position absolutely */
-            top: 50%; /* Position from top */
-            left: 50%; /* Position from left */
-            transform: translate(-50%, -50%); /* Center precisely */
+            overflow: hidden; /* Keep this to contain child overflow */
+            margin: auto;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
 
         /* Label styling - normal */
