@@ -38,7 +38,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $company = $_POST['company'] ?? null; 
     $company_address = $_POST['company_address'];
     $bill_to = $_POST['bill_to'] ?? null;
+    $bill_to_attn = $_POST['bill_to_attn'] ?? null;
     $ship_to = $_POST['ship_to'] ?? null;
+    $ship_to_attn = $_POST['ship_to_attn'] ?? null;
     $business_proof = [];
 
     if (validateUnique($conn, $username, $email)) {
@@ -81,8 +83,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $business_proof_json = json_encode($business_proof);
 
-    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to, ship_to, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
-    $stmt->bind_param("sssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $ship_to, $business_proof_json);
+    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to, bill_to_attn, ship_to, ship_to_attn, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
+    $stmt->bind_param("ssssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $bill_to_attn, $ship_to, $ship_to_attn, $business_proof_json);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
@@ -108,7 +110,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $company = $_POST['company'] ?? null; 
     $company_address = $_POST['company_address'];
     $bill_to = $_POST['bill_to'] ?? null;
+    $bill_to_attn = $_POST['bill_to_attn'] ?? null;
     $ship_to = $_POST['ship_to'] ?? null;
+    $ship_to_attn = $_POST['ship_to_attn'] ?? null;
     $business_proof = [];
 
     if (validateUnique($conn, $username, $email, $id)) {
@@ -210,8 +214,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
   
     $business_proof_json = json_encode($business_proof);
 
-    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to = ?, ship_to = ?, business_proof = ? WHERE id = ?");
-    $stmt->bind_param("sssssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $ship_to, $business_proof_json, $id);
+    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to = ?, bill_to_attn = ?, ship_to = ?, ship_to_attn = ?, business_proof = ? WHERE id = ?");
+    $stmt->bind_param("sssssssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $bill_to_attn, $ship_to, $ship_to_attn, $business_proof_json, $id);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
@@ -244,7 +248,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
 $status_filter = $_GET['status'] ?? '';
 
-$sql = "SELECT id, username, email, phone, region, city, company, company_address, bill_to, ship_to, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
+$sql = "SELECT id, username, email, phone, region, city, company, company_address, bill_to, bill_to_attn, ship_to, ship_to_attn, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
 if (!empty($status_filter)) {
     $sql .= " AND status = ?";
 }
@@ -374,6 +378,9 @@ function truncate($text, $max = 15) {
         .overlay-content {
             max-width: 800px;
             width: 90%;
+            max-height: 95vh;
+            overflow-y: auto;
+            padding: 20px;
         }
         
         /* Make inputs a bit wider as they have more space now */
@@ -430,7 +437,7 @@ function truncate($text, $max = 15) {
             background-color: #357abf;
         }
 
-        /* Address Info Modal Styles */
+        /* Address Info Modal Styles - Improved UX */
         #addressInfoModal {
             display: none;
             position: fixed;
@@ -445,45 +452,148 @@ function truncate($text, $max = 15) {
 
         .address-modal-content {
             background-color: #fefefe;
-            margin: 10% auto;
-            padding: 20px;
+            margin: 5% auto;
+            padding: 25px;
             border-radius: 8px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.2);
             width: 80%;
-            max-width: 600px;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .address-modal-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .address-modal-header h2 {
+            margin: 0;
+            color: #333;
+            flex: 1;
+        }
+
+        .address-modal-close {
+            color: #888;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 5px;
+            line-height: 1;
+        }
+
+        .address-modal-close:hover {
+            color: #333;
+        }
+
+        .address-info-section {
+            margin-bottom: 25px;
+        }
+
+        .address-info-section h3 {
+            color: #4a90e2;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 18px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
         }
 
         .address-info-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            margin-bottom: 15px;
         }
 
         .address-info-table th {
             text-align: left;
-            background-color: #f5f5f5;
+            background-color: #f9f9f9;
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #eee;
             width: 30%;
+            vertical-align: top;
+            color: #555;
         }
 
         .address-info-table td {
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #eee;
             word-break: break-word;
+            vertical-align: top;
+            line-height: 1.5;
         }
 
-        .address-modal-close {
-            color: #888;
-            float: right;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
+        .address-contact-person {
+            background-color: #f1f8ff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border-left: 4px solid #4a90e2;
+            margin-top: 10px;
         }
 
-        .address-modal-close:hover {
+        .address-contact-person strong {
             color: #333;
+            margin-right: 5px;
+        }
+
+        /* Overlays */
+        .overlay {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Scrollable modal content */
+        .modal-scroll-content {
+            max-height: 95vh;
+            overflow-y: auto;
+            padding-right: 10px; /* Add padding to account for scrollbar width */
+        }
+
+        /* Address groups in forms */
+        .address-group {
+            border: 1px solid #eee;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            background-color: #fafafa;
+        }
+
+        .address-group h3 {
+            margin-top: 0;
+            color: #4a90e2;
+            font-size: 16px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+        
+        /* Attention field styles */
+        .attention-field {
+            display: flex;
+            align-items: center;
+            margin-top: 8px;
+            padding: 8px;
+            background-color: #f1f8ff;
+            border-radius: 4px;
+            border: 1px solid #d1e6ff;
+        }
+        
+        .attention-field i {
+            color: #4a90e2;
+            margin-right: 8px;
         }
     </style>
 </head>
@@ -536,7 +646,9 @@ function truncate($text, $max = 15) {
                                             <?= json_encode($row["region"]) ?>,
                                             <?= json_encode($row["city"]) ?>,
                                             <?= json_encode($row["bill_to"]) ?>,
-                                            <?= json_encode($row["ship_to"]) ?>
+                                            <?= json_encode($row["bill_to_attn"]) ?>,
+                                            <?= json_encode($row["ship_to"]) ?>,
+                                            <?= json_encode($row["ship_to_attn"]) ?>
                                         )'>
                                         <i class="fas fa-eye"></i> View
                                     </button>
@@ -568,7 +680,9 @@ function truncate($text, $max = 15) {
                                         <?= json_encode($row["company_address"]) ?>,
                                         <?= $business_proof_json ?>,
                                         <?= json_encode($row["bill_to"]) ?>,
-                                        <?= json_encode($row["ship_to"]) ?>
+                                        <?= json_encode($row["bill_to_attn"]) ?>,
+                                        <?= json_encode($row["ship_to"]) ?>,
+                                        <?= json_encode($row["ship_to_attn"]) ?>
                                     )'>
                                     <i class="fas fa-edit"></i> Edit
                                 </button>
@@ -588,155 +702,226 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
+    <!-- Improved Address Info Modal -->
     <div id="addressInfoModal" class="overlay">
         <div class="address-modal-content">
-            <span class="address-modal-close" onclick="closeAddressInfoModal()">&times;</span>
-            <h2><i class="fas fa-map-marker-alt"></i> Address Information</h2>
-            <table class="address-info-table">
-                <tr>
-                    <th>Company Address:</th>
-                    <td id="modalCompanyAddress"></td>
-                </tr>
-                <tr>
-                    <th>Region:</th>
-                    <td id="modalRegion"></td>
-                </tr>
-                <tr>
-                    <th>City:</th>
-                    <td id="modalCity"></td>
-                </tr>
-                <tr>
-                    <th>Bill To:</th>
-                    <td id="modalBillTo"></td>
-                </tr>
-                <tr>
-                    <th>Ship To:</th>
-                    <td id="modalShipTo"></td>
-                </tr>
-            </table>
+            <div class="address-modal-header">
+                <h2><i class="fas fa-map-marker-alt"></i> Address Information</h2>
+                <span class="address-modal-close" onclick="closeAddressInfoModal()">&times;</span>
+            </div>
+            
+            <div class="address-info-section">
+                <h3>Company Location</h3>
+                <table class="address-info-table">
+                    <tr>
+                        <th>Company Address:</th>
+                        <td id="modalCompanyAddress"></td>
+                    </tr>
+                    <tr>
+                        <th>Region:</th>
+                        <td id="modalRegion"></td>
+                    </tr>
+                    <tr>
+                        <th>City:</th>
+                        <td id="modalCity"></td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="address-info-section">
+                <h3>Billing Information</h3>
+                <table class="address-info-table">
+                    <tr>
+                        <th>Bill To Address:</th>
+                        <td id="modalBillTo"></td>
+                    </tr>
+                </table>
+                <div class="address-contact-person" id="billToAttnSection" style="display: none;">
+                    <i class="fas fa-user"></i> <strong>Attention:</strong> <span id="modalBillToAttn"></span>
+                </div>
+            </div>
+            
+            <div class="address-info-section">
+                <h3>Shipping Information</h3>
+                <table class="address-info-table">
+                    <tr>
+                        <th>Ship To Address:</th>
+                        <td id="modalShipTo"></td>
+                    </tr>
+                </table>
+                <div class="address-contact-person" id="shipToAttnSection" style="display: none;">
+                    <i class="fas fa-user"></i> <strong>Attention:</strong> <span id="modalShipToAttn"></span>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Add Account Modal with Scroll -->
     <div id="addAccountOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-user-plus"></i> Add New Account</h2>
             <div id="addAccountError" class="error-message"></div>
-            <form id="addAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
-                <input type="hidden" name="formType" value="add">
-                
-                <div class="two-column-form">
-                    <div class="form-column">
-                        <label for="username">Username: <span class="required">*</span></label>
-                        <input type="text" id="username" name="username" autocomplete="username" required 
-                            placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" 
-                            title="Username can only contain letters, numbers, and underscores. Maximum 15 characters.">
-                        
-                        <label for="password">Password: <span class="required">*</span></label>
-                        <input type="password" id="password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
-                        
-                        <label for="email">Email: <span class="required">*</span></label>
-                        <input type="email" id="email" name="email" required placeholder="e.g., johndoe@example.com">
-                        
-                        <label for="phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
-                        <input type="tel" id="phone" name="phone" placeholder="e.g., +1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
-                    </div>
+            
+            <div class="modal-scroll-content">
+                <form id="addAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
+                    <input type="hidden" name="formType" value="add">
                     
-                    <div class="form-column">
-                        <label for="region">Region: <span class="required">*</span></label>
-                        <input type="text" id="region" name="region" required placeholder="e.g., Metro Manila">
+                    <div class="two-column-form">
+                        <div class="form-column">
+                            <label for="username">Username: <span class="required">*</span></label>
+                            <input type="text" id="username" name="username" autocomplete="username" required 
+                                placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" 
+                                title="Username can only contain letters, numbers, and underscores. Maximum 15 characters.">
+                            
+                            <label for="password">Password: <span class="required">*</span></label>
+                            <input type="password" id="password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
+                            
+                            <label for="email">Email: <span class="required">*</span></label>
+                            <input type="email" id="email" name="email" required placeholder="e.g., johndoe@example.com">
+                            
+                            <label for="phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
+                            <input type="tel" id="phone" name="phone" placeholder="e.g., +1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
+                        </div>
                         
-                        <label for="city">City: <span class="required">*</span></label>
-                        <input type="text" id="city" name="city" required placeholder="e.g., Quezon City">
+                        <div class="form-column">
+                            <label for="region">Region: <span class="required">*</span></label>
+                            <input type="text" id="region" name="region" required placeholder="e.g., Metro Manila">
+                            
+                            <label for="city">City: <span class="required">*</span></label>
+                            <input type="text" id="city" name="city" required placeholder="e.g., Quezon City">
+                            
+                            <label for="company">Company Name: <span class="optional">(optional)</span></label>
+                            <input type="text" id="company" name="company" placeholder="e.g., Top Exchange Food Corp">
+                        </div>
                         
-                        <label for="company">Company Name: <span class="optional">(optional)</span></label>
-                        <input type="text" id="company" name="company" placeholder="e.g., Top Exchange Food Corp">
-                    </div>
-                    
-                    <div class="form-full-width">
-                        <label for="company_address">Company Address: <span class="required">*</span></label>
-                        <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
-                        
-                        <label for="bill_to">Bill To: <span class="optional">(optional)</span></label>
-                        <textarea id="bill_to" name="bill_to" placeholder="Billing address if different from company address"></textarea>
+                        <div class="form-full-width">
+                            <div class="address-group">
+                                <h3><i class="fas fa-building"></i> Company Address</h3>
+                                <label for="company_address">Company Address: <span class="required">*</span></label>
+                                <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
+                            </div>
+                            
+                            <div class="address-group">
+                                <h3><i class="fas fa-file-invoice"></i> Billing Information</h3>
+                                <label for="bill_to">Bill To: <span class="optional">(optional)</span></label>
+                                <textarea id="bill_to" name="bill_to" placeholder="Billing address if different from company address"></textarea>
+                                
+                                <div class="attention-field">
+                                    <i class="fas fa-user"></i>
+                                    <input type="text" id="bill_to_attn" name="bill_to_attn" placeholder="Attention To (Person/Department)" title="Contact person for billing inquiries">
+                                </div>
+                            </div>
 
-                        <label for="ship_to">Ship To: <span class="optional">(optional)</span></label>
-                        <textarea id="ship_to" name="ship_to" placeholder="Shipping address if different from company address"></textarea>
-                        
-                        <label for="business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
-                        <input type="file" id="business_proof" name="business_proof[]" required accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
-                        
-                        <div class="form-buttons">
-                            <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
-                                <i class="fas fa-times"></i> Cancel
-                            </button>
-                            <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                            <div class="address-group">
+                                <h3><i class="fas fa-shipping-fast"></i> Shipping Information</h3>
+                                <label for="ship_to">Ship To: <span class="optional">(optional)</span></label>
+                                <textarea id="ship_to" name="ship_to" placeholder="Shipping address if different from company address"></textarea>
+                                
+                                <div class="attention-field">
+                                    <i class="fas fa-user"></i>
+                                    <input type="text" id="ship_to_attn" name="ship_to_attn" placeholder="Attention To (Person/Department)" title="Contact person for deliveries">
+                                </div>
+                            </div>
+                            
+                            <label for="business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
+                            <input type="file" id="business_proof" name="business_proof[]" required accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
+                            
+                            <div class="form-buttons">
+                                <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                                <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 
+    <!-- Edit Account Modal with Scroll -->
     <div id="editAccountOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-edit"></i> Edit Account</h2>
             <div id="editAccountError" class="error-message"></div>
-            <form id="editAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
-                <input type="hidden" name="formType" value="edit">
-                <input type="hidden" id="edit-id" name="id">
-                <input type="hidden" id="existing-business-proof" name="existing_business_proof">
-                
-                <div class="two-column-form">
-                    <div class="form-column">
-                        <label for="edit-username">Username: <span class="required">*</span></label>
-                        <input type="text" id="edit-username" name="username" autocomplete="username" required 
-                            placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" 
-                            title="Username can only contain letters, numbers, and underscores. Maximum 15 characters.">
-                        
-                        <label for="edit-password">Password: <span class="required">*</span></label>
-                        <input type="password" id="edit-password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
-                        
-                        <label for="edit-email">Email: <span class="required">*</span></label>
-                        <input type="email" id="edit-email" name="email" required placeholder="e.g., johndoe@example.com">
-                        
-                        <label for="edit-phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
-                        <input type="tel" id="edit-phone" name="phone" placeholder="e.g., +1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
-                    </div>
+            
+            <div class="modal-scroll-content">
+                <form id="editAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
+                    <input type="hidden" name="formType" value="edit">
+                    <input type="hidden" id="edit-id" name="id">
+                    <input type="hidden" id="existing-business-proof" name="existing_business_proof">
                     
-                    <div class="form-column">
-                        <label for="edit-region">Region: <span class="required">*</span></label>
-                        <input type="text" id="edit-region" name="region" required placeholder="e.g., North America">
+                    <div class="two-column-form">
+                        <div class="form-column">
+                            <label for="edit-username">Username: <span class="required">*</span></label>
+                            <input type="text" id="edit-username" name="username" autocomplete="username" required 
+                                placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" 
+                                title="Username can only contain letters, numbers, and underscores. Maximum 15 characters.">
+                            
+                            <label for="edit-password">Password: <span class="required">*</span></label>
+                            <input type="password" id="edit-password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
+                            
+                            <label for="edit-email">Email: <span class="required">*</span></label>
+                            <input type="email" id="edit-email" name="email" required placeholder="e.g., johndoe@example.com">
+                            
+                            <label for="edit-phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
+                            <input type="tel" id="edit-phone" name="phone" placeholder="e.g., +1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
+                        </div>
                         
-                        <label for="edit-city">City: <span class="required">*</span></label>
-                        <input type="text" id="edit-city" name="city" required placeholder="e.g., New York">
+                        <div class="form-column">
+                            <label for="edit-region">Region: <span class="required">*</span></label>
+                            <input type="text" id="edit-region" name="region" required placeholder="e.g., North America">
+                            
+                            <label for="edit-city">City: <span class="required">*</span></label>
+                            <input type="text" id="edit-city" name="city" required placeholder="e.g., New York">
+                            
+                            <label for="edit-company">Company Name: <span class="optional">(optional)</span></label>
+                            <input type="text" id="edit-company" name="company" placeholder="e.g., ABC Corp">
+                        </div>
                         
-                        <label for="edit-company">Company Name: <span class="optional">(optional)</span></label>
-                        <input type="text" id="edit-company" name="company" placeholder="e.g., ABC Corp">
-                    </div>
-                    
-                    <div class="form-full-width">
-                        <label for="edit-company_address">Company Address: <span class="required">*</span></label>
-                        <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
-                        
-                        <label for="edit-bill_to">Bill To: <span class="optional">(optional)</span></label>
-                        <textarea id="edit-bill_to" name="bill_to" placeholder="Billing address if different from company address"></textarea>
+                        <div class="form-full-width">
+                            <div class="address-group">
+                                <h3><i class="fas fa-building"></i> Company Address</h3>
+                                <label for="edit-company_address">Company Address: <span class="required">*</span></label>
+                                <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
+                            </div>
+                            
+                            <div class="address-group">
+                                <h3><i class="fas fa-file-invoice"></i> Billing Information</h3>
+                                <label for="edit-bill_to">Bill To: <span class="optional">(optional)</span></label>
+                                <textarea id="edit-bill_to" name="bill_to" placeholder="Billing address if different from company address"></textarea>
+                                
+                                <div class="attention-field">
+                                    <i class="fas fa-user"></i>
+                                    <input type="text" id="edit-bill_to_attn" name="bill_to_attn" placeholder="Attention To (Person/Department)" title="Contact person for billing inquiries">
+                                </div>
+                            </div>
 
-                        <label for="edit-ship_to">Ship To: <span class="optional">(optional)</span></label>
-                        <textarea id="edit-ship_to" name="ship_to" placeholder="Shipping address if different from company address"></textarea>
-                        
-                        <div id="edit-business-proof-container"></div>
-                        <label for="edit-business_proof">Business Proof: <span class="optional">(optional)</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
-                        <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
-                        
-                        <div class="form-buttons">
-                            <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
-                                <i class="fas fa-times"></i> Cancel
-                            </button>
-                            <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                            <div class="address-group">
+                                <h3><i class="fas fa-shipping-fast"></i> Shipping Information</h3>
+                                <label for="edit-ship_to">Ship To: <span class="optional">(optional)</span></label>
+                                <textarea id="edit-ship_to" name="ship_to" placeholder="Shipping address if different from company address"></textarea>
+                                
+                                <div class="attention-field">
+                                    <i class="fas fa-user"></i>
+                                    <input type="text" id="edit-ship_to_attn" name="ship_to_attn" placeholder="Attention To (Person/Department)" title="Contact person for deliveries">
+                                </div>
+                            </div>
+                            
+                            <div id="edit-business-proof-container"></div>
+                            <label for="edit-business_proof">Business Proof: <span class="optional">(optional)</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
+                            <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
+                            
+                            <div class="form-buttons">
+                                <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                                <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -792,12 +977,27 @@ function truncate($text, $max = 15) {
         modal.style.display = "none";
     }
 
-    function showAddressInfo(companyAddress, region, city, billTo, shipTo) {
+    function showAddressInfo(companyAddress, region, city, billTo, billToAttn, shipTo, shipToAttn) {
         document.getElementById("modalCompanyAddress").textContent = companyAddress || 'N/A';
         document.getElementById("modalRegion").textContent = region || 'N/A';
         document.getElementById("modalCity").textContent = city || 'N/A';
         document.getElementById("modalBillTo").textContent = billTo || 'N/A';
         document.getElementById("modalShipTo").textContent = shipTo || 'N/A';
+        
+        // Handle attention fields with visibility
+        if (billToAttn) {
+            document.getElementById("modalBillToAttn").textContent = billToAttn;
+            document.getElementById("billToAttnSection").style.display = "block";
+        } else {
+            document.getElementById("billToAttnSection").style.display = "none";
+        }
+        
+        if (shipToAttn) {
+            document.getElementById("modalShipToAttn").textContent = shipToAttn;
+            document.getElementById("shipToAttnSection").style.display = "block";
+        } else {
+            document.getElementById("shipToAttnSection").style.display = "none";
+        }
         
         document.getElementById("addressInfoModal").style.display = "block";
     }
@@ -852,8 +1052,8 @@ function truncate($text, $max = 15) {
         };
     });
 
-    // Fixed the openEditAccountForm function to properly handle JSON
-    function openEditAccountForm(id, username, email, phone, region, city, company, company_address, business_proof, bill_to, ship_to) {
+    // Fixed the openEditAccountForm function to properly handle JSON and include the new attention fields
+    function openEditAccountForm(id, username, email, phone, region, city, company, company_address, business_proof, bill_to, bill_to_attn, ship_to, ship_to_attn) {
         document.getElementById("edit-id").value = id;
         document.getElementById("edit-username").value = username;
         document.getElementById("edit-email").value = email;
@@ -863,7 +1063,9 @@ function truncate($text, $max = 15) {
         document.getElementById("edit-company").value = company || '';
         document.getElementById("edit-company_address").value = company_address;
         document.getElementById("edit-bill_to").value = bill_to || '';
+        document.getElementById("edit-bill_to_attn").value = bill_to_attn || '';
         document.getElementById("edit-ship_to").value = ship_to || '';
+        document.getElementById("edit-ship_to_attn").value = ship_to_attn || '';
         
         // Parse business_proof if it's a string
         let proofs = business_proof;
