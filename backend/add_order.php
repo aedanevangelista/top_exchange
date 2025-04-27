@@ -12,7 +12,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $po_number = $_POST['po_number'];
         $orders = $_POST['orders']; // Keep as JSON string
         $total_amount = $_POST['total_amount'];
-
         $special_instructions = $_POST['special_instructions'] ?? '';
         
         // Get shipping information from clients_accounts
@@ -20,9 +19,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $ship_to_attn = null;
         $bill_to = null;
         $bill_to_attn = null;
+        $company_address = null;
         
         $getShippingInfo = $conn->prepare("
-            SELECT ship_to, ship_to_attn, bill_to, bill_to_attn, company_address 
+            SELECT ship_to, ship_to_attn, bill_to, bill_to_attn, company_address
             FROM clients_accounts 
             WHERE username = ?
         ");
@@ -32,7 +32,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
         
         $getShippingInfo->bind_param("s", $username);
-        $company_address = null;
         
         if ($getShippingInfo->execute()) {
             $result = $getShippingInfo->get_result();
@@ -46,14 +45,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
         $getShippingInfo->close();
 
-        // If bill_to is empty, use company_address as fallback
-        if (empty($bill_to) && !empty($company_address)) {
-            $bill_to = $company_address;
+        // Use ship_to as the delivery address or fall back to alternatives if it's null
+        $delivery_address = $ship_to;
+        if (empty($delivery_address)) {
+            // If ship_to is empty, use bill_to as fallback
+            $delivery_address = $bill_to;
+            if (empty($delivery_address)) {
+                // If bill_to is also empty, use company_address as the final fallback
+                $delivery_address = $company_address;
+            }
         }
         
-        // If ship_to is empty, use bill_to as fallback
-        if (empty($ship_to) && !empty($bill_to)) {
-            $ship_to = $bill_to;
+        // Check if we have a delivery address
+        if (empty($delivery_address)) {
+            // Log the error for debugging
+            error_log("No delivery address found for user: $username");
+            $delivery_address = "No address provided"; // Default value as a last resort
         }
 
         // Validate that orders is valid JSON
@@ -62,26 +69,47 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Invalid order data format');
         }
 
-        // Insert into orders table with shipping information
-        $insertOrder = $conn->prepare("
-            INSERT INTO orders (
-                username, order_date, delivery_date, po_number, orders, 
-                total_amount, status, special_instructions,
-                ship_to, ship_to_attn, bill_to, bill_to_attn
-            ) 
-            VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?, ?, ?)
-        ");
+        // First, check if the orders table has the necessary columns
+        $checkColumnsQuery = "SHOW COLUMNS FROM orders LIKE 'ship_to'";
+        $checkResult = $conn->query($checkColumnsQuery);
+        
+        if ($checkResult && $checkResult->num_rows > 0) {
+            // Table has been updated with the new columns, use them
+            $insertOrder = $conn->prepare("
+                INSERT INTO orders (
+                    username, order_date, delivery_date, po_number, orders, 
+                    total_amount, status, special_instructions, delivery_address,
+                    ship_to, ship_to_attn, bill_to, bill_to_attn
+                ) 
+                VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?, ?, ?, ?)
+            ");
+
+            $insertOrder->bind_param(
+                "sssssdssssss", 
+                $username, $order_date, $delivery_date, $po_number, 
+                $orders, $total_amount, $special_instructions, $delivery_address,
+                $ship_to, $ship_to_attn, $bill_to, $bill_to_attn
+            );
+        } else {
+            // The table hasn't been updated yet, use the old structure
+            $insertOrder = $conn->prepare("
+                INSERT INTO orders (
+                    username, order_date, delivery_date, delivery_address, po_number, 
+                    orders, total_amount, status, special_instructions
+                ) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
+            ");
+
+            $insertOrder->bind_param(
+                "ssssssds", 
+                $username, $order_date, $delivery_date, $delivery_address, $po_number, 
+                $orders, $total_amount, $special_instructions
+            );
+        }
 
         if ($insertOrder === false) {
             throw new Exception('Failed to prepare statement: ' . $conn->error);
         }
-
-        $insertOrder->bind_param(
-            "sssssdsssss", 
-            $username, $order_date, $delivery_date, $po_number, 
-            $orders, $total_amount, $special_instructions,
-            $ship_to, $ship_to_attn, $bill_to, $bill_to_attn
-        );
 
         if ($insertOrder->execute()) {
             echo json_encode([
