@@ -401,7 +401,7 @@ function truncate($text, $max = 15) {
         textarea#ship_to, textarea#edit-ship_to {
             height: 60px; /* Smaller text areas */
             padding: 8px; /* Reduced padding */
-            font-size: 13px; /* Smaller font */
+            font-size: 14px; /* Increased font size by 1px */
             resize: vertical; /* Allow vertical resizing only */
             min-height: 60px; /* Smaller minimum height */
         }
@@ -413,7 +413,7 @@ function truncate($text, $max = 15) {
             padding: 6px 10px; /* Reduced padding */
             transition: border-color 0.3s;
             outline: none;
-            font-size: 13px; /* Smaller font */
+            font-size: 14px; /* Increased font size by 1px */
         }
         
         input:focus, textarea:focus {
@@ -531,7 +531,7 @@ function truncate($text, $max = 15) {
             color: #4a90e2;
             margin-top: 0;
             margin-bottom: 15px;
-            font-size: 15px; /* Reduced font size by 1px */
+            font-size: 16px; /* Increased font size by 1px */
             padding-bottom: 10px;
             border-bottom: 1px solid #e0e0e0;
         }
@@ -558,7 +558,7 @@ function truncate($text, $max = 15) {
             vertical-align: top;
             color: #3a5d85;
             font-weight: 600;
-            font-size: 13px; /* Reduced font size by 1px */
+            font-size: 14px; /* Increased font size by 1px */
         }
 
         .info-table td {
@@ -569,7 +569,7 @@ function truncate($text, $max = 15) {
             line-height: 1.5;
             color: #333;
             background-color: #fff;
-            font-size: 13px; /* Reduced font size by 1px */
+            font-size: 14px; /* Increased font size by 1px */
         }
 
         /* Contact info styling */
@@ -607,12 +607,12 @@ function truncate($text, $max = 15) {
         .contact-value {
             font-weight: bold;
             color: #333;
-            font-size: 13px; /* Reduced font size by 1px */
+            font-size: 14px; /* Increased font size by 1px */
             word-break: break-all;
         }
 
         .contact-label {
-            font-size: 12px; /* Reduced font size by 1px */
+            font-size: 13px; /* Increased font size by 1px */
             color: #777;
             display: block;
             margin-top: 5px;
@@ -623,13 +623,13 @@ function truncate($text, $max = 15) {
             display: flex;
             align-items: center;
             margin-top: 5px;
-            font-size: 13px; /* Reduced font size by 1px */
+            font-size: 14px; /* Increased font size by 1px */
         }
 
         .attention-info i {
             color: #4a90e2;
             margin-right: 8px;
-            font-size: 14px; /* Reduced font size by 1px */
+            font-size: 15px; /* Increased font size by 1px */
         }
 
         .attention-info strong {
@@ -644,7 +644,7 @@ function truncate($text, $max = 15) {
             font-style: italic;
             border: 1px dashed #d1e1f9;
             border-radius: 6px;
-            font-size: 13px; /* Reduced font size by 1px */
+            font-size: 14px; /* Increased font size by 1px */
         }
 
         /* Overlays */
@@ -674,7 +674,7 @@ function truncate($text, $max = 15) {
         .address-group h3 {
             margin-top: 0;
             color: #4a90e2;
-            font-size: 14px; /* Reduced font size */
+            font-size: 15px; /* Increased font size by 1px */
             margin-bottom: 12px; /* Reduced margin */
             border-bottom: 1px solid #eee;
             padding-bottom: 6px; /* Reduced padding */
@@ -684,7 +684,7 @@ function truncate($text, $max = 15) {
             display: flex;
             align-items: center;
             margin: 10px 0 5px 0;
-            font-size: 13px;
+            font-size: 14px; /* Increased font size by 1px */
             color: #4a90e2;
         }
         
@@ -702,7 +702,7 @@ function truncate($text, $max = 15) {
         .attention-field input {
             width: 100%;
             text-align: center;
-            font-size: 13px;
+            font-size: 14px; /* Increased font size by 1px */
         }
 
         /* Fixed header and footer in modal */
@@ -724,7 +724,7 @@ function truncate($text, $max = 15) {
 
         .modal-footer {
             background-color: #ffffff;
-            padding: 12px 15px; /* Reduced padding */
+            padding: 10px; /* Reduced padding */
             border-top: 1px solid #eee;
             text-align: center; /* Center the buttons */
             border-radius: 0 0 8px 8px;
@@ -760,9 +760,9 @@ function truncate($text, $max = 15) {
             transform: translate(-50%, -50%); /* Center precisely */
         }
 
-        /* Label styling - smaller */
+        /* Label styling - normal */
         label {
-            font-size: 13px; /* Smaller font */
+            font-size: 14px; /* Increased font size by 1px */
             margin-bottom: 4px; /* Less spacing */
         }
 
@@ -776,12 +776,13 @@ function truncate($text, $max = 15) {
         /* Form buttons - improved */
         .modal-footer button {
             padding: 8px 16px; /* Better padding */
-            font-size: 13px; /* Smaller font */
+            font-size: 14px; /* Increased font size by 1px */
             min-width: 100px; /* Minimum width for buttons */
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.2s;
             border: none;
+            margin: 0; /* Remove margins */
         }
 
         .save-btn {
