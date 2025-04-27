@@ -270,6 +270,7 @@ function truncate($text, $max = 15) {
     return (strlen($text) > $max) ? substr($text, 0, $max) . '...' : $text;
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -710,7 +711,7 @@ function truncate($text, $max = 15) {
             background-color: #ffffff;
             padding: 12px 15px; /* Reduced padding */
             border-top: 1px solid #eee;
-            text-align: right;
+            text-align: center; /* Center the buttons */
             border-radius: 0 0 8px 8px;
             position: sticky;
             bottom: 0;
@@ -719,7 +720,8 @@ function truncate($text, $max = 15) {
 
         .modal-body {
             padding: 15px; /* Reduced padding */
-            overflow-y: auto;
+            overflow-y: auto; /* Add scrollbar to modal body */
+            max-height: 60vh; /* Limit height to enable scrolling */
             flex: 1; /* Take remaining space */
         }
 
@@ -727,13 +729,17 @@ function truncate($text, $max = 15) {
         .form-modal-content {
             display: flex;
             flex-direction: column;
-            max-height: 85vh; /* Smaller height */
+            height: 85vh; /* Fixed height */
             width: 80%; /* Smaller width */
             max-width: 650px; /* Smaller max width */
             background-color: #fff;
             border-radius: 8px;
             overflow: hidden; /* Important to contain child overflow */
-            margin: 0 auto; /* Center the modal */
+            margin: auto; /* Center horizontally */
+            position: absolute; /* Position absolutely */
+            top: 50%; /* Position from top */
+            left: 50%; /* Position from left */
+            transform: translate(-50%, -50%); /* Center precisely */
         }
 
         /* Label styling - smaller */
@@ -749,15 +755,39 @@ function truncate($text, $max = 15) {
             font-size: 14px;
         }
         
-        /* Form buttons - smaller */
-        .form-buttons button {
-            padding: 6px 12px; /* Smaller padding */
+        /* Form buttons - centered */
+        .modal-footer button {
+            padding: 8px 16px; /* Better padding */
             font-size: 13px; /* Smaller font */
+            min-width: 100px; /* Minimum width for buttons */
+            margin: 0 5px; /* Margin between buttons */
         }
 
         .save-btn, .cancel-btn {
-            padding: 6px 12px; /* Smaller buttons */
+            padding: 8px 16px; /* Better padding */
             font-size: 13px; /* Smaller text */
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: none;
+        }
+
+        .save-btn {
+            background-color: #4a90e2;
+            color: white;
+        }
+
+        .save-btn:hover {
+            background-color: #357abf;
+        }
+
+        .cancel-btn {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+
+        .cancel-btn:hover {
+            background-color: #e1e1e1;
         }
 
         /* Attention cell styles */
