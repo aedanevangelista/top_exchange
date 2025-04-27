@@ -40,9 +40,10 @@ $stmt->close();
 // Fetch only pending orders for display in the table with sorting
 $orders = []; // Initialize $orders as an empty array
 
-// Modified query to join with clients_accounts to get the company information
+// Modified query to join with clients_accounts to get the company information and addresses
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.orders, o.total_amount, o.status, 
-        o.special_instructions, o.bill_to, o.bill_to_attn, o.ship_to, o.ship_to_attn, COALESCE(o.company, c.company) as company
+        o.special_instructions, COALESCE(o.company, c.company) as company,
+        c.bill_to, c.bill_to_attn, c.ship_to, c.ship_to_attn
         FROM orders o
         LEFT JOIN clients_accounts c ON o.username = c.username
         WHERE o.status = 'Pending'";
@@ -749,9 +750,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         font-size: 11px; /* Original was 14px */
     }
 
-#contentToDownload .po-detail-label {
-    font-size: 11px; /* Reduced from 12px */
-}
+    #contentToDownload .po-detail-label {
+        font-size: 11px; /* Reduced from 12px */
+    }
+
     #addressInfoModal {
     display: none;
     position: fixed;
@@ -989,7 +991,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                         '<?= htmlspecialchars(addslashes($order['ship_to'] ?? 'N/A')) ?>',
                                         '<?= htmlspecialchars(addslashes($order['ship_to_attn'] ?? '')) ?>'
                                     )">
-                                        <i class="fas fa-eye"></i> View
+                                        <i class="fas fa-eye"></i> View Addresses
                                     </button>
                                 </td>
                                 <td>
@@ -1013,21 +1015,21 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 <button class="download-btn" onclick="downloadPODirectly(
-                                '<?= htmlspecialchars($order['po_number']) ?>', 
-                                '<?= htmlspecialchars($order['username']) ?>', 
-                                '<?= htmlspecialchars($order['company']) ?>', 
-                                '<?= htmlspecialchars($order['order_date']) ?>', 
-                                '<?= htmlspecialchars($order['delivery_date']) ?>', 
-                                '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
-                                '<?= htmlspecialchars($order['total_amount']) ?>', 
-                                '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>',
-                                '<?= htmlspecialchars(addslashes($order['bill_to'] ?? '')) ?>',
-                                '<?= htmlspecialchars(addslashes($order['bill_to_attn'] ?? '')) ?>',
-                                '<?= htmlspecialchars(addslashes($order['ship_to'] ?? '')) ?>',
-                                '<?= htmlspecialchars(addslashes($order['ship_to_attn'] ?? '')) ?>'
-                            )">
-                                <i class="fas fa-file-pdf"></i> Download PDF
-                            </button>
+                                    '<?= htmlspecialchars($order['po_number']) ?>', 
+                                    '<?= htmlspecialchars($order['username']) ?>', 
+                                    '<?= htmlspecialchars($order['company']) ?>', 
+                                    '<?= htmlspecialchars($order['order_date']) ?>', 
+                                    '<?= htmlspecialchars($order['delivery_date']) ?>', 
+                                    '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
+                                    '<?= htmlspecialchars($order['total_amount']) ?>', 
+                                    '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>',
+                                    '<?= htmlspecialchars(addslashes($order['bill_to'] ?? '')) ?>',
+                                    '<?= htmlspecialchars(addslashes($order['bill_to_attn'] ?? '')) ?>',
+                                    '<?= htmlspecialchars(addslashes($order['ship_to'] ?? '')) ?>',
+                                    '<?= htmlspecialchars(addslashes($order['ship_to_attn'] ?? '')) ?>'
+                                )">
+                                    <i class="fas fa-file-pdf"></i> Download PDF
+                                </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -1144,9 +1146,23 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <select id="username" name="username" required onchange="generatePONumber();">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
+                            <?php
+                            // Fetch address data for this client
+                            $clientAddressData = [];
+                            $stmt = $conn->prepare("SELECT bill_to, bill_to_attn, ship_to, ship_to_attn FROM clients_accounts WHERE username = ?");
+                            $stmt->bind_param("s", $client);
+                            $stmt->execute();
+                            $stmt->bind_result($client_bill_to, $client_bill_to_attn, $client_ship_to, $client_ship_to_attn);
+                            $stmt->fetch();
+                            $stmt->close();
+                            ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
                                 data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
-                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>">
+                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>"
+                                data-bill-to="<?= htmlspecialchars($client_bill_to ?? '') ?>"
+                                data-bill-to-attn="<?= htmlspecialchars($client_bill_to_attn ?? '') ?>"
+                                data-ship-to="<?= htmlspecialchars($client_ship_to ?? '') ?>"
+                                data-ship-to-attn="<?= htmlspecialchars($client_ship_to_attn ?? '') ?>">
                                 <?= htmlspecialchars($client) ?>
                             </option>
                         <?php endforeach; ?>
@@ -1165,7 +1181,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     </select>
                     
                     <div id="company_address_container">
-                        <input type="text" id="company_address" name="company_address" readonly placeholder="Company address will appear here">
+                        <input type="hidden" id="bill_to" name="bill_to">
+                        <input type="hidden" id="bill_to_attn" name="bill_to_attn">
+                        <input type="hidden" id="ship_to" name="ship_to">
+                        <input type="hidden" id="ship_to_attn" name="ship_to_attn">
                     </div>
                     
                     <div id="custom_address_container" style="display: none;">
@@ -1448,51 +1467,27 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         document.getElementById('printOrderDate').textContent = orderDate;
         document.getElementById('printDeliveryDate').textContent = deliveryDate;
         
-        // Add address information
-        const billToSection = document.getElementById('printBillToSection');
-        const billToAttnSection = document.getElementById('printBillToAttnSection');
-        const shipToSection = document.getElementById('printShipToSection');
-        const shipToAttnSection = document.getElementById('printShipToAttnSection');
+        // Bill To information - only show if it exists
+        document.getElementById('printBillTo').textContent = billTo || '';
+        document.getElementById('printBillToSection').style.display = billTo ? 'block' : 'none';
         
-        if (billTo) {
-            document.getElementById('printBillTo').textContent = billTo;
-            billToSection.style.display = 'block';
-        } else {
-            billToSection.style.display = 'none';
-        }
+        // Bill To Attention - only show if it exists
+        document.getElementById('printBillToAttn').textContent = billToAttn || '';
+        document.getElementById('printBillToAttnSection').style.display = billToAttn ? 'block' : 'none';
         
-        if (billToAttn) {
-            document.getElementById('printBillToAttn').textContent = billToAttn;
-            billToAttnSection.style.display = 'block';
-        } else {
-            billToAttnSection.style.display = 'none';
-        }
+        // Ship To information - only show if it exists
+        document.getElementById('printShipTo').textContent = shipTo || '';
+        document.getElementById('printShipToSection').style.display = shipTo ? 'block' : 'none';
         
-        if (shipTo) {
-            document.getElementById('printShipTo').textContent = shipTo;
-            shipToSection.style.display = 'block';
-        } else {
-            shipToSection.style.display = 'none';
-        }
-        
-        if (shipToAttn) {
-            document.getElementById('printShipToAttn').textContent = shipToAttn;
-            shipToAttnSection.style.display = 'block';
-        } else {
-            shipToAttnSection.style.display = 'none';
-        }
+        // Ship To Attention - only show if it exists
+        document.getElementById('printShipToAttn').textContent = shipToAttn || '';
+        document.getElementById('printShipToAttnSection').style.display = shipToAttn ? 'block' : 'none';
         
         // Format the total amount
         document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
-        
-        // Hide special instructions section if it exists
-        const instructionsSection = document.getElementById('printInstructionsSection');
-        if (instructionsSection) {
-            instructionsSection.style.display = 'none';
-        }
         
         // Parse and populate order items
         const orderItems = JSON.parse(ordersJson);
@@ -2047,7 +2042,7 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
         });
 
         // Address info modal functions
-        function viewAddressInfo(billTo, billToAttn, shipTo, shipToAttn) {
+       function viewAddressInfo(billTo, billToAttn, shipTo, shipToAttn) {
             // Bill To information
             document.getElementById("modalBillTo").textContent = billTo || 'N/A';
             document.getElementById("noBillingInfo").style.display = (!billTo && !billToAttn) ? "block" : "none";
@@ -2078,6 +2073,31 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
         function closeAddressInfoModal() {
             document.getElementById("addressInfoModal").style.display = "none";
         }
+
+        function updateAddressFields() {
+            const username = document.getElementById('username').value;
+            const selectedOption = document.querySelector(`#username option[value="${username}"]`);
+            
+            if (selectedOption) {
+                // Get address data from data attributes
+                const billTo = selectedOption.getAttribute('data-bill-to') || '';
+                const billToAttn = selectedOption.getAttribute('data-bill-to-attn') || '';
+                const shipTo = selectedOption.getAttribute('data-ship-to') || '';
+                const shipToAttn = selectedOption.getAttribute('data-ship-to-attn') || '';
+                
+                // Update hidden fields
+                document.getElementById('bill_to').value = billTo;
+                document.getElementById('bill_to_attn').value = billToAttn;
+                document.getElementById('ship_to').value = shipTo;
+                document.getElementById('ship_to_attn').value = shipToAttn;
+            }
+        }
+
+        // Update the username change event handler
+        document.getElementById('username').addEventListener('change', function() {
+            updateCompany(); // Existing function to update company
+            updateAddressFields(); // New function to update address fields
+        });
 
     </script>
     <script>
