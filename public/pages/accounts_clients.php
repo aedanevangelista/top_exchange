@@ -379,8 +379,8 @@ function truncate($text, $max = 15) {
             max-width: 800px;
             width: 90%;
             max-height: 95vh;
-            overflow-y: auto;
-            padding: 20px;
+            display: flex;
+            flex-direction: column;
         }
         
         /* Make inputs a bit wider as they have more space now */
@@ -422,7 +422,7 @@ function truncate($text, $max = 15) {
         }
 
         /* View address button styles */
-        .view-address-btn {
+        .view-address-btn, .view-contact-btn {
             background-color: #4a90e2;
             color: white;
             border: none;
@@ -433,12 +433,12 @@ function truncate($text, $max = 15) {
             transition: all 0.3s;
         }
 
-        .view-address-btn:hover {
+        .view-address-btn:hover, .view-contact-btn:hover {
             background-color: #357abf;
         }
 
         /* Address Info Modal Styles - Improved UX */
-        #addressInfoModal {
+        #addressInfoModal, #contactInfoModal {
             display: none;
             position: fixed;
             z-index: 9999;
@@ -450,7 +450,7 @@ function truncate($text, $max = 15) {
             background-color: rgba(0,0,0,0.7);
         }
 
-        .address-modal-content {
+        .address-modal-content, .contact-modal-content {
             background-color: #fefefe;
             margin: 5% auto;
             padding: 25px;
@@ -462,7 +462,7 @@ function truncate($text, $max = 15) {
             overflow-y: auto;
         }
 
-        .address-modal-header {
+        .address-modal-header, .contact-modal-header {
             border-bottom: 1px solid #eee;
             padding-bottom: 15px;
             margin-bottom: 20px;
@@ -471,13 +471,13 @@ function truncate($text, $max = 15) {
             align-items: center;
         }
 
-        .address-modal-header h2 {
+        .address-modal-header h2, .contact-modal-header h2 {
             margin: 0;
             color: #333;
             flex: 1;
         }
 
-        .address-modal-close {
+        .address-modal-close, .contact-modal-close {
             color: #888;
             font-size: 24px;
             font-weight: bold;
@@ -487,15 +487,15 @@ function truncate($text, $max = 15) {
             line-height: 1;
         }
 
-        .address-modal-close:hover {
+        .address-modal-close:hover, .contact-modal-close:hover {
             color: #333;
         }
 
-        .address-info-section {
+        .address-info-section, .contact-info-section {
             margin-bottom: 25px;
         }
 
-        .address-info-section h3 {
+        .address-info-section h3, .contact-info-section h3 {
             color: #4a90e2;
             margin-top: 0;
             margin-bottom: 10px;
@@ -504,13 +504,13 @@ function truncate($text, $max = 15) {
             padding-bottom: 8px;
         }
 
-        .address-info-table {
+        .address-info-table, .contact-info-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 15px;
         }
 
-        .address-info-table th {
+        .address-info-table th, .contact-info-table th {
             text-align: left;
             background-color: #f9f9f9;
             padding: 10px;
@@ -520,7 +520,7 @@ function truncate($text, $max = 15) {
             color: #555;
         }
 
-        .address-info-table td {
+        .address-info-table td, .contact-info-table td {
             padding: 10px;
             border: 1px solid #eee;
             word-break: break-word;
@@ -553,13 +553,6 @@ function truncate($text, $max = 15) {
             display: flex;
             justify-content: center;
             align-items: center;
-        }
-
-        /* Scrollable modal content */
-        .modal-scroll-content {
-            max-height: 95vh;
-            overflow-y: auto;
-            padding-right: 10px; /* Add padding to account for scrollbar width */
         }
 
         /* Address groups in forms */
@@ -595,6 +588,81 @@ function truncate($text, $max = 15) {
             color: #4a90e2;
             margin-right: 8px;
         }
+
+        /* Fixed header and footer in modal */
+        .modal-header {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 1px solid #eee;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            padding: 0;
+        }
+
+        .modal-footer {
+            background-color: #ffffff;
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            text-align: right;
+            border-radius: 0 0 8px 8px;
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1; /* Take remaining space */
+        }
+
+        /* Contact info styling */
+        .contact-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .contact-icon {
+            width: 30px;
+            color: #4a90e2;
+            text-align: center;
+            margin-right: 10px;
+        }
+
+        .contact-text {
+            flex: 1;
+        }
+
+        .contact-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .contact-label {
+            font-size: 0.8em;
+            color: #777;
+            display: block;
+            margin-top: 3px;
+        }
+
+        /* Style for form modals with fixed header and footer */
+        .form-modal-content {
+            display: flex;
+            flex-direction: column;
+            max-height: 95vh;
+            width: 90%;
+            max-width: 800px;
+            background-color: #fff;
+            border-radius: 8px;
+            overflow: hidden; /* Important to contain child overflow */
+        }
     </style>
 </head>
 <body>
@@ -622,8 +690,7 @@ function truncate($text, $max = 15) {
                 <thead>
                     <tr>
                         <th>Username</th>
-                        <th>Email</th>
-                        <th>Phone</th>
+                        <th>Contact Info</th>
                         <th>Company Name</th>
                         <th>Address Info</th>
                         <th>Business Proof</th>
@@ -636,8 +703,15 @@ function truncate($text, $max = 15) {
                         <?php while ($row = $result->fetch_assoc()): ?>
                             <tr>
                                 <td><?= htmlspecialchars(truncate($row['username'] ?? 'N/A')) ?></td>
-                                <td><?= htmlspecialchars(truncate($row['email'] ?? 'N/A')) ?></td>
-                                <td><?= htmlspecialchars(truncate($row['phone'] ?? 'N/A')) ?></td>
+                                <td>
+                                    <button class="view-contact-btn" 
+                                        onclick='showContactInfo(
+                                            <?= json_encode($row["email"]) ?>,
+                                            <?= json_encode($row["phone"]) ?>
+                                        )'>
+                                        <i class="fas fa-address-card"></i> View
+                                    </button>
+                                </td>
                                 <td><?= htmlspecialchars(truncate($row['company'] ?? 'N/A')) ?></td>
                                 <td>
                                     <button class="view-address-btn" 
@@ -694,11 +768,43 @@ function truncate($text, $max = 15) {
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="no-accounts">No accounts found.</td>
+                            <td colspan="7" class="no-accounts">No accounts found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Contact Info Modal -->
+    <div id="contactInfoModal" class="overlay">
+        <div class="contact-modal-content">
+            <div class="contact-modal-header">
+                <h2><i class="fas fa-address-card"></i> Contact Information</h2>
+                <span class="contact-modal-close" onclick="closeContactInfoModal()">&times;</span>
+            </div>
+            
+            <div class="contact-info-section">
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="contact-text">
+                        <div class="contact-value" id="modalEmail"></div>
+                        <div class="contact-label">Email Address</div>
+                    </div>
+                </div>
+                
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <div class="contact-text">
+                        <div class="contact-value" id="modalPhone"></div>
+                        <div class="contact-label">Phone Number</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -756,16 +862,18 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- Add Account Modal with Scroll -->
+    <!-- Add Account Modal with Fixed Header and Footer -->
     <div id="addAccountOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <h2><i class="fas fa-user-plus"></i> Add New Account</h2>
-            <div id="addAccountError" class="error-message"></div>
+        <div class="form-modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-plus"></i> Add New Account</h2>
+                <div id="addAccountError" class="error-message"></div>
+            </div>
             
-            <div class="modal-scroll-content">
-                <form id="addAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
-                    <input type="hidden" name="formType" value="add">
-                    
+            <form id="addAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
+                <input type="hidden" name="formType" value="add">
+                
+                <div class="modal-body">
                     <div class="two-column-form">
                         <div class="form-column">
                             <label for="username">Username: <span class="required">*</span></label>
@@ -825,32 +933,34 @@ function truncate($text, $max = 15) {
                             
                             <label for="business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
                             <input type="file" id="business_proof" name="business_proof[]" required accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
-                            
-                            <div class="form-buttons">
-                                <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
-                                    <i class="fas fa-times"></i> Cancel
-                                </button>
-                                <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
-                            </div>
                         </div>
                     </div>
-                </form>
-            </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Edit Account Modal with Scroll -->
+    <!-- Edit Account Modal with Fixed Header and Footer -->
     <div id="editAccountOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <h2><i class="fas fa-edit"></i> Edit Account</h2>
-            <div id="editAccountError" class="error-message"></div>
+        <div class="form-modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Edit Account</h2>
+                <div id="editAccountError" class="error-message"></div>
+            </div>
             
-            <div class="modal-scroll-content">
-                <form id="editAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
-                    <input type="hidden" name="formType" value="edit">
-                    <input type="hidden" id="edit-id" name="id">
-                    <input type="hidden" id="existing-business-proof" name="existing_business_proof">
-                    
+            <form id="editAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
+                <input type="hidden" name="formType" value="edit">
+                <input type="hidden" id="edit-id" name="id">
+                <input type="hidden" id="existing-business-proof" name="existing_business_proof">
+                
+                <div class="modal-body">
                     <div class="two-column-form">
                         <div class="form-column">
                             <label for="edit-username">Username: <span class="required">*</span></label>
@@ -911,17 +1021,17 @@ function truncate($text, $max = 15) {
                             <div id="edit-business-proof-container"></div>
                             <label for="edit-business_proof">Business Proof: <span class="optional">(optional)</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
                             <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
-                            
-                            <div class="form-buttons">
-                                <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
-                                    <i class="fas fa-times"></i> Cancel
-                                </button>
-                                <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
-                            </div>
                         </div>
                     </div>
-                </form>
-            </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -975,6 +1085,16 @@ function truncate($text, $max = 15) {
     function closeModal() {
         var modal = document.getElementById("myModal");
         modal.style.display = "none";
+    }
+    
+    function showContactInfo(email, phone) {
+        document.getElementById("modalEmail").textContent = email || 'N/A';
+        document.getElementById("modalPhone").textContent = phone || 'N/A';
+        document.getElementById("contactInfoModal").style.display = "block";
+    }
+    
+    function closeContactInfoModal() {
+        document.getElementById("contactInfoModal").style.display = "none";
     }
 
     function showAddressInfo(companyAddress, region, city, billTo, billToAttn, shipTo, shipToAttn) {
@@ -1040,10 +1160,15 @@ function truncate($text, $max = 15) {
         // When the user clicks anywhere outside of the modals, close them
         window.onclick = function(event) {
             var addressModal = document.getElementById('addressInfoModal');
+            var contactModal = document.getElementById('contactInfoModal');
             var imageModal = document.getElementById('myModal');
             
             if (event.target == addressModal) {
                 addressModal.style.display = "none";
+            }
+            
+            if (event.target == contactModal) {
+                contactModal.style.display = "none";
             }
             
             if (event.target == imageModal) {
