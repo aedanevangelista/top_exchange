@@ -19,19 +19,26 @@ if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
     $sort_direction = 'DESC'; // Default to descending
 }
 
-// Fetch active clients for the dropdown
+// Fetch active clients for the dropdown with their address information
 $clients = [];
+$clients_with_addresses = []; // Array to store clients with their address info
 $clients_with_company = []; // Array to store clients with their company names
 
-$stmt = $conn->prepare("SELECT username, company FROM clients_accounts WHERE status = 'active'");
+$stmt = $conn->prepare("SELECT username, company, bill_to, bill_to_attn, ship_to, ship_to_attn FROM clients_accounts WHERE status = 'active'");
 if ($stmt === false) {
     die('Prepare failed: ' . htmlspecialchars($conn->error));
 }
 $stmt->execute();
-$stmt->bind_result($username, $company);
-while ($stmt->fetch()) {
-    $clients[] = $username;
-    $clients_with_company[$username] = $company;
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $clients[] = $row['username'];
+    $clients_with_addresses[$row['username']] = [
+        'bill_to' => $row['bill_to'],
+        'bill_to_attn' => $row['bill_to_attn'],
+        'ship_to' => $row['ship_to'],
+        'ship_to_attn' => $row['ship_to_attn']
+    ];
+    $clients_with_company[$row['username']] = $row['company'];
 }
 $stmt->close();
 
@@ -324,11 +331,15 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber();">
+                    <select id="username" name="username" required onchange="generatePONumber(); loadAddressInfo(this.value);">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
-                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>">
+                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>"
+                                data-bill-to="<?= htmlspecialchars($clients_with_addresses[$client]['bill_to'] ?? '') ?>"
+                                data-bill-to-attn="<?= htmlspecialchars($clients_with_addresses[$client]['bill_to_attn'] ?? '') ?>"
+                                data-ship-to="<?= htmlspecialchars($clients_with_addresses[$client]['ship_to'] ?? '') ?>"
+                                data-ship-to-attn="<?= htmlspecialchars($clients_with_addresses[$client]['ship_to_attn'] ?? '') ?>">
                                 <?= htmlspecialchars($client) ?>
                             </option>
                         <?php endforeach; ?>
@@ -339,31 +350,17 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <label for="delivery_date">Delivery Date:</label>
                     <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
                     
-                    <!-- Address Information - New Fields -->
-                    <div class="address-section">
-                        <h3>Billing Information</h3>
-                        <label for="bill_to">Bill To Address:</label>
-                        <textarea id="bill_to" name="bill_to" rows="3" placeholder="Enter billing address"></textarea>
-                        
-                        <label for="bill_to_attn">Bill To Attention:</label>
-                        <input type="text" id="bill_to_attn" name="bill_to_attn" placeholder="Billing attention (optional)">
+                    <!-- Address information section - Read-only display of client address -->
+                    <h3>Address Information</h3>
+                    <div id="address-info" class="address-info-container">
+                        <p>Client address information will be loaded when a username is selected.</p>
                     </div>
                     
-                    <div class="address-section">
-                        <h3>Shipping Information</h3>
-                        <label for="ship_to">Ship To Address:</label>
-                        <textarea id="ship_to" name="ship_to" rows="3" placeholder="Enter shipping address"></textarea>
-                        
-                        <label for="ship_to_attn">Ship To Attention:</label>
-                        <input type="text" id="ship_to_attn" name="ship_to_attn" placeholder="Shipping attention (optional)">
-                    </div>
-                    
-                    <div class="address-section">
-                        <label>
-                            <input type="checkbox" id="same_as_billing" name="same_as_billing" checked> 
-                            Shipping address same as billing
-                        </label>
-                    </div>
+                    <!-- Hidden fields to store address info -->
+                    <input type="hidden" name="bill_to" id="bill_to">
+                    <input type="hidden" name="bill_to_attn" id="bill_to_attn">
+                    <input type="hidden" name="ship_to" id="ship_to">
+                    <input type="hidden" name="ship_to_attn" id="ship_to_attn">
                     
                     <input type="hidden" name="special_instructions" id="special_instructions_hidden">
                     <!-- Add special instructions field -->
@@ -648,36 +645,62 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 });
             });
             
-            // Initialize "Same as billing" checkbox handler
-            $('#same_as_billing').change(function() {
-                if ($(this).is(':checked')) {
-                    // Copy billing info to shipping
-                    $('#ship_to').val($('#bill_to').val());
-                    $('#ship_to_attn').val($('#bill_to_attn').val());
-                    
-                    // Disable shipping fields
-                    $('#ship_to, #ship_to_attn').prop('disabled', true);
-                } else {
-                    // Enable shipping fields
-                    $('#ship_to, #ship_to_attn').prop('disabled', false);
-                }
-            });
-            
-            // Add change event listener to billing fields to auto-update shipping if checkbox is checked
-            $('#bill_to, #bill_to_attn').on('input', function() {
-                if ($('#same_as_billing').is(':checked')) {
-                    if ($(this).attr('id') === 'bill_to') {
-                        $('#ship_to').val($(this).val());
-                    } else {
-                        $('#ship_to_attn').val($(this).val());
-                    }
-                }
-            });
-            
             // Initialize company field if needed
             $('#username').change(function() {
                 updateCompany();
             });
+            
+            // Load address information when a username is selected
+            window.loadAddressInfo = function(username) {
+                if (!username) return;
+                
+                const selectedOption = $(`#username option[value="${username}"]`);
+                
+                // Get address data from the option data attributes
+                const billTo = selectedOption.data('bill-to') || '';
+                const billToAttn = selectedOption.data('bill-to-attn') || '';
+                const shipTo = selectedOption.data('ship-to') || '';
+                const shipToAttn = selectedOption.data('ship-to-attn') || '';
+                
+                // Set hidden field values
+                $('#bill_to').val(billTo);
+                $('#bill_to_attn').val(billToAttn);
+                $('#ship_to').val(shipTo);
+                $('#ship_to_attn').val(shipToAttn);
+                
+                // Display the address info in a readable format
+                let addressHTML = '<div class="address-display">';
+                
+                addressHTML += '<div class="address-section">';
+                addressHTML += '<h4><i class="fas fa-file-invoice"></i> Billing Information</h4>';
+                if (billTo) {
+                    addressHTML += `<p><strong>Bill To:</strong> ${billTo}</p>`;
+                }
+                if (billToAttn) {
+                    addressHTML += `<p><strong>Attention:</strong> ${billToAttn}</p>`;
+                }
+                if (!billTo && !billToAttn) {
+                    addressHTML += '<p class="no-info">No billing information available</p>';
+                }
+                addressHTML += '</div>';
+                
+                addressHTML += '<div class="address-section">';
+                addressHTML += '<h4><i class="fas fa-shipping-fast"></i> Shipping Information</h4>';
+                if (shipTo) {
+                    addressHTML += `<p><strong>Ship To:</strong> ${shipTo}</p>`;
+                }
+                if (shipToAttn) {
+                    addressHTML += `<p><strong>Attention:</strong> ${shipToAttn}</p>`;
+                }
+                if (!shipTo && !shipToAttn) {
+                    addressHTML += '<p class="no-info">No shipping information available</p>';
+                }
+                addressHTML += '</div>';
+                
+                addressHTML += '</div>';
+                
+                $('#address-info').html(addressHTML);
+            };
             
             // Make sure prepareOrderData includes proper fields
             window.prepareOrderData = function() {
@@ -689,13 +712,47 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 // Include special instructions in form data
                 const specialInstructions = $('#special_instructions').val();
                 $('#special_instructions_hidden').val(specialInstructions);
+                
+                // Address information is already set in the hidden fields when username is selected
             };
         });
+    </script>
+    <style>
+        /* Styles for address display */
+        .address-info-container {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
         
-        // Override the toggleDeliveryAddress function since we don't use it anymore
-        window.toggleDeliveryAddress = function() {
-            // No longer needed, but keep empty function for compatibility
-        };
-    </script> 
+        .address-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .address-display .address-section {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .address-display h4 {
+            margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            color: #333;
+        }
+        
+        .address-display p {
+            margin: 5px 0;
+        }
+        
+        .address-display .no-info {
+            color: #888;
+            font-style: italic;
+        }
+    </style>
 </body>
 </html>
