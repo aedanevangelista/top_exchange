@@ -458,8 +458,6 @@ function truncate($text, $max = 15) {
             box-shadow: 0 8px 30px rgba(0,0,0,0.3);
             width: 90%;
             max-width: 700px;
-            max-height: 90vh;
-            overflow: hidden;
             animation: modalFadeIn 0.3s;
         }
 
@@ -505,8 +503,7 @@ function truncate($text, $max = 15) {
 
         .info-modal-body {
             padding: 25px;
-            overflow-y: auto;
-            max-height: calc(90vh - 60px);
+            max-height: auto; /* No max-height to prevent scroll */
         }
 
         .info-section {
@@ -527,7 +524,7 @@ function truncate($text, $max = 15) {
             color: #4a90e2;
             margin-top: 0;
             margin-bottom: 15px;
-            font-size: 16px;
+            font-size: 15px; /* Reduced font size by 1px */
             padding-bottom: 10px;
             border-bottom: 1px solid #e0e0e0;
         }
@@ -554,6 +551,7 @@ function truncate($text, $max = 15) {
             vertical-align: top;
             color: #3a5d85;
             font-weight: 600;
+            font-size: 13px; /* Reduced font size by 1px */
         }
 
         .info-table td {
@@ -564,6 +562,7 @@ function truncate($text, $max = 15) {
             line-height: 1.5;
             color: #333;
             background-color: #fff;
+            font-size: 13px; /* Reduced font size by 1px */
         }
 
         /* Contact info styling */
@@ -601,34 +600,32 @@ function truncate($text, $max = 15) {
         .contact-value {
             font-weight: bold;
             color: #333;
-            font-size: 16px;
+            font-size: 13px; /* Reduced font size by 1px */
             word-break: break-all;
         }
 
         .contact-label {
-            font-size: 13px;
+            font-size: 12px; /* Reduced font size by 1px */
             color: #777;
             display: block;
             margin-top: 5px;
         }
 
         /* Attention styling */
-        .attention-person {
-            margin-top: 15px;
-            padding: 12px 15px;
-            background-color: #eef5ff;
-            border-radius: 6px;
-            border-left: 4px solid #4a90e2;
+        .attention-info {
             display: flex;
             align-items: center;
+            margin-top: 5px;
+            font-size: 13px; /* Reduced font size by 1px */
         }
 
-        .attention-person i {
+        .attention-info i {
             color: #4a90e2;
-            margin-right: 10px;
+            margin-right: 8px;
+            font-size: 14px; /* Reduced font size by 1px */
         }
 
-        .attention-person strong {
+        .attention-info strong {
             color: #3a5d85;
             margin-right: 5px;
         }
@@ -640,6 +637,7 @@ function truncate($text, $max = 15) {
             font-style: italic;
             border: 1px dashed #d1e1f9;
             border-radius: 6px;
+            font-size: 13px; /* Reduced font size by 1px */
         }
 
         /* Overlays */
@@ -891,7 +889,7 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- Improved Address Info Modal with Unified Design -->
+    <!-- Improved Address Info Modal with Unified Design - No Scrollbar -->
     <div id="addressInfoModal" class="overlay">
         <div class="info-modal-content">
             <div class="info-modal-header">
@@ -925,10 +923,11 @@ function truncate($text, $max = 15) {
                             <th>Bill To Address</th>
                             <td id="modalBillTo"></td>
                         </tr>
+                        <tr id="billToAttnRow" style="display: none;">
+                            <th>Attention To</th>
+                            <td id="modalBillToAttn"></td>
+                        </tr>
                     </table>
-                    <div class="attention-person" id="billToAttnSection" style="display: none;">
-                        <i class="fas fa-user"></i> <strong>Attention:</strong> <span id="modalBillToAttn"></span>
-                    </div>
                     <div id="noBillingInfo" class="empty-notice" style="display: none;">
                         No billing address information provided.
                     </div>
@@ -941,10 +940,11 @@ function truncate($text, $max = 15) {
                             <th>Ship To Address</th>
                             <td id="modalShipTo"></td>
                         </tr>
+                        <tr id="shipToAttnRow" style="display: none;">
+                            <th>Attention To</th>
+                            <td id="modalShipToAttn"></td>
+                        </tr>
                     </table>
-                    <div class="attention-person" id="shipToAttnSection" style="display: none;">
-                        <i class="fas fa-user"></i> <strong>Attention:</strong> <span id="modalShipToAttn"></span>
-                    </div>
                     <div id="noShippingInfo" class="empty-notice" style="display: none;">
                         No shipping address information provided.
                     </div>
@@ -1201,9 +1201,9 @@ function truncate($text, $max = 15) {
         // Bill To Attention with conditional display
         if (billToAttn) {
             document.getElementById("modalBillToAttn").textContent = billToAttn;
-            document.getElementById("billToAttnSection").style.display = "block";
+            document.getElementById("billToAttnRow").style.display = "table-row";
         } else {
-            document.getElementById("billToAttnSection").style.display = "none";
+            document.getElementById("billToAttnRow").style.display = "none";
         }
         
         // Ship To info with conditional display
@@ -1213,9 +1213,9 @@ function truncate($text, $max = 15) {
         // Ship To Attention with conditional display
         if (shipToAttn) {
             document.getElementById("modalShipToAttn").textContent = shipToAttn;
-            document.getElementById("shipToAttnSection").style.display = "block";
+            document.getElementById("shipToAttnRow").style.display = "table-row";
         } else {
-            document.getElementById("shipToAttnSection").style.display = "none";
+            document.getElementById("shipToAttnRow").style.display = "none";
         }
         
         document.getElementById("addressInfoModal").style.display = "block";
