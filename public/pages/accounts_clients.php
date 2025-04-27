@@ -37,6 +37,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $city = $_POST['city'];
     $company = $_POST['company'] ?? null; 
     $company_address = $_POST['company_address'];
+    $bill_to = $_POST['bill_to'] ?? null;
+    $ship_to = $_POST['ship_to'] ?? null;
     $business_proof = [];
 
     if (validateUnique($conn, $username, $email)) {
@@ -79,8 +81,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $business_proof_json = json_encode($business_proof);
 
-    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
-    $stmt->bind_param("sssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json);
+    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to, ship_to, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
+    $stmt->bind_param("sssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $ship_to, $business_proof_json);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
@@ -105,6 +107,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $city = $_POST['city'];
     $company = $_POST['company'] ?? null; 
     $company_address = $_POST['company_address'];
+    $bill_to = $_POST['bill_to'] ?? null;
+    $ship_to = $_POST['ship_to'] ?? null;
     $business_proof = [];
 
     if (validateUnique($conn, $username, $email, $id)) {
@@ -206,8 +210,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
   
     $business_proof_json = json_encode($business_proof);
 
-    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, business_proof = ? WHERE id = ?");
-    $stmt->bind_param("sssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json, $id);
+    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to = ?, ship_to = ?, business_proof = ? WHERE id = ?");
+    $stmt->bind_param("sssssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $ship_to, $business_proof_json, $id);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
@@ -240,7 +244,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
 $status_filter = $_GET['status'] ?? '';
 
-$sql = "SELECT id, username, email, phone, region, city, company, company_address, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
+$sql = "SELECT id, username, email, phone, region, city, company, company_address, bill_to, ship_to, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
 if (!empty($status_filter)) {
     $sql .= " AND status = ?";
 }
@@ -379,7 +383,9 @@ function truncate($text, $max = 15) {
         }
         
         /* Enhanced company address textarea */
-        textarea#company_address, textarea#edit-company_address {
+        textarea#company_address, textarea#edit-company_address,
+        textarea#bill_to, textarea#edit-bill_to,
+        textarea#ship_to, textarea#edit-ship_to {
             height: 80px; /* Make textarea taller */
             padding: 10px; /* Add padding inside */
             font-size: 14px; /* Consistent font size */
@@ -406,6 +412,78 @@ function truncate($text, $max = 15) {
             color: #aaa;
             padding: 4px;
             font-style: italic;
+        }
+
+        /* View address button styles */
+        .view-address-btn {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .view-address-btn:hover {
+            background-color: #357abf;
+        }
+
+        /* Address Info Modal Styles */
+        #addressInfoModal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+        }
+
+        .address-modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            width: 80%;
+            max-width: 600px;
+        }
+
+        .address-info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .address-info-table th {
+            text-align: left;
+            background-color: #f5f5f5;
+            padding: 10px;
+            border: 1px solid #ddd;
+            width: 30%;
+        }
+
+        .address-info-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            word-break: break-word;
+        }
+
+        .address-modal-close {
+            color: #888;
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .address-modal-close:hover {
+            color: #333;
         }
     </style>
 </head>
@@ -436,10 +514,8 @@ function truncate($text, $max = 15) {
                         <th>Username</th>
                         <th>Email</th>
                         <th>Phone</th>
-                        <th>Region</th>
-                        <th>City</th>
                         <th>Company</th>
-                        <th>Company Address</th>
+                        <th>Address Info</th>
                         <th>Business Proof</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -452,10 +528,19 @@ function truncate($text, $max = 15) {
                                 <td><?= htmlspecialchars(truncate($row['username'] ?? 'N/A')) ?></td>
                                 <td><?= htmlspecialchars(truncate($row['email'] ?? 'N/A')) ?></td>
                                 <td><?= htmlspecialchars(truncate($row['phone'] ?? 'N/A')) ?></td>
-                                <td><?= htmlspecialchars(truncate($row['region'] ?? 'N/A')) ?></td>
-                                <td><?= htmlspecialchars(truncate($row['city'] ?? 'N/A')) ?></td>
                                 <td><?= htmlspecialchars(truncate($row['company'] ?? 'N/A')) ?></td>
-                                <td><?= htmlspecialchars(truncate($row['company_address'] ?? 'N/A')) ?></td>
+                                <td>
+                                    <button class="view-address-btn" 
+                                        onclick='showAddressInfo(
+                                            <?= json_encode($row["company_address"]) ?>,
+                                            <?= json_encode($row["region"]) ?>,
+                                            <?= json_encode($row["city"]) ?>,
+                                            <?= json_encode($row["bill_to"]) ?>,
+                                            <?= json_encode($row["ship_to"]) ?>
+                                        )'>
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                </td>
                                 <td class="photo-album">
                                     <?php
                                     $proofs = json_decode($row['business_proof'], true);
@@ -481,7 +566,9 @@ function truncate($text, $max = 15) {
                                         <?= json_encode($row["city"]) ?>,
                                         <?= json_encode($row["company"]) ?>,
                                         <?= json_encode($row["company_address"]) ?>,
-                                        <?= $business_proof_json ?>
+                                        <?= $business_proof_json ?>,
+                                        <?= json_encode($row["bill_to"]) ?>,
+                                        <?= json_encode($row["ship_to"]) ?>
                                     )'>
                                     <i class="fas fa-edit"></i> Edit
                                 </button>
@@ -493,10 +580,39 @@ function truncate($text, $max = 15) {
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="10" class="no-accounts">No accounts found.</td>
+                            <td colspan="8" class="no-accounts">No accounts found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="addressInfoModal" class="overlay">
+        <div class="address-modal-content">
+            <span class="address-modal-close" onclick="closeAddressInfoModal()">&times;</span>
+            <h2><i class="fas fa-map-marker-alt"></i> Address Information</h2>
+            <table class="address-info-table">
+                <tr>
+                    <th>Company Address:</th>
+                    <td id="modalCompanyAddress"></td>
+                </tr>
+                <tr>
+                    <th>Region:</th>
+                    <td id="modalRegion"></td>
+                </tr>
+                <tr>
+                    <th>City:</th>
+                    <td id="modalCity"></td>
+                </tr>
+                <tr>
+                    <th>Bill To:</th>
+                    <td id="modalBillTo"></td>
+                </tr>
+                <tr>
+                    <th>Ship To:</th>
+                    <td id="modalShipTo"></td>
+                </tr>
             </table>
         </div>
     </div>
@@ -539,6 +655,12 @@ function truncate($text, $max = 15) {
                     <div class="form-full-width">
                         <label for="company_address">Company Address: <span class="required">*</span></label>
                         <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
+                        
+                        <label for="bill_to">Bill To: <span class="optional">(optional)</span></label>
+                        <textarea id="bill_to" name="bill_to" placeholder="Billing address if different from company address"></textarea>
+
+                        <label for="ship_to">Ship To: <span class="optional">(optional)</span></label>
+                        <textarea id="ship_to" name="ship_to" placeholder="Shipping address if different from company address"></textarea>
                         
                         <label for="business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
                         <input type="file" id="business_proof" name="business_proof[]" required accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
@@ -595,6 +717,12 @@ function truncate($text, $max = 15) {
                     <div class="form-full-width">
                         <label for="edit-company_address">Company Address: <span class="required">*</span></label>
                         <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
+                        
+                        <label for="edit-bill_to">Bill To: <span class="optional">(optional)</span></label>
+                        <textarea id="edit-bill_to" name="bill_to" placeholder="Billing address if different from company address"></textarea>
+
+                        <label for="edit-ship_to">Ship To: <span class="optional">(optional)</span></label>
+                        <textarea id="edit-ship_to" name="ship_to" placeholder="Shipping address if different from company address"></textarea>
                         
                         <div id="edit-business-proof-container"></div>
                         <label for="edit-business_proof">Business Proof: <span class="optional">(optional)</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
@@ -663,6 +791,20 @@ function truncate($text, $max = 15) {
         var modal = document.getElementById("myModal");
         modal.style.display = "none";
     }
+
+    function showAddressInfo(companyAddress, region, city, billTo, shipTo) {
+        document.getElementById("modalCompanyAddress").textContent = companyAddress || 'N/A';
+        document.getElementById("modalRegion").textContent = region || 'N/A';
+        document.getElementById("modalCity").textContent = city || 'N/A';
+        document.getElementById("modalBillTo").textContent = billTo || 'N/A';
+        document.getElementById("modalShipTo").textContent = shipTo || 'N/A';
+        
+        document.getElementById("addressInfoModal").style.display = "block";
+    }
+
+    function closeAddressInfoModal() {
+        document.getElementById("addressInfoModal").style.display = "none";
+    }
     
     // Client-side validation for username (prevent special characters)
     document.addEventListener('DOMContentLoaded', function() {
@@ -694,7 +836,66 @@ function truncate($text, $max = 15) {
                 }
             });
         });
+
+        // When the user clicks anywhere outside of the modals, close them
+        window.onclick = function(event) {
+            var addressModal = document.getElementById('addressInfoModal');
+            var imageModal = document.getElementById('myModal');
+            
+            if (event.target == addressModal) {
+                addressModal.style.display = "none";
+            }
+            
+            if (event.target == imageModal) {
+                imageModal.style.display = "none";
+            }
+        };
     });
+
+    // Update the openEditAccountForm function to include bill_to and ship_to
+    function openEditAccountForm(id, username, email, phone, region, city, company, company_address, business_proof, bill_to, ship_to) {
+        document.getElementById("edit-id").value = id;
+        document.getElementById("edit-username").value = username;
+        document.getElementById("edit-email").value = email;
+        document.getElementById("edit-phone").value = phone || '';
+        document.getElementById("edit-region").value = region;
+        document.getElementById("edit-city").value = city;
+        document.getElementById("edit-company").value = company || '';
+        document.getElementById("edit-company_address").value = company_address;
+        document.getElementById("edit-bill_to").value = bill_to || '';
+        document.getElementById("edit-ship_to").value = ship_to || '';
+        
+        document.getElementById("existing-business-proof").value = JSON.stringify(business_proof);
+        
+        var proofContainer = document.getElementById("edit-business-proof-container");
+        proofContainer.innerHTML = '';
+        
+        if (business_proof && business_proof.length > 0) {
+            var proofLabel = document.createElement('label');
+            proofLabel.innerHTML = 'Current Business Proof:';
+            proofContainer.appendChild(proofLabel);
+            
+            var proofDiv = document.createElement('div');
+            proofDiv.className = 'current-proofs';
+            proofDiv.style.marginBottom = '15px';
+            
+            business_proof.forEach(function(proof) {
+                var img = document.createElement('img');
+                img.src = proof;
+                img.alt = 'Business Proof';
+                img.style.width = '80px';
+                img.style.height = 'auto';
+                img.style.margin = '5px';
+                img.style.cursor = 'pointer';
+                img.onclick = function() { openModal(this); };
+                proofDiv.appendChild(img);
+            });
+            
+            proofContainer.appendChild(proofDiv);
+        }
+        
+        document.getElementById("editAccountOverlay").style.display = "block";
+    }
     </script>
 </body>
 </html>

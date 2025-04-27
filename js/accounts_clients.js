@@ -257,3 +257,136 @@ if (typeof showToast !== 'function') {
     
     window.showToast = showToast;
 }
+
+$(document).ready(function() {
+    // Add Account Form Submission
+    $('#addAccountForm').submit(function(e) {
+        e.preventDefault();
+        
+        var formData = new FormData(this);
+        formData.append('ajax', true);
+        
+        $.ajax({
+            url: '',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                if(response.success) {
+                    if(response.reload) {
+                        showToast('Account added successfully!', 'success');
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    }
+                } else {
+                    $('#addAccountError').text(response.message || 'An error occurred.');
+                    showToast(response.message || 'An error occurred.', 'error');
+                }
+            },
+            error: function() {
+                $('#addAccountError').text('A server error occurred.');
+                showToast('A server error occurred.', 'error');
+            }
+        });
+    });
+    
+    // Edit Account Form Submission
+    $('#editAccountForm').submit(function(e) {
+        e.preventDefault();
+        
+        var formData = new FormData(this);
+        formData.append('ajax', true);
+        
+        $.ajax({
+            url: '',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                if(response.success) {
+                    if(response.reload) {
+                        showToast('Account updated successfully!', 'success');
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    }
+                } else {
+                    $('#editAccountError').text(response.message || 'An error occurred.');
+                    showToast(response.message || 'An error occurred.', 'error');
+                }
+            },
+            error: function() {
+                $('#editAccountError').text('A server error occurred.');
+                showToast('A server error occurred.', 'error');
+            }
+        });
+    });
+});
+
+// Status Change Functions
+var selectedId = null;
+var selectedStatus = null;
+
+function openAddAccountForm() {
+    document.getElementById("addAccountOverlay").style.display = "block";
+}
+
+function closeAddAccountForm() {
+    document.getElementById("addAccountOverlay").style.display = "none";
+    document.getElementById("addAccountForm").reset();
+    document.getElementById("addAccountError").textContent = "";
+}
+
+function closeEditAccountForm() {
+    document.getElementById("editAccountOverlay").style.display = "none";
+    document.getElementById("editAccountForm").reset();
+    document.getElementById("editAccountError").textContent = "";
+}
+
+function openStatusModal(id, username, email) {
+    selectedId = id;
+    document.getElementById("statusMessage").textContent = "Change status for " + username + " (" + email + ")";
+    document.getElementById("statusModal").style.display = "block";
+}
+
+function closeStatusModal() {
+    document.getElementById("statusModal").style.display = "none";
+}
+
+function changeStatus(status) {
+    if (!selectedId) return;
+    
+    $.ajax({
+        url: '',
+        type: 'POST',
+        data: {
+            ajax: true,
+            formType: 'status',
+            id: selectedId,
+            status: status
+        },
+        success: function(response) {
+            if(response.success) {
+                showToast('Status changed successfully!', 'success');
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showToast(response.message || 'An error occurred.', 'error');
+            }
+            closeStatusModal();
+        },
+        error: function() {
+            showToast('A server error occurred.', 'error');
+            closeStatusModal();
+        }
+    });
+}
+
+function filterByStatus() {
+    var status = document.getElementById("statusFilter").value;
+    window.location.href = '?status=' + status;
+}
