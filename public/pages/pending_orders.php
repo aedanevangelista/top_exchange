@@ -41,8 +41,8 @@ $stmt->close();
 $orders = []; // Initialize $orders as an empty array
 
 // Modified query to join with clients_accounts to get the company information
-$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, 
-        o.special_instructions, COALESCE(o.company, c.company) as company
+$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.orders, o.total_amount, o.status, 
+        o.special_instructions, o.bill_to, o.bill_to_attn, o.ship_to, o.ship_to_attn, COALESCE(o.company, c.company) as company
         FROM orders o
         LEFT JOIN clients_accounts c ON o.username = c.username
         WHERE o.status = 'Pending'";
@@ -443,7 +443,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .po-details {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
         
         .po-left, .po-right {
@@ -451,7 +451,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         
         .po-detail-row {
-            margin-bottom: 10px;
+            margin-bottom: 5px;
+            line-height: 1.3;
         }
         
         .po-detail-label {
@@ -728,11 +729,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     }
 
     #contentToDownload {
-        font-size: 14px; /* Adjust this value based on the original font size minus 2px */
+        font-size: 13px; /* Adjust this value based on the original font size minus 2px */
     }
 
     #contentToDownload .po-table {
-        font-size: 12px; /* Adjust this value based on the original font size minus 2px */
+        font-size: 11px; /* Adjust this value based on the original font size minus 2px */
     }
 
     /* Adjust other elements if needed */
@@ -741,11 +742,179 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     }
 
     #contentToDownload .po-company {
-        font-size: 20px; /* Original was 22px */
+        font-size: 19px; /* Original was 22px */
     }
 
     #contentToDownload .po-total {
-        font-size: 12px; /* Original was 14px */
+        font-size: 11px; /* Original was 14px */
+    }
+
+#contentToDownload .po-detail-label {
+    font-size: 11px; /* Reduced from 12px */
+}
+    #addressInfoModal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: rgba(0,0,0,0.7);
+}
+
+    .info-modal-content {
+        background-color: #ffffff;
+        margin: 0;
+        padding: 0;
+        border-radius: 10px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        width: 90%;
+        max-width: 700px;
+        max-height: 80vh;
+        animation: modalFadeIn 0.3s;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .info-modal-header {
+        background-color: #4a90e2;
+        color: #fff;
+        padding: 15px 25px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .info-modal-header h2 {
+        margin: 0;
+        font-size: 20px;
+        flex: 1;
+        font-weight: 500;
+    }
+
+    .info-modal-header h2 i {
+        margin-right: 10px;
+    }
+
+    .info-modal-close {
+        color: #fff;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        padding: 5px;
+        line-height: 1;
+    }
+
+    .info-modal-close:hover {
+        transform: scale(1.1);
+    }
+
+    .info-modal-body {
+        padding: 25px;
+        overflow-y: auto;
+        max-height: calc(80vh - 65px);
+        flex: 1;
+    }
+
+    .info-section {
+        margin-bottom: 25px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .info-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .info-section-title {
+        display: flex;
+        align-items: center;
+        color: #4a90e2;
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 16px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .info-section-title i {
+        margin-right: 10px;
+        width: 20px;
+        text-align: center;
+    }
+
+    .info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 0;
+    }
+
+    .info-table th {
+        text-align: left;
+        background-color: #eef5ff;
+        padding: 12px 15px;
+        border: 1px solid #d1e1f9;
+        width: 30%;
+        vertical-align: top;
+        color: #3a5d85;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .info-table td {
+        padding: 12px 15px;
+        border: 1px solid #d1e1f9;
+        word-break: break-word;
+        vertical-align: top;
+        line-height: 1.5;
+        color: #333;
+        background-color: #fff;
+        font-size: 14px;
+    }
+
+    .attention-cell {
+        display: flex;
+        align-items: center;
+    }
+
+    .attention-cell i {
+        margin-right: 6px;
+        color: #4a90e2;
+    }
+
+    .empty-notice {
+        padding: 20px;
+        text-align: center;
+        color: #888;
+        font-style: italic;
+        border: 1px dashed #d1e1f9;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .view-address-btn {
+        background-color: #4a90e2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 5px 10px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.3s;
+    }
+
+    .view-address-btn:hover {
+        background-color: #357abf;
     }
     </style>
 </head>
@@ -793,7 +962,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 Delivery Date <?= getSortIcon('delivery_date', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
-                        <th>Delivery Address</th>
+                        <th>Address Info</th>
                         <th>Orders</th>
                         <th class="sortable">
                             <a href="<?= getSortUrl('total_amount', $sort_column, $sort_direction) ?>">
@@ -813,16 +982,27 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['company'] ?: 'No Company') ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
-                                <td><?= htmlspecialchars($order['delivery_address']) ?></td>
-                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
-                                <i class="fas fa-clipboard-list"></i>    
-                                Orders</button></td>
+                                <td>
+                                    <button class="view-address-btn" onclick="viewAddressInfo(
+                                        '<?= htmlspecialchars(addslashes($order['bill_to'] ?? 'N/A')) ?>',
+                                        '<?= htmlspecialchars(addslashes($order['bill_to_attn'] ?? '')) ?>',
+                                        '<?= htmlspecialchars(addslashes($order['ship_to'] ?? 'N/A')) ?>',
+                                        '<?= htmlspecialchars(addslashes($order['ship_to_attn'] ?? '')) ?>'
+                                    )">
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                </td>
+                                <td>
+                                    <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
+                                        <i class="fas fa-clipboard-list"></i> Orders
+                                    </button>
+                                </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <!-- Add Special Instructions column with view button -->
                                 <td>
                                     <?php if (!empty($order['special_instructions'])): ?>
                                         <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
-                                            View
+                                            <i class="fas fa-comment"></i> View
                                         </button>
                                     <?php else: ?>
                                         <span class="no-instructions">None</span>
@@ -833,18 +1013,21 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 <button class="download-btn" onclick="downloadPODirectly(
-                                    '<?= htmlspecialchars($order['po_number']) ?>', 
-                                    '<?= htmlspecialchars($order['username']) ?>', 
-                                    '<?= htmlspecialchars($order['company']) ?>', 
-                                    '<?= htmlspecialchars($order['order_date']) ?>', 
-                                    '<?= htmlspecialchars($order['delivery_date']) ?>', 
-                                    '<?= htmlspecialchars($order['delivery_address']) ?>', 
-                                    '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
-                                    '<?= htmlspecialchars($order['total_amount']) ?>', 
-                                    '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
-                                )">
-                                    <i class="fas fa-file-pdf"></i> Download PDF
-                                </button>
+                                '<?= htmlspecialchars($order['po_number']) ?>', 
+                                '<?= htmlspecialchars($order['username']) ?>', 
+                                '<?= htmlspecialchars($order['company']) ?>', 
+                                '<?= htmlspecialchars($order['order_date']) ?>', 
+                                '<?= htmlspecialchars($order['delivery_date']) ?>', 
+                                '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
+                                '<?= htmlspecialchars($order['total_amount']) ?>', 
+                                '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>',
+                                '<?= htmlspecialchars(addslashes($order['bill_to'] ?? '')) ?>',
+                                '<?= htmlspecialchars(addslashes($order['bill_to_attn'] ?? '')) ?>',
+                                '<?= htmlspecialchars(addslashes($order['ship_to'] ?? '')) ?>',
+                                '<?= htmlspecialchars(addslashes($order['ship_to_attn'] ?? '')) ?>'
+                            )">
+                                <i class="fas fa-file-pdf"></i> Download PDF
+                            </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -883,23 +1066,31 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <span id="printUsername"></span>
                             </div>
                             <div class="po-detail-row">
-                                <span class="po-detail-label">Delivery Address:</span>
-                                <span id="printDeliveryAddress"></span>
-                            </div>
-                            <div class="po-detail-row" id="printInstructionsSection">
-                                <span class="po-detail-label">Special Instructions:</span>
-                                <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
-                            </div>
-                        </div>
-                        
-                        <div class="po-right">
-                            <div class="po-detail-row">
                                 <span class="po-detail-label">Order Date:</span>
                                 <span id="printOrderDate"></span>
                             </div>
                             <div class="po-detail-row">
                                 <span class="po-detail-label">Delivery Date:</span>
                                 <span id="printDeliveryDate"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="po-right">
+                            <div class="po-detail-row" id="printBillToSection">
+                                <span class="po-detail-label">Bill To:</span>
+                                <span id="printBillTo"></span>
+                            </div>
+                            <div class="po-detail-row" id="printBillToAttnSection">
+                                <span class="po-detail-label">Bill To Attn:</span>
+                                <span id="printBillToAttn"></span>
+                            </div>
+                            <div class="po-detail-row" id="printShipToSection">
+                                <span class="po-detail-label">Ship To:</span>
+                                <span id="printShipTo"></span>
+                            </div>
+                            <div class="po-detail-row" id="printShipToAttnSection">
+                                <span class="po-detail-label">Ship To Attn:</span>
+                                <span id="printShipToAttn"></span>
                             </div>
                         </div>
                     </div>
@@ -1175,12 +1366,64 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
+    <!-- Address Info Modal - Similar to accounts_clients.php -->
+    <div id="addressInfoModal" class="overlay" style="display: none;">
+        <div class="info-modal-content">
+            <div class="info-modal-header">
+                <h2><i class="fas fa-map-marker-alt"></i> Address Information</h2>
+                <span class="info-modal-close" onclick="closeAddressInfoModal()">&times;</span>
+            </div>
+            
+            <div class="info-modal-body">
+                <div class="info-section">
+                    <h3 class="info-section-title"><i class="fas fa-file-invoice"></i> Billing Information</h3>
+                    <table class="info-table">
+                        <tr>
+                            <th>Bill To Address</th>
+                            <td id="modalBillTo"></td>
+                        </tr>
+                        <tr id="billToAttnRow">
+                            <th>Attention To</th>
+                            <td class="attention-cell">
+                                <i class="fas fa-user"></i>
+                                <span id="modalBillToAttn"></span>
+                            </td>
+                        </tr>
+                    </table>
+                    <div id="noBillingInfo" class="empty-notice" style="display: none;">
+                        No billing address information provided.
+                    </div>
+                </div>
+                
+                <div class="info-section">
+                    <h3 class="info-section-title"><i class="fas fa-shipping-fast"></i> Shipping Information</h3>
+                    <table class="info-table">
+                        <tr>
+                            <th>Ship To Address</th>
+                            <td id="modalShipTo"></td>
+                        </tr>
+                        <tr id="shipToAttnRow">
+                            <th>Attention To</th>
+                            <td class="attention-cell">
+                                <i class="fas fa-user"></i>
+                                <span id="modalShipToAttn"></span>
+                            </td>
+                        </tr>
+                    </table>
+                    <div id="noShippingInfo" class="empty-notice" style="display: none;">
+                        No shipping address information provided.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/orders.js"></script>
     <script>
     // Variables to store the current PO for PDF generation
     let currentPOData = null;
     
-function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, ordersJson, totalAmount, specialInstructions, billTo, billToAttn, shipTo, shipToAttn) {
     try {
         // Store current PO data
         currentPOData = {
@@ -1189,19 +1432,55 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             company,
             orderDate,
             deliveryDate,
-            deliveryAddress,
             ordersJson,
             totalAmount,
-            specialInstructions  // Keep storing this in case you need it elsewhere
+            specialInstructions,
+            billTo,
+            billToAttn,
+            shipTo,
+            shipToAttn
         };
         
         // Populate the hidden PDF content silently
         document.getElementById('printCompany').textContent = company || 'No Company Name';
         document.getElementById('printPoNumber').textContent = poNumber;
         document.getElementById('printUsername').textContent = username;
-        document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
         document.getElementById('printOrderDate').textContent = orderDate;
         document.getElementById('printDeliveryDate').textContent = deliveryDate;
+        
+        // Add address information
+        const billToSection = document.getElementById('printBillToSection');
+        const billToAttnSection = document.getElementById('printBillToAttnSection');
+        const shipToSection = document.getElementById('printShipToSection');
+        const shipToAttnSection = document.getElementById('printShipToAttnSection');
+        
+        if (billTo) {
+            document.getElementById('printBillTo').textContent = billTo;
+            billToSection.style.display = 'block';
+        } else {
+            billToSection.style.display = 'none';
+        }
+        
+        if (billToAttn) {
+            document.getElementById('printBillToAttn').textContent = billToAttn;
+            billToAttnSection.style.display = 'block';
+        } else {
+            billToAttnSection.style.display = 'none';
+        }
+        
+        if (shipTo) {
+            document.getElementById('printShipTo').textContent = shipTo;
+            shipToSection.style.display = 'block';
+        } else {
+            shipToSection.style.display = 'none';
+        }
+        
+        if (shipToAttn) {
+            document.getElementById('printShipToAttn').textContent = shipToAttn;
+            shipToAttnSection.style.display = 'block';
+        } else {
+            shipToAttnSection.style.display = 'none';
+        }
         
         // Format the total amount
         document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
@@ -1209,9 +1488,11 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             maximumFractionDigits: 2
         });
         
-        // Hide special instructions section completely regardless of content
+        // Hide special instructions section if it exists
         const instructionsSection = document.getElementById('printInstructionsSection');
-        instructionsSection.style.display = 'none';
+        if (instructionsSection) {
+            instructionsSection.style.display = 'none';
+        }
         
         // Parse and populate order items
         const orderItems = JSON.parse(ordersJson);
@@ -1271,9 +1552,8 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
     }
 }
 
-    // Function to generate Purchase Order PDF
-    // Function to generate Purchase Order PDF
-function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+// Function to generate Purchase Order PDF
+function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions, billTo, billToAttn, shipTo, shipToAttn) {
     try {
         // Store current PO data for later use
         currentPOData = {
@@ -1285,7 +1565,11 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
             deliveryAddress,
             ordersJson,
             totalAmount,
-            specialInstructions  // Add special instructions to stored data
+            specialInstructions,
+            billTo,
+            billToAttn,
+            shipTo,
+            shipToAttn
         };
         
         // Set basic information
@@ -1296,9 +1580,23 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
         document.getElementById('printOrderDate').textContent = orderDate;
         document.getElementById('printDeliveryDate').textContent = deliveryDate;
         
+        // Populate the billing and shipping information
+        document.getElementById('printBillTo').textContent = billTo || 'N/A';
+        document.getElementById('printBillToAttn').textContent = billToAttn || 'N/A';
+        document.getElementById('printShipTo').textContent = shipTo || 'N/A';
+        document.getElementById('printShipToAttn').textContent = shipToAttn || 'N/A';
+        
+        // Hide rows if data is not present
+        document.getElementById('billToRow').style.display = billTo ? 'block' : 'none';
+        document.getElementById('billToAttnRow').style.display = billToAttn ? 'block' : 'none';
+        document.getElementById('shipToRow').style.display = shipTo ? 'block' : 'none';
+        document.getElementById('shipToAttnRow').style.display = shipToAttn ? 'block' : 'none';
+        
         // Hide special instructions section completely
         const instructionsSection = document.getElementById('printInstructionsSection');
-        instructionsSection.style.display = 'none';
+        if (instructionsSection) {
+            instructionsSection.style.display = 'none';
+        }
         
         // Format the total amount with commas and decimals
         document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
@@ -1747,6 +2045,39 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
                 closeSpecialInstructions();
             }
         });
+
+        // Address info modal functions
+        function viewAddressInfo(billTo, billToAttn, shipTo, shipToAttn) {
+            // Bill To information
+            document.getElementById("modalBillTo").textContent = billTo || 'N/A';
+            document.getElementById("noBillingInfo").style.display = (!billTo && !billToAttn) ? "block" : "none";
+            
+            // Bill To Attention with conditional display
+            if (billToAttn) {
+                document.getElementById("modalBillToAttn").textContent = billToAttn;
+                document.getElementById("billToAttnRow").style.display = "table-row";
+            } else {
+                document.getElementById("billToAttnRow").style.display = "none";
+            }
+            
+            // Ship To information
+            document.getElementById("modalShipTo").textContent = shipTo || 'N/A';
+            document.getElementById("noShippingInfo").style.display = (!shipTo && !shipToAttn) ? "block" : "none";
+            
+            // Ship To Attention with conditional display
+            if (shipToAttn) {
+                document.getElementById("modalShipToAttn").textContent = shipToAttn;
+                document.getElementById("shipToAttnRow").style.display = "table-row";
+            } else {
+                document.getElementById("shipToAttnRow").style.display = "none";
+            }
+            
+            document.getElementById("addressInfoModal").style.display = "block";
+        }
+
+        function closeAddressInfoModal() {
+            document.getElementById("addressInfoModal").style.display = "none";
+        }
 
     </script>
     <script>
