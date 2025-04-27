@@ -514,7 +514,7 @@ function truncate($text, $max = 15) {
                         <th>Username</th>
                         <th>Email</th>
                         <th>Phone</th>
-                        <th>Company</th>
+                        <th>Company Name</th>
                         <th>Address Info</th>
                         <th>Business Proof</th>
                         <th>Status</th>
@@ -554,7 +554,7 @@ function truncate($text, $max = 15) {
                                 <td class="<?= 'status-' . strtolower($row['status'] ?? 'pending') ?>"><?= htmlspecialchars($row['status'] ?? 'Pending') ?></td>
                                 <td class="action-buttons">
                                 <?php
-                                    $business_proof_json = htmlspecialchars(json_encode($row['business_proof']), ENT_QUOTES);
+                                    $business_proof_json = htmlspecialchars($row['business_proof'], ENT_QUOTES);
                                 ?>
                                 <button class="edit-btn"
                                     onclick='openEditAccountForm(
@@ -648,7 +648,7 @@ function truncate($text, $max = 15) {
                         <label for="city">City: <span class="required">*</span></label>
                         <input type="text" id="city" name="city" required placeholder="e.g., Quezon City">
                         
-                        <label for="company">Company: <span class="optional">(optional)</span></label>
+                        <label for="company">Company Name: <span class="optional">(optional)</span></label>
                         <input type="text" id="company" name="company" placeholder="e.g., Top Exchange Food Corp">
                     </div>
                     
@@ -710,7 +710,7 @@ function truncate($text, $max = 15) {
                         <label for="edit-city">City: <span class="required">*</span></label>
                         <input type="text" id="edit-city" name="city" required placeholder="e.g., New York">
                         
-                        <label for="edit-company">Company: <span class="optional">(optional)</span></label>
+                        <label for="edit-company">Company Name: <span class="optional">(optional)</span></label>
                         <input type="text" id="edit-company" name="company" placeholder="e.g., ABC Corp">
                     </div>
                     
@@ -852,7 +852,7 @@ function truncate($text, $max = 15) {
         };
     });
 
-    // Update the openEditAccountForm function to include bill_to and ship_to
+    // Fixed the openEditAccountForm function to properly handle JSON
     function openEditAccountForm(id, username, email, phone, region, city, company, company_address, business_proof, bill_to, ship_to) {
         document.getElementById("edit-id").value = id;
         document.getElementById("edit-username").value = username;
@@ -865,12 +865,23 @@ function truncate($text, $max = 15) {
         document.getElementById("edit-bill_to").value = bill_to || '';
         document.getElementById("edit-ship_to").value = ship_to || '';
         
-        document.getElementById("existing-business-proof").value = JSON.stringify(business_proof);
+        // Parse business_proof if it's a string
+        let proofs = business_proof;
+        if (typeof business_proof === 'string') {
+            try {
+                proofs = JSON.parse(business_proof);
+            } catch (e) {
+                console.error("Error parsing business proof:", e);
+                proofs = [];
+            }
+        }
+        
+        document.getElementById("existing-business-proof").value = JSON.stringify(proofs);
         
         var proofContainer = document.getElementById("edit-business-proof-container");
         proofContainer.innerHTML = '';
         
-        if (business_proof && business_proof.length > 0) {
+        if (proofs && Array.isArray(proofs) && proofs.length > 0) {
             var proofLabel = document.createElement('label');
             proofLabel.innerHTML = 'Current Business Proof:';
             proofContainer.appendChild(proofLabel);
@@ -879,7 +890,7 @@ function truncate($text, $max = 15) {
             proofDiv.className = 'current-proofs';
             proofDiv.style.marginBottom = '15px';
             
-            business_proof.forEach(function(proof) {
+            proofs.forEach(function(proof) {
                 var img = document.createElement('img');
                 img.src = proof;
                 img.alt = 'Business Proof';
