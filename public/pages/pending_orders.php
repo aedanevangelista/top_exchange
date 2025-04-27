@@ -24,12 +24,12 @@ $clients = [];
 $clients_with_company_address = []; // Array to store clients with their company addresses
 $clients_with_company = []; // Array to store clients with their company names
 
-$stmt = $conn->prepare("SELECT username, company_address, company, ship_to, ship_to_attn, bill_to, bill_to_attn FROM clients_accounts WHERE status = 'active'");
+$stmt = $conn->prepare("SELECT username, company_address, company FROM clients_accounts WHERE status = 'active'");
 if ($stmt === false) {
     die('Prepare failed: ' . htmlspecialchars($conn->error));
 }
 $stmt->execute();
-$stmt->bind_result($username, $company_address, $company, $ship_to, $ship_to_attn, $bill_to, $bill_to_attn);
+$stmt->bind_result($username, $company_address, $company);
 while ($stmt->fetch()) {
     $clients[] = $username;
     $clients_with_company_address[$username] = $company_address;
@@ -92,7 +92,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="/css/toast.css">
-    <link rel="stylesheet" href="/css/pending_orders.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -100,6 +99,823 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <!-- HTML2PDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>    
     <style>
+        /* Main styles for the Order Summary table */
+        .order-summary {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        
+        /* Make the table properly aligned */
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        
+        /* Apply proper scrolling to tbody only */
+        .summary-table tbody {
+            display: block;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        /* Make table header and rows consistent */
+        .summary-table thead, 
+        .summary-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        
+        /* Account for scrollbar width in header */
+        .summary-table thead {
+            width: calc(100% - 17px);
+        }
+        
+        /* Cell styling for proper alignment and text overflow */
+        .summary-table th,
+        .summary-table td {
+            padding: 8px;
+            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border: 1px solid #ddd;
+        }
+        
+        /* Specify consistent column widths */
+        .summary-table th:nth-child(1),
+        .summary-table td:nth-child(1) {
+            width: 18%;
+        }
+        
+        .summary-table th:nth-child(2),
+        .summary-table td:nth-child(2) {
+            width: 26%;
+        }
+        
+        .summary-table th:nth-child(3),
+        .summary-table td:nth-child(3) {
+            width: 18%;
+        }
+        
+        .summary-table th:nth-child(4),
+        .summary-table td:nth-child(4) {
+            width: 18%;
+        }
+        
+        .summary-table th:nth-child(5),
+        .summary-table td:nth-child(5) {
+            width: 20%;
+        }
+        
+        /* Style for the total section */
+        .summary-total {
+            margin-top: 10px;
+            text-align: right;
+            font-weight: bold;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        
+        /* Style for quantity input fields */
+        .summary-quantity {
+            width: 80px;
+            max-width: 100%;
+            text-align: center;
+        }
+        
+        /* Search Container Styling (exactly as in order_history.php) */
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-container input {
+            padding: 8px 12px;
+            border-radius: 20px 0 0 20px;
+            border: 1px solid #ddd;
+            font-size: 12px;
+            width: 220px;
+        }
+
+        .search-container .search-btn {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 0 20px 20px 0;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .search-container .search-btn:hover {
+            background-color: #2471a3;
+        }
+        
+        .orders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        /* Materials table styling */
+        .raw-materials-container {
+            overflow: visible;
+        }
+        
+        .raw-materials-container h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .materials-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        
+        .materials-table tbody {
+            display: block;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+
+        .materials-table thead, 
+        .materials-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .materials-table th,
+        .materials-table td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        .materials-table thead {
+            background-color: #f2f2f2;
+            display: table;
+            width: calc(100% - 17px); /* Adjust for scrollbar width */
+            table-layout: fixed;
+        }   
+
+        .modal-content {
+            max-height: none;
+            overflow-y: visible;
+            padding-bottom: 20px;
+        }
+            <table class="cart-table
+        
+        .materials-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .material-sufficient {
+            color: #28a745;
+        }
+        
+        .material-insufficient {
+            color: #dc3545;
+        }
+        
+        .materials-status {
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .status-sufficient {
+            background-color: #d4edda;
+            color: #155724;
+            font-size: 16px;
+        }
+        
+        .status-insufficient {
+            background-color: #f8d7da;
+            color: #721c24;
+            font-size: 16px;
+        }
+        
+        /* Status modal buttons */
+        .status-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .modal-status-btn {
+            padding: 10px 20px;
+            border-radius: 40px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .modal-status-btn.active {
+            background-color: #ffc107;
+            color: white;
+        }
+
+        .modal-status-btn.active:hover {
+            background-color:rgb(202, 154, 10);
+            color: white;
+        }
+        
+        .modal-status-btn.reject {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .modal-status-btn.reject:hover {
+            background-color:rgb(138, 23, 35);
+            color: white;
+        }
+        
+        .modal-status-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .modal-footer {
+            margin-top: 8px;
+            text-align: right;
+        }
+        
+        .modal-cancel-btn {
+            padding: 8px 15px;
+            border-radius: 40px;
+            border: 1px solid #ddd;
+            background-color:rgb(43, 43, 43);
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .modal-cancel-btn:hover {
+            background-color:rgb(61, 61, 61);
+        }
+        
+        /* Sortable table headers */
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px; /* Space for the icon */
+            user-select: none;
+        }
+
+        th.sortable a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        th.sortable .fas {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+        }
+
+        th.sortable:hover {
+            background-color:rgb(51, 51, 51);
+        }
+
+        th.sortable .fa-sort-up,
+        th.sortable .fa-sort-down {
+            color:rgb(255, 255, 255);
+        }
+        
+        /* Download button styles */
+        .download-btn {
+            padding: 6px 12px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        
+        .download-btn:hover {
+            background-color: #138496;
+        }
+        
+        .download-btn i {
+            margin-right: 5px;
+        }
+        
+        /* PO PDF layout */
+        .po-container {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+        }
+        
+        .po-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .po-company {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .po-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        
+        .po-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .po-left, .po-right {
+            width: 48%;
+        }
+        
+        .po-detail-row {
+            margin-bottom: 5px;
+            line-height: 1.3;
+        }
+        
+        .po-detail-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 120px;
+        }
+        
+        .po-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        .po-table th, .po-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .po-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .po-total {
+            text-align: right;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        
+        .po-signature {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 50px;
+        }
+        
+        .po-signature-block {
+            width: 40%;
+            text-align: center;
+        }
+        
+        .po-signature-line {
+            border-bottom: 1px solid #000;
+            margin-bottom: 10px;
+            padding-top: 40px;
+        }
+        
+        #pdfPreview {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow: auto;
+        }
+        
+        .pdf-container {
+            background-color: white;
+            width: 80%;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        .close-pdf {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 18px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #333;
+        }
+        
+        .pdf-actions {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .download-pdf-btn {
+            padding: 10px 20px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+    .instructions-btn {
+        padding: 6px 12px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        min-width: 60px;
+        text-align: center;
+    }
+
+    .instructions-btn:hover {
+        background-color: #218838;
+    }
+    
+    .instructions-btn i {
+        margin-right: 5px;
+    }
+    
+    .no-instructions {
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    /* Special Instructions Modal */
+    .instructions-modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.7);
+    }
+    
+    .instructions-modal-content {
+        background-color: #ffffff;
+        margin: 10% auto;
+        padding: 0;
+        border-radius: 8px;
+        width: 60%;
+        max-width: 600px;
+        position: relative;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        animation: modalFadeIn 0.3s ease-in-out;
+        overflow: hidden;
+        max-height: 90vh; /* 90% of the viewport height */
+        overflow-y: auto; /* Add scroll if content exceeds max height */
+        margin: 2vh auto; /* Center vertically with 5% top margin */
+    }
+
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .close-instructions {
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        font-size: 18px;
+        color: white;
+        opacity: 0.8;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    
+    .close-instructions:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+        opacity: 1;
+    }
+    
+    .instructions-header {
+        background-color: #2980b9;
+        color: white;
+        padding: 15px 20px;
+        position: relative;
+    }
+
+    .instructions-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .instructions-po-number {
+        font-size: 12px;
+        margin-top: 5px;
+        opacity: 0.9;
+    }
+    
+    .instructions-body {
+        padding: 20px;
+        max-height: 300px;
+        overflow-y: auto;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #eaeaea;
+    }
+    
+    .instructions-body.empty {
+        color: #6c757d;
+        font-style: italic;
+        text-align: center;
+        padding: 40px 20px;
+    }
+    
+    .instructions-footer {
+        padding: 15px 20px;
+        text-align: right;
+        background-color: #ffffff;
+    }
+    
+    .close-instructions-btn {
+        background-color: #2980b9;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: background-color 0.2s;
+    }
+    
+    .close-instructions-btn:hover {
+        background-color: #2471a3;
+    }
+    
+    /* Make button look consistent with other buttons */
+    .instructions-btn {
+        padding: 6px 12px;
+        background-color: #2980b9;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        min-width: 60px;
+        text-align: center;
+        transition: background-color 0.2s;
+    }
+    
+    .instructions-btn:hover {
+        background-color: #2471a3;
+    }
+    
+    .no-instructions {
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    /* Style for the special instructions textarea */
+    #special_instructions {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        resize: vertical; /* Allow vertical resizing only */
+        font-family: inherit;
+        margin-bottom: 15px;
+    }
+
+    /* Update overlay-content max height */
+    .overlay-content {
+        max-height: 90vh; /* 90% of the viewport height */
+        overflow-y: auto; /* Add scroll if content exceeds max height */
+    }
+
+    #contentToDownload {
+        font-size: 13px; /* Adjust this value based on the original font size minus 2px */
+    }
+
+    #contentToDownload .po-table {
+        font-size: 11px; /* Adjust this value based on the original font size minus 2px */
+    }
+
+    /* Adjust other elements if needed */
+    #contentToDownload .po-title {
+        font-size: 16px; /* Original was 18px */
+    }
+
+    #contentToDownload .po-company {
+        font-size: 19px; /* Original was 22px */
+    }
+
+    #contentToDownload .po-total {
+        font-size: 11px; /* Original was 14px */
+    }
+
+#contentToDownload .po-detail-label {
+    font-size: 11px; /* Reduced from 12px */
+}
+    #addressInfoModal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: rgba(0,0,0,0.7);
+}
+
+    .info-modal-content {
+        background-color: #ffffff;
+        margin: 0;
+        padding: 0;
+        border-radius: 10px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        width: 90%;
+        max-width: 700px;
+        max-height: 80vh;
+        animation: modalFadeIn 0.3s;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .info-modal-header {
+        background-color: #4a90e2;
+        color: #fff;
+        padding: 15px 25px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .info-modal-header h2 {
+        margin: 0;
+        font-size: 20px;
+        flex: 1;
+        font-weight: 500;
+    }
+
+    .info-modal-header h2 i {
+        margin-right: 10px;
+    }
+
+    .info-modal-close {
+        color: #fff;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        padding: 5px;
+        line-height: 1;
+    }
+
+    .info-modal-close:hover {
+        transform: scale(1.1);
+    }
+
+    .info-modal-body {
+        padding: 25px;
+        overflow-y: auto;
+        max-height: calc(80vh - 65px);
+        flex: 1;
+    }
+
+    .info-section {
+        margin-bottom: 25px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .info-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .info-section-title {
+        display: flex;
+        align-items: center;
+        color: #4a90e2;
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 16px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .info-section-title i {
+        margin-right: 10px;
+        width: 20px;
+        text-align: center;
+    }
+
+    .info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 0;
+    }
+
+    .info-table th {
+        text-align: left;
+        background-color: #eef5ff;
+        padding: 12px 15px;
+        border: 1px solid #d1e1f9;
+        width: 30%;
+        vertical-align: top;
+        color: #3a5d85;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .info-table td {
+        padding: 12px 15px;
+        border: 1px solid #d1e1f9;
+        word-break: break-word;
+        vertical-align: top;
+        line-height: 1.5;
+        color: #333;
+        background-color: #fff;
+        font-size: 14px;
+    }
+
+    .attention-cell {
+        display: flex;
+        align-items: center;
+    }
+
+    .attention-cell i {
+        margin-right: 6px;
+        color: #4a90e2;
+    }
+
+    .empty-notice {
+        padding: 20px;
+        text-align: center;
+        color: #888;
+        font-style: italic;
+        border: 1px dashed #d1e1f9;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .view-address-btn {
+        background-color: #4a90e2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 5px 10px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.3s;
+    }
+
+    .view-address-btn:hover {
+        background-color: #357abf;
+    }
     </style>
 </head>
 <body>
@@ -185,8 +1001,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <!-- Add Special Instructions column with view button -->
                                 <td>
                                     <?php if (!empty($order['special_instructions'])): ?>
-                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', 
-                                        '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
+                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
                                             <i class="fas fa-comment"></i> View
                                         </button>
                                     <?php else: ?>
@@ -194,7 +1009,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 <button class="download-btn" onclick="downloadPODirectly(
@@ -326,89 +1141,42 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="fetchClientInfo(); generatePONumber();">
+                    <select id="username" name="username" required onchange="generatePONumber();">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
+                                data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
                                 data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>">
                                 <?= htmlspecialchars($client) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
-                                    
-                    <div class="form-row">
-                        <div class="form-column">
-                            <label for="order_date">Order Date:</label>
-                            <input type="text" id="order_date" name="order_date" readonly>
-                        </div>
-                        <div class="form-column">
-                            <label for="delivery_date">Delivery Date:</label>
-                            <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
-                        </div>
+                                        
+                    <label for="order_date">Order Date:</label>
+                    <input type="text" id="order_date" name="order_date" readonly>
+                    <label for="delivery_date">Delivery Date:</label>
+                    <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
+                    
+                    <!-- New Delivery Address selection -->
+                    <label for="delivery_address_type">Delivery Address:</label>
+                    <select id="delivery_address_type" name="delivery_address_type" onchange="toggleDeliveryAddress()">
+                        <option value="company">Company Address</option>
+                        <option value="custom">Custom Address</option>
+                    </select>
+                    
+                    <div id="company_address_container">
+                        <input type="text" id="company_address" name="company_address" readonly placeholder="Company address will appear here">
                     </div>
                     
-                    <!-- Improved Shipping Information Display Section -->
-                    <div class="shipping-info-container">
-                        <div class="shipping-info-header">
-                            <h3><i class="fas fa-shipping-fast"></i> Shipping & Billing Information</h3>
-                        </div>
-                        
-                        <div class="shipping-info-columns">
-                            <!-- Billing Information Column -->
-                            <div class="shipping-info-column">
-                                <h4>Billing Information</h4>
-                                
-                                <div class="info-group">
-                                    <label>Bill To:</label>
-                                    <div id="bill_to_display" class="info-field">
-                                        <span class="placeholder">Select a client to view billing address</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="info-group">
-                                    <label>Bill To Attention:</label>
-                                    <div id="bill_to_attn_display" class="info-field">
-                                        <span class="placeholder">Select a client to view billing attention</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Shipping Information Column -->
-                            <div class="shipping-info-column">
-                                <h4>Shipping Information</h4>
-                                
-                                <div class="info-group">
-                                    <label>Ship To:</label>
-                                    <div id="ship_to_display" class="info-field">
-                                        <span class="placeholder">Select a client to view shipping address</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="info-group">
-                                    <label>Ship To Attention:</label>
-                                    <div id="ship_to_attn_display" class="info-field">
-                                        <span class="placeholder">Select a client to view shipping attention</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="shipping-info-actions">
-                            <button type="button" id="edit_client_button" class="edit-client-btn" onclick="editClientAddress()" disabled>
-                                <i class="fas fa-user-edit"></i> Edit Client Address
-                            </button>
-                            <div class="shipping-note">
-                                <i class="fas fa-info-circle"></i> 
-                                Shipping information is automatically retrieved from the client's profile.
-                            </div>
-                        </div>
+                    <div id="custom_address_container" style="display: none;">
+                        <textarea id="custom_address" name="custom_address" rows="3" placeholder="Enter delivery address"></textarea>
                     </div>
-
+                    
+                    <input type="hidden" name="delivery_address" id="delivery_address">
+                    <input type="hidden" name="special_instructions" id="special_instructions_hidden">
                     <!-- Add special instructions field -->
                     <label for="special_instructions">Special Instructions:</label>
                     <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
-                    <!-- Add hidden field for special instructions -->
-                    <input type="hidden" id="special_instructions_hidden" name="special_instructions_hidden">
                     
                     <div class="centered-button">
                         <button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()">
@@ -438,16 +1206,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <input type="hidden" name="po_number" id="po_number">
                     <input type="hidden" name="orders" id="orders">
                     <input type="hidden" name="total_amount" id="total_amount">
-                    <!-- Add hidden company field -->
-                    <input type="hidden" name="company" id="company">
                 </div>
                 <div class="form-buttons">
+
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
-                    <button type="submit" class="save-btn">
-                        <i class="fas fa-save"></i> Save
-                    </button>
+                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
                 </div>
             </form>
         </div>
@@ -654,7 +1419,667 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     </div>
 
     <script src="/js/orders.js"></script>
-    <script src="/js/pending_orders.js"></script>
+    <script>
+    // Variables to store the current PO for PDF generation
+    let currentPOData = null;
+    
+function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, ordersJson, totalAmount, specialInstructions, billTo, billToAttn, shipTo, shipToAttn) {
+    try {
+        // Store current PO data
+        currentPOData = {
+            poNumber,
+            username,
+            company,
+            orderDate,
+            deliveryDate,
+            ordersJson,
+            totalAmount,
+            specialInstructions,
+            billTo,
+            billToAttn,
+            shipTo,
+            shipToAttn
+        };
+        
+        // Populate the hidden PDF content silently
+        document.getElementById('printCompany').textContent = company || 'No Company Name';
+        document.getElementById('printPoNumber').textContent = poNumber;
+        document.getElementById('printUsername').textContent = username;
+        document.getElementById('printOrderDate').textContent = orderDate;
+        document.getElementById('printDeliveryDate').textContent = deliveryDate;
+        
+        // Add address information
+        const billToSection = document.getElementById('printBillToSection');
+        const billToAttnSection = document.getElementById('printBillToAttnSection');
+        const shipToSection = document.getElementById('printShipToSection');
+        const shipToAttnSection = document.getElementById('printShipToAttnSection');
+        
+        if (billTo) {
+            document.getElementById('printBillTo').textContent = billTo;
+            billToSection.style.display = 'block';
+        } else {
+            billToSection.style.display = 'none';
+        }
+        
+        if (billToAttn) {
+            document.getElementById('printBillToAttn').textContent = billToAttn;
+            billToAttnSection.style.display = 'block';
+        } else {
+            billToAttnSection.style.display = 'none';
+        }
+        
+        if (shipTo) {
+            document.getElementById('printShipTo').textContent = shipTo;
+            shipToSection.style.display = 'block';
+        } else {
+            shipToSection.style.display = 'none';
+        }
+        
+        if (shipToAttn) {
+            document.getElementById('printShipToAttn').textContent = shipToAttn;
+            shipToAttnSection.style.display = 'block';
+        } else {
+            shipToAttnSection.style.display = 'none';
+        }
+        
+        // Format the total amount
+        document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        
+        // Hide special instructions section if it exists
+        const instructionsSection = document.getElementById('printInstructionsSection');
+        if (instructionsSection) {
+            instructionsSection.style.display = 'none';
+        }
+        
+        // Parse and populate order items
+        const orderItems = JSON.parse(ordersJson);
+        const orderItemsBody = document.getElementById('printOrderItems');
+        
+        // Clear previous content
+        orderItemsBody.innerHTML = '';
+        
+        // Add items to the table
+        orderItems.forEach(item => {
+            const row = document.createElement('tr');
+            
+            // Calculate item total
+            const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+            
+            row.innerHTML = `
+                <td>${item.category || ''}</td>
+                <td>${item.item_description}</td>
+                <td>${item.packaging || ''}</td>
+                <td>${item.quantity}</td>
+                <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}</td>
+                <td>PHP ${itemTotal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}</td>
+            `;
+            
+            orderItemsBody.appendChild(row);
+        });
+        
+        // Get the element to convert to PDF
+        const element = document.getElementById('contentToDownload');
+        
+        // Configure html2pdf options
+        const opt = {
+            margin:       [10, 10, 10, 10],
+            filename:     `PO_${poNumber}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        // Generate and download PDF directly
+        html2pdf().set(opt).from(element).save().then(() => {
+            showToast(`Purchase Order ${poNumber} has been downloaded.`, 'success');
+        }).catch(error => {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF. Please try again.');
+        });
+        
+    } catch (e) {
+        console.error('Error preparing PDF data:', e);
+        alert('Error preparing PDF data');
+    }
+}
+
+// Function to generate Purchase Order PDF
+function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions, billTo, billToAttn, shipTo, shipToAttn) {
+    try {
+        // Store current PO data for later use
+        currentPOData = {
+            poNumber,
+            username,
+            company,
+            orderDate,
+            deliveryDate,
+            deliveryAddress,
+            ordersJson,
+            totalAmount,
+            specialInstructions,
+            billTo,
+            billToAttn,
+            shipTo,
+            shipToAttn
+        };
+        
+        // Set basic information
+        document.getElementById('printCompany').textContent = company || 'No Company Name';
+        document.getElementById('printPoNumber').textContent = poNumber;
+        document.getElementById('printUsername').textContent = username;
+        document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
+        document.getElementById('printOrderDate').textContent = orderDate;
+        document.getElementById('printDeliveryDate').textContent = deliveryDate;
+        
+        // Populate the billing and shipping information
+        document.getElementById('printBillTo').textContent = billTo || 'N/A';
+        document.getElementById('printBillToAttn').textContent = billToAttn || 'N/A';
+        document.getElementById('printShipTo').textContent = shipTo || 'N/A';
+        document.getElementById('printShipToAttn').textContent = shipToAttn || 'N/A';
+        
+        // Hide rows if data is not present
+        document.getElementById('billToRow').style.display = billTo ? 'block' : 'none';
+        document.getElementById('billToAttnRow').style.display = billToAttn ? 'block' : 'none';
+        document.getElementById('shipToRow').style.display = shipTo ? 'block' : 'none';
+        document.getElementById('shipToAttnRow').style.display = shipToAttn ? 'block' : 'none';
+        
+        // Hide special instructions section completely
+        const instructionsSection = document.getElementById('printInstructionsSection');
+        if (instructionsSection) {
+            instructionsSection.style.display = 'none';
+        }
+        
+        // Format the total amount with commas and decimals
+        document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        
+        // Parse and populate order items
+        const orderItems = JSON.parse(ordersJson);
+        const orderItemsBody = document.getElementById('printOrderItems');
+        
+        // Clear previous content
+        orderItemsBody.innerHTML = '';
+        
+        // Add items to the table
+        orderItems.forEach(item => {
+            const row = document.createElement('tr');
+            
+            // Calculate item total
+            const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+            
+            row.innerHTML = `
+                <td>${item.category || ''}</td>
+                <td>${item.item_description}</td>
+                <td>${item.packaging || ''}</td>
+                <td>${item.quantity}</td>
+                <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}</td>
+                <td>PHP ${itemTotal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}</td>
+            `;
+            
+            orderItemsBody.appendChild(row);
+        });
+        
+        // Show the PDF preview
+        document.getElementById('pdfPreview').style.display = 'block';
+        
+    } catch (e) {
+        console.error('Error preparing PDF data:', e);
+        alert('Error preparing PDF data');
+    }
+}
+    
+    // Function to close PDF preview
+    function closePDFPreview() {
+        document.getElementById('pdfPreview').style.display = 'none';
+    }
+    
+    // Function to download the PDF
+    function downloadPDF() {
+        if (!currentPOData) {
+            alert('No PO data available for download.');
+            return;
+        }
+        
+        // Get the element to convert to PDF
+        const element = document.getElementById('contentToDownload');
+        
+        // Configure html2pdf options
+        const opt = {
+            margin:       [10, 10, 10, 10],
+            filename:     `PO_${currentPOData.poNumber}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        // Generate and download PDF
+        html2pdf().set(opt).from(element).save().then(() => {
+            showToast(`Purchase Order ${currentPOData.poNumber} has been downloaded as PDF.`, 'success');
+            closePDFPreview();
+        }).catch(error => {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF. Please try again.');
+        });
+    }
+    
+    window.openStatusModal = function(poNumber, username, ordersJson) {
+        $('#statusMessage').text('Change order status for ' + poNumber);
+        $('#statusModal').data('po_number', poNumber).show();
+        
+        // Clear previous data and show loading state
+        $('#rawMaterialsContainer').html('<h3>Loading inventory status...</h3>');
+        
+        // Parse the orders JSON and check materials
+        try {
+            $.ajax({
+                url: '/backend/check_raw_materials.php',
+                type: 'POST',
+                data: { 
+                    orders: ordersJson,
+                    po_number: poNumber
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        // Display finished products status first
+                        if (response.finishedProducts) {
+                            displayFinishedProducts(response.finishedProducts);
+                        }
+                        
+                        // If manufacturing is needed, display raw materials
+                        if (response.needsManufacturing && response.materials) {
+                            displayRawMaterials(response.materials);
+                        } else {
+                            // Hide the raw materials section if no manufacturing needed
+                            $('#rawMaterialsContainer').append('<p>All products are in stock - no manufacturing needed</p>');
+                        }
+                        
+                        // Enable or disable the Active button based on overall status
+                        updateOrderActionStatus(response);
+                    } else {
+                        $('#rawMaterialsContainer').html(`
+                            <h3>Error Checking Inventory</h3>
+                            <p style="color:red;">${response.message || 'Unknown error'}</p>
+                            <p>Order status can still be changed.</p>
+                        `);
+                        $('#activeStatusBtn').prop('disabled', false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#rawMaterialsContainer').html(`
+                        <h3>Server Error</h3>
+                        <p style="color:red;">Could not connect to server: ${error}</p>
+                        <p>Order status can still be changed.</p>
+                    `);
+                    $('#activeStatusBtn').prop('disabled', false);
+                    console.error("AJAX Error:", status, error);
+                }
+            });
+        } catch (e) {
+            $('#rawMaterialsContainer').html(`
+                <h3>Error Processing Data</h3>
+                <p style="color:red;">${e.message}</p>
+                <p>Order status can still be changed.</p>
+            `);
+            $('#activeStatusBtn').prop('disabled', false);
+            console.error("Error:", e);
+        }
+    };
+
+    // Helper function to format weight values
+    function formatWeight(weightInGrams) {
+        if (weightInGrams >= 1000) {
+            return (weightInGrams / 1000).toFixed(2) + ' kg';
+        } else {
+            return weightInGrams.toFixed(2) + ' g';
+        }
+    }
+
+    // Function to display finished products status
+    function displayFinishedProducts(productsData) {
+        const productsTableHTML = `
+            <h3>Finished Products Status</h3>
+            <table class="materials-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>In Stock</th>
+                        <th>Required</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.keys(productsData).map(product => {
+                        const data = productsData[product];
+                        const available = parseInt(data.available);
+                        const required = parseInt(data.required);
+                        const isSufficient = data.sufficient;
+                        
+                        return `
+                            <tr>
+                                <td>${product}</td>
+                                <td>${available}</td>
+                                <td>${required}</td>
+                                <td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">
+                                    ${isSufficient ? 'In Stock' : 'Need to manufacture ' + data.shortfall + ' more'}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+        
+        // Update the HTML container
+        $('#rawMaterialsContainer').html(productsTableHTML);
+        
+        // Check if any products need manufacturing
+        const needsManufacturing = Object.values(productsData).some(product => !product.sufficient);
+        
+        if (needsManufacturing) {
+            $('#rawMaterialsContainer').append(`
+                <h3>Raw Materials Required for Manufacturing</h3>
+                <div id="raw-materials-section">
+                    <p>Loading raw materials information...</p>
+                </div>
+            `);
+        }
+    }
+
+    // Function to display raw materials data
+    function displayRawMaterials(materialsData) {
+        if (!materialsData || Object.keys(materialsData).length === 0) {
+            $('#raw-materials-section').html('<p>No raw materials information available.</p>');
+            return;
+        }
+        
+        // Count sufficient vs insufficient materials
+        let allSufficient = true;
+        let insufficientMaterials = [];
+        
+        const materialsTableHTML = `
+            <table class="materials-table">
+                <thead>
+                    <tr>
+                        <th>Material</th>
+                        <th>Available</th>
+                        <th>Required</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.keys(materialsData).map(material => {
+                        const data = materialsData[material];
+                        const available = parseFloat(data.available);
+                        const required = parseFloat(data.required);
+                        const isSufficient = data.sufficient;
+                        
+                        if (!isSufficient) {
+                            allSufficient = false;
+                            insufficientMaterials.push(material);
+                        }
+                        
+                        return `
+                            <tr>
+                                <td>${material}</td>
+                                <td>${formatWeight(available)}</td>
+                                <td>${formatWeight(required)}</td>
+                                <td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">
+                                    ${isSufficient ? 'Sufficient' : 'Insufficient'}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+        
+        // Add status message
+        const statusMessage = allSufficient 
+            ? 'All raw materials are sufficient for manufacturing.' 
+            : `Insufficient raw materials: ${insufficientMaterials.join(', ')}. The order cannot proceed.`;
+        
+        const statusClass = allSufficient ? 'status-sufficient' : 'status-insufficient';
+        
+        const fullHTML = `
+            ${materialsTableHTML}
+            <p class="materials-status ${statusClass}">${statusMessage}</p>
+        `;
+        
+        $('#raw-materials-section').html(fullHTML);
+        
+        // Enable or disable the Active button
+        $('#activeStatusBtn').prop('disabled', !allSufficient);
+        
+        return allSufficient;
+    }
+
+    // Function to update order action status
+    function updateOrderActionStatus(response) {
+        let canProceed = true;
+        let statusMessage = 'All inventory requirements are met. The order can proceed.';
+        
+        // Check if all finished products are in stock
+        const finishedProducts = response.finishedProducts || {};
+        const allProductsInStock = Object.values(finishedProducts).every(product => product.sufficient);
+        
+        // If manufacturing is needed, check raw materials
+        if (!allProductsInStock && response.needsManufacturing) {
+            // Check if all products can be manufactured
+            const canManufactureAll = Object.values(finishedProducts).every(product => 
+                product.sufficient || product.canManufacture !== false);
+                
+            if (!canManufactureAll) {
+                canProceed = false;
+                statusMessage = 'Some products cannot be manufactured due to missing ingredients.';
+            } else {
+                // Check if all raw materials are sufficient
+                const materials = response.materials || {};
+                const allMaterialsSufficient = Object.values(materials).every(material => material.sufficient);
+                
+                if (!allMaterialsSufficient) {
+                    canProceed = false;
+                    statusMessage = 'Insufficient raw materials for manufacturing required products.';
+                } else {
+                    statusMessage = 'Products will be manufactured using raw materials. The order can proceed.';
+                }
+            }
+        }
+        
+        // Update UI based on status
+        $('#activeStatusBtn').prop('disabled', !canProceed);
+        
+        // Add a summary at the end of the container
+        const statusClass = canProceed ? 'status-sufficient' : 'status-insufficient';
+        $('#rawMaterialsContainer').append(`
+            <p class="materials-status ${statusClass}">${statusMessage}</p>
+        `);
+    }
+
+    function closeStatusModal() {
+        document.getElementById('statusModal').style.display = 'none';
+    }
+
+    // Function to change order status
+    function changeStatus(status) {
+        var poNumber = $('#statusModal').data('po_number');
+        
+        // Only deduct materials if changing to Active
+        const deductMaterials = (status === 'Active');
+        
+        $.ajax({
+            type: 'POST',
+            url: '/backend/update_order_status.php',
+            data: { 
+                po_number: poNumber, 
+                status: status,
+                deduct_materials: deductMaterials
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Format status type for toast
+                    let toastType = status.toLowerCase();
+                    if (toastType === 'completed') toastType = 'complete';
+                    if (toastType === 'rejected') toastType = 'reject';
+                    
+                    // Create message
+                    let message = `Changed status for ${poNumber} to ${status}.`;
+                    if (status === 'Active' && deductMaterials) {
+                        message = `Changed status for ${poNumber} to ${status}. Inventory has been updated.`;
+                    }
+                    
+                    // Show toast and reload
+                    showToast(message, toastType);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    alert('Failed to change status: ' + (response.error || 'Unknown error'));
+                }
+                closeStatusModal();
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', error);
+                alert('Failed to change status. Please try again.');
+                closeStatusModal();
+            }
+        });
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                <div class="message">${message}</div>
+            </div>
+            <i class="fas fa-times close" onclick="this.parentElement.remove()"></i>
+        `;
+        document.getElementById('toast-container').appendChild(toast);
+        
+        // Automatically remove the toast after 5 seconds
+        setTimeout(() => {
+            toast.remove();
+        }, 5000);
+    }
+    
+    function viewOrderDetails(ordersJson) {
+        try {
+            const orderDetails = JSON.parse(ordersJson);
+            const orderDetailsBody = document.getElementById('orderDetailsBody');
+            
+            // Clear previous content
+            orderDetailsBody.innerHTML = '';
+            
+            orderDetails.forEach(product => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${product.category}</td>
+                    <td>${product.item_description}</td>
+                    <td>${product.packaging}</td>
+                    <td>PHP ${parseFloat(product.price).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    })}</td>
+                    <td>${product.quantity}</td>
+                `;
+                
+                orderDetailsBody.appendChild(row);
+            });
+            
+            // Show modal
+            document.getElementById('orderDetailsModal').style.display = 'flex';
+        } catch (e) {
+            console.error('Error parsing order details:', e);
+            alert('Error displaying order details');
+        }
+    }
+
+    function closeOrderDetailsModal() {
+        document.getElementById('orderDetailsModal').style.display = 'none';
+    }
+    
+    // Add function to update company name when username changes
+
+        function viewSpecialInstructions(poNumber, instructions) {
+                document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
+                const contentEl = document.getElementById('instructionsContent');
+                
+                if (instructions && instructions.trim().length > 0) {
+                    contentEl.textContent = instructions;
+                    contentEl.classList.remove('empty');
+                } else {
+                    contentEl.textContent = 'No special instructions provided for this order.';
+                    contentEl.classList.add('empty');
+                }
+                
+                document.getElementById('specialInstructionsModal').style.display = 'block';
+            }
+
+        function closeSpecialInstructions() {
+            document.getElementById('specialInstructionsModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('specialInstructionsModal');
+            if (event.target === modal) {
+                closeSpecialInstructions();
+            }
+        });
+
+        // Address info modal functions
+        function viewAddressInfo(billTo, billToAttn, shipTo, shipToAttn) {
+            // Bill To information
+            document.getElementById("modalBillTo").textContent = billTo || 'N/A';
+            document.getElementById("noBillingInfo").style.display = (!billTo && !billToAttn) ? "block" : "none";
+            
+            // Bill To Attention with conditional display
+            if (billToAttn) {
+                document.getElementById("modalBillToAttn").textContent = billToAttn;
+                document.getElementById("billToAttnRow").style.display = "table-row";
+            } else {
+                document.getElementById("billToAttnRow").style.display = "none";
+            }
+            
+            // Ship To information
+            document.getElementById("modalShipTo").textContent = shipTo || 'N/A';
+            document.getElementById("noShippingInfo").style.display = (!shipTo && !shipToAttn) ? "block" : "none";
+            
+            // Ship To Attention with conditional display
+            if (shipToAttn) {
+                document.getElementById("modalShipToAttn").textContent = shipToAttn;
+                document.getElementById("shipToAttnRow").style.display = "table-row";
+            } else {
+                document.getElementById("shipToAttnRow").style.display = "none";
+            }
+            
+            document.getElementById("addressInfoModal").style.display = "block";
+        }
+
+        function closeAddressInfoModal() {
+            document.getElementById("addressInfoModal").style.display = "none";
+        }
+
+    </script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
     
@@ -715,23 +2140,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     }
                 }
                 
-                // Get company value from the selected option
-                const username = document.getElementById('username');
-                const selectedOption = username.options[username.selectedIndex];
-                if (selectedOption && selectedOption.dataset.company) {
-                    document.getElementById('company').value = selectedOption.dataset.company;
-                }
+                // Include special instructions in form data
+                const specialInstructions = document.getElementById('special_instructions').value;
+                document.getElementById('special_instructions_hidden').value = specialInstructions;
+                // No need for a hidden field since the textarea already has the name attribute
             };
-
-            // Add or update the updateCompany function
-            window.updateCompany = function() {
-                const username = document.getElementById('username');
-                const selectedOption = username.options[username.selectedIndex];
-                if (selectedOption && selectedOption.dataset.company) {
-                    document.getElementById('company').value = selectedOption.dataset.company;
-                }
-            };
-        });
     </script> 
 </body>
 </html>
