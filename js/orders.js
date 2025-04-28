@@ -512,7 +512,6 @@ $(document).ready(function() {
     });
 
     // Form submission
-    // Form submission
 $('#addOrderForm').on('submit', function(e) {
     e.preventDefault();
     
@@ -523,7 +522,7 @@ $('#addOrderForm').on('submit', function(e) {
 
     prepareOrderData();
     
-    // Validate ship_to (delivery address) - UPDATED FROM delivery_address
+    // Validate ship_to as delivery address instead of delivery_address
     const shipTo = $('#ship_to').val();
     if (!shipTo || shipTo.trim() === '') {
         alert('Please provide a shipping address in the "Ship To" field');

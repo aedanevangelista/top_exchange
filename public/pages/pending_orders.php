@@ -535,8 +535,20 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
     <script src="/js/orders.js"></script>
     <script>
-        <?php include('../../js/order_processing.js'); ?>
-    
+    <?php include('../../js/order_processing.js'); ?>
+
+        // Define updateCompany function
+        function updateCompany() {
+            const usernameSelect = document.getElementById('username');
+            if (usernameSelect.selectedIndex <= 0) return; // Skip if no selection
+            
+            const selectedOption = usernameSelect.options[usernameSelect.selectedIndex];
+            const company = selectedOption.getAttribute('data-company') || '';
+            
+            // You can do something with the company value if needed
+            console.log('Company updated:', company);
+        }
+        
         // Search functionality (client-side, same as in order_history.php)
         $(document).ready(function() {
             // Search functionality
@@ -643,8 +655,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             // Set current date for order_date
             const today = new Date();
             const formattedDate = today.getFullYear() + '-' + 
-                                 String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-                                 String(today.getDate()).padStart(2, '0');
+                                String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                                String(today.getDate()).padStart(2, '0');
             document.getElementById('order_date').value = formattedDate;
             
             // Initialize the delivery date datepicker
@@ -661,6 +673,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             document.getElementById('ship_to_attn').value = '';
             document.getElementById('special_instructions').value = '';
         };
-    </script> 
+    </script>
 </body>
 </html>
