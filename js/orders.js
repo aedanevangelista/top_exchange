@@ -259,39 +259,44 @@ window.generatePONumber = function() {
     const username = $('#username').val();
     if (username) {
         $.ajax({
-            url: '/backend/get_user_details.php', // We'll create this new file to get all user details
+            url: '/backend/get_next_po_number.php',
             type: 'POST',
             data: { username: username },
-            dataType: 'json',
             success: function(response) {
-                if (response.success) {
-                    // Set the PO number
-                    $('#po_number').val(response.po_number);
-                    
-                    // Set the EXACT values from the database - not derived values
-                    $('#bill_to').val(response.bill_to || '');
-                    $('#bill_to_attn').val(response.bill_to_attn || '');
-                    $('#ship_to').val(response.ship_to || '');
-                    $('#ship_to_attn').val(response.ship_to_attn || '');
-                    
-                    // Make address fields readonly to prevent manual editing
-                    $('#bill_to').prop('readonly', true);
-                    $('#bill_to_attn').prop('readonly', true);
-                    $('#ship_to').prop('readonly', true);
-                    $('#ship_to_attn').prop('readonly', true);
-                } else {
-                    console.error("Error fetching user details:", response.message);
+                $('#po_number').val(response.po_number);
+                
+                // Update the company address field with the selected user's company address
+                const selectedOption = $('#username option:selected');
+                const companyAddress = selectedOption.data('company-address');
+                const company = selectedOption.data('company');
+                
+                // Set default values for bill_to and ship_to fields
+                $('#bill_to').val(companyAddress || '');
+                $('#ship_to').val(companyAddress || '');
+                
+                // Set company name for attention fields if available
+                if (company) {
+                    $('#bill_to_attn').val(company);
+                    $('#ship_to_attn').val(company);
                 }
-            },
-            error: function(xhr, status, error) {
-                console.error("AJAX Error:", error);
             }
         });
     }
 };
 
 window.prepareOrderData = function() {
-    // Do NOT set bill_to and ship_to values here - use what was retrieved from the database
+    // Make sure all the address fields have values
+    if (!$('#bill_to').val() && $('#username').val()) {
+        // If bill_to is empty, use the company address as a default
+        const companyAddress = $('#username option:selected').data('company-address') || '';
+        $('#bill_to').val(companyAddress);
+    }
+    
+    if (!$('#ship_to').val() && $('#username').val()) {
+        // If ship_to is empty, use the company address as a default
+        const companyAddress = $('#username option:selected').data('company-address') || '';
+        $('#ship_to').val(companyAddress);
+    }
     
     const orderData = JSON.stringify(selectedProducts);
     $('#orders').val(orderData);
@@ -515,10 +520,10 @@ $(document).ready(function() {
 
         prepareOrderData();
         
-        // Validate ship_to field
-        const shipTo = $('#ship_to').val();
-        if (!shipTo || shipTo.trim() === '') {
-            alert('Please provide a shipping address');
+        // Validate delivery address
+        const deliveryAddress = $('#delivery_address').val();
+        if (!deliveryAddress || deliveryAddress.trim() === '') {
+            alert('Please provide a delivery address');
             return;
         }
         
@@ -592,7 +597,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             company,
             orderDate,
             deliveryDate,
-            shipTo,  // This was previously deliveryAddress
+            shipTo,  // Updated from deliveryAddress to shipTo
             ordersJson,
             totalAmount,
             specialInstructions
@@ -602,10 +607,10 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         document.getElementById('printCompany').textContent = company || 'No Company Name';
         document.getElementById('printPoNumber').textContent = poNumber;
         document.getElementById('printUsername').textContent = username;
-        document.getElementById('printDeliveryAddress').textContent = shipTo;  // Update to use shipTo
+        document.getElementById('printDeliveryAddress').textContent = shipTo;  // Updated to use shipTo
         document.getElementById('printOrderDate').textContent = orderDate;
         document.getElementById('printDeliveryDate').textContent = deliveryDate;
-        
+          
         // Format the total amount
         document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
             minimumFractionDigits: 2,
@@ -1149,52 +1154,3 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, shipTo
                 closeSpecialInstructions();
             }
         });
-
-        // Function to get user details when a username is selected
-function getUserDetails(username) {
-    if (!username) return;
-    
-    // Clear all fields first
-    document.getElementById('bill_to').value = '';
-    document.getElementById('bill_to_attn').value = '';
-    document.getElementById('ship_to').value = '';
-    document.getElementById('ship_to_attn').value = '';
-    
-    // Get user details from the server
-    fetch('/backend/get_user_address_data.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'username=' + encodeURIComponent(username)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Set PO number
-            if (data.po_number) {
-                document.getElementById('po_number').value = data.po_number;
-            }
-            
-            // Directly set the exact address values from the database
-            document.getElementById('bill_to').value = data.bill_to || '';
-            document.getElementById('bill_to_attn').value = data.bill_to_attn || '';
-            document.getElementById('ship_to').value = data.ship_to || '';
-            document.getElementById('ship_to_attn').value = data.ship_to_attn || '';
-            
-            console.log('Address data loaded successfully:', data);
-        } else {
-            console.error('Error loading user address data:', data.message);
-            alert('Error loading address data: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Fetch error:', error);
-        alert('Error communicating with server');
-    });
-    
-    // Also generate the PO number (if you still need this function)
-    if (window.generatePONumber) {
-        window.generatePONumber();
-    }
-}

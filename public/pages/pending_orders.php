@@ -302,10 +302,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="getUserDetails(this.value);">
+                    <select id="username" name="username" required onchange="generatePONumber();">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
-                            <option value="<?= htmlspecialchars($client) ?>">
+                            <option value="<?= htmlspecialchars($client) ?>" 
+                                data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
+                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>">
                                 <?= htmlspecialchars($client) ?>
                             </option>
                         <?php endforeach; ?>
@@ -316,18 +318,18 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <label for="delivery_date">Delivery Date:</label>
                     <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
                     
-                    <!-- Updated address fields -->
+                    <!-- Updated shipping information fields -->
                     <label for="bill_to">Bill To:</label>
-                    <textarea id="bill_to" name="bill_to" rows="2" readonly></textarea>
-
+                    <textarea id="bill_to" name="bill_to" rows="2" placeholder="Enter billing address"></textarea>
+                    
                     <label for="bill_to_attn">Bill To Attention:</label>
-                    <input type="text" id="bill_to_attn" name="bill_to_attn" readonly>
-
+                    <input type="text" id="bill_to_attn" name="bill_to_attn" placeholder="Enter billing contact">
+                    
                     <label for="ship_to">Ship To (Delivery Address):</label>
-                    <textarea id="ship_to" name="ship_to" rows="2" readonly></textarea>
-
+                    <textarea id="ship_to" name="ship_to" rows="2" placeholder="Enter shipping address"></textarea>
+                    
                     <label for="ship_to_attn">Ship To Attention:</label>
-                    <input type="text" id="ship_to_attn" name="ship_to_attn" readonly>
+                    <input type="text" id="ship_to_attn" name="ship_to_attn" placeholder="Enter delivery contact">
                     
                     <label for="special_instructions">Special Instructions:</label>
                     <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
@@ -522,60 +524,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <script src="/js/orders.js"></script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
-        
-        // Function to get user details when a username is selected
-        function getUserDetails(username) {
-            if (!username) return;
-            
-            // Show loading indicator
-            $('#bill_to').val('Loading...');
-            $('#ship_to').val('Loading...');
-            
-            // Get user details from the server
-            $.ajax({
-                url: '/backend/get_user_address_data.php',
-                type: 'POST',
-                data: { username: username },
-                dataType: 'json',
-                success: function(data) {
-                    if (data.success) {
-                        // Set PO number
-                        if (data.po_number) {
-                            $('#po_number').val(data.po_number);
-                        }
-                        
-                        // Set the address fields with data from database
-                        $('#bill_to').val(data.bill_to || '');
-                        $('#bill_to_attn').val(data.bill_to_attn || '');
-                        $('#ship_to').val(data.ship_to || '');
-                        $('#ship_to_attn').val(data.ship_to_attn || '');
-                        
-                        console.log('Address data loaded successfully for ' + username);
-                    } else {
-                        console.error('Error loading user address data:', data.message);
-                        
-                        // Clear the fields to avoid confusion
-                        $('#bill_to').val('');
-                        $('#bill_to_attn').val('');
-                        $('#ship_to').val('');
-                        $('#ship_to_attn').val('');
-                        
-                        alert('Error loading address data: ' + data.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', error);
-                    
-                    // Clear the fields
-                    $('#bill_to').val('');
-                    $('#bill_to_attn').val('');
-                    $('#ship_to').val('');
-                    $('#ship_to_attn').val('');
-                    
-                    alert('Network error while loading address data. Please try again.');
-                }
-            });
-        }
     
         // Search functionality (client-side, same as in order_history.php)
         $(document).ready(function() {
@@ -611,76 +559,34 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 });
             });
             
-            // Form submission handler
-            $('#addOrderForm').on('submit', function(e) {
-                e.preventDefault();
-                
-                if (selectedProducts.length === 0) {
-                    alert('Please add products to your order');
-                    return;
-                }
-                
-                // Prepare order data
-                prepareOrderData();
-                
-                // Validate ship_to is not empty
-                if (!$('#ship_to').val() || $('#ship_to').val().trim() === '') {
-                    alert('Shipping address is missing. Please select a valid user.');
-                    return;
-                }
-                
-                // Show a toast notification when saving the order
-                const poNumber = $('#po_number').val();
-                const username = $('#username').val();
-                
-                if (poNumber && username) {
-                    showToast(`The order: ${poNumber} has been created for ${username}.`, 'success');
-                }
-                
-                // Submit the form via Ajax
-                $.ajax({
-                    url: $(this).attr('action'),
-                    type: 'POST',
-                    data: $(this).serialize(),
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            // Wait a moment for the toast to be visible before reloading
-                            setTimeout(() => {
-                                location.reload();
-                            }, 1500);
-                        } else {
-                            alert('Error: ' + response.message);
-                        }
-                    },
-                    error: function() {
-                        alert('Error submitting order. Please try again.');
-                    }
-                });
+            // Initialize company field if needed
+            $('#username').change(function() {
+                updateCompany();
             });
             
-            // Update prepareOrderData to not modify the address fields
+            // Make sure prepareOrderData includes company field
+            window.originalPrepareOrderData = window.prepareOrderData;
             window.prepareOrderData = function() {
-                // Only prepare the orders JSON and total amount
-                const orderData = JSON.stringify(selectedProducts);
-                $('#orders').val(orderData);
-                const totalAmount = calculateCartTotal();
-                $('#total_amount').val(totalAmount.toFixed(2));
-            };
-            
-            // Initialize delivery date
-            $('#delivery_date').datepicker({
-                dateFormat: 'yy-mm-dd',
-                minDate: 0,
-                beforeShowDay: function(date) {
-                    const day = date.getDay();
-                    return [day === 1 || day === 3 || day === 5];
+                if (window.originalPrepareOrderData) {
+                    window.originalPrepareOrderData();
                 }
-            });
-            
-            // Set current date for order_date
-            $('#order_date').val(new Date().toISOString().split('T')[0]);
-        });
-    </script>
+                
+                // Ensure company is included
+                const ordersInput = document.getElementById('orders');
+                if (ordersInput.value) {
+                    try {
+                        const ordersData = JSON.parse(ordersInput.value);
+                        ordersInput.value = JSON.stringify(ordersData);
+                    } catch (e) {
+                        console.error("Error preparing order data:", e);
+                    }
+                }
+                
+                // Include special instructions in form data
+                const specialInstructions = document.getElementById('special_instructions').value;
+                document.getElementById('special_instructions_hidden').value = specialInstructions;
+                // No need for a hidden field since the textarea already has the name attribute
+            };
+    </script> 
 </body>
 </html>
