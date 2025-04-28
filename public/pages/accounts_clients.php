@@ -36,10 +36,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $city = $_POST['city'];
     $company = $_POST['company'] ?? null; 
     $company_address = $_POST['company_address'];
-    $bill_to = $_POST['bill_to'] ?? null;
-    $bill_to_attn = $_POST['bill_to_attn'] ?? null;
-    $ship_to = $_POST['ship_to'] ?? null;
-    $ship_to_attn = $_POST['ship_to_attn'] ?? null;
     $business_proof = [];
 
     if (validateUnique($conn, $username, $email)) {
@@ -82,9 +78,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $business_proof_json = json_encode($business_proof);
 
-    // Fixed: Added missing 's' in bind_param to match the number of placeholders in the query
-    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to, bill_to_attn, ship_to, ship_to_attn, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
-    $stmt->bind_param("sssssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $bill_to_attn, $ship_to, $ship_to_attn, $business_proof_json);
+    // Removed bill_to, bill_to_attn, ship_to, ship_to_attn fields
+    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
+    $stmt->bind_param("sssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
@@ -108,10 +104,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $city = $_POST['city'];
     $company = $_POST['company'] ?? null; 
     $company_address = $_POST['company_address'];
-    $bill_to = $_POST['bill_to'] ?? null;
-    $bill_to_attn = $_POST['bill_to_attn'] ?? null;
-    $ship_to = $_POST['ship_to'] ?? null;
-    $ship_to_attn = $_POST['ship_to_attn'] ?? null;
     $business_proof = [];
 
     if (validateUnique($conn, $username, $email, $id)) {
@@ -201,9 +193,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $business_proof_json = json_encode($business_proof);
 
-    // Fixed: Added missing 's' in bind_param to match the number of placeholders in the query
-    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to = ?, bill_to_attn = ?, ship_to = ?, ship_to_attn = ?, business_proof = ? WHERE id = ?");
-    $stmt->bind_param("sssssssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $bill_to_attn, $ship_to, $ship_to_attn, $business_proof_json, $id);
+    // Removed bill_to, bill_to_attn, ship_to, ship_to_attn fields
+    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, business_proof = ? WHERE id = ?");
+    $stmt->bind_param("sssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json, $id);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
@@ -235,8 +227,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
 $status_filter = $_GET['status'] ?? '';
 
-// Fixed: Completed SQL query with proper condition
-$sql = "SELECT id, username, email, phone, region, city, company, company_address, bill_to, bill_to_attn, ship_to, ship_to_attn, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
+// Removed bill_to, bill_to_attn, ship_to, ship_to_attn fields from the query
+$sql = "SELECT id, username, email, phone, region, city, company, company_address, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
 if (!empty($status_filter)) {
     $sql .= " AND status = ?";
 }
@@ -383,9 +375,7 @@ function truncate($text, $max = 15) {
         }
         
         /* Enhanced company address textarea */
-        textarea#company_address, textarea#edit-company_address,
-        textarea#bill_to, textarea#edit-bill_to,
-        textarea#ship_to, textarea#edit-ship_to {
+        textarea#company_address, textarea#edit-company_address {
             height: 60px; /* Smaller text areas */
             padding: 8px; /* Reduced padding */
             font-size: 14px; /* Increased font size by 1px */
@@ -614,35 +604,6 @@ function truncate($text, $max = 15) {
             margin-top: 5px;
         }
 
-        /* Attention styling */
-        .attention-info {
-            display: flex;
-            align-items: center;
-            margin-top: 5px;
-            font-size: 14px; /* Increased font size by 1px */
-        }
-
-        .attention-info i {
-            color: #4a90e2;
-            margin-right: 8px;
-            font-size: 15px; /* Increased font size by 1px */
-        }
-
-        .attention-info strong {
-            color: #3a5d85;
-            margin-right: 5px;
-        }
-
-        .empty-notice {
-            padding: 20px;
-            text-align: center;
-            color: #888;
-            font-style: italic;
-            border: 1px dashed #d1e1f9;
-            border-radius: 6px;
-            font-size: 14px; /* Increased font size by 1px */
-        }
-
         /* Overlays */
         .overlay {
             position: fixed;
@@ -674,31 +635,6 @@ function truncate($text, $max = 15) {
             margin-bottom: 12px; /* Reduced margin */
             border-bottom: 1px solid #eee;
             padding-bottom: 6px; /* Reduced padding */
-        }
-
-        .attention-title {
-            display: flex;
-            align-items: center;
-            margin: 10px 0 5px 0;
-            font-size: 14px; /* Increased font size by 1px */
-            color: #4a90e2;
-        }
-        
-        .attention-title i {
-            margin-right: 5px;
-        }
-        
-        /* Attention field styles */
-        .attention-field {
-            width: 100%;
-            margin-top: 6px; /* Reduced margin */
-            text-align: center;
-        }
-        
-        .attention-field input {
-            width: 100%;
-            text-align: center;
-            font-size: 14px; /* Increased font size by 1px */
         }
 
         /* Fixed header and footer in modal */
@@ -803,15 +739,33 @@ function truncate($text, $max = 15) {
             background-color: #e1e1e1;
         }
 
-        /* Attention cell styles */
-        .attention-cell {
-            display: flex;
-            align-items: center;
+        /* Status styling */
+        .status-active {
+            background-color: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
         }
 
-        .attention-cell i {
-            margin-right: 6px;
-            color: #4a90e2;
+        .status-pending {
+            background-color: #ffc107;
+            color: #333;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .status-rejected {
+            background-color: #dc3545;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .status-inactive {
+            background-color: #6c757d;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -868,11 +822,7 @@ function truncate($text, $max = 15) {
                                         onclick='showAddressInfo(
                                             <?= json_encode($row["company_address"]) ?>,
                                             <?= json_encode($row["region"]) ?>,
-                                            <?= json_encode($row["city"]) ?>,
-                                            <?= json_encode($row["bill_to"]) ?>,
-                                            <?= json_encode($row["bill_to_attn"]) ?>,
-                                            <?= json_encode($row["ship_to"]) ?>,
-                                            <?= json_encode($row["ship_to_attn"]) ?>
+                                            <?= json_encode($row["city"]) ?>
                                         )'>
                                         <i class="fas fa-eye"></i> View
                                     </button>
@@ -902,11 +852,7 @@ function truncate($text, $max = 15) {
                                         <?= json_encode($row["city"]) ?>,
                                         <?= json_encode($row["company"]) ?>,
                                         <?= json_encode($row["company_address"]) ?>,
-                                        <?= $business_proof_json ?>,
-                                        <?= json_encode($row["bill_to"]) ?>,
-                                        <?= json_encode($row["bill_to_attn"]) ?>,
-                                        <?= json_encode($row["ship_to"]) ?>,
-                                        <?= json_encode($row["ship_to_attn"]) ?>
+                                        <?= $business_proof_json ?>
                                     )'>
                                     <i class="fas fa-edit"></i> Edit
                                 </button>
@@ -962,7 +908,7 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- Improved Address Info Modal with Unified Design - No Scrollbar -->
+    <!-- Simplified Address Info Modal - Removed billing and shipping sections -->
     <div id="addressInfoModal" class="overlay">
         <div class="info-modal-content">
             <div class="info-modal-header">
@@ -988,51 +934,11 @@ function truncate($text, $max = 15) {
                         </tr>
                     </table>
                 </div>
-                
-                <div class="info-section">
-                    <h3 class="info-section-title"><i class="fas fa-file-invoice"></i> Billing Information</h3>
-                    <table class="info-table">
-                        <tr>
-                            <th>Bill To Address</th>
-                            <td id="modalBillTo"></td>
-                        </tr>
-                        <tr id="billToAttnRow">
-                            <th>Attention To</th>
-                            <td class="attention-cell">
-                                <i class="fas fa-user"></i>
-                                <span id="modalBillToAttn"></span>
-                            </td>
-                        </tr>
-                    </table>
-                    <div id="noBillingInfo" class="empty-notice" style="display: none;">
-                        No billing address information provided.
-                    </div>
-                </div>
-                
-                <div class="info-section">
-                    <h3 class="info-section-title"><i class="fas fa-shipping-fast"></i> Shipping Information</h3>
-                    <table class="info-table">
-                        <tr>
-                            <th>Ship To Address</th>
-                            <td id="modalShipTo"></td>
-                        </tr>
-                        <tr id="shipToAttnRow">
-                            <th>Attention To</th>
-                            <td class="attention-cell">
-                                <i class="fas fa-user"></i>
-                                <span id="modalShipToAttn"></span>
-                            </td>
-                        </tr>
-                    </table>
-                    <div id="noShippingInfo" class="empty-notice" style="display: none;">
-                        No shipping address information provided.
-                    </div>
-                </div>
             </div>
         </div>
     </div>
 
-    <!-- Add Account Modal with Fixed Header and Footer -->
+    <!-- Add Account Modal with Fixed Header and Footer - Removed billing and shipping fields -->
     <div id="addAccountOverlay" class="overlay" style="display: none;">
         <div class="form-modal-content">
             <div class="modal-header">
@@ -1079,32 +985,6 @@ function truncate($text, $max = 15) {
                                 <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
                             </div>
                             
-                            <div class="address-group">
-                                <h3><i class="fas fa-file-invoice"></i> Billing Information</h3>
-                                <label for="bill_to">Bill To: <span class="optional">(optional)</span></label>
-                                <textarea id="bill_to" name="bill_to" placeholder="Billing address if different from company address"></textarea>
-                                
-                                <div class="attention-title">
-                                    <i class="fas fa-user"></i> Attention To <span class="optional">(optional)</span>
-                                </div>
-                                <div class="attention-field">
-                                    <input type="text" id="bill_to_attn" name="bill_to_attn" placeholder="Contact person for billing inquiries">
-                                </div>
-                            </div>
-
-                            <div class="address-group">
-                                <h3><i class="fas fa-shipping-fast"></i> Shipping Information</h3>
-                                <label for="ship_to">Ship To: <span class="optional">(optional)</span></label>
-                                <textarea id="ship_to" name="ship_to" placeholder="Shipping address if different from company address"></textarea>
-                                
-                                <div class="attention-title">
-                                    <i class="fas fa-user"></i> Attention To <span class="optional">(optional)</span>
-                                </div>
-                                <div class="attention-field">
-                                    <input type="text" id="ship_to_attn" name="ship_to_attn" placeholder="Contact person for deliveries">
-                                </div>
-                            </div>
-                            
                             <label for="business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
                             <input type="file" id="business_proof" name="business_proof[]" required accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
                         </div>
@@ -1121,7 +1001,7 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- Edit Account Modal with Fixed Header and Footer -->
+    <!-- Edit Account Modal with Fixed Header and Footer - Removed billing and shipping fields -->
     <div id="editAccountOverlay" class="overlay" style="display: none;">
         <div class="form-modal-content">
             <div class="modal-header">
@@ -1168,32 +1048,6 @@ function truncate($text, $max = 15) {
                                 <h3><i class="fas fa-building"></i> Company Address</h3>
                                 <label for="edit-company_address">Company Address: <span class="required">*</span></label>
                                 <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
-                            </div>
-                            
-                            <div class="address-group">
-                                <h3><i class="fas fa-file-invoice"></i> Billing Information</h3>
-                                <label for="edit-bill_to">Bill To: <span class="optional">(optional)</span></label>
-                                <textarea id="edit-bill_to" name="bill_to" placeholder="Billing address if different from company address"></textarea>
-                                
-                                <div class="attention-title">
-                                    <i class="fas fa-user"></i> Attention To <span class="optional">(optional)</span>
-                                </div>
-                                <div class="attention-field">
-                                    <input type="text" id="edit-bill_to_attn" name="bill_to_attn" placeholder="Contact person for billing inquiries">
-                                </div>
-                            </div>
-
-                            <div class="address-group">
-                                <h3><i class="fas fa-shipping-fast"></i> Shipping Information</h3>
-                                <label for="edit-ship_to">Ship To: <span class="optional">(optional)</span></label>
-                                <textarea id="edit-ship_to" name="ship_to" placeholder="Shipping address if different from company address"></textarea>
-                                
-                                <div class="attention-title">
-                                    <i class="fas fa-user"></i> Attention To <span class="optional">(optional)</span>
-                                </div>
-                                <div class="attention-field">
-                                    <input type="text" id="edit-ship_to_attn" name="ship_to_attn" placeholder="Contact person for deliveries">
-                                </div>
                             </div>
                             
                             <div id="edit-business-proof-container"></div>
@@ -1278,36 +1132,11 @@ function truncate($text, $max = 15) {
         document.getElementById("contactInfoModal").style.display = "none";
     }
 
-    function showAddressInfo(companyAddress, region, city, billTo, billToAttn, shipTo, shipToAttn) {
-        // Company address info
+    // Updated to remove bill_to, bill_to_attn, ship_to, ship_to_attn parameters
+    function showAddressInfo(companyAddress, region, city) {
         document.getElementById("modalCompanyAddress").textContent = companyAddress || 'N/A';
         document.getElementById("modalRegion").textContent = region || 'N/A';
         document.getElementById("modalCity").textContent = city || 'N/A';
-        
-        // Bill To info with conditional display
-        document.getElementById("modalBillTo").textContent = billTo || 'N/A';
-        document.getElementById("noBillingInfo").style.display = (!billTo && !billToAttn) ? "block" : "none";
-        
-        // Bill To Attention with conditional display
-        if (billToAttn) {
-            document.getElementById("modalBillToAttn").textContent = billToAttn;
-            document.getElementById("billToAttnRow").style.display = "table-row";
-        } else {
-            document.getElementById("billToAttnRow").style.display = "none";
-        }
-        
-        // Ship To info with conditional display
-        document.getElementById("modalShipTo").textContent = shipTo || 'N/A';
-        document.getElementById("noShippingInfo").style.display = (!shipTo && !shipToAttn) ? "block" : "none";
-        
-        // Ship To Attention with conditional display
-        if (shipToAttn) {
-            document.getElementById("modalShipToAttn").textContent = shipToAttn;
-            document.getElementById("shipToAttnRow").style.display = "table-row";
-        } else {
-            document.getElementById("shipToAttnRow").style.display = "none";
-        }
-        
         document.getElementById("addressInfoModal").style.display = "block";
     }
 
@@ -1482,63 +1311,59 @@ function truncate($text, $max = 15) {
         window.location.href = '?status=' + encodeURIComponent(status);
     }
 
-    // Fixed the openEditAccountForm function to properly handle JSON and include the new attention fields
-function openEditAccountForm(id, username, email, phone, region, city, company, company_address, business_proof, bill_to, bill_to_attn, ship_to, ship_to_attn) {
-    document.getElementById("edit-id").value = id;
-    document.getElementById("edit-username").value = username;
-    document.getElementById("edit-email").value = email;
-    document.getElementById("edit-phone").value = phone || '';
-    document.getElementById("edit-region").value = region;
-    document.getElementById("edit-city").value = city;
-    document.getElementById("edit-company").value = company || '';
-    document.getElementById("edit-company_address").value = company_address;
-    document.getElementById("edit-bill_to").value = bill_to || '';
-    document.getElementById("edit-bill_to_attn").value = bill_to_attn || '';
-    document.getElementById("edit-ship_to").value = ship_to || '';
-    document.getElementById("edit-ship_to_attn").value = ship_to_attn || '';
-    
-    // Parse business_proof if it's a string
-    let proofs = business_proof;
-    if (typeof business_proof === 'string') {
-        try {
-            proofs = JSON.parse(business_proof);
-        } catch (e) {
-            console.error("Error parsing business proof:", e);
-            proofs = [];
+    // Updated to remove bill_to, bill_to_attn, ship_to, ship_to_attn parameters
+    function openEditAccountForm(id, username, email, phone, region, city, company, company_address, business_proof) {
+        document.getElementById("edit-id").value = id;
+        document.getElementById("edit-username").value = username;
+        document.getElementById("edit-email").value = email;
+        document.getElementById("edit-phone").value = phone || '';
+        document.getElementById("edit-region").value = region;
+        document.getElementById("edit-city").value = city;
+        document.getElementById("edit-company").value = company || '';
+        document.getElementById("edit-company_address").value = company_address;
+        
+        // Parse business_proof if it's a string
+        let proofs = business_proof;
+        if (typeof business_proof === 'string') {
+            try {
+                proofs = JSON.parse(business_proof);
+            } catch (e) {
+                console.error("Error parsing business proof:", e);
+                proofs = [];
+            }
         }
+        
+        document.getElementById("existing-business-proof").value = JSON.stringify(proofs);
+        
+        var proofContainer = document.getElementById("edit-business-proof-container");
+        proofContainer.innerHTML = '';
+        
+        if (proofs && Array.isArray(proofs) && proofs.length > 0) {
+            var proofLabel = document.createElement('label');
+            proofLabel.innerHTML = 'Current Business Proof:';
+            proofContainer.appendChild(proofLabel);
+            
+            var proofDiv = document.createElement('div');
+            proofDiv.className = 'current-proofs';
+            proofDiv.style.marginBottom = '15px';
+            
+            proofs.forEach(function(proof) {
+                var img = document.createElement('img');
+                img.src = proof;
+                img.alt = 'Business Proof';
+                img.style.width = '80px';
+                img.style.height = 'auto';
+                img.style.margin = '5px';
+                img.style.cursor = 'pointer';
+                img.onclick = function() { openModal(this); };
+                proofDiv.appendChild(img);
+            });
+            
+            proofContainer.appendChild(proofDiv);
+        }
+        
+        document.getElementById("editAccountOverlay").style.display = "block";
     }
-    
-    document.getElementById("existing-business-proof").value = JSON.stringify(proofs);
-    
-    var proofContainer = document.getElementById("edit-business-proof-container");
-    proofContainer.innerHTML = '';
-    
-    if (proofs && Array.isArray(proofs) && proofs.length > 0) {
-        var proofLabel = document.createElement('label');
-        proofLabel.innerHTML = 'Current Business Proof:';
-        proofContainer.appendChild(proofLabel);
-        
-        var proofDiv = document.createElement('div');
-        proofDiv.className = 'current-proofs';
-        proofDiv.style.marginBottom = '15px';
-        
-        proofs.forEach(function(proof) {
-            var img = document.createElement('img');
-            img.src = proof;
-            img.alt = 'Business Proof';
-            img.style.width = '80px';
-            img.style.height = 'auto';
-            img.style.margin = '5px';
-            img.style.cursor = 'pointer';
-            img.onclick = function() { openModal(this); };
-            proofDiv.appendChild(img);
-        });
-        
-        proofContainer.appendChild(proofDiv);
-    }
-    
-    document.getElementById("editAccountOverlay").style.display = "block";
-}
-</script>
+    </script>
 </body>
 </html>
