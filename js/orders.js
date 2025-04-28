@@ -265,20 +265,22 @@ window.generatePONumber = function() {
             success: function(response) {
                 $('#po_number').val(response.po_number);
                 
-                // Update the company address field with the selected user's company address
+                // Get the selected option
                 const selectedOption = $('#username option:selected');
+                
+                // Load data attributes - using the correct client data
+                const billTo = selectedOption.data('bill-to');
+                const billToAttn = selectedOption.data('bill-to-attn');
+                const shipTo = selectedOption.data('ship-to');
+                const shipToAttn = selectedOption.data('ship-to-attn');
                 const companyAddress = selectedOption.data('company-address');
                 const company = selectedOption.data('company');
                 
-                // Set default values for bill_to and ship_to fields
-                $('#bill_to').val(companyAddress || '');
-                $('#ship_to').val(companyAddress || '');
-                
-                // Set company name for attention fields if available
-                if (company) {
-                    $('#bill_to_attn').val(company);
-                    $('#ship_to_attn').val(company);
-                }
+                // Set form fields - preferring client-specific bill_to and ship_to data
+                $('#bill_to').val(billTo || companyAddress || '');
+                $('#bill_to_attn').val(billToAttn || company || '');
+                $('#ship_to').val(shipTo || companyAddress || '');
+                $('#ship_to_attn').val(shipToAttn || company || '');
             }
         });
     }
