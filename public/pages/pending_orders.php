@@ -537,6 +537,17 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <script>
     <?php include('../../js/order_processing.js'); ?>
 
+        // Update the save button handler in the form
+        document.querySelector('#addOrderForm').onsubmit = function(event) {
+            // Prepare order data before submission
+            if (!prepareOrderData()) {
+                event.preventDefault(); // Stop form submission if data preparation failed
+                return false;
+            }
+            return true; // Allow form submission if data preparation succeeded
+        };
+
+
         // Define updateCompany function
         function updateCompany() {
             const usernameSelect = document.getElementById('username');
@@ -592,28 +603,53 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             // Make sure prepareOrderData includes company field
             window.originalPrepareOrderData = window.prepareOrderData;
             window.prepareOrderData = function() {
-                if (window.originalPrepareOrderData) {
-                    window.originalPrepareOrderData();
-                }
+            // Get all selected products from the summary table
+            const summaryRows = document.querySelectorAll('#summaryBody tr');
+            const orderItems = [];
+            let totalAmount = 0;
+            
+            // Process each row in the summary table
+            summaryRows.forEach(row => {
+                const cells = row.cells;
+                const category = cells[0].textContent;
+                const product = cells[1].textContent;
+                const packaging = cells[2].textContent;
+                const price = parseFloat(cells[3].textContent);
+                const quantity = parseInt(cells[4].textContent);
+                const itemTotal = price * quantity;
                 
-                // Ensure company is included
-                const ordersInput = document.getElementById('orders');
-                if (ordersInput.value) {
-                    try {
-                        const ordersData = JSON.parse(ordersInput.value);
-                        ordersInput.value = JSON.stringify(ordersData);
-                    } catch (e) {
-                        console.error("Error preparing order data:", e);
-                    }
-                }
+                totalAmount += itemTotal;
                 
-                // Include special instructions in form data
-                const specialInstructions = document.getElementById('special_instructions').value;
-                if (document.getElementById('special_instructions_hidden')) {
-                    document.getElementById('special_instructions_hidden').value = specialInstructions;
-                }
-                // No need for a hidden field since the textarea already has the name attribute
-            };
+                // Add to order items array
+                orderItems.push({
+                    category: category,
+                    product: product,
+                    packaging: packaging,
+                    price: price,
+                    quantity: quantity,
+                    total: itemTotal
+                });
+            });
+            
+            // Set the orders input value as a JSON string
+            document.getElementById('orders').value = JSON.stringify(orderItems);
+            
+            // Set the total amount
+            document.getElementById('total_amount').value = totalAmount.toFixed(2);
+            
+            console.log("Order data prepared:", {
+                items: orderItems,
+                totalAmount: totalAmount.toFixed(2)
+            });
+            
+            // If there are no items, prevent submission
+            if (orderItems.length === 0) {
+                alert("Please select at least one product before submitting the order.");
+                return false;
+            }
+            
+            return true;
+        }
         });
 
         // Define updateClientInfo in global scope to ensure it's available to other functions
