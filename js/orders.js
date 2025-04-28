@@ -265,41 +265,44 @@ window.generatePONumber = function() {
             success: function(response) {
                 $('#po_number').val(response.po_number);
                 
-                // Update the company address field with the selected user's company address
+                // Get user data from the selected option
                 const selectedOption = $('#username option:selected');
-                const companyAddress = selectedOption.data('company-address');
-                const company = selectedOption.data('company');
+                const companyAddress = selectedOption.data('company-address') || '';
+                const company = selectedOption.data('company') || '';
                 
-                // Set default values for bill_to and ship_to fields
-                $('#bill_to').val(companyAddress || '');
-                $('#ship_to').val(companyAddress || '');
+                // Automatically populate all address fields
+                $('#bill_to').val(companyAddress);
+                $('#bill_to_attn').val(company);
+                $('#ship_to').val(companyAddress);
+                $('#ship_to_attn').val(company);
                 
-                // Set company name for attention fields if available
-                if (company) {
-                    $('#bill_to_attn').val(company);
-                    $('#ship_to_attn').val(company);
-                }
+                // Make address fields readonly to prevent manual editing
+                $('#bill_to').prop('readonly', true);
+                $('#bill_to_attn').prop('readonly', true);
+                $('#ship_to').prop('readonly', true);
+                $('#ship_to_attn').prop('readonly', true);
             }
         });
     }
 };
 
 window.prepareOrderData = function() {
-    // Make sure all the address fields have values
-    if (!$('#bill_to').val() && $('#username').val()) {
-        // If bill_to is empty, use the company address as a default
-        const companyAddress = $('#username option:selected').data('company-address') || '';
-        $('#bill_to').val(companyAddress);
-    }
+    // Get selected user's data
+    const selectedOption = $('#username option:selected');
+    const companyAddress = selectedOption.data('company-address') || '';
+    const company = selectedOption.data('company') || '';
     
-    if (!$('#ship_to').val() && $('#username').val()) {
-        // If ship_to is empty, use the company address as a default
-        const companyAddress = $('#username option:selected').data('company-address') || '';
-        $('#ship_to').val(companyAddress);
-    }
+    // Automatically set billing and shipping information
+    $('#bill_to').val(companyAddress);
+    $('#bill_to_attn').val(company);
+    $('#ship_to').val(companyAddress);
+    $('#ship_to_attn').val(company);
     
+    // Set order JSON data
     const orderData = JSON.stringify(selectedProducts);
     $('#orders').val(orderData);
+    
+    // Calculate and set total amount
     const totalAmount = calculateCartTotal();
     $('#total_amount').val(totalAmount.toFixed(2));
 };
@@ -510,7 +513,7 @@ $(document).ready(function() {
     });
 
     // Form submission
-    $('#addOrderForm').on('submit', function(e) {
+     $('#addOrderForm').on('submit', function(e) {
         e.preventDefault();
         
         if (selectedProducts.length === 0) {
@@ -520,10 +523,10 @@ $(document).ready(function() {
 
         prepareOrderData();
         
-        // Validate delivery address
-        const deliveryAddress = $('#delivery_address').val();
-        if (!deliveryAddress || deliveryAddress.trim() === '') {
-            alert('Please provide a delivery address');
+        // Validate ship_to address instead of delivery_address
+        const shipTo = $('#ship_to').val();
+        if (!shipTo || shipTo.trim() === '') {
+            alert('Please provide a shipping address');
             return;
         }
         
@@ -597,7 +600,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             company,
             orderDate,
             deliveryDate,
-            shipTo,  // Updated from deliveryAddress to shipTo
+            shipTo,  // This was previously deliveryAddress
             ordersJson,
             totalAmount,
             specialInstructions
@@ -607,10 +610,10 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         document.getElementById('printCompany').textContent = company || 'No Company Name';
         document.getElementById('printPoNumber').textContent = poNumber;
         document.getElementById('printUsername').textContent = username;
-        document.getElementById('printDeliveryAddress').textContent = shipTo;  // Updated to use shipTo
+        document.getElementById('printDeliveryAddress').textContent = shipTo;  // Update to use shipTo
         document.getElementById('printOrderDate').textContent = orderDate;
         document.getElementById('printDeliveryDate').textContent = deliveryDate;
-          
+        
         // Format the total amount
         document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
             minimumFractionDigits: 2,
