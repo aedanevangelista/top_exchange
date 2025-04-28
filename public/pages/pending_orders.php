@@ -189,7 +189,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 <button class="download-btn" onclick="downloadPODirectly(
@@ -537,142 +537,39 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <script>
     <?php include('../../js/order_processing.js'); ?>
 
-        // Define updateCompany function
-        function updateCompany() {
-            const usernameSelect = document.getElementById('username');
-            if (usernameSelect.selectedIndex <= 0) return; // Skip if no selection
-            
-            const selectedOption = usernameSelect.options[usernameSelect.selectedIndex];
-            const company = selectedOption.getAttribute('data-company') || '';
-            
-            // You can do something with the company value if needed
-            console.log('Company updated:', company);
-        }
-        
-        // Search functionality (client-side, same as in order_history.php)
-        $(document).ready(function() {
-            // Search functionality
-            $("#searchInput").on("input", function() {
-                let searchText = $(this).val().toLowerCase().trim();
+    // Search functionality
+    $(document).ready(function() {
+        $("#searchInput").on("input", function() {
+            let searchText = $(this).val().toLowerCase().trim();
 
-                $(".orders-table tbody tr").each(function() {
-                    let row = $(this);
-                    let text = row.text().toLowerCase();
-                    
-                    if (text.includes(searchText)) {
-                        row.show();
-                    } else {
-                        row.hide();
-                    }
-                });
-            });
-            
-            // Handle search button click (same functionality as typing)
-            $(".search-btn").on("click", function() {
-                let searchText = $("#searchInput").val().toLowerCase().trim();
+            $(".orders-table tbody tr").each(function() {
+                let row = $(this);
+                let text = row.text().toLowerCase();
                 
-                $(".orders-table tbody tr").each(function() {
-                    let row = $(this);
-                    let text = row.text().toLowerCase();
-                    
-                    if (text.includes(searchText)) {
-                        row.show();
-                    } else {
-                        row.hide();
-                    }
-                });
+                if (text.includes(searchText)) {
+                    row.show();
+                } else {
+                    row.hide();
+                }
             });
-            
-            // Initialize company field if needed
-            $('#username').change(function() {
-                updateCompany();
-                // Removed updateClientInfo() from here as it's now directly called in the select's onchange attribute
-            });
-            
-            // Make sure prepareOrderData includes company field
-            window.originalPrepareOrderData = window.prepareOrderData;
-            window.prepareOrderData = function() {
-                if (window.originalPrepareOrderData) {
-                    window.originalPrepareOrderData();
-                }
-                
-                // Ensure company is included
-                const ordersInput = document.getElementById('orders');
-                if (ordersInput.value) {
-                    try {
-                        const ordersData = JSON.parse(ordersInput.value);
-                        ordersInput.value = JSON.stringify(ordersData);
-                    } catch (e) {
-                        console.error("Error preparing order data:", e);
-                    }
-                }
-                
-                // Include special instructions in form data
-                const specialInstructions = document.getElementById('special_instructions').value;
-                if (document.getElementById('special_instructions_hidden')) {
-                    document.getElementById('special_instructions_hidden').value = specialInstructions;
-                }
-                // No need for a hidden field since the textarea already has the name attribute
-            };
         });
-
-        // Define updateClientInfo in global scope to ensure it's available to other functions
-        function updateClientInfo() {
-            const usernameSelect = document.getElementById('username');
-            if (usernameSelect.selectedIndex <= 0) return; // Skip if no selection
+        
+        // Handle search button click
+        $(".search-btn").on("click", function() {
+            let searchText = $("#searchInput").val().toLowerCase().trim();
             
-            const selectedOption = usernameSelect.options[usernameSelect.selectedIndex];
-            
-            // Get data attributes with the correct data attribute names
-            const billTo = selectedOption.getAttribute('data-bill-to') || '';
-            const billToAttn = selectedOption.getAttribute('data-bill-to-attn') || '';
-            const shipTo = selectedOption.getAttribute('data-ship-to') || '';
-            const shipToAttn = selectedOption.getAttribute('data-ship-to-attn') || '';
-            
-            // Set form values
-            document.getElementById('bill_to').value = billTo;
-            document.getElementById('bill_to_attn').value = billToAttn;
-            document.getElementById('ship_to').value = shipTo;
-            document.getElementById('ship_to_attn').value = shipToAttn;
-            
-            console.log('Auto-filling client data:', {
-                billTo: billTo,
-                billToAttn: billToAttn,
-                shipTo: shipTo, 
-                shipToAttn: shipToAttn
+            $(".orders-table tbody tr").each(function() {
+                let row = $(this);
+                let text = row.text().toLowerCase();
+                
+                if (text.includes(searchText)) {
+                    row.show();
+                } else {
+                    row.hide();
+                }
             });
-        }
-
-        // Modify the existing openAddOrderForm function if it exists in your JS
-        const originalOpenAddOrderForm = window.openAddOrderForm;
-        window.openAddOrderForm = function() {
-            if (typeof originalOpenAddOrderForm === 'function') {
-                originalOpenAddOrderForm();
-            } else {
-                document.getElementById('addOrderOverlay').style.display = 'flex';
-            }
-            
-            // Set current date for order_date
-            const today = new Date();
-            const formattedDate = today.getFullYear() + '-' + 
-                                String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-                                String(today.getDate()).padStart(2, '0');
-            document.getElementById('order_date').value = formattedDate;
-            
-            // Initialize the delivery date datepicker
-            $("#delivery_date").datepicker({
-                dateFormat: 'yy-mm-dd',
-                minDate: 0
-            });
-            
-            // Reset form fields
-            document.getElementById('username').selectedIndex = 0;
-            document.getElementById('bill_to').value = '';
-            document.getElementById('bill_to_attn').value = '';
-            document.getElementById('ship_to').value = '';
-            document.getElementById('ship_to_attn').value = '';
-            document.getElementById('special_instructions').value = '';
-        };
+        });
+    });
     </script>
 </body>
 </html>
