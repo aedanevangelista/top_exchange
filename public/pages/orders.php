@@ -967,27 +967,34 @@ function viewOrderDetails(poNumber) {
     
     console.log("Fetching details for PO:", poNumber);
     
-    // Fetch the order items
+    // Fetch the order items with better error handling
     fetch(`/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
     .then(response => {
+        console.log("Response status:", response.status);
+        
         if (!response.ok) {
-            throw new Error(`Server returned status ${response.status}`);
+            if (response.status === 500) {
+                throw new Error("Server error (500): The server encountered an internal error. Check PHP error logs for details.");
+            } else {
+                throw new Error(`Server returned status ${response.status}`);
+            }
         }
-        return response.json();
+        
+        // Try to parse JSON
+        return response.json().catch(err => {
+            throw new Error("Invalid JSON response: " + err.message);
+        });
     })
     .then(data => {
-        console.log("Server response:", data);
+        console.log("Server response data:", data);
         orderDetailsBody.innerHTML = '';
         
         if (data.success && data.orderItems) {
             try {
-                // We might need to parse the order items if they're returned as a string
                 let items = data.orderItems;
-                if (typeof items === 'string') {
-                    items = JSON.parse(items);
-                }
                 
-                if (!Array.isArray(items) || items.length === 0) {
+                // If no items, show message
+                if (items.length === 0) {
                     orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">No items found in this order</td></tr>';
                     return;
                 }
@@ -1036,7 +1043,14 @@ function viewOrderDetails(poNumber) {
     })
     .catch(error => {
         console.error("Fetch error:", error);
-        orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Network error: ${error.message}</td></tr>`;
+        orderDetailsBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align:center;padding:20px;color:red;">
+                    ${error.message}
+                    <br><br>
+                    <small>Please check server logs for more details or contact your system administrator.</small>
+                </td>
+            </tr>`;
     });
 }
         
