@@ -27,7 +27,7 @@ $sortColumn = isset($_GET['sort']) ? $_GET['sort'] : 'order_date';
 $sortOrder = isset($_GET['order']) ? $_GET['order'] : 'DESC';
 
 // Validate sort parameters
-$allowedColumns = ['po_number', 'username', 'order_date', 'delivery_date', 'total_amount', 'status'];
+$allowedColumns = ['po_number', 'username', 'order_date', 'delivery_date', 'payment_method', 'total_amount', 'status'];
 if (!in_array($sortColumn, $allowedColumns)) {
     $sortColumn = 'order_date';
 }
@@ -37,9 +37,9 @@ if (!in_array($sortOrder, $allowedOrders)) {
     $sortOrder = 'DESC';
 }
 
-// Build the SQL query with status filter - REMOVED payment_method from the SELECT statement
+// Build the SQL query with status filter
 $sql = "SELECT o.po_number, o.username, o.company, o.order_date, o.delivery_date, o.delivery_address, 
-        o.orders, o.total_amount, o.status, o.driver_assigned, 
+        o.payment_method, o.orders, o.total_amount, o.status, o.driver_assigned, 
         o.special_instructions, IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
         FROM orders o 
         LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
@@ -542,6 +542,7 @@ if ($statusResult) {
             height: 100%;
             background-color: rgba(0, 0, 0, 0.7);
             z-index: 1000;
+            display: flex;
             align-items: center;
             justify-content: center;
         }
@@ -696,7 +697,7 @@ if ($statusResult) {
                         <th class="sort-header <?= $sortColumn == 'delivery_date' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="delivery_date">Delivery Date</th>
                         <th>Delivery Address</th>
                         <th>Orders</th>
-                        <!-- Removed Payment Method column -->
+                        <th class="sort-header <?= $sortColumn == 'payment_method' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="payment_method">Payment Method</th>
                         <th>Special Instructions</th>
                         <th class="sort-header <?= $sortColumn == 'total_amount' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="total_amount">Total Amount</th>
                         <th>Driver</th>
@@ -720,7 +721,7 @@ if ($statusResult) {
                                         View Order Items
                                     </button>
                                 </td>
-                                <!-- Removed Payment Method column -->
+                                <td><?= htmlspecialchars($order['payment_method']) ?></td>
                                 <td>
                                     <?php if (!empty($order['special_instructions'])): ?>
                                         <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
@@ -773,7 +774,7 @@ if ($statusResult) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="12" style="text-align: center; padding: 20px;">No orders found with status: <?= htmlspecialchars($filterStatus) ?></td>
+                            <td colspan="13" style="text-align: center; padding: 20px;">No orders found with status: <?= htmlspecialchars($filterStatus) ?></td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -956,103 +957,104 @@ if ($statusResult) {
             window.location.href = url;
         }
         
-       // Add this function to your JavaScript
-function viewOrderDetails(poNumber) {
-    currentPoNumber = poNumber;
-    
-    // Show loading indicator
-    const orderDetailsBody = document.getElementById('orderDetailsBody');
-    orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading order details...</td></tr>';
-    document.getElementById('orderDetailsModal').style.display = 'flex';
-    
-    console.log("Fetching details for PO:", poNumber);
-    
-    // Fetch the order items with better error handling
-    fetch(`/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
-    .then(response => {
-        console.log("Response status:", response.status);
-        
-        if (!response.ok) {
-            if (response.status === 500) {
-                throw new Error("Server error (500): The server encountered an internal error. Check PHP error logs for details.");
-            } else {
-                throw new Error(`Server returned status ${response.status}`);
-            }
-        }
-        
-        // Try to parse JSON
-        return response.json().catch(err => {
-            throw new Error("Invalid JSON response: " + err.message);
-        });
-    })
-    .then(data => {
-        console.log("Server response data:", data);
-        orderDetailsBody.innerHTML = '';
-        
-        if (data.success && data.orderItems) {
-            try {
-                let items = data.orderItems;
-                
-                // If no items, show message
-                if (items.length === 0) {
-                    orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">No items found in this order</td></tr>';
-                    return;
-                }
-                
-                let totalAmount = 0;
-                
-                // Add each item to the table
-                items.forEach(item => {
-                    if (!item) return;
-                    
-                    const quantity = parseInt(item.quantity) || 0;
-                    const price = parseFloat(item.price) || 0;
-                    const itemTotal = quantity * price;
-                    totalAmount += itemTotal;
-                    
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${item.category || ''}</td>
-                        <td>${item.item_description || ''}</td>
-                        <td>${item.packaging || ''}</td>
-                        <td>PHP ${price.toFixed(2)}</td>
-                        <td>${quantity}</td>
-                        <td>PHP ${itemTotal.toFixed(2)}</td>
-                    `;
-                    orderDetailsBody.appendChild(row);
+        // Function to view order details
+        function viewOrderDetails(poNumber) {
+            currentPoNumber = poNumber;
+            
+            // Show loading indicator
+            const orderDetailsBody = document.getElementById('orderDetailsBody');
+            orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading order details...</td></tr>';
+            document.getElementById('orderDetailsModal').style.display = 'flex';
+            
+            // Add console log to see what's being sent
+            console.log("Fetching order details for PO: " + poNumber);
+            
+            // Fetch the order items
+            fetch(`/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
+            .then(response => {
+                console.log("Response status:", response.status);
+                return response.json().catch(err => {
+                    console.error("JSON parse error:", err);
+                    throw new Error("Failed to parse server response");
                 });
+            })
+            .then(data => {
+                // Log the response for debugging
+                console.log("Response data:", data);
                 
-                // Add a total row
-                const totalRow = document.createElement('tr');
-                totalRow.style.fontWeight = 'bold';
-                totalRow.innerHTML = `
-                    <td colspan="5" style="text-align: right;">Total:</td>
-                    <td>PHP ${totalAmount.toFixed(2)}</td>
-                `;
-                orderDetailsBody.appendChild(totalRow);
+                // Clear the loading message
+                orderDetailsBody.innerHTML = '';
                 
-            } catch (error) {
-                console.error("Error processing data:", error);
-                orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Error processing order data: ${error.message}</td></tr>`;
-            }
-        } else {
-            // Show the error message from the server
-            const errorMessage = data.message || 'Could not retrieve order details';
-            orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Error: ${errorMessage}</td></tr>`;
+                if (data && data.success && data.orderItems) {
+                    const orderItems = data.orderItems;
+                    
+                    try {
+                        // Parse orders if it's a string (JSON)
+                        let parsedItems = orderItems;
+                        if (typeof orderItems === 'string') {
+                            parsedItems = JSON.parse(orderItems);
+                        }
+                        
+                        // Ensure parsedItems is an array
+                        if (!Array.isArray(parsedItems)) {
+                            throw new Error("Order items is not an array");
+                        }
+                        
+                        // Check if there are any items
+                        if (parsedItems.length === 0) {
+                            orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;font-style:italic;">No items found in this order.</td></tr>';
+                            return;
+                        }
+                        
+                        let totalAmount = 0;
+                        
+                        parsedItems.forEach(item => {
+                            if (!item) return; // Skip if item is null or undefined
+                            
+                            const quantity = parseInt(item.quantity) || 0;
+                            const price = parseFloat(item.price) || 0;
+                            const itemTotal = quantity * price;
+                            totalAmount += itemTotal;
+                            
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${item.category || ''}</td>
+                                <td>${item.item_description || ''}</td>
+                                <td>${item.packaging || ''}</td>
+                                <td>PHP ${price.toFixed(2)}</td>
+                                <td>${quantity}</td>
+                                <td>PHP ${itemTotal.toFixed(2)}</td>
+                            `;
+                            orderDetailsBody.appendChild(row);
+                        });
+                        
+                        // Add a total row
+                        const totalRow = document.createElement('tr');
+                        totalRow.style.fontWeight = 'bold';
+                        totalRow.innerHTML = `
+                            <td colspan="5" style="text-align: right;">Total:</td>
+                            <td>PHP ${totalAmount.toFixed(2)}</td>
+                        `;
+                        orderDetailsBody.appendChild(totalRow);
+                    } catch (parseError) {
+                        console.error("Error processing order items:", parseError);
+                        orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error processing order data: ${parseError.message}</td></tr>`;
+                        showToast('Error processing order data: ' + parseError.message, 'error');
+                    }
+                } else {
+                    // Handle when the API returns success: false or missing orderItems array
+                    let errorMessage = (data && data.message) ? data.message : 'Could not retrieve order details';
+                    orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${errorMessage}</td></tr>`;
+                    
+                    showToast('Error: ' + errorMessage, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching order details:', error);
+                orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${error.message}</td></tr>`;
+                showToast('Error: ' + error.message, 'error');
+            });
         }
-    })
-    .catch(error => {
-        console.error("Fetch error:", error);
-        orderDetailsBody.innerHTML = `
-            <tr>
-                <td colspan="6" style="text-align:center;padding:20px;color:red;">
-                    ${error.message}
-                    <br><br>
-                    <small>Please check server logs for more details or contact your system administrator.</small>
-                </td>
-            </tr>`;
-    });
-}
         
         function closeOrderDetailsModal() {
             document.getElementById('orderDetailsModal').style.display = 'none';
