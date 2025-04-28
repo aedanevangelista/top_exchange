@@ -592,29 +592,52 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             // Make sure prepareOrderData includes company field
             window.originalPrepareOrderData = window.prepareOrderData;
             window.prepareOrderData = function() {
-                if (window.originalPrepareOrderData) {
-                    window.originalPrepareOrderData();
-                }
-                
-                // Ensure company is included
-                const ordersInput = document.getElementById('orders');
-                if (ordersInput.value) {
-                    try {
-                        const ordersData = JSON.parse(ordersInput.value);
-                        ordersInput.value = JSON.stringify(ordersData);
-                    } catch (e) {
-                        console.error("Error preparing order data:", e);
-                    }
-                }
-                
-                // Include special instructions in form data
-                const specialInstructions = document.getElementById('special_instructions').value;
-                if (document.getElementById('special_instructions_hidden')) {
-                    document.getElementById('special_instructions_hidden').value = specialInstructions;
-                }
-                // No need for a hidden field since the textarea already has the name attribute
-            };
+    console.log("Preparing order data with products:", selectedProducts);
+    
+    // Debug check - if selectedProducts is empty, try to recover from the summary table
+    if (!selectedProducts || selectedProducts.length === 0) {
+        console.warn("selectedProducts array is empty - attempting to recover from summary table");
+        
+        // Create a temporary array to hold recovered products
+        const recoveredProducts = [];
+        
+        // Loop through each row in the summary table
+        $('#summaryBody tr').each(function() {
+            const row = $(this);
+            const category = row.find('td:eq(0)').text().trim();
+            const itemDescription = row.find('td:eq(1)').text().trim();
+            const packaging = row.find('td:eq(2)').text().trim();
+            const price = parseFloat(row.find('td:eq(3)').text().replace('PHP ', '').trim());
+            const quantity = parseInt(row.find('.summary-quantity').val(), 10);
+            
+            recoveredProducts.push({
+                category: category,
+                item_description: itemDescription,
+                packaging: packaging,
+                price: price,
+                quantity: quantity
+            });
         });
+        
+        if (recoveredProducts.length > 0) {
+            selectedProducts = recoveredProducts;
+            console.log("Recovered products from summary table:", selectedProducts);
+        }
+    }
+    
+    // Convert selectedProducts array to JSON string and store in hidden input
+    const orderData = JSON.stringify(selectedProducts);
+    $('#orders').val(orderData);
+    
+    // Calculate and store total amount
+    const totalAmount = calculateCartTotal();
+    $('#total_amount').val(totalAmount.toFixed(2));
+    
+    console.log("Final order data:", {
+        orders: $('#orders').val(),
+        total_amount: $('#total_amount').val()
+    });
+};
 
         // Define updateClientInfo in global scope to ensure it's available to other functions
         function updateClientInfo() {
