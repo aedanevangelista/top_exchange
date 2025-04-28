@@ -288,9 +288,27 @@ window.generatePONumber = function() {
 
 
 window.prepareOrderData = function() {
-    // Update delivery address based on the selected type
+    // Make sure selectedProducts is properly formatted
+    if (!Array.isArray(selectedProducts) || selectedProducts.length === 0) {
+        console.error('Selected products is empty or not an array!');
+        return;
+    }
     
-    const orderData = JSON.stringify(selectedProducts);
+    // Verify each product has the required fields
+    const validProducts = selectedProducts.map(product => {
+        return {
+            product_id: product.product_id,
+            category: product.category || '',
+            item_description: product.item_description || '',
+            packaging: product.packaging || '',
+            price: parseFloat(product.price) || 0,
+            quantity: parseInt(product.quantity) || 0
+        };
+    });
+    
+    const orderData = JSON.stringify(validProducts);
+    console.log('Prepared order data:', orderData);
+    
     $('#orders').val(orderData);
     const totalAmount = calculateCartTotal();
     $('#total_amount').val(totalAmount.toFixed(2));
@@ -522,7 +540,11 @@ $('#addOrderForm').on('submit', function(e) {
         return;
     }
 
+    // Call prepareOrderData FIRST to ensure data is properly formatted
     prepareOrderData();
+    
+    // Debug: Check what's being sent
+    console.log('Orders being sent:', $('#orders').val());
     
     // Validate ship_to as the delivery address field
     const shipTo = $('#ship_to').val();
