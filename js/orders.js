@@ -421,6 +421,8 @@ window.generatePONumber = function() {
             data: { username: username },
             success: function(response) {
                 $('#po_number').val(response.po_number);
+                
+                updateClientInfo(); // Call updateClientInfo to populate form fields
             }
         });
     }
@@ -430,13 +432,13 @@ window.prepareOrderData = function() {
     // Make sure all the address fields have values
     if (!$('#bill_to').val() && $('#username').val()) {
         // If bill_to is empty, use the company address as a default
-        const companyAddress = $('#username option:selected').data('company-address') || '';
+        const companyAddress = $('#username option:selected').attr('data-company-address') || '';
         $('#bill_to').val(companyAddress);
     }
     
     if (!$('#ship_to').val() && $('#username').val()) {
         // If ship_to is empty, use the company address as a default
-        const companyAddress = $('#username option:selected').data('company-address') || '';
+        const companyAddress = $('#username option:selected').attr('data-company-address') || '';
         $('#ship_to').val(companyAddress);
     }
     
@@ -446,14 +448,14 @@ window.prepareOrderData = function() {
     $('#total_amount').val(totalAmount.toFixed(2));
 };
 
-window.viewOrderDetails = function(orders) {
+window.viewOrderDetails = function(ordersJson) {
     try {
         // Make sure the orders variable is properly parsed
         let orderDetails;
-        if (typeof orders === 'string') {
-            orderDetails = JSON.parse(orders);
+        if (typeof ordersJson === 'string') {
+            orderDetails = JSON.parse(ordersJson);
         } else {
-            orderDetails = orders; // Already an object
+            orderDetails = ordersJson; // Already an object
         }
 
         // Check if orderDetails is an array
@@ -507,6 +509,10 @@ window.openAddOrderForm = function() {
     document.getElementById('ship_to').value = '';
     document.getElementById('ship_to_attn').value = '';
     document.getElementById('special_instructions').value = '';
+    
+    // Reset selected products
+    selectedProducts = [];
+    updateOrderSummary();
 };
 
 window.closeAddOrderForm = function() {
@@ -882,6 +888,7 @@ $(document).ready(function() {
             return;
         }
 
+        // Prepare order data before submitting
         prepareOrderData();
         
         // Validate ship_to as the delivery address field
@@ -954,6 +961,38 @@ $(document).ready(function() {
         if (parseInt(this.value) > 200) {
             this.value = 200;
         }
+    });
+    
+    // Search functionality
+    $("#searchInput").on("input", function() {
+        let searchText = $(this).val().toLowerCase().trim();
+
+        $(".orders-table tbody tr").each(function() {
+            let row = $(this);
+            let text = row.text().toLowerCase();
+            
+            if (text.includes(searchText)) {
+                row.show();
+            } else {
+                row.hide();
+            }
+        });
+    });
+    
+    // Handle search button click
+    $(".search-btn").on("click", function() {
+        let searchText = $("#searchInput").val().toLowerCase().trim();
+        
+        $(".orders-table tbody tr").each(function() {
+            let row = $(this);
+            let text = row.text().toLowerCase();
+            
+            if (text.includes(searchText)) {
+                row.show();
+            } else {
+                row.hide();
+            }
+        });
     });
     
     // Close modal when clicking outside
