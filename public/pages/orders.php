@@ -27,7 +27,7 @@ $sortColumn = isset($_GET['sort']) ? $_GET['sort'] : 'order_date';
 $sortOrder = isset($_GET['order']) ? $_GET['order'] : 'DESC';
 
 // Validate sort parameters
-$allowedColumns = ['po_number', 'username', 'order_date', 'delivery_date', 'payment_method', 'total_amount', 'status'];
+$allowedColumns = ['po_number', 'username', 'order_date', 'delivery_date', 'total_amount', 'status'];
 if (!in_array($sortColumn, $allowedColumns)) {
     $sortColumn = 'order_date';
 }
@@ -37,9 +37,9 @@ if (!in_array($sortOrder, $allowedOrders)) {
     $sortOrder = 'DESC';
 }
 
-// Build the SQL query with status filter
+// Build the SQL query with status filter - REMOVED payment_method from the SELECT statement
 $sql = "SELECT o.po_number, o.username, o.company, o.order_date, o.delivery_date, o.delivery_address, 
-        o.payment_method, o.orders, o.total_amount, o.status, o.driver_assigned, 
+        o.orders, o.total_amount, o.status, o.driver_assigned, 
         o.special_instructions, IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
         FROM orders o 
         LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
@@ -542,7 +542,6 @@ if ($statusResult) {
             height: 100%;
             background-color: rgba(0, 0, 0, 0.7);
             z-index: 1000;
-            display: flex;
             align-items: center;
             justify-content: center;
         }
@@ -697,7 +696,7 @@ if ($statusResult) {
                         <th class="sort-header <?= $sortColumn == 'delivery_date' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="delivery_date">Delivery Date</th>
                         <th>Delivery Address</th>
                         <th>Orders</th>
-                        <th class="sort-header <?= $sortColumn == 'payment_method' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="payment_method">Payment Method</th>
+                        <!-- Removed Payment Method column -->
                         <th>Special Instructions</th>
                         <th class="sort-header <?= $sortColumn == 'total_amount' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="total_amount">Total Amount</th>
                         <th>Driver</th>
@@ -721,7 +720,7 @@ if ($statusResult) {
                                         View Order Items
                                     </button>
                                 </td>
-                                <td><?= htmlspecialchars($order['payment_method']) ?></td>
+                                <!-- Removed Payment Method column -->
                                 <td>
                                     <?php if (!empty($order['special_instructions'])): ?>
                                         <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
@@ -774,7 +773,7 @@ if ($statusResult) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="13" style="text-align: center; padding: 20px;">No orders found with status: <?= htmlspecialchars($filterStatus) ?></td>
+                            <td colspan="12" style="text-align: center; padding: 20px;">No orders found with status: <?= htmlspecialchars($filterStatus) ?></td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
