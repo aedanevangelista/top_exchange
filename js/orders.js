@@ -279,18 +279,19 @@ window.generatePONumber = function() {
     }
 };
 
-// Updated prepareOrderData function
 window.prepareOrderData = function() {
+    // Update delivery address based on the selected type
+    const addressType = $('#delivery_address_type').val();
+    if (addressType === 'company') {
+        $('#delivery_address').val($('#company_address').val());
+    } else {
+        $('#delivery_address').val($('#custom_address').val());
+    }
+    
     const orderData = JSON.stringify(selectedProducts);
     $('#orders').val(orderData);
     const totalAmount = calculateCartTotal();
     $('#total_amount').val(totalAmount.toFixed(2));
-    
-    // Include special instructions in form data
-    const specialInstructions = $('#special_instructions').val();
-    $('#special_instructions_hidden').val(specialInstructions);
-    
-    // No need to set delivery_address since we're using bill_to and ship_to directly
 };
 
 window.viewOrderDetails = function(orders) {
@@ -500,63 +501,50 @@ $(document).ready(function() {
 
     // Form submission
     $('#addOrderForm').on('submit', function(e) {
-    e.preventDefault();
-    
-    if (selectedProducts.length === 0) {
-        alert('Please add products to your order');
-        return;
-    }
-
-    prepareOrderData();
-    
-    // Check if we have either billing or shipping info
-    const billTo = $('#bill_to').val();
-    const shipTo = $('#ship_to').val();
-    
-    if ((!billTo || billTo.trim() === '') && (!shipTo || shipTo.trim() === '')) {
-        alert('No address information available. Please select a different user with address information.');
-        return;
-    }
-    
-    // Validate other required fields
-    if (!$('#username').val()) {
-        alert('Please select a username');
-        return;
-    }
-    
-    if (!$('#po_number').val()) {
-        alert('PO number is missing. Please try again.');
-        return;
-    }
-    
-    // Disable the save button to prevent multiple submissions
-    $('.save-btn').prop('disabled', true);
-    
-    // Submit the form via AJAX
-    $.ajax({
-        url: $(this).attr('action'),
-        type: 'POST',
-        data: $(this).serialize(),
-        dataType: 'json',
-        success: function(response) {
-            if (response.success) {
-                showToast('Order added successfully!', 'success');
-                setTimeout(function() {
-                    location.reload();
-                }, 1500);
-            } else {
-                $('.save-btn').prop('disabled', false);
-                alert('Error: ' + response.message);
-            }
-        },
-        error: function(xhr, status, error) {
-            $('.save-btn').prop('disabled', false);
-            console.error("Form submission error:", status, error);
-            console.error("Server response:", xhr.responseText);
-            alert('Error submitting order. Please try again. Details: ' + error);
+        e.preventDefault();
+        
+        if (selectedProducts.length === 0) {
+            alert('Please add products to your order');
+            return;
         }
+
+        prepareOrderData();
+        
+        // Validate delivery address
+        const deliveryAddress = $('#delivery_address').val();
+        if (!deliveryAddress || deliveryAddress.trim() === '') {
+            alert('Please provide a delivery address');
+            return;
+        }
+        
+        // Show a toast notification when saving the order
+        const poNumber = $('#po_number').val();
+        const username = $('#username').val();
+        
+        if (poNumber && username) {
+            showToast(`The order: ${poNumber} has been created for ${username}.`, 'success');
+        }
+
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Wait a moment for the toast to be visible before reloading
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Error submitting order. Please try again.');
+            }
+        });
     });
-});
     
     // Category filter change handler
     $('#inventoryFilter').on('change', function() {

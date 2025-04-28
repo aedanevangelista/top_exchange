@@ -19,26 +19,21 @@ if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
     $sort_direction = 'DESC'; // Default to descending
 }
 
-// Fetch active clients for the dropdown with their address information
+// Fetch active clients for the dropdown
 $clients = [];
-$clients_with_addresses = []; // Array to store clients with their address info
+$clients_with_company_address = []; // Array to store clients with their company addresses
 $clients_with_company = []; // Array to store clients with their company names
 
-$stmt = $conn->prepare("SELECT username, company, bill_to, bill_to_attn, ship_to, ship_to_attn FROM clients_accounts WHERE status = 'active'");
+$stmt = $conn->prepare("SELECT username, company_address, company FROM clients_accounts WHERE status = 'active'");
 if ($stmt === false) {
     die('Prepare failed: ' . htmlspecialchars($conn->error));
 }
 $stmt->execute();
-$result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $clients[] = $row['username'];
-    $clients_with_addresses[$row['username']] = [
-        'bill_to' => $row['bill_to'],
-        'bill_to_attn' => $row['bill_to_attn'],
-        'ship_to' => $row['ship_to'],
-        'ship_to_attn' => $row['ship_to_attn']
-    ];
-    $clients_with_company[$row['username']] = $row['company'];
+$stmt->bind_result($username, $company_address, $company);
+while ($stmt->fetch()) {
+    $clients[] = $username;
+    $clients_with_company_address[$username] = $company_address;
+    $clients_with_company[$username] = $company;
 }
 $stmt->close();
 
@@ -46,8 +41,8 @@ $stmt->close();
 $orders = []; // Initialize $orders as an empty array
 
 // Modified query to join with clients_accounts to get the company information
-$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.orders, o.total_amount, o.status, 
-        o.special_instructions, o.bill_to, o.bill_to_attn, o.ship_to, o.ship_to_attn, COALESCE(o.company, c.company) as company
+$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, 
+        o.special_instructions, COALESCE(o.company, c.company) as company
         FROM orders o
         LEFT JOIN clients_accounts c ON o.username = c.username
         WHERE o.status = 'Pending'";
@@ -96,7 +91,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <title>Pending Orders</title>
     <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="/css/sidebar.css">
-    <link rel="stylesheet" href="/css/pending_orders.css">
     <link rel="stylesheet" href="/css/toast.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
@@ -105,41 +99,654 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <!-- HTML2PDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>    
     <style>
-      /* Styles for address display */
-      .address-info-container {
-          border: 1px solid #ddd;
-          border-radius: 5px;
-          padding: 10px;
-          margin-bottom: 20px;
-          background-color: #f9f9f9;
-      }
-      
-      .address-display {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 20px;
-      }
-      
-      .address-display .address-section {
-          flex: 1;
-          min-width: 250px;
-      }
-      
-      .address-display h4 {
-          margin-top: 0;
-          border-bottom: 1px solid #ddd;
-          padding-bottom: 5px;
-          color: #333;
-      }
-      
-      .address-display p {
-          margin: 5px 0;
-      }
-      
-      .address-display .no-info {
-          color: #888;
-          font-style: italic;
-      }
+        /* Main styles for the Order Summary table */
+        .order-summary {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        
+        /* Make the table properly aligned */
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        
+        /* Apply proper scrolling to tbody only */
+        .summary-table tbody {
+            display: block;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        /* Make table header and rows consistent */
+        .summary-table thead, 
+        .summary-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        
+        /* Account for scrollbar width in header */
+        .summary-table thead {
+            width: calc(100% - 17px);
+        }
+        
+        /* Cell styling for proper alignment and text overflow */
+        .summary-table th,
+        .summary-table td {
+            padding: 8px;
+            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border: 1px solid #ddd;
+        }
+        
+        /* Specify consistent column widths */
+        .summary-table th:nth-child(1),
+        .summary-table td:nth-child(1) {
+            width: 18%;
+        }
+        
+        .summary-table th:nth-child(2),
+        .summary-table td:nth-child(2) {
+            width: 26%;
+        }
+        
+        .summary-table th:nth-child(3),
+        .summary-table td:nth-child(3) {
+            width: 18%;
+        }
+        
+        .summary-table th:nth-child(4),
+        .summary-table td:nth-child(4) {
+            width: 18%;
+        }
+        
+        .summary-table th:nth-child(5),
+        .summary-table td:nth-child(5) {
+            width: 20%;
+        }
+        
+        /* Style for the total section */
+        .summary-total {
+            margin-top: 10px;
+            text-align: right;
+            font-weight: bold;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        
+        /* Style for quantity input fields */
+        .summary-quantity {
+            width: 80px;
+            max-width: 100%;
+            text-align: center;
+        }
+        
+        /* Search Container Styling (exactly as in order_history.php) */
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-container input {
+            padding: 8px 12px;
+            border-radius: 20px 0 0 20px;
+            border: 1px solid #ddd;
+            font-size: 12px;
+            width: 220px;
+        }
+
+        .search-container .search-btn {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 0 20px 20px 0;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .search-container .search-btn:hover {
+            background-color: #2471a3;
+        }
+        
+        .orders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        /* Materials table styling */
+        .raw-materials-container {
+            overflow: visible;
+        }
+        
+        .raw-materials-container h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .materials-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        
+        .materials-table tbody {
+            display: block;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+
+        .materials-table thead, 
+        .materials-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .materials-table th,
+        .materials-table td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        .materials-table thead {
+            background-color: #f2f2f2;
+            display: table;
+            width: calc(100% - 17px); /* Adjust for scrollbar width */
+            table-layout: fixed;
+        }   
+
+        .modal-content {
+            max-height: none;
+            overflow-y: visible;
+            padding-bottom: 20px;
+        }
+            <table class="cart-table
+        
+        .materials-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .material-sufficient {
+            color: #28a745;
+        }
+        
+        .material-insufficient {
+            color: #dc3545;
+        }
+        
+        .materials-status {
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .status-sufficient {
+            background-color: #d4edda;
+            color: #155724;
+            font-size: 16px;
+        }
+        
+        .status-insufficient {
+            background-color: #f8d7da;
+            color: #721c24;
+            font-size: 16px;
+        }
+        
+        /* Status modal buttons */
+        .status-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .modal-status-btn {
+            padding: 10px 20px;
+            border-radius: 40px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .modal-status-btn.active {
+            background-color: #ffc107;
+            color: white;
+        }
+
+        .modal-status-btn.active:hover {
+            background-color:rgb(202, 154, 10);
+            color: white;
+        }
+        
+        .modal-status-btn.reject {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .modal-status-btn.reject:hover {
+            background-color:rgb(138, 23, 35);
+            color: white;
+        }
+        
+        .modal-status-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .modal-footer {
+            margin-top: 8px;
+            text-align: right;
+        }
+        
+        .modal-cancel-btn {
+            padding: 8px 15px;
+            border-radius: 40px;
+            border: 1px solid #ddd;
+            background-color:rgb(43, 43, 43);
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .modal-cancel-btn:hover {
+            background-color:rgb(61, 61, 61);
+        }
+        
+        /* Sortable table headers */
+        th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px; /* Space for the icon */
+            user-select: none;
+        }
+
+        th.sortable a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        th.sortable .fas {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+        }
+
+        th.sortable:hover {
+            background-color:rgb(51, 51, 51);
+        }
+
+        th.sortable .fa-sort-up,
+        th.sortable .fa-sort-down {
+            color:rgb(255, 255, 255);
+        }
+        
+        /* Download button styles */
+        .download-btn {
+            padding: 6px 12px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        
+        .download-btn:hover {
+            background-color: #138496;
+        }
+        
+        .download-btn i {
+            margin-right: 5px;
+        }
+        
+        /* PO PDF layout */
+        .po-container {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+        }
+        
+        .po-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .po-company {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .po-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        
+        .po-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .po-left, .po-right {
+            width: 48%;
+        }
+        
+        .po-detail-row {
+            margin-bottom: 10px;
+        }
+        
+        .po-detail-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 120px;
+        }
+        
+        .po-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        .po-table th, .po-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .po-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .po-total {
+            text-align: right;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        
+        .po-signature {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 50px;
+        }
+        
+        .po-signature-block {
+            width: 40%;
+            text-align: center;
+        }
+        
+        .po-signature-line {
+            border-bottom: 1px solid #000;
+            margin-bottom: 10px;
+            padding-top: 40px;
+        }
+        
+        #pdfPreview {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow: auto;
+        }
+        
+        .pdf-container {
+            background-color: white;
+            width: 80%;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        .close-pdf {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 18px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #333;
+        }
+        
+        .pdf-actions {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .download-pdf-btn {
+            padding: 10px 20px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+    .instructions-btn {
+        padding: 6px 12px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        min-width: 60px;
+        text-align: center;
+    }
+
+    .instructions-btn:hover {
+        background-color: #218838;
+    }
+    
+    .instructions-btn i {
+        margin-right: 5px;
+    }
+    
+    .no-instructions {
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    /* Special Instructions Modal */
+    .instructions-modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.7);
+    }
+    
+    .instructions-modal-content {
+        background-color: #ffffff;
+        margin: 10% auto;
+        padding: 0;
+        border-radius: 8px;
+        width: 60%;
+        max-width: 600px;
+        position: relative;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        animation: modalFadeIn 0.3s ease-in-out;
+        overflow: hidden;
+        max-height: 90vh; /* 90% of the viewport height */
+        overflow-y: auto; /* Add scroll if content exceeds max height */
+        margin: 2vh auto; /* Center vertically with 5% top margin */
+    }
+
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .close-instructions {
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        font-size: 18px;
+        color: white;
+        opacity: 0.8;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        width: 25px;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    
+    .close-instructions:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+        opacity: 1;
+    }
+    
+    .instructions-header {
+        background-color: #2980b9;
+        color: white;
+        padding: 15px 20px;
+        position: relative;
+    }
+
+    .instructions-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .instructions-po-number {
+        font-size: 12px;
+        margin-top: 5px;
+        opacity: 0.9;
+    }
+    
+    .instructions-body {
+        padding: 20px;
+        max-height: 300px;
+        overflow-y: auto;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #eaeaea;
+    }
+    
+    .instructions-body.empty {
+        color: #6c757d;
+        font-style: italic;
+        text-align: center;
+        padding: 40px 20px;
+    }
+    
+    .instructions-footer {
+        padding: 15px 20px;
+        text-align: right;
+        background-color: #ffffff;
+    }
+    
+    .close-instructions-btn {
+        background-color: #2980b9;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: background-color 0.2s;
+    }
+    
+    .close-instructions-btn:hover {
+        background-color: #2471a3;
+    }
+    
+    /* Make button look consistent with other buttons */
+    .instructions-btn {
+        padding: 6px 12px;
+        background-color: #2980b9;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        min-width: 60px;
+        text-align: center;
+        transition: background-color 0.2s;
+    }
+    
+    .instructions-btn:hover {
+        background-color: #2471a3;
+    }
+    
+    .no-instructions {
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    /* Style for the special instructions textarea */
+    #special_instructions {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        resize: vertical; /* Allow vertical resizing only */
+        font-family: inherit;
+        margin-bottom: 15px;
+    }
+
+    /* Update overlay-content max height */
+    .overlay-content {
+        max-height: 90vh; /* 90% of the viewport height */
+        overflow-y: auto; /* Add scroll if content exceeds max height */
+    }
+
+    #contentToDownload {
+        font-size: 14px; /* Adjust this value based on the original font size minus 2px */
+    }
+
+    #contentToDownload .po-table {
+        font-size: 12px; /* Adjust this value based on the original font size minus 2px */
+    }
+
+    /* Adjust other elements if needed */
+    #contentToDownload .po-title {
+        font-size: 16px; /* Original was 18px */
+    }
+
+    #contentToDownload .po-company {
+        font-size: 20px; /* Original was 22px */
+    }
+
+    #contentToDownload .po-total {
+        font-size: 12px; /* Original was 14px */
+    }
     </style>
 </head>
 <body>
@@ -186,7 +793,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 Delivery Date <?= getSortIcon('delivery_date', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
-                        <th>Address Info</th>
+                        <th>Delivery Address</th>
                         <th>Orders</th>
                         <th class="sortable">
                             <a href="<?= getSortUrl('total_amount', $sort_column, $sort_direction) ?>">
@@ -206,52 +813,38 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['company'] ?: 'No Company') ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
-                                <td>
-                                    <button class="view-address-btn" onclick="viewAddressInfo(
-                                        '<?= htmlspecialchars(addslashes($order['bill_to'] ?? 'N/A')) ?>',
-                                        '<?= htmlspecialchars(addslashes($order['bill_to_attn'] ?? '')) ?>',
-                                        '<?= htmlspecialchars(addslashes($order['ship_to'] ?? 'N/A')) ?>',
-                                        '<?= htmlspecialchars(addslashes($order['ship_to_attn'] ?? '')) ?>'
-                                    )">
-                                        <i class="fas fa-eye"></i> View
-                                    </button>
-                                </td>
-                                <td>
-                                    <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
-                                        <i class="fas fa-clipboard-list"></i> Orders
-                                    </button>
-                                </td>
+                                <td><?= htmlspecialchars($order['delivery_address']) ?></td>
+                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
+                                <i class="fas fa-clipboard-list"></i>    
+                                Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <!-- Add Special Instructions column with view button -->
                                 <td>
                                     <?php if (!empty($order['special_instructions'])): ?>
                                         <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
-                                            <i class="fas fa-comment"></i> View
+                                            View
                                         </button>
                                     <?php else: ?>
                                         <span class="no-instructions">None</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 <button class="download-btn" onclick="downloadPODirectly(
-                                '<?= htmlspecialchars($order['po_number']) ?>', 
-                                '<?= htmlspecialchars($order['username']) ?>', 
-                                '<?= htmlspecialchars($order['company']) ?>', 
-                                '<?= htmlspecialchars($order['order_date']) ?>', 
-                                '<?= htmlspecialchars($order['delivery_date']) ?>', 
-                                '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
-                                '<?= htmlspecialchars($order['total_amount']) ?>', 
-                                '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>',
-                                '<?= htmlspecialchars(addslashes($order['bill_to'] ?? '')) ?>',
-                                '<?= htmlspecialchars(addslashes($order['bill_to_attn'] ?? '')) ?>',
-                                '<?= htmlspecialchars(addslashes($order['ship_to'] ?? '')) ?>',
-                                '<?= htmlspecialchars(addslashes($order['ship_to_attn'] ?? '')) ?>'
-                            )">
-                                <i class="fas fa-file-pdf"></i> Download PDF
-                            </button>
+                                    '<?= htmlspecialchars($order['po_number']) ?>', 
+                                    '<?= htmlspecialchars($order['username']) ?>', 
+                                    '<?= htmlspecialchars($order['company']) ?>', 
+                                    '<?= htmlspecialchars($order['order_date']) ?>', 
+                                    '<?= htmlspecialchars($order['delivery_date']) ?>', 
+                                    '<?= htmlspecialchars($order['delivery_address']) ?>', 
+                                    '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
+                                    '<?= htmlspecialchars($order['total_amount']) ?>', 
+                                    '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
+                                )">
+                                    <i class="fas fa-file-pdf"></i> Download PDF
+                                </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -273,7 +866,76 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         <div class="pdf-container">
             <button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button>
             <div id="contentToDownload">
-                <!-- PDF content here -->
+                <div class="po-container">
+                    <div class="po-header">
+                        <div class="po-company" id="printCompany"></div>
+                        <div class="po-title">Purchase Order</div>
+                    </div>
+                    
+                    <div class="po-details">
+                        <div class="po-left">
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">PO Number:</span>
+                                <span id="printPoNumber"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Username:</span>
+                                <span id="printUsername"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Delivery Address:</span>
+                                <span id="printDeliveryAddress"></span>
+                            </div>
+                            <div class="po-detail-row" id="printInstructionsSection">
+                                <span class="po-detail-label">Special Instructions:</span>
+                                <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="po-right">
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Order Date:</span>
+                                <span id="printOrderDate"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Delivery Date:</span>
+                                <span id="printDeliveryDate"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <table class="po-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Product</th>
+                                <th>Packaging</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="printOrderItems">
+                            <!-- Items will be populated here -->
+                        </tbody>
+                    </table>
+                    
+                    <div class="po-total">
+                        Total Amount: PHP <span id="printTotalAmount"></span>
+                    </div>
+                    
+                    <div class="po-signature">
+                        <div class="po-signature-block">
+                            <div class="po-signature-line"></div>
+                            <div>Authorized by</div>
+                        </div>
+                        
+                        <div class="po-signature-block">
+                            <div class="po-signature-line"></div>
+                            <div>Received by</div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="pdf-actions">
                 <button class="download-pdf-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button>
@@ -288,15 +950,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber(); loadClientAddressInfo(this.value);">
+                    <select id="username" name="username" required onchange="generatePONumber();">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
-                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>"
-                                data-bill-to="<?= htmlspecialchars($clients_with_addresses[$client]['bill_to'] ?? '') ?>"
-                                data-bill-to-attn="<?= htmlspecialchars($clients_with_addresses[$client]['bill_to_attn'] ?? '') ?>"
-                                data-ship-to="<?= htmlspecialchars($clients_with_addresses[$client]['ship_to'] ?? '') ?>"
-                                data-ship-to-attn="<?= htmlspecialchars($clients_with_addresses[$client]['ship_to_attn'] ?? '') ?>">
+                                data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
+                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>">
                                 <?= htmlspecialchars($client) ?>
                             </option>
                         <?php endforeach; ?>
@@ -307,18 +966,22 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <label for="delivery_date">Delivery Date:</label>
                     <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
                     
-                    <!-- Address information section - Read-only display of client address -->
-                    <h3>Address Information</h3>
-                    <div id="address-info" class="address-info-container">
-                        <p>Client address information will be loaded when a username is selected.</p>
+                    <!-- New Delivery Address selection -->
+                    <label for="delivery_address_type">Delivery Address:</label>
+                    <select id="delivery_address_type" name="delivery_address_type" onchange="toggleDeliveryAddress()">
+                        <option value="company">Company Address</option>
+                        <option value="custom">Custom Address</option>
+                    </select>
+                    
+                    <div id="company_address_container">
+                        <input type="text" id="company_address" name="company_address" readonly placeholder="Company address will appear here">
                     </div>
                     
-                    <!-- Hidden fields to store address info -->
-                    <input type="hidden" name="bill_to" id="bill_to">
-                    <input type="hidden" name="bill_to_attn" id="bill_to_attn">
-                    <input type="hidden" name="ship_to" id="ship_to">
-                    <input type="hidden" name="ship_to_attn" id="ship_to_attn">
+                    <div id="custom_address_container" style="display: none;">
+                        <textarea id="custom_address" name="custom_address" rows="3" placeholder="Enter delivery address"></textarea>
+                    </div>
                     
+                    <input type="hidden" name="delivery_address" id="delivery_address">
                     <input type="hidden" name="special_instructions" id="special_instructions_hidden">
                     <!-- Add special instructions field -->
                     <label for="special_instructions">Special Instructions:</label>
@@ -354,16 +1017,16 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <input type="hidden" name="total_amount" id="total_amount">
                 </div>
                 <div class="form-buttons">
+
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
-                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
                 </div>
             </form>
         </div>
     </div>
 
-    
     <!-- Inventory Overlay for Selecting Products -->
     <div id="inventoryOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
@@ -512,124 +1175,584 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
-    <!-- Address Info Modal - Similar to accounts_clients.php -->
-    <div id="addressInfoModal" class="overlay" style="display: none;">
-        <div class="info-modal-content">
-            <div class="info-modal-header">
-                <h2><i class="fas fa-map-marker-alt"></i> Address Information</h2>
-                <span class="info-modal-close" onclick="closeAddressInfoModal()">&times;</span>
-            </div>
-            
-            <div class="info-modal-body">
-                <div class="info-section">
-                    <h3 class="info-section-title"><i class="fas fa-file-invoice"></i> Billing Information</h3>
-                    <table class="info-table">
-                        <tr>
-                            <th>Bill To Address</th>
-                            <td id="modalBillTo"></td>
-                        </tr>
-                        <tr id="billToAttnRow">
-                            <th>Attention To</th>
-                            <td class="attention-cell">
-                                <i class="fas fa-user"></i>
-                                <span id="modalBillToAttn"></span>
-                            </td>
-                        </tr>
-                    </table>
-                    <div id="noBillingInfo" class="empty-notice" style="display: none;">
-                        No billing address information provided.
-                    </div>
-                </div>
-                
-                <div class="info-section">
-                    <h3 class="info-section-title"><i class="fas fa-shipping-fast"></i> Shipping Information</h3>
-                    <table class="info-table">
-                        <tr>
-                            <th>Ship To Address</th>
-                            <td id="modalShipTo"></td>
-                        </tr>
-                        <tr id="shipToAttnRow">
-                            <th>Attention To</th>
-                            <td class="attention-cell">
-                                <i class="fas fa-user"></i>
-                                <span id="modalShipToAttn"></span>
-                            </td>
-                        </tr>
-                    </table>
-                    <div id="noShippingInfo" class="empty-notice" style="display: none;">
-                        No shipping address information provided.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="/js/orders.js"></script>
-    <script src="/js/pending_orders.js"></script>
+    <script>
+    // Variables to store the current PO for PDF generation
+    let currentPOData = null;
+    
+function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+    try {
+        // Store current PO data
+        currentPOData = {
+            poNumber,
+            username,
+            company,
+            orderDate,
+            deliveryDate,
+            deliveryAddress,
+            ordersJson,
+            totalAmount,
+            specialInstructions  // Keep storing this in case you need it elsewhere
+        };
+        
+        // Populate the hidden PDF content silently
+        document.getElementById('printCompany').textContent = company || 'No Company Name';
+        document.getElementById('printPoNumber').textContent = poNumber;
+        document.getElementById('printUsername').textContent = username;
+        document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
+        document.getElementById('printOrderDate').textContent = orderDate;
+        document.getElementById('printDeliveryDate').textContent = deliveryDate;
+        
+        // Format the total amount
+        document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        
+        // Hide special instructions section completely regardless of content
+        const instructionsSection = document.getElementById('printInstructionsSection');
+        instructionsSection.style.display = 'none';
+        
+        // Parse and populate order items
+        const orderItems = JSON.parse(ordersJson);
+        const orderItemsBody = document.getElementById('printOrderItems');
+        
+        // Clear previous content
+        orderItemsBody.innerHTML = '';
+        
+        // Add items to the table
+        orderItems.forEach(item => {
+            const row = document.createElement('tr');
+            
+            // Calculate item total
+            const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+            
+            row.innerHTML = `
+                <td>${item.category || ''}</td>
+                <td>${item.item_description}</td>
+                <td>${item.packaging || ''}</td>
+                <td>${item.quantity}</td>
+                <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}</td>
+                <td>PHP ${itemTotal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}</td>
+            `;
+            
+            orderItemsBody.appendChild(row);
+        });
+        
+        // Get the element to convert to PDF
+        const element = document.getElementById('contentToDownload');
+        
+        // Configure html2pdf options
+        const opt = {
+            margin:       [10, 10, 10, 10],
+            filename:     `PO_${poNumber}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        // Generate and download PDF directly
+        html2pdf().set(opt).from(element).save().then(() => {
+            showToast(`Purchase Order ${poNumber} has been downloaded.`, 'success');
+        }).catch(error => {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF. Please try again.');
+        });
+        
+    } catch (e) {
+        console.error('Error preparing PDF data:', e);
+        alert('Error preparing PDF data');
+    }
+}
+
+    // Function to generate Purchase Order PDF
+    // Function to generate Purchase Order PDF
+function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+    try {
+        // Store current PO data for later use
+        currentPOData = {
+            poNumber,
+            username,
+            company,
+            orderDate,
+            deliveryDate,
+            deliveryAddress,
+            ordersJson,
+            totalAmount,
+            specialInstructions  // Add special instructions to stored data
+        };
+        
+        // Set basic information
+        document.getElementById('printCompany').textContent = company || 'No Company Name';
+        document.getElementById('printPoNumber').textContent = poNumber;
+        document.getElementById('printUsername').textContent = username;
+        document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
+        document.getElementById('printOrderDate').textContent = orderDate;
+        document.getElementById('printDeliveryDate').textContent = deliveryDate;
+        
+        // Hide special instructions section completely
+        const instructionsSection = document.getElementById('printInstructionsSection');
+        instructionsSection.style.display = 'none';
+        
+        // Format the total amount with commas and decimals
+        document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        
+        // Parse and populate order items
+        const orderItems = JSON.parse(ordersJson);
+        const orderItemsBody = document.getElementById('printOrderItems');
+        
+        // Clear previous content
+        orderItemsBody.innerHTML = '';
+        
+        // Add items to the table
+        orderItems.forEach(item => {
+            const row = document.createElement('tr');
+            
+            // Calculate item total
+            const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+            
+            row.innerHTML = `
+                <td>${item.category || ''}</td>
+                <td>${item.item_description}</td>
+                <td>${item.packaging || ''}</td>
+                <td>${item.quantity}</td>
+                <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}</td>
+                <td>PHP ${itemTotal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}</td>
+            `;
+            
+            orderItemsBody.appendChild(row);
+        });
+        
+        // Show the PDF preview
+        document.getElementById('pdfPreview').style.display = 'block';
+        
+    } catch (e) {
+        console.error('Error preparing PDF data:', e);
+        alert('Error preparing PDF data');
+    }
+}
+    
+    // Function to close PDF preview
+    function closePDFPreview() {
+        document.getElementById('pdfPreview').style.display = 'none';
+    }
+    
+    // Function to download the PDF
+    function downloadPDF() {
+        if (!currentPOData) {
+            alert('No PO data available for download.');
+            return;
+        }
+        
+        // Get the element to convert to PDF
+        const element = document.getElementById('contentToDownload');
+        
+        // Configure html2pdf options
+        const opt = {
+            margin:       [10, 10, 10, 10],
+            filename:     `PO_${currentPOData.poNumber}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        // Generate and download PDF
+        html2pdf().set(opt).from(element).save().then(() => {
+            showToast(`Purchase Order ${currentPOData.poNumber} has been downloaded as PDF.`, 'success');
+            closePDFPreview();
+        }).catch(error => {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF. Please try again.');
+        });
+    }
+    
+    window.openStatusModal = function(poNumber, username, ordersJson) {
+        $('#statusMessage').text('Change order status for ' + poNumber);
+        $('#statusModal').data('po_number', poNumber).show();
+        
+        // Clear previous data and show loading state
+        $('#rawMaterialsContainer').html('<h3>Loading inventory status...</h3>');
+        
+        // Parse the orders JSON and check materials
+        try {
+            $.ajax({
+                url: '/backend/check_raw_materials.php',
+                type: 'POST',
+                data: { 
+                    orders: ordersJson,
+                    po_number: poNumber
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        // Display finished products status first
+                        if (response.finishedProducts) {
+                            displayFinishedProducts(response.finishedProducts);
+                        }
+                        
+                        // If manufacturing is needed, display raw materials
+                        if (response.needsManufacturing && response.materials) {
+                            displayRawMaterials(response.materials);
+                        } else {
+                            // Hide the raw materials section if no manufacturing needed
+                            $('#rawMaterialsContainer').append('<p>All products are in stock - no manufacturing needed</p>');
+                        }
+                        
+                        // Enable or disable the Active button based on overall status
+                        updateOrderActionStatus(response);
+                    } else {
+                        $('#rawMaterialsContainer').html(`
+                            <h3>Error Checking Inventory</h3>
+                            <p style="color:red;">${response.message || 'Unknown error'}</p>
+                            <p>Order status can still be changed.</p>
+                        `);
+                        $('#activeStatusBtn').prop('disabled', false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#rawMaterialsContainer').html(`
+                        <h3>Server Error</h3>
+                        <p style="color:red;">Could not connect to server: ${error}</p>
+                        <p>Order status can still be changed.</p>
+                    `);
+                    $('#activeStatusBtn').prop('disabled', false);
+                    console.error("AJAX Error:", status, error);
+                }
+            });
+        } catch (e) {
+            $('#rawMaterialsContainer').html(`
+                <h3>Error Processing Data</h3>
+                <p style="color:red;">${e.message}</p>
+                <p>Order status can still be changed.</p>
+            `);
+            $('#activeStatusBtn').prop('disabled', false);
+            console.error("Error:", e);
+        }
+    };
+
+    // Helper function to format weight values
+    function formatWeight(weightInGrams) {
+        if (weightInGrams >= 1000) {
+            return (weightInGrams / 1000).toFixed(2) + ' kg';
+        } else {
+            return weightInGrams.toFixed(2) + ' g';
+        }
+    }
+
+    // Function to display finished products status
+    function displayFinishedProducts(productsData) {
+        const productsTableHTML = `
+            <h3>Finished Products Status</h3>
+            <table class="materials-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>In Stock</th>
+                        <th>Required</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.keys(productsData).map(product => {
+                        const data = productsData[product];
+                        const available = parseInt(data.available);
+                        const required = parseInt(data.required);
+                        const isSufficient = data.sufficient;
+                        
+                        return `
+                            <tr>
+                                <td>${product}</td>
+                                <td>${available}</td>
+                                <td>${required}</td>
+                                <td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">
+                                    ${isSufficient ? 'In Stock' : 'Need to manufacture ' + data.shortfall + ' more'}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+        
+        // Update the HTML container
+        $('#rawMaterialsContainer').html(productsTableHTML);
+        
+        // Check if any products need manufacturing
+        const needsManufacturing = Object.values(productsData).some(product => !product.sufficient);
+        
+        if (needsManufacturing) {
+            $('#rawMaterialsContainer').append(`
+                <h3>Raw Materials Required for Manufacturing</h3>
+                <div id="raw-materials-section">
+                    <p>Loading raw materials information...</p>
+                </div>
+            `);
+        }
+    }
+
+    // Function to display raw materials data
+    function displayRawMaterials(materialsData) {
+        if (!materialsData || Object.keys(materialsData).length === 0) {
+            $('#raw-materials-section').html('<p>No raw materials information available.</p>');
+            return;
+        }
+        
+        // Count sufficient vs insufficient materials
+        let allSufficient = true;
+        let insufficientMaterials = [];
+        
+        const materialsTableHTML = `
+            <table class="materials-table">
+                <thead>
+                    <tr>
+                        <th>Material</th>
+                        <th>Available</th>
+                        <th>Required</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.keys(materialsData).map(material => {
+                        const data = materialsData[material];
+                        const available = parseFloat(data.available);
+                        const required = parseFloat(data.required);
+                        const isSufficient = data.sufficient;
+                        
+                        if (!isSufficient) {
+                            allSufficient = false;
+                            insufficientMaterials.push(material);
+                        }
+                        
+                        return `
+                            <tr>
+                                <td>${material}</td>
+                                <td>${formatWeight(available)}</td>
+                                <td>${formatWeight(required)}</td>
+                                <td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">
+                                    ${isSufficient ? 'Sufficient' : 'Insufficient'}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+        
+        // Add status message
+        const statusMessage = allSufficient 
+            ? 'All raw materials are sufficient for manufacturing.' 
+            : `Insufficient raw materials: ${insufficientMaterials.join(', ')}. The order cannot proceed.`;
+        
+        const statusClass = allSufficient ? 'status-sufficient' : 'status-insufficient';
+        
+        const fullHTML = `
+            ${materialsTableHTML}
+            <p class="materials-status ${statusClass}">${statusMessage}</p>
+        `;
+        
+        $('#raw-materials-section').html(fullHTML);
+        
+        // Enable or disable the Active button
+        $('#activeStatusBtn').prop('disabled', !allSufficient);
+        
+        return allSufficient;
+    }
+
+    // Function to update order action status
+    function updateOrderActionStatus(response) {
+        let canProceed = true;
+        let statusMessage = 'All inventory requirements are met. The order can proceed.';
+        
+        // Check if all finished products are in stock
+        const finishedProducts = response.finishedProducts || {};
+        const allProductsInStock = Object.values(finishedProducts).every(product => product.sufficient);
+        
+        // If manufacturing is needed, check raw materials
+        if (!allProductsInStock && response.needsManufacturing) {
+            // Check if all products can be manufactured
+            const canManufactureAll = Object.values(finishedProducts).every(product => 
+                product.sufficient || product.canManufacture !== false);
+                
+            if (!canManufactureAll) {
+                canProceed = false;
+                statusMessage = 'Some products cannot be manufactured due to missing ingredients.';
+            } else {
+                // Check if all raw materials are sufficient
+                const materials = response.materials || {};
+                const allMaterialsSufficient = Object.values(materials).every(material => material.sufficient);
+                
+                if (!allMaterialsSufficient) {
+                    canProceed = false;
+                    statusMessage = 'Insufficient raw materials for manufacturing required products.';
+                } else {
+                    statusMessage = 'Products will be manufactured using raw materials. The order can proceed.';
+                }
+            }
+        }
+        
+        // Update UI based on status
+        $('#activeStatusBtn').prop('disabled', !canProceed);
+        
+        // Add a summary at the end of the container
+        const statusClass = canProceed ? 'status-sufficient' : 'status-insufficient';
+        $('#rawMaterialsContainer').append(`
+            <p class="materials-status ${statusClass}">${statusMessage}</p>
+        `);
+    }
+
+    function closeStatusModal() {
+        document.getElementById('statusModal').style.display = 'none';
+    }
+
+    // Function to change order status
+    function changeStatus(status) {
+        var poNumber = $('#statusModal').data('po_number');
+        
+        // Only deduct materials if changing to Active
+        const deductMaterials = (status === 'Active');
+        
+        $.ajax({
+            type: 'POST',
+            url: '/backend/update_order_status.php',
+            data: { 
+                po_number: poNumber, 
+                status: status,
+                deduct_materials: deductMaterials
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Format status type for toast
+                    let toastType = status.toLowerCase();
+                    if (toastType === 'completed') toastType = 'complete';
+                    if (toastType === 'rejected') toastType = 'reject';
+                    
+                    // Create message
+                    let message = `Changed status for ${poNumber} to ${status}.`;
+                    if (status === 'Active' && deductMaterials) {
+                        message = `Changed status for ${poNumber} to ${status}. Inventory has been updated.`;
+                    }
+                    
+                    // Show toast and reload
+                    showToast(message, toastType);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    alert('Failed to change status: ' + (response.error || 'Unknown error'));
+                }
+                closeStatusModal();
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', error);
+                alert('Failed to change status. Please try again.');
+                closeStatusModal();
+            }
+        });
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                <div class="message">${message}</div>
+            </div>
+            <i class="fas fa-times close" onclick="this.parentElement.remove()"></i>
+        `;
+        document.getElementById('toast-container').appendChild(toast);
+        
+        // Automatically remove the toast after 5 seconds
+        setTimeout(() => {
+            toast.remove();
+        }, 5000);
+    }
+    
+    function viewOrderDetails(ordersJson) {
+        try {
+            const orderDetails = JSON.parse(ordersJson);
+            const orderDetailsBody = document.getElementById('orderDetailsBody');
+            
+            // Clear previous content
+            orderDetailsBody.innerHTML = '';
+            
+            orderDetails.forEach(product => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td>${product.category}</td>
+                    <td>${product.item_description}</td>
+                    <td>${product.packaging}</td>
+                    <td>PHP ${parseFloat(product.price).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    })}</td>
+                    <td>${product.quantity}</td>
+                `;
+                
+                orderDetailsBody.appendChild(row);
+            });
+            
+            // Show modal
+            document.getElementById('orderDetailsModal').style.display = 'flex';
+        } catch (e) {
+            console.error('Error parsing order details:', e);
+            alert('Error displaying order details');
+        }
+    }
+
+    function closeOrderDetailsModal() {
+        document.getElementById('orderDetailsModal').style.display = 'none';
+    }
+    
+    // Add function to update company name when username changes
+
+        function viewSpecialInstructions(poNumber, instructions) {
+                document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
+                const contentEl = document.getElementById('instructionsContent');
+                
+                if (instructions && instructions.trim().length > 0) {
+                    contentEl.textContent = instructions;
+                    contentEl.classList.remove('empty');
+                } else {
+                    contentEl.textContent = 'No special instructions provided for this order.';
+                    contentEl.classList.add('empty');
+                }
+                
+                document.getElementById('specialInstructionsModal').style.display = 'block';
+            }
+
+        function closeSpecialInstructions() {
+            document.getElementById('specialInstructionsModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('specialInstructionsModal');
+            if (event.target === modal) {
+                closeSpecialInstructions();
+            }
+        });
+
+    </script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
     
-        // Add custom script to handle loading client address info
-        function loadClientAddressInfo(username) {
-            if (!username) return;
-            
-            console.log("Loading address info for:", username);
-            
-            const selectedOption = $(`#username option[value="${username}"]`);
-            
-            // Get address data from the option data attributes
-            const billTo = selectedOption.data('bill-to') || '';
-            const billToAttn = selectedOption.data('bill-to-attn') || '';
-            const shipTo = selectedOption.data('ship-to') || '';
-            const shipToAttn = selectedOption.data('ship-to-attn') || '';
-            
-            console.log("Address data loaded:", {
-                billTo: billTo,
-                billToAttn: billToAttn,
-                shipTo: shipTo,
-                shipToAttn: shipToAttn
-            });
-            
-            // Set hidden field values
-            $('#bill_to').val(billTo);
-            $('#bill_to_attn').val(billToAttn);
-            $('#ship_to').val(shipTo);
-            $('#ship_to_attn').val(shipToAttn);
-            
-            // Display the address info in a readable format
-            let addressHTML = '<div class="address-display">';
-            
-            addressHTML += '<div class="address-section">';
-            addressHTML += '<h4><i class="fas fa-file-invoice"></i> Billing Information</h4>';
-            if (billTo) {
-                addressHTML += `<p><strong>Bill To:</strong> ${billTo}</p>`;
-            }
-            if (billToAttn) {
-                addressHTML += `<p><strong>Attention:</strong> ${billToAttn}</p>`;
-            }
-            if (!billTo && !billToAttn) {
-                addressHTML += '<p class="no-info">No billing information available</p>';
-            }
-            addressHTML += '</div>';
-            
-            addressHTML += '<div class="address-section">';
-            addressHTML += '<h4><i class="fas fa-shipping-fast"></i> Shipping Information</h4>';
-            if (shipTo) {
-                addressHTML += `<p><strong>Ship To:</strong> ${shipTo}</p>`;
-            }
-            if (shipToAttn) {
-                addressHTML += `<p><strong>Attention:</strong> ${shipToAttn}</p>`;
-            }
-            if (!shipTo && !shipToAttn) {
-                addressHTML += '<p class="no-info">No shipping information available</p>';
-            }
-            addressHTML += '</div>';
-            
-            addressHTML += '</div>';
-            
-            $('#address-info').html(addressHTML);
-        }
-
+        // Search functionality (client-side, same as in order_history.php)
         $(document).ready(function() {
             // Search functionality
             $("#searchInput").on("input", function() {
@@ -647,7 +1770,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 });
             });
             
-            // Handle search button click
+            // Handle search button click (same functionality as typing)
             $(".search-btn").on("click", function() {
                 let searchText = $("#searchInput").val().toLowerCase().trim();
                 
@@ -662,109 +1785,35 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     }
                 });
             });
-
-            // Make sure prepareOrderData includes proper fields
+            
+            // Initialize company field if needed
+            $('#username').change(function() {
+                updateCompany();
+            });
+            
+            // Make sure prepareOrderData includes company field
+            window.originalPrepareOrderData = window.prepareOrderData;
             window.prepareOrderData = function() {
-                const orderData = JSON.stringify(selectedProducts);
-                $('#orders').val(orderData);
-                const totalAmount = calculateCartTotal();
-                $('#total_amount').val(totalAmount.toFixed(2));
+                if (window.originalPrepareOrderData) {
+                    window.originalPrepareOrderData();
+                }
+                
+                // Ensure company is included
+                const ordersInput = document.getElementById('orders');
+                if (ordersInput.value) {
+                    try {
+                        const ordersData = JSON.parse(ordersInput.value);
+                        ordersInput.value = JSON.stringify(ordersData);
+                    } catch (e) {
+                        console.error("Error preparing order data:", e);
+                    }
+                }
                 
                 // Include special instructions in form data
-                const specialInstructions = $('#special_instructions').val();
-                $('#special_instructions_hidden').val(specialInstructions);
-                
-                // No need to set delivery_address since we're using bill_to and ship_to directly
-                console.log("Order data prepared with addresses - bill_to:", $('#bill_to').val(), "ship_to:", $('#ship_to').val());
+                const specialInstructions = document.getElementById('special_instructions').value;
+                document.getElementById('special_instructions_hidden').value = specialInstructions;
+                // No need for a hidden field since the textarea already has the name attribute
             };
-            
-            // Initialize PO number generator on page load
-            function generateUniquePoNumber() {
-                // Format: TE-YYYYMMDD-XXXX (TE for Top Exchange, followed by date, followed by 4 random digits)
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const day = String(now.getDate()).padStart(2, '0');
-                const random = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
-                
-                return `TE-${year}${month}${day}-${random}`;
-            }
-            
-            // Modified function to generate PO number when username changes
-            window.generatePONumber = function() {
-                const poNumber = generateUniquePoNumber();
-                $('#po_number').val(poNumber);
-                console.log("Generated PO number:", poNumber);
-                
-                // Also set the current date
-                const today = new Date();
-                const formattedDate = today.toISOString().split('T')[0]; // YYYY-MM-DD format
-                $('#order_date').val(formattedDate);
-            };
-        });
-
-        // Override the form submission to ensure we're not checking for delivery_address
-        $('#addOrderForm').on('submit', function(e) {
-            e.preventDefault();
-            
-            // Prepare order data before submitting
-            prepareOrderData();
-            
-            if (selectedProducts.length === 0) {
-                alert('Please add products to your order');
-                return;
-            }
-            
-            // Check if we have either billing or shipping info
-            const billTo = $('#bill_to').val();
-            const shipTo = $('#ship_to').val();
-            
-            console.log("Submitting form with bill_to:", billTo, "and ship_to:", shipTo);
-            
-            if ((!billTo || billTo.trim() === '') && (!shipTo || shipTo.trim() === '')) {
-                alert('No address information available. Please select a different user with address information.');
-                return;
-            }
-            
-            // Validate other required fields
-            if (!$('#username').val()) {
-                alert('Please select a username');
-                return;
-            }
-            
-            if (!$('#po_number').val()) {
-                // Generate a new PO number if it's missing
-                generatePONumber();
-            }
-            
-            // Disable the save button to prevent multiple submissions
-            $('.save-btn').prop('disabled', true);
-            
-            // Submit the form via AJAX
-            $.ajax({
-                url: $(this).attr('action'),
-                type: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        showToast('Order added successfully!', 'success');
-                        setTimeout(function() {
-                            location.reload();
-                        }, 1500);
-                    } else {
-                        $('.save-btn').prop('disabled', false);
-                        alert('Error: ' + response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    $('.save-btn').prop('disabled', false);
-                    console.error("Form submission error:", status, error);
-                    console.error("Server response:", xhr.responseText);
-                    alert('Error submitting order. Please try again. Details: ' + error);
-                }
-            });
-        });
-    </script>
+    </script> 
 </body>
 </html>
