@@ -2,93 +2,85 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Orders'); // Ensure the user has access to the Orders page
-
-// Handle sorting parameters
-$sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'order_date';
-$sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'DESC';
-
-// Validate sort column to prevent SQL injection
-$allowed_columns = ['po_number', 'username', 'order_date', 'delivery_date', 'progress', 'total_amount'];
-if (!in_array($sort_column, $allowed_columns)) {
-    $sort_column = 'order_date'; // Default sort column
-}
-
-// Validate sort direction
-if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
-    $sort_direction = 'DESC'; // Default to descending
-}
-
-// Fetch active clients for the dropdown
-$clients = [];
-$clients_with_company_address = []; // Array to store clients with their company addresses
-$stmt = $conn->prepare("SELECT username, company_address FROM clients_accounts WHERE status = 'active'");
-if ($stmt === false) {
-    die('Prepare failed: ' . htmlspecialchars($conn->error));
-}
-$stmt->execute();
-$stmt->bind_result($username, $company_address);
-while ($stmt->fetch()) {
-    $clients[] = $username;
-    $clients_with_company_address[$username] = $company_address;
-}
-$stmt->close();
+checkRole('Orders'); // Ensure user has access to Orders
 
 // Fetch all drivers for the driver assignment dropdown
 $drivers = [];
-$stmt = $conn->prepare("SELECT id, name FROM drivers WHERE availability = 'Available' AND current_deliveries < 20 ORDER BY name");
-$stmt->execute();
-$result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $drivers[] = $row;
+$driverStmt = $conn->prepare("SELECT id, name FROM drivers WHERE availability = 'Available' AND current_deliveries < 20 ORDER BY name");
+if ($driverStmt) {
+    $driverStmt->execute();
+    $driverResult = $driverStmt->get_result();
+    while ($row = $driverResult->fetch_assoc()) {
+        $drivers[] = $row;
+    }
+    $driverStmt->close();
 }
-$stmt->close();
 
-// Modified query to only show Active orders with sorting
-$orders = []; // Initialize $orders as an empty array
-$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress, o.driver_assigned, 
-        o.company, o.special_instructions, 
-        IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
+// Get the current date for filtering
+$today = date('Y-m-d');
+
+// Get status filter from query string (default to 'Active')
+$filterStatus = isset($_GET['status']) ? $_GET['status'] : 'Active';
+
+// Handle sorting
+$sortColumn = isset($_GET['sort']) ? $_GET['sort'] : 'order_date';
+$sortOrder = isset($_GET['order']) ? $_GET['order'] : 'DESC';
+
+// Validate sort parameters
+$allowedColumns = ['po_number', 'username', 'order_date', 'delivery_date', 'payment_method', 'total_amount', 'status'];
+if (!in_array($sortColumn, $allowedColumns)) {
+    $sortColumn = 'order_date';
+}
+
+$allowedOrders = ['ASC', 'DESC'];
+if (!in_array($sortOrder, $allowedOrders)) {
+    $sortOrder = 'DESC';
+}
+
+// Build the SQL query with status filter
+$sql = "SELECT o.po_number, o.username, o.company, o.order_date, o.delivery_date, o.delivery_address, 
+        o.payment_method, o.orders, o.total_amount, o.status, o.driver_assigned, 
+        o.special_instructions, IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
         FROM orders o 
         LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
         LEFT JOIN drivers d ON da.driver_id = d.id 
-        WHERE o.status = 'Active'";
+        WHERE o.status = ?
+        ORDER BY o.$sortColumn $sortOrder";
 
-// Add sorting
-$sql .= " ORDER BY {$sort_column} {$sort_direction}";
-
-$stmt = $conn->prepare($sql);
-$stmt->execute();
-$result = $stmt->get_result();
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $orders[] = $row;
+$orders = [];
+$orderStmt = $conn->prepare($sql);
+if ($orderStmt) {
+    $orderStmt->bind_param("s", $filterStatus);
+    $orderStmt->execute();
+    $orderResult = $orderStmt->get_result();
+    if ($orderResult && $orderResult->num_rows > 0) {
+        while ($row = $orderResult->fetch_assoc()) {
+            $orders[] = $row;
+        }
     }
+    $orderStmt->close();
+} else {
+    // For debugging
+    error_log("SQL Error in orders.php: " . $conn->error);
 }
 
-// Helper function to generate sort URL
-function getSortUrl($column, $currentColumn, $currentDirection) {
-    $newDirection = ($column === $currentColumn && $currentDirection === 'ASC') ? 'DESC' : 'ASC';
-    return "?sort=" . urlencode($column) . "&direction=" . urlencode($newDirection);
-}
-
-// Helper function to display sort icon
-function getSortIcon($column, $currentColumn, $currentDirection) {
-    if ($column !== $currentColumn) {
-        return '<i class="fas fa-sort"></i>';
-    } else if ($currentDirection === 'ASC') {
-        return '<i class="fas fa-sort-up"></i>';
-    } else {
-        return '<i class="fas fa-sort-down"></i>';
+// Get filter options for status
+$statusQuery = "SELECT DISTINCT status FROM orders ORDER BY status";
+$statusResult = $conn->query($statusQuery);
+$statusOptions = [];
+if ($statusResult) {
+    while ($row = $statusResult->fetch_assoc()) {
+        $statusOptions[] = $row['status'];
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orders</title>
+    <title>Order Management</title>
     <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="/css/toast.css">
@@ -96,12 +88,185 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-    <!-- HTML2PDF Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        /* Existing styles... */
+        /* Search container styles */
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
 
-        /* Download button styles */
+        .search-container input {
+            padding: 8px 12px;
+            border-radius: 20px 0 0 20px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            width: 220px;
+        }
+
+        .search-container .search-btn {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 0 20px 20px 0;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .search-container .search-btn:hover {
+            background-color: #2471a3;
+        }
+
+        /* Orders header styles */
+        .orders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        
+        .filter-section {
+            display: flex;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+        }
+        
+        .filter-label {
+            margin-right: 8px;
+            font-weight: bold;
+        }
+        
+        .filter-select {
+            padding: 8px 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background-color: white;
+            min-width: 150px;
+        }
+
+        /* Status badge styles */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .status-pending {
+            background-color: #ffc107;
+            color: #333;
+        }
+        
+        .status-completed {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .status-rejected {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .status-for-delivery {
+            background-color: #fd7e14;
+            color: white;
+        }
+        
+        .status-in-transit {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        /* Driver badge and button styles */
+        .driver-badge {
+            background-color: #17a2b8;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .driver-btn {
+            background-color: #6610f2;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .driver-btn:hover {
+            background-color: #510bc4;
+        }
+
+        .assign-driver-btn {
+            background-color: #fd7e14;
+        }
+
+        .assign-driver-btn:hover {
+            background-color: #e67211;
+        }
+
+        /* Sort indicators and clickable headers */
+        .sort-header {
+            cursor: pointer;
+            position: relative;
+            padding-right: 20px;
+            transition: background-color 0.2s;
+        }
+        
+        .sort-header:hover {
+            background-color:rgb(51, 51, 51);
+        }
+        
+        .sort-header::after {
+            content: '\f0dc';
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 5px;
+            color: #6c757d;
+        }
+        
+        .sort-header.asc::after {
+            content: '\f0de';
+            color:rgb(255, 255, 255);
+        }
+        
+        .sort-header.desc::after {
+            content: '\f0dd';
+            color:rgb(255, 255, 255);
+        }
+
+        /* Download PDF button */
         .download-btn {
             padding: 6px 12px;
             background-color: #17a2b8;
@@ -110,7 +275,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             border-radius: 40px;
             cursor: pointer;
             font-size: 12px;
-            margin-left: 5px;
+            margin-right: 5px;
         }
         
         .download-btn:hover {
@@ -121,7 +286,118 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             margin-right: 5px;
         }
         
-        /* PO PDF layout */
+        /* Special Instructions styles */
+        .instructions-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .instructions-modal-content {
+            background-color: #ffffff;
+            margin: 10% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 60%;
+            max-width: 600px;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: modalFadeIn 0.3s ease-in-out;
+            overflow: hidden;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .instructions-header {
+            background-color: #2980b9;
+            color: white;
+            padding: 15px 20px;
+            position: relative;
+        }
+
+        .instructions-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .instructions-po-number {
+            font-size: 12px;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+        
+        .instructions-body {
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .instructions-body.empty {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .instructions-footer {
+            padding: 15px 20px;
+            text-align: right;
+            background-color: #ffffff;
+        }
+        
+        .close-instructions-btn {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+        
+        .close-instructions-btn:hover {
+            background-color: #2471a3;
+        }
+        
+        .instructions-btn {
+            padding: 6px 12px;
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            min-width: 60px;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+        
+        .instructions-btn:hover {
+            background-color: #2471a3;
+        }
+        
+        .no-instructions {
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        /* PDF styles for print */
         .po-container {
             font-family: Arial, sans-serif;
             max-width: 800px;
@@ -255,141 +531,131 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             cursor: pointer;
             font-size: 14px;
         }
-
-        /* Special Instructions Modal Styles */
-        .instructions-modal {
+        
+        /* Driver Assignment Modal */
+        .overlay {
             display: none;
             position: fixed;
-            z-index: 2000;
-            left: 0;
             top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
             background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
-        .instructions-modal-content {
-            background-color: #ffffff;
-            margin: 10% auto;
-            padding: 0;
+        .overlay-content {
+            background-color: white;
+            padding: 25px;
             border-radius: 8px;
-            width: 60%;
-            max-width: 600px;
-            position: relative;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            animation: modalFadeIn 0.3s ease-in-out;
-            overflow: hidden;
-            max-height: 90vh; /* 90% of the viewport height */
-            overflow-y: auto; /* Add scroll if content exceeds max height */
-            margin: 2vh auto; /* Center vertically with 5% top margin */
-        }
-
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .instructions-header {
-            background-color: #2980b9;
-            color: white;
-            padding: 15px 20px;
+            max-width: 550px;
+            width: 90%;
             position: relative;
         }
-
-        .instructions-header h3 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .instructions-po-number {
-            font-size: 12px;
-            margin-top: 5px;
-            opacity: 0.9;
+        
+        .driver-modal-content {
+            max-width: 450px;
         }
         
-        .instructions-body {
-            padding: 20px;
-            max-height: 300px;
-            overflow-y: auto;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #eaeaea;
+        .driver-selection {
+            margin: 20px 0;
         }
         
-        .instructions-body.empty {
-            color: #6c757d;
-            font-style: italic;
-            text-align: center;
-            padding: 40px 20px;
+        .driver-selection label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
         }
         
-        .instructions-footer {
-            padding: 15px 20px;
-            text-align: right;
-            background-color: #ffffff;
-        }
-        
-        .close-instructions-btn {
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            padding: 8px 16px;
+        .driver-selection select {
+            width: 100%;
+            padding: 10px;
             border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: background-color 0.2s;
-        }
-        
-        .close-instructions-btn:hover {
-            background-color: #2471a3;
-        }
-        
-        /* Instructions button */
-        .instructions-btn {
-            padding: 6px 12px;
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            min-width: 60px;
-            text-align: center;
-            transition: background-color 0.2s;
-        }
-        
-        .instructions-btn:hover {
-            background-color: #2471a3;
-        }
-        
-        .no-instructions {
-            color: #6c757d;
-            font-style: italic;
-        }
-        
-        /* Content for PDF */
-        #contentToDownload {
-            font-size: 14px;
-        }
-
-        #contentToDownload .po-table {
-            font-size: 12px;
-        }
-
-        #contentToDownload .po-title {
+            border: 1px solid #ddd;
+            background-color: #fff;
             font-size: 16px;
         }
-
-        #contentToDownload .po-company {
-            font-size: 20px;
+        
+        .driver-modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 25px;
         }
-
-        #contentToDownload .po-total {
-            font-size: 12px;
+        
+        .cancel-btn, .save-btn {
+            padding: 10px 25px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            min-width: 120px;
+        }
+        
+        .cancel-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .cancel-btn:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .save-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .save-btn:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* For mobile devices */
+        @media (max-width: 768px) {
+            .orders-table-container {
+                overflow-x: auto;
+            }
+            
+            .orders-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .filter-section {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .search-container {
+                width: 100%;
+            }
+            
+            .search-container input {
+                width: 100%;
+            }
+            
+            .po-details {
+                flex-direction: column;
+            }
+            
+            .po-left, .po-right {
+                width: 100%;
+                margin-bottom: 20px;
+            }
         }
     </style>
 </head>
@@ -397,51 +663,45 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="orders-header">
-            <h1>Orders Management</h1>
-            <!-- Updated search section to exactly match order_history.php -->
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
-                <button class="search-btn"><i class="fas fa-search"></i></button>
+            <div class="header-content">
+                <h1 class="page-title">Order Management</h1>
+                
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <span class="filter-label">Status:</span>
+                        <select id="statusFilter" class="filter-select" onchange="filterByStatus()">
+                            <?php foreach ($statusOptions as $status): ?>
+                                <option value="<?= $status ?>" <?= $filterStatus === $status ? 'selected' : '' ?>>
+                                    <?= $status ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
+                    <button class="search-btn"><i class="fas fa-search"></i></button>
+                </div>
             </div>
         </div>
+        
         <div class="orders-table-container">
             <table class="orders-table">
                 <thead>
                     <tr>
-                        <th class="sortable">
-                            <a href="<?= getSortUrl('po_number', $sort_column, $sort_direction) ?>">
-                                PO Number <?= getSortIcon('po_number', $sort_column, $sort_direction) ?>
-                            </a>
-                        </th>
-                        <th class="sortable">
-                            <a href="<?= getSortUrl('username', $sort_column, $sort_direction) ?>">
-                                Username <?= getSortIcon('username', $sort_column, $sort_direction) ?>
-                            </a>
-                        </th>
-                        <th class="sortable">
-                            <a href="<?= getSortUrl('order_date', $sort_column, $sort_direction) ?>">
-                                Order Date <?= getSortIcon('order_date', $sort_column, $sort_direction) ?>
-                            </a>
-                        </th>
-                        <th class="sortable">
-                            <a href="<?= getSortUrl('delivery_date', $sort_column, $sort_direction) ?>">
-                                Delivery Date <?= getSortIcon('delivery_date', $sort_column, $sort_direction) ?>
-                            </a>
-                        </th>
-                        <th class="sortable">
-                            <a href="<?= getSortUrl('progress', $sort_column, $sort_direction) ?>">
-                                Progress <?= getSortIcon('progress', $sort_column, $sort_direction) ?>
-                            </a>
-                        </th>
+                        <th class="sort-header <?= $sortColumn == 'po_number' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="po_number">PO Number</th>
+                        <th class="sort-header <?= $sortColumn == 'username' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="username">Username</th>
+                        <th>Company</th>
+                        <th class="sort-header <?= $sortColumn == 'order_date' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="order_date">Order Date</th>
+                        <th class="sort-header <?= $sortColumn == 'delivery_date' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="delivery_date">Delivery Date</th>
+                        <th>Delivery Address</th>
                         <th>Orders</th>
-                        <th class="sortable">
-                            <a href="<?= getSortUrl('total_amount', $sort_column, $sort_direction) ?>">
-                                Total Amount <?= getSortIcon('total_amount', $sort_column, $sort_direction) ?>
-                            </a>
-                        </th>
+                        <th class="sort-header <?= $sortColumn == 'payment_method' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="payment_method">Payment Method</th>
                         <th>Special Instructions</th>
-                        <th>Drivers</th>
-                        <th>Status</th>
+                        <th class="sort-header <?= $sortColumn == 'total_amount' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="total_amount">Total Amount</th>
+                        <th>Driver</th>
+                        <th class="sort-header <?= $sortColumn == 'status' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="status">Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -451,21 +711,17 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             <tr>
                                 <td><?= htmlspecialchars($order['po_number']) ?></td>
                                 <td><?= htmlspecialchars($order['username']) ?></td>
+                                <td><?= htmlspecialchars($order['company'] ?? 'N/A') ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
-                                <td>
-                                    <div class="progress-bar-container">
-                                        <div class="progress-bar" style="width: <?= $order['progress'] ?? 0 ?>%"></div>
-                                        <div class="progress-text"><?= $order['progress'] ?? 0 ?>%</div>
-                                    </div>
-                                </td>
+                                <td><?= htmlspecialchars($order['delivery_address']) ?></td>
                                 <td>
                                     <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
                                         <i class="fas fa-clipboard-list"></i>    
-                                        View Order Status
+                                        View Order Items
                                     </button>
                                 </td>
-                                <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
+                                <td><?= htmlspecialchars($order['payment_method']) ?></td>
                                 <td>
                                     <?php if (!empty($order['special_instructions'])): ?>
                                         <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
@@ -475,30 +731,31 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                         <span class="no-instructions">None</span>
                                     <?php endif; ?>
                                 </td>
+                                <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
-                                    <?php if ($order['driver_assigned'] && !empty($order['driver_name'])): ?>
-                                        <div class="driver-badge">
-                                            <i class="fas fa-user"></i> <?= htmlspecialchars($order['driver_name']) ?>
-                                        </div>
-                                        <button class="driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', <?= $order['driver_id'] ?>, '<?= htmlspecialchars($order['driver_name']) ?>')">
-                                            <i class="fas fa-exchange-alt"></i> Change
-                                        </button>
+                                    <?php if ($order['status'] === 'For Delivery' || $order['status'] === 'In Transit'): ?>
+                                        <?php if ($order['driver_assigned'] && !empty($order['driver_name'])): ?>
+                                            <div class="driver-badge">
+                                                <i class="fas fa-user"></i> <?= htmlspecialchars($order['driver_name']) ?>
+                                            </div>
+                                            <button class="driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', <?= $order['driver_id'] ?>, '<?= htmlspecialchars($order['driver_name']) ?>')">
+                                                <i class="fas fa-exchange-alt"></i> Change
+                                            </button>
+                                        <?php else: ?>
+                                            <button class="driver-btn assign-driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>')">
+                                                <i class="fas fa-user-plus"></i> Assign
+                                            </button>
+                                        <?php endif; ?>
                                     <?php else: ?>
-                                        <div class="driver-badge driver-not-assigned">
-                                            <i class="fas fa-user-slash"></i> Not Assigned
-                                        </div>
-                                        <button class="driver-btn assign-driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', 0, '')">
-                                            <i class="fas fa-user-plus"></i> Assign
-                                        </button>
+                                        <span>N/A</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="status-badge status-active"><?= htmlspecialchars($order['status']) ?></span>
+                                    <span class="status-badge status-<?= strtolower(str_replace(' ', '-', $order['status'])) ?>">
+                                        <?= htmlspecialchars($order['status']) ?>
+                                    </span>
                                 </td>
-                                <td class="action-buttons">
-                                    <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
-                                        <i class="fas fa-exchange-alt"></i> Change Status
-                                    </button>
+                                <td>
                                     <button class="download-btn" onclick="downloadPODirectly(
                                         '<?= htmlspecialchars($order['po_number']) ?>', 
                                         '<?= htmlspecialchars($order['username']) ?>', 
@@ -517,7 +774,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="11" class="no-orders">No orders found.</td>
+                            <td colspan="13" style="text-align: center; padding: 20px;">No orders found with status: <?= htmlspecialchars($filterStatus) ?></td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -528,7 +785,52 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- PO PDF Preview Section -->
+    <!-- Order Details Modal -->
+    <div id="orderDetailsModal" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2><i class="fas fa-box-open"></i> Order Details</h2>
+            <div class="order-details-container">
+                <table class="order-details-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Product</th>
+                            <th>Packaging</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderDetailsBody">
+                        <!-- Order details will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="form-buttons">
+                <button type="button" class="back-btn" onclick="closeOrderDetailsModal()">
+                    <i class="fas fa-arrow-left"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Special Instructions Modal -->
+    <div id="specialInstructionsModal" class="instructions-modal">
+        <div class="instructions-modal-content">
+            <div class="instructions-header">
+                <h3>Special Instructions</h3>
+                <div class="instructions-po-number" id="instructionsPoNumber"></div>
+            </div>
+            <div class="instructions-body" id="instructionsContent">
+                <!-- Instructions will be displayed here -->
+            </div>
+            <div class="instructions-footer">
+                <button type="button" class="close-instructions-btn" onclick="closeSpecialInstructions()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Preview Modal -->
     <div id="pdfPreview">
         <div class="pdf-container">
             <button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button>
@@ -591,90 +893,20 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         Total Amount: PHP <span id="printTotalAmount"></span>
                     </div>
                     
+                    <div class="po-signature">
+                        <div class="po-signature-block">
+                            <div class="po-signature-line"></div>
+                            <div>Client Signature</div>
+                        </div>
+                        <div class="po-signature-block">
+                            <div class="po-signature-line"></div>
+                            <div>Authorized Signature</div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="pdf-actions">
                 <button class="download-pdf-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Special Instructions Modal -->
-    <div id="specialInstructionsModal" class="instructions-modal">
-        <div class="instructions-modal-content">
-            <div class="instructions-header">
-                <h3>Special Instructions</h3>
-                <div class="instructions-po-number" id="instructionsPoNumber"></div>
-            </div>
-            <div class="instructions-body" id="instructionsContent">
-                <!-- Instructions will be displayed here -->
-            </div>
-            <div class="instructions-footer">
-                <button type="button" class="close-instructions-btn" onclick="closeSpecialInstructions()">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Order Details Modal with Progress Tracking -->
-    <div id="orderDetailsModal" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <h2><i class="fas fa-box-open"></i> Order Details</h2>
-            <div class="order-details-container">
-                <table class="order-details-table">
-                    <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th>Product</th>
-                            <th>Packaging</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="orderDetailsBody">
-                        <!-- Order details will be populated here -->
-                    </tbody>
-                </table>
-                <!-- Overall progress info -->
-                <div class="item-progress-info" id="overall-progress-info" style="margin-top: 10px;">
-                    <div class="progress-info-label">Overall Order Progress:</div>
-                    <div class="progress-bar-container" style="margin-top: 5px;">
-                        <div class="progress-bar" id="overall-progress-bar" style="width: 0%"></div>
-                        <div class="progress-text" id="overall-progress-text">0%</div>
-                    </div>
-                </div>
-            </div>
-            <div class="form-buttons">
-                <button type="button" class="back-btn" onclick="closeOrderDetailsModal()">
-                    <i class="fas fa-arrow-left"></i> Back
-                </button>
-                <button type="button" class="save-progress-btn" onclick="saveProgressChanges()">
-                    <i class="fas fa-save"></i> Save Progress
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Status Modal -->
-    <div id="statusModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h2>Change Status</h2>
-            <p id="statusMessage"></p>
-            <div class="status-buttons">
-                <button onclick="changeStatus('For Delivery')" class="modal-status-btn delivery">
-                    <i class="fas fa-truck"></i> For Delivery
-                </button>
-                <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
-                    <i class="fas fa-clock"></i> Pending
-                </button>
-                <button onclick="changeStatus('Rejected')" class="modal-status-btn rejected">
-                    <i class="fas fa-times-circle"></i> Reject
-                </button>
-            </div>
-            <div class="modal-footer">
-                <button onclick="closeStatusModal()" class="modal-cancel-btn">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
             </div>
         </div>
     </div>
@@ -698,7 +930,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <i class="fas fa-times"></i> Cancel
                 </button>
                 <button class="save-btn" onclick="assignDriver()">
-                    <i class="fas fa-save"></i> Save
+                    <i class="fas fa-check"></i> Confirm
                 </button>
             </div>
         </div>
@@ -707,290 +939,229 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <script>
         // Global variables
         let currentPoNumber = '';
-        let currentOrderItems = [];
-        let completedItems = [];
-        let quantityProgressData = {};
-        let itemProgressPercentages = {};
-        let itemContributions = {}; // How much each item contributes to the total
-        let overallProgress = 0;
+        let currentPOData = null;
         let currentDriverId = 0;
-        let currentPOData = null; // For PDF generation
-
-        function openStatusModal(poNumber, username) {
-            currentPoNumber = poNumber;
-            document.getElementById('statusMessage').textContent = `Change status for order ${poNumber} (${username})`;
-            document.getElementById('statusModal').style.display = 'flex';
-        }
-
-        function closeStatusModal() {
-            document.getElementById('statusModal').style.display = 'none';
-        }
-
-        function changeStatus(status) {
-            // For 'For Delivery' status, check if a driver has been assigned and progress is 100%
-            if (status === 'For Delivery') {
-                // Show a loading indicator
-                const modalContent = document.querySelector('.modal-content');
-                const loadingDiv = document.createElement('div');
-                loadingDiv.id = 'status-loading';
-                loadingDiv.style.textAlign = 'center';
-                loadingDiv.style.margin = '10px 0';
-                loadingDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking requirements...';
-                modalContent.appendChild(loadingDiv);
-                
-                // Disable all buttons while checking
-                const buttons = document.querySelectorAll('.modal-status-btn, .modal-cancel-btn');
-                buttons.forEach(btn => btn.disabled = true);
-                
-                // Fetch the order details to check driver_assigned flag and progress
-                fetch(`/backend/check_order_driver.php?po_number=${currentPoNumber}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        // Remove loading indicator
-                        document.getElementById('status-loading').remove();
-                        // Re-enable buttons
-                        buttons.forEach(btn => btn.disabled = false);
-                        
-                        if (data.success) {
-                            // Check if driver is assigned
-                            if (!data.driver_assigned) {
-                                showToast('Error: You must assign a driver to this order before marking it for delivery.', 'error');
-                                closeStatusModal();
-                                return;
-                            }
-                            
-                            // Check if progress is 100%
-                            if (data.progress < 100) {
-                                showToast('Error: Order progress must be 100% before marking it for delivery.', 'error');
-                                closeStatusModal();
-                                return;
-                            }
-                            
-                            // Both requirements are met, proceed with status change
-                            updateOrderStatus(status);
-                        } else {
-                            showToast('Error checking order requirements: ' + data.message, 'error');
-                            closeStatusModal();
-                        }
-                    })
-                    .catch(error => {
-                        // Remove loading indicator
-                        if (document.getElementById('status-loading')) {
-                            document.getElementById('status-loading').remove();
-                        }
-                        // Re-enable buttons
-                        buttons.forEach(btn => btn.disabled = false);
-                        
-                        console.error('Error:', error);
-                        showToast('Error checking requirements: ' + error, 'error');
-                        closeStatusModal();
-                    });
-            } else {
-                // For other statuses, proceed directly
-                updateOrderStatus(status);
+        
+        // Order filtering functions
+        function filterByStatus() {
+            const status = document.getElementById('statusFilter').value;
+            const currentSort = '<?= $sortColumn ?>';
+            const currentOrder = '<?= $sortOrder ?>';
+            
+            let url = '?status=' + encodeURIComponent(status);
+            
+            if (currentSort && currentOrder) {
+                url += '&sort=' + currentSort + '&order=' + currentOrder;
             }
+            
+            window.location.href = url;
         }
-
-        function updateOrderStatus(status) {
-            // Send AJAX request to update status
-            fetch('/backend/update_order_status.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `po_number=${currentPoNumber}&status=${status}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    let message = 'Status updated successfully';
-                    if (status === 'For Delivery') {
-                        message = 'Order marked for delivery successfully';
-                    } else if (status === 'Rejected') {
-                        message = 'Order rejected successfully';
-                    }
-                    showToast(message, 'success');
-                    // Reload the page after a short delay
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                } else {
-                    showToast('Error updating status: ' + data.message, 'error');
-                }
-                closeStatusModal();
-            })
-            .catch(error => {
-                showToast('Error updating status: ' + error, 'error');
-                closeStatusModal();
-            });
-        }
-
+        
+        // Function to view order details
         function viewOrderDetails(poNumber) {
             currentPoNumber = poNumber;
             
-            // Fetch the order data and completion status
-            fetch(`/backend/get_order_details.php?po_number=${poNumber}`)
-            .then(response => response.json())
+            // Show loading indicator
+            const orderDetailsBody = document.getElementById('orderDetailsBody');
+            orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading order details...</td></tr>';
+            document.getElementById('orderDetailsModal').style.display = 'flex';
+            
+            // Add console log to see what's being sent
+            console.log("Fetching order details for PO: " + poNumber);
+            
+            // Fetch the order items
+            fetch(`/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
+            .then(response => {
+                console.log("Response status:", response.status);
+                return response.json().catch(err => {
+                    console.error("JSON parse error:", err);
+                    throw new Error("Failed to parse server response");
+                });
+            })
             .then(data => {
-                if (data.success) {
-                    currentOrderItems = data.orderItems;
-                    completedItems = data.completedItems || [];
-                    quantityProgressData = data.quantityProgressData || {};
-                    itemProgressPercentages = data.itemProgressPercentages || {};
+                // Log the response for debugging
+                console.log("Response data:", data);
+                
+                // Clear the loading message
+                orderDetailsBody.innerHTML = '';
+                
+                if (data && data.success && data.orderItems) {
+                    const orderItems = data.orderItems;
                     
-                    const orderDetailsBody = document.getElementById('orderDetailsBody');
-                    orderDetailsBody.innerHTML = '';
-                    
-                    // Calculate item contributions to overall progress
-                    const totalItems = currentOrderItems.length;
-                    const contributionPerItem = totalItems > 0 ? (100 / totalItems) : 0;
-                    
-                    // Track overall progress
-                    overallProgress = 0;
-                    
-                    currentOrderItems.forEach((item, index) => {
-                        const isCompleted = completedItems.includes(index);
-                        const itemQuantity = parseInt(item.quantity) || 0;
-                        
-                        // Store contribution percentage
-                        itemContributions[index] = contributionPerItem;
-                        
-                        // Calculate item progress percentage based on units
-                        let unitCompletedCount = 0;
-                        if (quantityProgressData[index]) {
-                            for (let i = 0; i < itemQuantity; i++) {
-                                if (quantityProgressData[index][i] === true) {
-                                    unitCompletedCount++;
-                                }
-                            }
+                    try {
+                        // Parse orders if it's a string (JSON)
+                        let parsedItems = orderItems;
+                        if (typeof orderItems === 'string') {
+                            parsedItems = JSON.parse(orderItems);
                         }
                         
-                        // Calculate unit progress percentage
-                        const unitProgress = itemQuantity > 0 ? (unitCompletedCount / itemQuantity) * 100 : 0;
-                        
-                        // Calculate contribution to overall progress (what this item adds to overall)
-                        const contributionToOverall = (unitProgress / 100) * contributionPerItem;
-                        overallProgress += contributionToOverall;
-                        
-                        // Store item progress
-                        itemProgressPercentages[index] = unitProgress;
-                        
-                        // Create main row for the item
-                        const mainRow = document.createElement('tr');
-                        mainRow.className = 'item-header-row';
-                        if (isCompleted) {
-                            mainRow.classList.add('completed-item');
+                        // Ensure parsedItems is an array
+                        if (!Array.isArray(parsedItems)) {
+                            throw new Error("Order items is not an array");
                         }
-                        mainRow.dataset.itemIndex = index;
                         
-                        mainRow.innerHTML = `
-                            <td>${item.category}</td>
-                            <td>${item.item_description}</td>
-                            <td>${item.packaging}</td>
-                            <td>PHP ${parseFloat(item.price).toFixed(2)}</td>
-                            <td>${item.quantity}</td>
-                            <td class="status-cell">
-                                <div style="display: flex; align-items: center; justify-content: space-between">
-                                    <input type="checkbox" class="item-status-checkbox" data-index="${index}" 
-                                        ${isCompleted ? 'checked' : ''} onchange="updateRowStyle(this)">
-                                    <button type="button" class="toggle-item-progress" data-index="${index}" onclick="toggleQuantityProgress(${index})">
-                                        <i class="fas fa-list-ol"></i> Units
-                                    </button>
-                                </div>
-                                <div class="item-progress-bar-container">
-                                    <div class="item-progress-bar" id="item-progress-bar-${index}" style="width: ${unitProgress}%"></div>
-                                </div>
-                                <span class="item-progress-text" id="item-progress-text-${index}">${Math.round(unitProgress)}% Complete</span>
-                                <span class="contribution-text" id="contribution-text-${index}">
-                                    (${Math.round(contributionToOverall)}% of total)
-                                </span>
-                            </td>
+                        // Check if there are any items
+                        if (parsedItems.length === 0) {
+                            orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;font-style:italic;">No items found in this order.</td></tr>';
+                            return;
+                        }
+                        
+                        let totalAmount = 0;
+                        
+                        parsedItems.forEach(item => {
+                            if (!item) return; // Skip if item is null or undefined
+                            
+                            const quantity = parseInt(item.quantity) || 0;
+                            const price = parseFloat(item.price) || 0;
+                            const itemTotal = quantity * price;
+                            totalAmount += itemTotal;
+                            
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${item.category || ''}</td>
+                                <td>${item.item_description || ''}</td>
+                                <td>${item.packaging || ''}</td>
+                                <td>PHP ${price.toFixed(2)}</td>
+                                <td>${quantity}</td>
+                                <td>PHP ${itemTotal.toFixed(2)}</td>
+                            `;
+                            orderDetailsBody.appendChild(row);
+                        });
+                        
+                        // Add a total row
+                        const totalRow = document.createElement('tr');
+                        totalRow.style.fontWeight = 'bold';
+                        totalRow.innerHTML = `
+                            <td colspan="5" style="text-align: right;">Total:</td>
+                            <td>PHP ${totalAmount.toFixed(2)}</td>
                         `;
-                        orderDetailsBody.appendChild(mainRow);
-                        
-                        // Add a divider row
-                        const dividerRow = document.createElement('tr');
-                        dividerRow.className = 'units-divider';
-                        dividerRow.id = `units-divider-${index}`;
-                        dividerRow.style.display = 'none';
-                        dividerRow.innerHTML = `<td colspan="6"></td>`;
-                        orderDetailsBody.appendChild(dividerRow);
-                        
-                        // Create rows for individual units
-                        for (let i = 0; i < itemQuantity; i++) {
-                            // Check if this unit is completed
-                            const isUnitCompleted = quantityProgressData[index] && 
-                                                    quantityProgressData[index][i] === true;
-                            
-                            const unitRow = document.createElement('tr');
-                            unitRow.className = `unit-row unit-item unit-for-item-${index}`;
-                            unitRow.style.display = 'none';
-                            if (isUnitCompleted) {
-                                unitRow.classList.add('completed');
-                            }
-                            
-                            unitRow.innerHTML = `
-                                <td>${item.category}</td>
-                                <td>${item.item_description}</td>
-                                <td>${item.packaging}</td>
-                                <td>PHP ${parseFloat(item.price).toFixed(2)}</td>
-                                <td class="unit-number-cell">Unit ${i+1}</td>
-                                <td>
-                                    <input type="checkbox" class="unit-status-checkbox" 
-                                        data-item-index="${index}" 
-                                        data-unit-index="${i}" 
-                                        ${isUnitCompleted ? 'checked' : ''} 
-                                        onchange="updateUnitStatus(this)">
-                                </td>
-                            `;
-                            orderDetailsBody.appendChild(unitRow);
-                        }
-                        
-                        // Add an action row with a "Select All" button
-                        if (itemQuantity > 0) {
-                            const actionRow = document.createElement('tr');
-                            actionRow.className = `unit-row unit-action-row unit-for-item-${index}`;
-                            actionRow.style.display = 'none';
-                            actionRow.innerHTML = `
-                                <td colspan="6" style="text-align: right; padding: 10px;">
-                                    <button type="button" class="select-all-units" onclick="selectAllUnits(${index}, ${itemQuantity})">
-                                        <i class="fas fa-check-square"></i> Select All Units
-                                    </button>
-                                </td>
-                            `;
-                            orderDetailsBody.appendChild(actionRow);
-                        }
-                    });
-                    
-                    // Update overall progress display
-                    updateOverallProgressDisplay();
-                    
-                    document.getElementById('orderDetailsModal').style.display = 'flex';
+                        orderDetailsBody.appendChild(totalRow);
+                    } catch (parseError) {
+                        console.error("Error processing order items:", parseError);
+                        orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error processing order data: ${parseError.message}</td></tr>`;
+                        showToast('Error processing order data: ' + parseError.message, 'error');
+                    }
                 } else {
-                    showToast('Error: ' + data.message, 'error');
+                    // Handle when the API returns success: false or missing orderItems array
+                    let errorMessage = (data && data.message) ? data.message : 'Could not retrieve order details';
+                    orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${errorMessage}</td></tr>`;
+                    
+                    showToast('Error: ' + errorMessage, 'error');
                 }
             })
             .catch(error => {
-                showToast('Error: ' + error, 'error');
                 console.error('Error fetching order details:', error);
+                orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${error.message}</td></tr>`;
+                showToast('Error: ' + error.message, 'error');
             });
         }
-
-        // All other existing functions from orders.php...
-        function updateOverallProgressDisplay() {
-            const overallProgressBar = document.getElementById('overall-progress-bar');
-            const overallProgressText = document.getElementById('overall-progress-text');
+        
+        function closeOrderDetailsModal() {
+            document.getElementById('orderDetailsModal').style.display = 'none';
+        }
+        
+        // Function to open driver assignment modal
+        function openDriverModal(poNumber, driverId = 0, driverName = '') {
+            // Store the PO number in a variable for later use
+            currentPoNumber = poNumber;
+            currentDriverId = driverId;
             
-            // Round to nearest whole number
-            const roundedProgress = Math.round(overallProgress);
+            // Set the modal title
+            if (driverId > 0) {
+                document.getElementById('driverModalTitle').textContent = 'Change Driver';
+                document.getElementById('driverModalMessage').textContent = `Current driver: ${driverName}`;
+            } else {
+                document.getElementById('driverModalTitle').textContent = 'Assign Driver';
+                document.getElementById('driverModalMessage').textContent = 'No driver currently assigned';
+            }
             
-            overallProgressBar.style.width = `${roundedProgress}%`;
-            overallProgressText.textContent = `${roundedProgress}%`;
+            // Set the current driver in the dropdown if one is assigned
+            const driverSelect = document.getElementById('driverSelect');
+            if (driverSelect) {
+                driverSelect.value = driverId;
+            }
+            
+            // Show the modal
+            const driverModal = document.getElementById('driverModal');
+            if (driverModal) {
+                driverModal.style.display = 'flex';
+            }
         }
 
-        // ... (other existing functions from orders.php)
+        // Function to close the driver modal
+        function closeDriverModal() {
+            const driverModal = document.getElementById('driverModal');
+            if (driverModal) {
+                driverModal.style.display = 'none';
+            }
+        }
 
-        // PDF Functions copied from pending_orders.php
+        // Function to handle driver assignment
+        function assignDriver() {
+            const driverId = document.getElementById('driverSelect').value;
+            
+            if (driverId == 0) {
+                showToast('Please select a driver', 'error');
+                return;
+            }
+            
+            // Show loading state
+            const saveBtn = document.querySelector('#driverModal .save-btn');
+            const originalBtnText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            saveBtn.disabled = true;
+
+            // Send request to assign driver
+            fetch('/backend/assign_driver.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    po_number: currentPoNumber,
+                    driver_id: driverId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Driver assigned successfully', 'success');
+                    setTimeout(() => { window.location.reload(); }, 1000);
+                } else {
+                    showToast('Error: ' + (data.message || 'Unknown error'), 'error');
+                    saveBtn.innerHTML = originalBtnText;
+                    saveBtn.disabled = false;
+                }
+                closeDriverModal();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error: Failed to communicate with server', 'error');
+                saveBtn.innerHTML = originalBtnText;
+                saveBtn.disabled = false;
+                closeDriverModal();
+            });
+        }
+        
+        // Special instructions functions
+        function viewSpecialInstructions(poNumber, instructions) {
+            document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
+            const contentEl = document.getElementById('instructionsContent');
+            
+            if (instructions && instructions.trim().length > 0) {
+                contentEl.textContent = instructions;
+                contentEl.classList.remove('empty');
+            } else {
+                contentEl.textContent = 'No special instructions provided for this order.';
+                contentEl.classList.add('empty');
+            }
+            
+            document.getElementById('specialInstructionsModal').style.display = 'block';
+        }
+
+        function closeSpecialInstructions() {
+            document.getElementById('specialInstructionsModal').style.display = 'none';
+        }
+        
+        // PDF Generation functions
         function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
             try {
                 // Store current PO data
@@ -1083,10 +1254,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 
             } catch (e) {
                 console.error('Error preparing PDF data:', e);
-                alert('Error preparing PDF data');
+                alert('Error preparing PDF data: ' + e.message);
             }
         }
-
+        
         // Function to show PDF preview
         function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
             try {
@@ -1163,7 +1334,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 
             } catch (e) {
                 console.error('Error preparing PDF data:', e);
-                alert('Error preparing PDF data');
+                alert('Error preparing PDF data: ' + e.message);
             }
         }
         
@@ -1200,27 +1371,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 alert('Error generating PDF. Please try again.');
             });
         }
-
-        // Special Instructions Modal Functions
-        function viewSpecialInstructions(poNumber, instructions) {
-            document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
-            const contentEl = document.getElementById('instructionsContent');
-            
-            if (instructions && instructions.trim().length > 0) {
-                contentEl.textContent = instructions;
-                contentEl.classList.remove('empty');
-            } else {
-                contentEl.textContent = 'No special instructions provided for this order.';
-                contentEl.classList.add('empty');
-            }
-            
-            document.getElementById('specialInstructionsModal').style.display = 'block';
-        }
-
-        function closeSpecialInstructions() {
-            document.getElementById('specialInstructionsModal').style.display = 'none';
-        }
-
+        
+        // Function to display toast messages
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
@@ -1233,19 +1385,35 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             `;
             document.getElementById('toast-container').appendChild(toast);
             
-            // Automatically remove the toast after 5 seconds
-            setTimeout(() => {
-                toast.remove();
-            }, 5000);
+            setTimeout(() => { toast.remove(); }, 5000);
         }
 
-        // Document ready function for real-time searching
+        // Sorting functionality
+        document.querySelectorAll('.sort-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const column = this.getAttribute('data-column');
+                let order = 'ASC';
+                
+                // If already sorted by this column, toggle order
+                if (this.classList.contains('asc')) {
+                    order = 'DESC';
+                }
+                
+                // Preserve any filter when sorting
+                const statusFilter = document.getElementById('statusFilter').value;
+                let url = `?status=${encodeURIComponent(statusFilter)}&sort=${column}&order=${order}`;
+                
+                window.location.href = url;
+            });
+        });
+
+        // Search functionality
         $(document).ready(function() {
-            // Search functionality - exact match to order_history.php
+            // Search functionality
             $("#searchInput").on("input", function() {
                 let searchText = $(this).val().toLowerCase().trim();
-
-                $(".orders-table tbody tr").each(function() {
+                
+                $("table.orders-table tbody tr").each(function() {
                     let row = $(this);
                     let text = row.text().toLowerCase();
                     
@@ -1257,11 +1425,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 });
             });
             
-            // Handle search button click (same functionality as typing)
+            // Handle search button click
             $(".search-btn").on("click", function() {
                 let searchText = $("#searchInput").val().toLowerCase().trim();
                 
-                $(".orders-table tbody tr").each(function() {
+                $("table.orders-table tbody tr").each(function() {
                     let row = $(this);
                     let text = row.text().toLowerCase();
                     
@@ -1273,19 +1441,35 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 });
             });
 
-            // Handle clicks outside modals to close them
-            $(document).on('click', '.overlay', function(event) {
-                if (event.target === this) {
-                    if (this.id === 'orderDetailsModal') closeOrderDetailsModal();
-                    else if (this.id === 'driverModal') closeDriverModal();
-                }
-            });
-
             // Close special instructions modal when clicking outside
             window.addEventListener('click', function(event) {
                 const modal = document.getElementById('specialInstructionsModal');
                 if (event.target === modal) {
                     closeSpecialInstructions();
+                }
+            });
+            
+            // Close modals with Escape key
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    closeOrderDetailsModal();
+                    closeSpecialInstructions();
+                    closePDFPreview();
+                    closeDriverModal();
+                }
+            });
+            
+            // Handle clicks outside order details modal
+            document.getElementById('orderDetailsModal')?.addEventListener('click', function(event) {
+                if (event.target === this) {
+                    closeOrderDetailsModal();
+                }
+            });
+            
+            // Handle clicks outside driver modal
+            document.getElementById('driverModal')?.addEventListener('click', function(event) {
+                if (event.target === this) {
+                    closeDriverModal();
                 }
             });
         });
