@@ -17,23 +17,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $ship_to_attn = $_POST['ship_to_attn'] ?? '';
         
         $po_number = $_POST['po_number'];
-        
-        // Check if the po_number already exists to prevent duplicates
-        $checkPO = $conn->prepare("SELECT COUNT(*) FROM orders WHERE po_number = ?");
-        if ($checkPO === false) {
-            throw new Exception('Failed to prepare check statement: ' . $conn->error);
-        }
-        
-        $checkPO->bind_param("s", $po_number);
-        $checkPO->execute();
-        $checkPO->bind_result($poExists);
-        $checkPO->fetch();
-        $checkPO->close();
-        
-        if ($poExists > 0) {
-            throw new Exception('PO Number already exists. Please try again with a different PO number.');
-        }
-        
         $orders = $_POST['orders']; // Keep as JSON string
         $total_amount = $_POST['total_amount'];
         $special_instructions = $_POST['special_instructions'] ?? '';
@@ -44,17 +27,39 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Invalid order data format');
         }
 
-        // Insert into orders table with updated column names
+        // Get the next available ID for our order
+        $maxIdStmt = $conn->query("SELECT MAX(id) as max_id FROM orders");
+        $maxIdResult = $maxIdStmt->fetch_assoc();
+        $nextId = ($maxIdResult['max_id'] ?? 0) + 1;
+        
+        // Check if the po_number already exists
+        $checkStmt = $conn->prepare("SELECT COUNT(*) FROM orders WHERE po_number = ?");
+        if ($checkStmt === false) {
+            throw new Exception('Failed to prepare check statement: ' . $conn->error);
+        }
+        
+        $checkStmt->bind_param("s", $po_number);
+        $checkStmt->execute();
+        $checkStmt->bind_result($count);
+        $checkStmt->fetch();
+        $checkStmt->close();
+        
+        if ($count > 0) {
+            throw new Exception('This PO number already exists. Please generate a new one.');
+        }
+
+        // Insert into orders table with updated column names - and explicitly set the ID
         $insertOrder = $conn->prepare("
-            INSERT INTO orders (username, order_date, delivery_date, bill_to, bill_to_attn, ship_to, ship_to_attn, po_number, orders, total_amount, status, special_instructions) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
+            INSERT INTO orders (id, username, order_date, delivery_date, bill_to, bill_to_attn, ship_to, ship_to_attn, po_number, orders, total_amount, status, special_instructions) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
         ");
 
         if ($insertOrder === false) {
             throw new Exception('Failed to prepare statement: ' . $conn->error);
         }
 
-        $insertOrder->bind_param("ssssssssdss", 
+        $insertOrder->bind_param("issssssssds", 
+            $nextId,
             $username, 
             $order_date, 
             $delivery_date, 
@@ -72,7 +77,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             echo json_encode([
                 'success' => true,
                 'message' => 'Order successfully added!',
-                'order_id' => $conn->insert_id,
+                'order_id' => $nextId,
                 'po_number' => $po_number
             ]);
         } else {

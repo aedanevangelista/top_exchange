@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Apr 28, 2025 at 03:59 AM
+-- Generation Time: Apr 28, 2025 at 05:08 AM
 -- Server version: 10.11.10-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -285,7 +285,7 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `po_number`, `username`, `company`, `order_date`, `delivery_date`, `ship_to`, `ship_to_attn`, `bill_to`, `bill_to_attn`, `orders`, `total_amount`, `status`, `driver_assigned`, `contact_number`, `special_instructions`, `subtotal`, `progress`, `completed_items`, `item_progress_data`, `quantity_progress_data`, `item_progress_percentages`) VALUES
-(0, 'TE-20250428-3186', 'Solaire', NULL, '2025-04-27', '2025-04-30', 'SURESTE PROPERTIES, INC\r\nThe Executive Offices, Solaire Resort & Casino\r\nAsean Avenue, Entertainment City\r\nTambo\r\nParanaque City, Philippines, 1701, PH', 'Gillian Mendoza', 'SURESTE PROPERTIES, INC\r\nThe Executive Offices, Solaire Resort & Casino\r\nAsean Avenue, Entertainment City\r\nTambo\r\nParanaque City, Philippines, 1701, PH', 'PROCUREMENT', '[{\"product_id\":1,\"category\":\"Siopao\",\"item_description\":\"Asado Siopao (A Large)\",\"packaging\":\"6pcs/pack\",\"price\":280,\"quantity\":1}]', 280.00, 'Pending', 0, NULL, '', 0.00, 0, NULL, NULL, NULL, NULL);
+(0, 'Solaire-1', 'Solaire', NULL, '2025-04-28', '2025-04-30', 'SURESTE PROPERTIES, INC\r\nThe Executive Offices, Solaire Resort & Casino\r\nAsean Avenue, Entertainment City\r\nTambo\r\nParanaque City, Philippines, 1701, PH', 'Gillian Mendoza', 'SURESTE PROPERTIES, INC\r\nThe Executive Offices, Solaire Resort & Casino\r\nAsean Avenue, Entertainment City\r\nTambo\r\nParanaque City, Philippines, 1701, PH', 'PROCUREMENT', '0', 3080.00, 'Pending', 0, NULL, '1', 0.00, 0, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
