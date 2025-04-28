@@ -1483,62 +1483,62 @@ function truncate($text, $max = 15) {
     }
 
     // Fixed the openEditAccountForm function to properly handle JSON and include the new attention fields
-    function openEditAccountForm(id, username, email, phone, region, city, company, company_address, business_proof, bill_to, bill_to_attn, ship_to, ship_to_attn) {
-        document.getElementById("edit-id").value = id;
-        document.getElementById("edit-username").value = username;
-        document.getElementById("edit-email").value = email;
-        document.getElementById("edit-phone").value = phone || '';
-        document.getElementById("edit-region").value = region;
-        document.getElementById("edit-city").value = city;
-        document.getElementById("edit-company").value = company || '';
-        document.getElementById("edit-company_address").value = company_address;
-        document.getElementById("edit-bill_to").value = bill_to || '';
-        document.getElementById("edit-bill_to_attn").value = bill_to_attn || '';
-        document.getElementById("edit-ship_to").value = ship_to || '';
-        document.getElementById("edit-ship_to_attn").value = ship_to_attn || '';
-        
-        // Parse business_proof if it's a string
-        let proofs = business_proof;
-        if (typeof business_proof === 'string') {
-            try {
-                proofs = JSON.parse(business_proof);
-            } catch (e) {
-                console.error("Error parsing business proof:", e);
-                proofs = [];
-            }
+function openEditAccountForm(id, username, email, phone, region, city, company, company_address, business_proof, bill_to, bill_to_attn, ship_to, ship_to_attn) {
+    document.getElementById("edit-id").value = id;
+    document.getElementById("edit-username").value = username;
+    document.getElementById("edit-email").value = email;
+    document.getElementById("edit-phone").value = phone || '';
+    document.getElementById("edit-region").value = region;
+    document.getElementById("edit-city").value = city;
+    document.getElementById("edit-company").value = company || '';
+    document.getElementById("edit-company_address").value = company_address;
+    document.getElementById("edit-bill_to").value = bill_to || '';
+    document.getElementById("edit-bill_to_attn").value = bill_to_attn || '';
+    document.getElementById("edit-ship_to").value = ship_to || '';
+    document.getElementById("edit-ship_to_attn").value = ship_to_attn || '';
+    
+    // Parse business_proof if it's a string
+    let proofs = business_proof;
+    if (typeof business_proof === 'string') {
+        try {
+            proofs = JSON.parse(business_proof);
+        } catch (e) {
+            console.error("Error parsing business proof:", e);
+            proofs = [];
         }
-        
-        document.getElementById("existing-business-proof").value = JSON.stringify(proofs);
-        
-        var proofContainer = document.getElementById("edit-business-proof-container");
-        proofContainer.innerHTML = '';
-        
-        if (proofs && Array.isArray(proofs) && proofs.length > 0) {
-            var proofLabel = document.createElement('label');
-            proofLabel.innerHTML = 'Current Business Proof:';
-            proofContainer.appendChild(proofLabel);
-            
-            var proofDiv = document.createElement('div');
-            proofDiv.className = 'current-proofs';
-            proofDiv.style.marginBottom = '15px';
-            
-            proofs.forEach(function(proof) {
-                var img = document.createElement('img');
-                img.src = proof;
-                img.alt = 'Business Proof';
-                img.style.width = '80px';
-                img.style.height = 'auto';
-                img.style.margin = '5px';
-                img.style.cursor = 'pointer';
-                img.onclick = function() { openModal(this); };
-                proofDiv.appendChild(img);
-            });
-            
-            proofContainer.appendChild(proofDiv);
-        }
-        
-        document.getElementById("editAccountOverlay").style.display = "block";
     }
-    </script>
+    
+    document.getElementById("existing-business-proof").value = JSON.stringify(proofs);
+    
+    var proofContainer = document.getElementById("edit-business-proof-container");
+    proofContainer.innerHTML = '';
+    
+    if (proofs && Array.isArray(proofs) && proofs.length > 0) {
+        var proofLabel = document.createElement('label');
+        proofLabel.innerHTML = 'Current Business Proof:';
+        proofContainer.appendChild(proofLabel);
+        
+        var proofDiv = document.createElement('div');
+        proofDiv.className = 'current-proofs';
+        proofDiv.style.marginBottom = '15px';
+        
+        proofs.forEach(function(proof) {
+            var img = document.createElement('img');
+            img.src = proof;
+            img.alt = 'Business Proof';
+            img.style.width = '80px';
+            img.style.height = 'auto';
+            img.style.margin = '5px';
+            img.style.cursor = 'pointer';
+            img.onclick = function() { openModal(this); };
+            proofDiv.appendChild(img);
+        });
+        
+        proofContainer.appendChild(proofDiv);
+    }
+    
+    document.getElementById("editAccountOverlay").style.display = "block";
+}
+</script>
 </body>
 </html>
