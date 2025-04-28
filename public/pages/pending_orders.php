@@ -1269,88 +1269,27 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, billTo
             
             // Make sure prepareOrderData includes company field
             window.originalPrepareOrderData = window.prepareOrderData;
-             window.prepareOrderData = function() {
-        // Get form values
-        const username = document.getElementById('username').value;
-        const billTo = document.getElementById('bill_to').value;
-        const billToAttn = document.getElementById('bill_to_attn').value;
-        const shipTo = document.getElementById('ship_to').value;
-        const shipToAttn = document.getElementById('ship_to_attn').value;
-        
-        // Validate required fields
-        if (!username) {
-            alert('Please select a username');
-            return false;
-        }
-        
-        if (!shipTo) {
-            alert('Please provide a Ship To address');
-            return false;
-        }
-        
-        // Format the orders JSON data
-        const ordersInput = document.getElementById('orders');
-        const specialInstructions = document.getElementById('special_instructions').value;
-        
-        // Ensure we have valid order data
-        if (!ordersInput.value) {
-            alert('Please add at least one product to the order');
-            return false;
-        }
-        
-        try {
-            const ordersData = JSON.parse(ordersInput.value);
-            ordersInput.value = JSON.stringify(ordersData);
-        } catch (e) {
-            console.error("Error preparing order data:", e);
-            alert('There was an error preparing the order data. Please try again.');
-            return false;
-        }
-        
-        // Populate hidden fields
-        document.getElementById('special_instructions_hidden').value = specialInstructions;
-        
-        return true; // Allow form submission to proceed
-    }
-    
-    // Add event listener to form submission
-    document.addEventListener('DOMContentLoaded', function() {
-        const orderForm = document.getElementById('addOrderForm');
-        if (orderForm) {
-            orderForm.addEventListener('submit', function(event) {
-                if (!prepareOrderData()) {
-                    event.preventDefault(); // Prevent form submission if validation fails
+            window.prepareOrderData = function() {
+                if (window.originalPrepareOrderData) {
+                    window.originalPrepareOrderData();
                 }
-            });
-        }
-    });
-
-    function prepareOrderData() {
-    // The original order data preparation (retrieve from window.originalPrepareOrderData if needed)
-    if (window.originalPrepareOrderData) {
-        window.originalPrepareOrderData();
-    }
-    
-    // Get values from the form
-    const ordersInput = document.getElementById('orders');
-    const specialInstructions = document.getElementById('special_instructions').value;
-    
-    // Ensure we have valid order data
-    if (ordersInput.value) {
-        try {
-            const ordersData = JSON.parse(ordersInput.value);
-            ordersInput.value = JSON.stringify(ordersData);
-        } catch (e) {
-            console.error("Error preparing order data:", e);
-            return false;
-        }
-    }
-    
-    // Populate special instructions
-    document.getElementById('special_instructions_hidden').value = specialInstructions;
-    
-    return true;
-}
+                
+                // Ensure company is included
+                const ordersInput = document.getElementById('orders');
+                if (ordersInput.value) {
+                    try {
+                        const ordersData = JSON.parse(ordersInput.value);
+                        ordersInput.value = JSON.stringify(ordersData);
+                    } catch (e) {
+                        console.error("Error preparing order data:", e);
+                    }
+                }
+                
+                // Include special instructions in form data
+                const specialInstructions = document.getElementById('special_instructions').value;
+                document.getElementById('special_instructions_hidden').value = specialInstructions;
+                // No need for a hidden field since the textarea already has the name attribute
+            };
     </script> 
 </body>
 </html>
