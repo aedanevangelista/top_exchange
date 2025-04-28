@@ -1792,28 +1792,7 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
             });
             
             // Make sure prepareOrderData includes company field
-            window.originalPrepareOrderData = window.prepareOrderData;
-            window.prepareOrderData = function() {
-                if (window.originalPrepareOrderData) {
-                    window.originalPrepareOrderData();
-                }
-                
-                // Ensure company is included
-                const ordersInput = document.getElementById('orders');
-                if (ordersInput.value) {
-                    try {
-                        const ordersData = JSON.parse(ordersInput.value);
-                        ordersInput.value = JSON.stringify(ordersData);
-                    } catch (e) {
-                        console.error("Error preparing order data:", e);
-                    }
-                }
-                
-                // Include special instructions in form data
-                const specialInstructions = document.getElementById('special_instructions').value;
-                document.getElementById('special_instructions_hidden').value = specialInstructions;
-                // No need for a hidden field since the textarea already has the name attribute
-            };
+            
     </script> 
 </body>
 </html>
