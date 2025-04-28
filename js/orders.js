@@ -287,6 +287,8 @@ window.generatePONumber = function() {
 };
 
 window.prepareOrderData = function() {
+    console.log("Selected products before preparing:", selectedProducts);
+    
     // Make sure all the address fields have values
     if (!$('#bill_to').val() && $('#username').val()) {
         // If bill_to is empty, use the company address as a default
@@ -300,10 +302,49 @@ window.prepareOrderData = function() {
         $('#ship_to').val(companyAddress);
     }
     
+    // Ensure selectedProducts is not empty
+    if (!selectedProducts || selectedProducts.length === 0) {
+        // Check if there are products in the summary table
+        const summaryProducts = [];
+        $('#summaryBody tr').each(function() {
+            const row = $(this);
+            const productId = row.data('product-id');
+            const category = row.find('td:eq(0)').text().trim();
+            const itemDescription = row.find('td:eq(1)').text().trim();
+            const packaging = row.find('td:eq(2)').text().trim();
+            const price = parseFloat(row.find('td:eq(3)').text().replace('PHP ', '').trim());
+            const quantity = parseInt(row.find('.summary-quantity').val());
+            
+            summaryProducts.push({
+                product_id: productId,
+                category: category,
+                item_description: itemDescription,
+                packaging: packaging,
+                price: price,
+                quantity: quantity
+            });
+        });
+        
+        if (summaryProducts.length > 0) {
+            selectedProducts = summaryProducts;
+            console.log("Recovered products from summary table:", selectedProducts);
+        } else {
+            console.error("No products found in either selectedProducts or summary table");
+            // Provide a default empty array to avoid saving "0"
+            selectedProducts = [];
+        }
+    }
+    
     const orderData = JSON.stringify(selectedProducts);
     $('#orders').val(orderData);
+    
     const totalAmount = calculateCartTotal();
     $('#total_amount').val(totalAmount.toFixed(2));
+    
+    console.log("Final order data:", {
+        orders: $('#orders').val(),
+        total_amount: $('#total_amount').val()
+    });
 };
 
 window.viewOrderDetails = function(orders) {
