@@ -512,51 +512,52 @@ $(document).ready(function() {
     });
 
     // Form submission
-    $('#addOrderForm').on('submit', function(e) {
-        e.preventDefault();
-        
-        if (selectedProducts.length === 0) {
-            alert('Please add products to your order');
-            return;
-        }
+    // Form submission
+$('#addOrderForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    if (selectedProducts.length === 0) {
+        alert('Please add products to your order');
+        return;
+    }
 
-        prepareOrderData();
-        
-        // Validate delivery address
-        const deliveryAddress = $('#delivery_address').val();
-        if (!deliveryAddress || deliveryAddress.trim() === '') {
-            alert('Please provide a delivery address');
-            return;
-        }
-        
-        // Show a toast notification when saving the order
-        const poNumber = $('#po_number').val();
-        const username = $('#username').val();
-        
-        if (poNumber && username) {
-            showToast(`The order: ${poNumber} has been created for ${username}.`, 'success');
-        }
+    prepareOrderData();
+    
+    // Validate ship_to (delivery address) - UPDATED FROM delivery_address
+    const shipTo = $('#ship_to').val();
+    if (!shipTo || shipTo.trim() === '') {
+        alert('Please provide a shipping address in the "Ship To" field');
+        return;
+    }
+    
+    // Show a toast notification when saving the order
+    const poNumber = $('#po_number').val();
+    const username = $('#username').val();
+    
+    if (poNumber && username) {
+        showToast(`The order: ${poNumber} has been created for ${username}.`, 'success');
+    }
 
-        $.ajax({
-            url: $(this).attr('action'),
-            type: 'POST',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    // Wait a moment for the toast to be visible before reloading
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
-                } else {
-                    alert('Error: ' + response.message);
-                }
-            },
-            error: function() {
-                alert('Error submitting order. Please try again.');
+    $.ajax({
+        url: $(this).attr('action'),
+        type: 'POST',
+        data: $(this).serialize(),
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                // Wait a moment for the toast to be visible before reloading
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                alert('Error: ' + response.message);
             }
-        });
+        },
+        error: function() {
+            alert('Error submitting order. Please try again.');
+        }
     });
+});
     
     // Category filter change handler
     $('#inventoryFilter').on('change', function() {
