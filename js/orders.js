@@ -308,18 +308,30 @@ window.prepareOrderData = function() {
 
 window.viewOrderDetails = function(orders) {
     try {
-        const orderDetails = JSON.parse(orders);
+        // Make sure the orders variable is properly parsed
+        let orderDetails;
+        if (typeof orders === 'string') {
+            orderDetails = JSON.parse(orders);
+        } else {
+            orderDetails = orders; // Already an object
+        }
+
+        // Check if orderDetails is an array
+        if (!Array.isArray(orderDetails)) {
+            throw new Error('Order details is not an array');
+        }
+
         const orderDetailsBody = $('#orderDetailsBody');
         orderDetailsBody.empty();
         
         orderDetails.forEach(product => {
             const row = `
                 <tr>
-                    <td>${product.category}</td>
-                    <td>${product.item_description}</td>
-                    <td>${product.packaging}</td>
-                    <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
-                    <td>${product.quantity}</td>
+                    <td>${product.category || ''}</td>
+                    <td>${product.item_description || ''}</td>
+                    <td>${product.packaging || ''}</td>
+                    <td>PHP ${parseFloat(product.price || 0).toFixed(2)}</td>
+                    <td>${product.quantity || 0}</td>
                 </tr>
             `;
             orderDetailsBody.append(row);
@@ -328,7 +340,7 @@ window.viewOrderDetails = function(orders) {
         $('#orderDetailsModal').show();
     } catch (e) {
         console.error('Error parsing order details:', e);
-        alert('Error displaying order details');
+        alert('Error displaying order details: ' + e.message);
     }
 };
 

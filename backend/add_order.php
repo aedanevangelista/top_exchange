@@ -17,6 +17,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $ship_to_attn = $_POST['ship_to_attn'] ?? '';
         
         $po_number = $_POST['po_number'];
+        
+        // Check if the po_number already exists to prevent duplicates
+        $checkPO = $conn->prepare("SELECT COUNT(*) FROM orders WHERE po_number = ?");
+        if ($checkPO === false) {
+            throw new Exception('Failed to prepare check statement: ' . $conn->error);
+        }
+        
+        $checkPO->bind_param("s", $po_number);
+        $checkPO->execute();
+        $checkPO->bind_result($poExists);
+        $checkPO->fetch();
+        $checkPO->close();
+        
+        if ($poExists > 0) {
+            throw new Exception('PO Number already exists. Please try again with a different PO number.');
+        }
+        
         $orders = $_POST['orders']; // Keep as JSON string
         $total_amount = $_POST['total_amount'];
         $special_instructions = $_POST['special_instructions'] ?? '';
@@ -55,7 +72,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             echo json_encode([
                 'success' => true,
                 'message' => 'Order successfully added!',
-                'order_id' => $conn->insert_id
+                'order_id' => $conn->insert_id,
+                'po_number' => $po_number
             ]);
         } else {
             throw new Exception('Failed to execute statement: ' . $insertOrder->error);
