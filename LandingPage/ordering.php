@@ -520,49 +520,8 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
 </head>
 <body>
 
-<div class="header_section header_bg">
-    <div class="container">
-        <nav class="navbar navbar-expand-lg navbar-light bg-light">
-            <a class="navbar-brand" href="index.php"><img src="images/resized_food_corp_logo.png" alt="Top Exchange Logo"></a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav ml-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="../index.php">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="../LandingPage/about.php">About</a>
-                    </li>
-                    <li class="nav-item active">
-                        <a class="nav-link" href="../LandingPage/ordering.php">Products</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="../LandingPage/contact.php">Contact Us</a>
-                    </li>
-                </ul>
-                <form class="form-inline my-2 my-lg-0">
-                    <div class="login_bt">
-                        <?php if (isset($_SESSION['username'])): ?>
-                            <a href="#" class="cart-button" data-toggle="modal" data-target="#cartModal" aria-label="View shopping cart">
-                                <span style="color: #222222;"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
-                                <span id="cart-count" class="badge badge-danger"><?php echo array_sum(array_column($_SESSION['cart'], 'quantity')); ?></span>
-                            </a>
-                            <a href="logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>) 
-                                <span style="color: #222222;"><i class="fa fa-sign-out-alt" aria-hidden="true"></i></span>
-                            </a>
-                        <?php else: ?>
-                            <a href="login.php">Login 
-                                <span style="color: #222222;"><i class="fa fa-user" aria-hidden="true"></i></span>
-                            </a>
-                        <?php endif; ?>
-                    </div>
-                </form>
-            </div>
-        </nav>
-    </div>
-</div>
+<!-- Include external header -->
+<?php include('header.php'); ?>
 
 <?php if (isset($_SESSION['username'])): ?>
 <!-- Cart Modal -->
@@ -846,13 +805,8 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
     </div>
 </div>
 
-<!-- copyright section start -->
-<div class="copyright_section margin_top90">
-    <div class="container">
-        <p class="copyright_text">2025 All Rights Reserved. Design by STI Munoz Students</p>
-    </div>
-</div>
-<!-- copyright section end -->
+<!-- Include external footer -->
+<?php include('footer.php'); ?>
 
 <?php $conn->close(); ?>
 

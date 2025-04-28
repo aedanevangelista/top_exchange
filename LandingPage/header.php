@@ -60,6 +60,95 @@ if (!isset($_SESSION['cart'])) {
             --border-radius: 10px;
         }
 
+        /* Enhanced Company logo and name styles */
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            transition: var(--transition);
+            padding: 5px 0;
+        }
+        
+        .navbar-brand:hover {
+            transform: translateY(-2px);
+        }
+        
+        .navbar-brand img {
+            height: 50px;
+            width: auto;
+            transition: var(--transition);
+        }
+        
+        .company-name {
+            display: flex;
+            flex-direction: column;
+            margin-left: 12px;
+            line-height: 1.1;
+            font-family: 'Roboto', sans-serif;
+        }
+        
+        .company-name-main {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #9a7432, #c9a158);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            padding-bottom: 3px;
+        }
+        
+        .company-name-main::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to right, #9a7432, #c9a158);
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.3s ease;
+        }
+        
+        .navbar-brand:hover .company-name-main::after {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+        
+        .company-name-sub {
+            font-size: 0.75rem;
+            color: var(--secondary-color);
+            margin-top: 2px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 992px) {
+            .company-name-main {
+                font-size: 1.4rem;
+            }
+            
+            .company-name-sub {
+                font-size: 0.7rem;
+                letter-spacing: 1px;
+            }
+            
+            .navbar-brand img {
+                height: 45px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .company-name {
+                display: none;
+            }
+        }
+
         /* Custom Popup Styles */
         .custom-popup {
             position: fixed;
@@ -260,7 +349,13 @@ if (!isset($_SESSION['cart'])) {
     <div class="header_section">
         <div class="container">
             <nav class="navbar navbar-expand-lg navbar-light bg-light">
-                <a class="navbar-brand" href="index.php"><img src="/LandingPage/images/resized_food_corp_logo.png" alt="Top Food Exchange Corp. Logo"></a>
+                <a class="navbar-brand" href="index.php">
+                    <img src="/LandingPage/images/resized_food_corp_logo.png" alt="Top Food Exchange Corp. Logo">
+                    <div class="company-name">
+                        <span class="company-name-main">Top Exchange</span>
+                        <span class="company-name-sub">Food Corporation</span>
+                    </div>
+                </a>
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
