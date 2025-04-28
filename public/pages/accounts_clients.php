@@ -844,7 +844,7 @@ function truncate($text, $max = 15) {
                 </select>
             </div>
             <button onclick="openAddAccountForm()" class="add-account-btn">
-                <i class="fas fa-user-plus"></i> Add New Accsount
+                <i class="fas fa-user-plus"></i> Add New Account
             </button>
         </div>
         <div class="accounts-table-container">
