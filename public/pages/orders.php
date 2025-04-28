@@ -956,104 +956,89 @@ if ($statusResult) {
             window.location.href = url;
         }
         
-        // Function to view order details
-        function viewOrderDetails(poNumber) {
-            currentPoNumber = poNumber;
-            
-            // Show loading indicator
-            const orderDetailsBody = document.getElementById('orderDetailsBody');
-            orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading order details...</td></tr>';
-            document.getElementById('orderDetailsModal').style.display = 'flex';
-            
-            // Add console log to see what's being sent
-            console.log("Fetching order details for PO: " + poNumber);
-            
-            // Fetch the order items
-            fetch(`/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
-            .then(response => {
-                console.log("Response status:", response.status);
-                return response.json().catch(err => {
-                    console.error("JSON parse error:", err);
-                    throw new Error("Failed to parse server response");
-                });
-            })
-            .then(data => {
-                // Log the response for debugging
-                console.log("Response data:", data);
-                
-                // Clear the loading message
-                orderDetailsBody.innerHTML = '';
-                
-                if (data && data.success && data.orderItems) {
-                    const orderItems = data.orderItems;
-                    
-                    try {
-                        // Parse orders if it's a string (JSON)
-                        let parsedItems = orderItems;
-                        if (typeof orderItems === 'string') {
-                            parsedItems = JSON.parse(orderItems);
-                        }
-                        
-                        // Ensure parsedItems is an array
-                        if (!Array.isArray(parsedItems)) {
-                            throw new Error("Order items is not an array");
-                        }
-                        
-                        // Check if there are any items
-                        if (parsedItems.length === 0) {
-                            orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;font-style:italic;">No items found in this order.</td></tr>';
-                            return;
-                        }
-                        
-                        let totalAmount = 0;
-                        
-                        parsedItems.forEach(item => {
-                            if (!item) return; // Skip if item is null or undefined
-                            
-                            const quantity = parseInt(item.quantity) || 0;
-                            const price = parseFloat(item.price) || 0;
-                            const itemTotal = quantity * price;
-                            totalAmount += itemTotal;
-                            
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td>${item.category || ''}</td>
-                                <td>${item.item_description || ''}</td>
-                                <td>${item.packaging || ''}</td>
-                                <td>PHP ${price.toFixed(2)}</td>
-                                <td>${quantity}</td>
-                                <td>PHP ${itemTotal.toFixed(2)}</td>
-                            `;
-                            orderDetailsBody.appendChild(row);
-                        });
-                        
-                        // Add a total row
-                        const totalRow = document.createElement('tr');
-                        totalRow.style.fontWeight = 'bold';
-                        totalRow.innerHTML = `
-                            <td colspan="5" style="text-align: right;">Total:</td>
-                            <td>PHP ${totalAmount.toFixed(2)}</td>
-                        `;
-                        orderDetailsBody.appendChild(totalRow);
-                    } catch (parseError) {
-                        console.error("Error processing order items:", parseError);
-                        orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error processing order data: ${parseError.message}</td></tr>`;
-                        showToast('Error processing order data: ' + parseError.message, 'error');
-                    }
-                } else {
-                    // Handle when the API returns success: false or missing orderItems array
-                    let errorMessage = (data && data.message) ? data.message : 'Could not retrieve order details';
-                    orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${errorMessage}</td></tr>`;
-                    
-                    showToast('Error: ' + errorMessage, 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching order details:', error);
-                orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${error.message}</td></tr>`;
-                showToast('Error: ' + error.message, 'error');
-            });
+       // Add this function to your JavaScript
+function viewOrderDetails(poNumber) {
+    currentPoNumber = poNumber;
+    
+    // Show loading indicator
+    const orderDetailsBody = document.getElementById('orderDetailsBody');
+    orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading order details...</td></tr>';
+    document.getElementById('orderDetailsModal').style.display = 'flex';
+    
+    console.log("Fetching details for PO:", poNumber);
+    
+    // Fetch the order items
+    fetch(`/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Server returned status ${response.status}`);
         }
+        return response.json();
+    })
+    .then(data => {
+        console.log("Server response:", data);
+        orderDetailsBody.innerHTML = '';
+        
+        if (data.success && data.orderItems) {
+            try {
+                // We might need to parse the order items if they're returned as a string
+                let items = data.orderItems;
+                if (typeof items === 'string') {
+                    items = JSON.parse(items);
+                }
+                
+                if (!Array.isArray(items) || items.length === 0) {
+                    orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">No items found in this order</td></tr>';
+                    return;
+                }
+                
+                let totalAmount = 0;
+                
+                // Add each item to the table
+                items.forEach(item => {
+                    if (!item) return;
+                    
+                    const quantity = parseInt(item.quantity) || 0;
+                    const price = parseFloat(item.price) || 0;
+                    const itemTotal = quantity * price;
+                    totalAmount += itemTotal;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.category || ''}</td>
+                        <td>${item.item_description || ''}</td>
+                        <td>${item.packaging || ''}</td>
+                        <td>PHP ${price.toFixed(2)}</td>
+                        <td>${quantity}</td>
+                        <td>PHP ${itemTotal.toFixed(2)}</td>
+                    `;
+                    orderDetailsBody.appendChild(row);
+                });
+                
+                // Add a total row
+                const totalRow = document.createElement('tr');
+                totalRow.style.fontWeight = 'bold';
+                totalRow.innerHTML = `
+                    <td colspan="5" style="text-align: right;">Total:</td>
+                    <td>PHP ${totalAmount.toFixed(2)}</td>
+                `;
+                orderDetailsBody.appendChild(totalRow);
+                
+            } catch (error) {
+                console.error("Error processing data:", error);
+                orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Error processing order data: ${error.message}</td></tr>`;
+            }
+        } else {
+            // Show the error message from the server
+            const errorMessage = data.message || 'Could not retrieve order details';
+            orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Error: ${errorMessage}</td></tr>`;
+        }
+    })
+    .catch(error => {
+        console.error("Fetch error:", error);
+        orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Network error: ${error.message}</td></tr>`;
+    });
+}
         
         function closeOrderDetailsModal() {
             document.getElementById('orderDetailsModal').style.display = 'none';
