@@ -27,11 +27,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Invalid order data format');
         }
 
-        // Get the next available ID for our order
-        $maxIdStmt = $conn->query("SELECT MAX(id) as max_id FROM orders");
-        $maxIdResult = $maxIdStmt->fetch_assoc();
-        $nextId = ($maxIdResult['max_id'] ?? 0) + 1;
-        
         // Check if the po_number already exists
         $checkStmt = $conn->prepare("SELECT COUNT(*) FROM orders WHERE po_number = ?");
         if ($checkStmt === false) {
@@ -48,21 +43,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('This PO number already exists. Please generate a new one.');
         }
 
-        // Insert into orders table with updated column names - and explicitly set the ID
+        // Insert into orders table with updated column names 
+        // Let's drop 'status' from both the column list and VALUES since we're setting it to 'Pending' directly
         $insertOrder = $conn->prepare("
-            INSERT INTO orders (id, username, order_date, delivery_date, bill_to, bill_to_attn, ship_to, ship_to_attn, po_number, orders, total_amount, status, special_instructions) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
+            INSERT INTO orders (username, order_date, delivery_date, bill_to, bill_to_attn, ship_to, ship_to_attn, po_number, orders, total_amount, status, special_instructions) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
         ");
 
         if ($insertOrder === false) {
             throw new Exception('Failed to prepare statement: ' . $conn->error);
         }
-
-        $status = 'Pending'; // This will be explicitly set in the query, not as a parameter
         
-        // This line was causing the error - now the number of parameters matches the SQL placeholders (? marks)
-        $insertOrder->bind_param("issssssssds", 
-            $nextId,
+        // Now we have 11 ? placeholders and 11 parameters
+        $insertOrder->bind_param("ssssssssdss", 
             $username, 
             $order_date, 
             $delivery_date, 
@@ -80,7 +73,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             echo json_encode([
                 'success' => true,
                 'message' => 'Order successfully added!',
-                'order_id' => $nextId,
+                'order_id' => $conn->insert_id,
                 'po_number' => $po_number
             ]);
         } else {
