@@ -302,12 +302,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber();">
+                    <select id="username" name="username" required onchange="getUserDetails(this.value);">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
-                            <option value="<?= htmlspecialchars($client) ?>" 
-                                data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
-                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>">
+                            <option value="<?= htmlspecialchars($client) ?>">
                                 <?= htmlspecialchars($client) ?>
                             </option>
                         <?php endforeach; ?>
@@ -320,17 +318,17 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     
                     <!-- Updated shipping information fields -->
                     <label for="bill_to">Bill To:</label>
-                    <textarea id="bill_to" name="bill_to" rows="2" placeholder="Enter billing address"></textarea>
-                    
+                    <textarea id="bill_to" name="bill_to" rows="2" readonly></textarea>
+
                     <label for="bill_to_attn">Bill To Attention:</label>
-                    <input type="text" id="bill_to_attn" name="bill_to_attn" placeholder="Enter billing contact">
-                    
+                    <input type="text" id="bill_to_attn" name="bill_to_attn" readonly>
+
                     <label for="ship_to">Ship To (Delivery Address):</label>
-                    <textarea id="ship_to" name="ship_to" rows="2" placeholder="Enter shipping address"></textarea>
-                    
+                    <textarea id="ship_to" name="ship_to" rows="2" readonly></textarea>
+
                     <label for="ship_to_attn">Ship To Attention:</label>
-                    <input type="text" id="ship_to_attn" name="ship_to_attn" placeholder="Enter delivery contact">
-                    
+                    <input type="text" id="ship_to_attn" name="ship_to_attn" readonly>
+
                     <label for="special_instructions">Special Instructions:</label>
                     <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
                     
@@ -521,6 +519,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
+    <script src="/js/get_user_details.js"></script>
     <script src="/js/orders.js"></script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
@@ -542,6 +541,19 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     }
                 });
             });
+
+            const selectedUsername = $('#username').val();
+                if (selectedUsername && selectedUsername !== '') {
+                    getUserDetails(selectedUsername);
+                }
+                
+                // Replace the existing username change handler
+                $('#username').off('change').on('change', function() {
+                    const username = $(this).val();
+                    if (username) {
+                        getUserDetails(username);
+                    }
+                });
             
             // Handle search button click (same functionality as typing)
             $(".search-btn").on("click", function() {

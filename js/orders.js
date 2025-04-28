@@ -506,50 +506,46 @@ $(document).ready(function() {
 
     // Form submission
     $('#addOrderForm').on('submit', function(e) {
-        e.preventDefault();
-        
-        if (selectedProducts.length === 0) {
-            alert('Please add products to your order');
-            return;
-        }
-
-        prepareOrderData();
-        
-        // Validate ship_to field
-        const shipTo = $('#ship_to').val();
-        if (!shipTo || shipTo.trim() === '') {
-            alert('Please provide a shipping address');
-            return;
-        }
-        
-        // Show a toast notification when saving the order
-        const poNumber = $('#po_number').val();
-        const username = $('#username').val();
-        
-        if (poNumber && username) {
-            showToast(`The order: ${poNumber} has been created for ${username}.`, 'success');
-        }
-
-        $.ajax({
-            url: $(this).attr('action'),
-            type: 'POST',
-            data: $(this).serialize(),
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    // Wait a moment for the toast to be visible before reloading
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
-                } else {
-                    alert('Error: ' + response.message);
-                }
-            },
-            error: function() {
-                alert('Error submitting order. Please try again.');
+            e.preventDefault();
+            
+            if (selectedProducts.length === 0) {
+                alert('Please add products to your order');
+                return;
             }
+            
+            // Prepare order data
+            const orderData = JSON.stringify(selectedProducts);
+            $('#orders').val(orderData);
+            const totalAmount = calculateCartTotal();
+            $('#total_amount').val(totalAmount.toFixed(2));
+            
+            // Validate ship_to is not empty
+            if (!$('#ship_to').val() || $('#ship_to').val().trim() === '') {
+                alert('Shipping address is missing. Please select a valid user.');
+                return;
+            }
+            
+            // Submit the form via Ajax
+            $.ajax({
+                url: $(this).attr('action'),
+                type: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        showToast('Order successfully added!', 'success');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Error submitting order. Please try again.');
+                }
+            });
         });
-    });
     
     // Category filter change handler
     $('#inventoryFilter').on('change', function() {
@@ -1149,3 +1145,52 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, shipTo
                 closeSpecialInstructions();
             }
         });
+
+        // Function to get user details when a username is selected
+function getUserDetails(username) {
+    if (!username) return;
+    
+    // Clear all fields first
+    document.getElementById('bill_to').value = '';
+    document.getElementById('bill_to_attn').value = '';
+    document.getElementById('ship_to').value = '';
+    document.getElementById('ship_to_attn').value = '';
+    
+    // Get user details from the server
+    fetch('/backend/get_user_address_data.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'username=' + encodeURIComponent(username)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Set PO number
+            if (data.po_number) {
+                document.getElementById('po_number').value = data.po_number;
+            }
+            
+            // Directly set the exact address values from the database
+            document.getElementById('bill_to').value = data.bill_to || '';
+            document.getElementById('bill_to_attn').value = data.bill_to_attn || '';
+            document.getElementById('ship_to').value = data.ship_to || '';
+            document.getElementById('ship_to_attn').value = data.ship_to_attn || '';
+            
+            console.log('Address data loaded successfully:', data);
+        } else {
+            console.error('Error loading user address data:', data.message);
+            alert('Error loading address data: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Fetch error:', error);
+        alert('Error communicating with server');
+    });
+    
+    // Also generate the PO number (if you still need this function)
+    if (window.generatePONumber) {
+        window.generatePONumber();
+    }
+}
