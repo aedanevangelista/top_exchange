@@ -741,32 +741,29 @@ function truncate($text, $max = 15) {
 
         /* Status styling */
         .status-active {
-            background-color: #28a745;
-            color: white;
+            color: #28a745;
             padding: 4px 8px;
             border-radius: 4px;
         }
 
         .status-pending {
-            background-color: #ffc107;
-            color: #333;
+            color: #ffc107;
             padding: 4px 8px;
             border-radius: 4px;
         }
 
         .status-rejected {
-            background-color: #dc3545;
-            color: white;
+            color: #dc3545;
             padding: 4px 8px;
             border-radius: 4px;
         }
 
         .status-inactive {
-            background-color: #6c757d;
-            color: white;
+            color: #6c757d;
             padding: 4px 8px;
             border-radius: 4px;
         }
+
     </style>
 </head>
 <body>
