@@ -1160,18 +1160,37 @@ $statusOptions = ['For Delivery', 'In Transit'];
         function viewOrderDetails(poNumber) {
             currentPoNumber = poNumber;
             
+            // Show loading indicator
+            const orderDetailsBody = document.getElementById('orderDetailsBody');
+            orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading order details...</td></tr>';
+            document.getElementById('orderDetailsModal').style.display = 'flex';
+            
             // Fetch the order items
             fetch(`/backend/get_order_items.php?po_number=${poNumber}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server returned status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
-                if (data.success) {
+                // Clear the loading message
+                orderDetailsBody.innerHTML = '';
+                
+                if (data.success && data.orderItems && Array.isArray(data.orderItems)) {
                     const orderItems = data.orderItems;
-                    const orderDetailsBody = document.getElementById('orderDetailsBody');
-                    orderDetailsBody.innerHTML = '';
                     
                     let totalAmount = 0;
                     
+                    // Check if there are any items
+                    if (orderItems.length === 0) {
+                        orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;font-style:italic;">No items found in this order.</td></tr>';
+                        return;
+                    }
+                    
                     orderItems.forEach(item => {
+                        if (!item) return; // Skip if item is null or undefined
+                        
                         const quantity = parseInt(item.quantity) || 0;
                         const price = parseFloat(item.price) || 0;
                         const itemTotal = quantity * price;
@@ -1180,7 +1199,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${item.category || ''}</td>
-                            <td>${item.item_description}</td>
+                            <td>${item.item_description || ''}</td>
                             <td>${item.packaging || ''}</td>
                             <td>PHP ${price.toFixed(2)}</td>
                             <td>${quantity}</td>
@@ -1198,14 +1217,18 @@ $statusOptions = ['For Delivery', 'In Transit'];
                     `;
                     orderDetailsBody.appendChild(totalRow);
                     
-                    document.getElementById('orderDetailsModal').style.display = 'flex';
                 } else {
-                    showToast('Error: ' + data.message, 'error');
+                    // Handle when the API returns success: false or missing orderItems array
+                    let errorMessage = data.message || 'Could not retrieve order details';
+                    orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${errorMessage}</td></tr>`;
+                    
+                    showToast('Error: ' + errorMessage, 'error');
                 }
             })
             .catch(error => {
-                showToast('Error: ' + error, 'error');
                 console.error('Error fetching order details:', error);
+                orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: Could not load order details. Please try again.</td></tr>`;
+                showToast('Error: ' + error.message, 'error');
             });
         }
 
