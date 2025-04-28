@@ -10,10 +10,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $order_date = $_POST['order_date'];
         $delivery_date = $_POST['delivery_date'];
         
-        // Get the new fields instead of delivery_address
+        // Get the billing and shipping data directly from the form
         $bill_to = $_POST['bill_to'] ?? '';
         $bill_to_attn = $_POST['bill_to_attn'] ?? '';
-        $ship_to = $_POST['ship_to']; // This replaces delivery_address
+        $ship_to = $_POST['ship_to'] ?? '';  // This replaces delivery_address
         $ship_to_attn = $_POST['ship_to_attn'] ?? '';
         
         $po_number = $_POST['po_number'];
@@ -25,6 +25,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $decoded_orders = json_decode($orders, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new Exception('Invalid order data format');
+        }
+
+        // If ship_to is empty, get the user's ship_to from the database
+        if (empty($ship_to)) {
+            $stmt = $conn->prepare("SELECT ship_to, bill_to, bill_to_attn, ship_to_attn FROM clients_accounts WHERE username = ?");
+            $stmt->bind_param("s", $username);
+            $stmt->execute();
+            $stmt->bind_result($db_ship_to, $db_bill_to, $db_bill_to_attn, $db_ship_to_attn);
+            if ($stmt->fetch()) {
+                $ship_to = $db_ship_to;
+                
+                // If other fields are also empty, use database values
+                if (empty($bill_to)) $bill_to = $db_bill_to;
+                if (empty($bill_to_attn)) $bill_to_attn = $db_bill_to_attn;
+                if (empty($ship_to_attn)) $ship_to_attn = $db_ship_to_attn;
+            }
+            $stmt->close();
         }
 
         // Insert into orders table with updated column names

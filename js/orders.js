@@ -505,7 +505,7 @@ $(document).ready(function() {
     });
 
     // Form submission
-     $('#addOrderForm').on('submit', function(e) {
+    $('#addOrderForm').on('submit', function(e) {
         e.preventDefault();
         
         if (selectedProducts.length === 0) {
@@ -515,7 +515,7 @@ $(document).ready(function() {
 
         prepareOrderData();
         
-        // Validate ship_to address instead of delivery_address
+        // Validate ship_to field
         const shipTo = $('#ship_to').val();
         if (!shipTo || shipTo.trim() === '') {
             alert('Please provide a shipping address');
