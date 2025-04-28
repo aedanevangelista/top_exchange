@@ -4,9 +4,9 @@ include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
 checkRole('Accounts - Clients');
 
-
-error_reporting(0);
-
+// Change this to see errors during development
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 function validateUnique($conn, $username, $email, $id = null) {
     $query = "SELECT COUNT(*) as count FROM clients_accounts WHERE (username = ? OR email = ?)";
@@ -24,7 +24,6 @@ function validateUnique($conn, $username, $email, $id = null) {
     $stmt->close();
     return $result['count'] > 0;
 }
-
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
     header('Content-Type: application/json');
@@ -83,8 +82,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $business_proof_json = json_encode($business_proof);
 
+    // Fixed: Added missing 's' in bind_param to match the number of placeholders in the query
     $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to, bill_to_attn, ship_to, ship_to_attn, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
-    $stmt->bind_param("ssssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $bill_to_attn, $ship_to, $ship_to_attn, $business_proof_json);
+    $stmt->bind_param("sssssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $bill_to_attn, $ship_to, $ship_to_attn, $business_proof_json);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
@@ -96,6 +96,124 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     exit;
 }
 
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'edit') {
+    header('Content-Type: application/json');
+
+    $id = $_POST['id'];
+    $username = trim($_POST['username']);
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $email = $_POST['email'];
+    $phone = $_POST['phone'] ?? null;
+    $region = $_POST['region'];
+    $city = $_POST['city'];
+    $company = $_POST['company'] ?? null; 
+    $company_address = $_POST['company_address'];
+    $bill_to = $_POST['bill_to'] ?? null;
+    $bill_to_attn = $_POST['bill_to_attn'] ?? null;
+    $ship_to = $_POST['ship_to'] ?? null;
+    $ship_to_attn = $_POST['ship_to_attn'] ?? null;
+    $business_proof = [];
+
+    if (validateUnique($conn, $username, $email, $id)) {
+        echo json_encode(['success' => false, 'message' => 'Username or email already exists.']);
+        exit;
+    }
+
+    $old_username = '';
+    $stmt = $conn->prepare("SELECT username FROM clients_accounts WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($row = $result->fetch_assoc()) {
+        $old_username = $row['username'];
+    }
+    $stmt->close();
+
+    $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $username . '/';
+    if (!file_exists($user_upload_dir)) {
+        mkdir($user_upload_dir, 0777, true);
+    }
+
+    $existing_business_proof = json_decode($_POST['existing_business_proof'], true) ?? [];
+    $old_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $old_username . '/';
+
+    if (isset($_FILES['business_proof']) && !empty($_FILES['business_proof']['name'][0])) {
+        $business_proof = [];
+
+        if ($old_username !== $username && !file_exists($user_upload_dir)) {
+            mkdir($user_upload_dir, 0777, true);
+        }
+
+        if (file_exists($old_upload_dir)) {
+            $old_files = array_diff(scandir($old_upload_dir), array('.', '..'));
+            foreach ($old_files as $file) {
+                @unlink($old_upload_dir . $file);
+            }
+        }
+
+        if (count($_FILES['business_proof']['name']) > 3) {
+            echo json_encode(['success' => false, 'message' => 'Maximum of 3 photos allowed.']);
+            exit;
+        }
+
+        foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
+            if ($_FILES['business_proof']['error'][$key] == 0) {
+                $allowed_types = ['image/jpeg', 'image/png'];
+                $max_size = 20 * 1024 * 1024;
+                $file_type = $_FILES['business_proof']['type'][$key];
+                $file_size = $_FILES['business_proof']['size'][$key];
+
+                if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
+                    $business_proof_path = '/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                    if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
+                        $business_proof[] = $business_proof_path;
+                    } else {
+                        echo json_encode(['success' => false, 'message' => 'Failed to upload file.']);
+                        exit;
+                    }
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
+                    exit;
+                }
+            }
+        }
+    } else {
+        if ($old_username !== $username) {
+            foreach ($existing_business_proof as $index => $old_path) {
+                $old_file = basename($old_path);
+                $old_file_path = $old_upload_dir . $old_file;
+                $new_file_path = $user_upload_dir . $old_file;
+                $new_path = '/uploads/' . $username . '/' . $old_file;
+
+                if (file_exists($old_file_path) && copy($old_file_path, $new_file_path)) {
+                    $business_proof[] = $new_path;
+                    @unlink($old_file_path); 
+                }
+            }
+            
+            if (file_exists($old_upload_dir) && count(array_diff(scandir($old_upload_dir), array('.', '..'))) == 0) {
+                @rmdir($old_upload_dir);
+            }
+        } else {
+            $business_proof = $existing_business_proof;
+        }
+    }
+
+    $business_proof_json = json_encode($business_proof);
+
+    // Fixed: Added missing 's' in bind_param to match the number of placeholders in the query
+    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to = ?, bill_to_attn = ?, ship_to = ?, ship_to_attn = ?, business_proof = ? WHERE id = ?");
+    $stmt->bind_param("sssssssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $bill_to_attn, $ship_to, $ship_to_attn, $business_proof_json, $id);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'reload' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to update account.']);
+    }
+
+    $stmt->close();
+    exit;
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'status') {
     header('Content-Type: application/json');
@@ -115,9 +233,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     exit;
 }
 
-
 $status_filter = $_GET['status'] ?? '';
 
+// Fixed: Completed SQL query with proper condition
 $sql = "SELECT id, username, email, phone, region, city, company, company_address, bill_to, bill_to_attn, ship_to, ship_to_attn, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
 if (!empty($status_filter)) {
     $sql .= " AND status = ?";
@@ -1133,6 +1251,9 @@ function truncate($text, $max = 15) {
     <script src="/js/accounts_clients.js"></script>
     
     <script>
+    // Variable to store the current account ID for status changes
+    let currentAccountId = 0;
+
     function openModal(imgElement) {
         var modal = document.getElementById("myModal");
         var modalImg = document.getElementById("img01");
@@ -1243,7 +1364,123 @@ function truncate($text, $max = 15) {
                 imageModal.style.display = "none";
             }
         };
+
+        // Add Form Submission via AJAX
+        const addAccountForm = document.getElementById('addAccountForm');
+        if (addAccountForm) {
+            addAccountForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                formData.append('ajax', true);
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Account added successfully', 'success');
+                        setTimeout(() => { window.location.reload(); }, 1500);
+                    } else {
+                        document.getElementById('addAccountError').textContent = data.message || 'Error adding account.';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('addAccountError').textContent = 'Error submitting form: ' + error;
+                });
+            });
+        }
+        
+        // Edit Form Submission via AJAX
+        const editAccountForm = document.getElementById('editAccountForm');
+        if (editAccountForm) {
+            editAccountForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                formData.append('ajax', true);
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Account updated successfully', 'success');
+                        setTimeout(() => { window.location.reload(); }, 1500);
+                    } else {
+                        document.getElementById('editAccountError').textContent = data.message || 'Error updating account.';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('editAccountError').textContent = 'Error submitting form: ' + error;
+                });
+            });
+        }
     });
+
+    // Form management functions
+    function openAddAccountForm() {
+        document.getElementById('addAccountOverlay').style.display = 'block';
+    }
+
+    function closeAddAccountForm() {
+        document.getElementById('addAccountForm').reset();
+        document.getElementById('addAccountError').textContent = '';
+        document.getElementById('addAccountOverlay').style.display = 'none';
+    }
+
+    function closeEditAccountForm() {
+        document.getElementById('editAccountForm').reset();
+        document.getElementById('editAccountError').textContent = '';
+        document.getElementById('editAccountOverlay').style.display = 'none';
+    }
+
+    // Status management functions
+    function openStatusModal(id, username, email) {
+        currentAccountId = id;
+        document.getElementById('statusMessage').textContent = `Change status for ${username} (${email})`;
+        document.getElementById('statusModal').style.display = 'block';
+    }
+
+    function closeStatusModal() {
+        document.getElementById('statusModal').style.display = 'none';
+    }
+
+    function changeStatus(status) {
+        const formData = new FormData();
+        formData.append('formType', 'status');
+        formData.append('ajax', true);
+        formData.append('id', currentAccountId);
+        formData.append('status', status);
+
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`Account status changed to ${status}`, 'success');
+                setTimeout(() => { window.location.reload(); }, 1500);
+            } else {
+                showToast('Error changing status: ' + (data.message || 'Unknown error'), 'error');
+            }
+            closeStatusModal();
+        })
+        .catch(error => {
+            showToast('Error: ' + error, 'error');
+            closeStatusModal();
+        });
+    }
+
+    function filterByStatus() {
+        const status = document.getElementById('statusFilter').value;
+        window.location.href = '?status=' + encodeURIComponent(status);
+    }
 
     // Fixed the openEditAccountForm function to properly handle JSON and include the new attention fields
     function openEditAccountForm(id, username, email, phone, region, city, company, company_address, business_proof, bill_to, bill_to_attn, ship_to, ship_to_attn) {
