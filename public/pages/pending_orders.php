@@ -49,7 +49,6 @@ $stmt->close();
 $orders = []; // Initialize $orders as an empty array
 
 // Modified query to join with clients_accounts to get the company information
-// Updated to use ship_to instead of delivery_address
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.ship_to, o.orders, o.total_amount, o.status, 
         o.special_instructions, o.bill_to, o.bill_to_attn, o.ship_to_attn, COALESCE(o.company, c.company) as company
         FROM orders o
@@ -174,7 +173,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td><?= htmlspecialchars($order['ship_to']) ?></td>
-                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
+                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
                                 <i class="fas fa-clipboard-list"></i>    
                                 Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
@@ -379,7 +378,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
-                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
+                    <button type="submit" id="save-order-btn" class="save-btn"><i class="fas fa-save"></i> Save</button>
                 </div>
             </form>
         </div>
@@ -534,42 +533,5 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     </div>
 
     <script src="/js/orders.js"></script>
-    <script>
-    <?php include('../../js/order_processing.js'); ?>
-
-    // Search functionality
-    $(document).ready(function() {
-        $("#searchInput").on("input", function() {
-            let searchText = $(this).val().toLowerCase().trim();
-
-            $(".orders-table tbody tr").each(function() {
-                let row = $(this);
-                let text = row.text().toLowerCase();
-                
-                if (text.includes(searchText)) {
-                    row.show();
-                } else {
-                    row.hide();
-                }
-            });
-        });
-        
-        // Handle search button click
-        $(".search-btn").on("click", function() {
-            let searchText = $("#searchInput").val().toLowerCase().trim();
-            
-            $(".orders-table tbody tr").each(function() {
-                let row = $(this);
-                let text = row.text().toLowerCase();
-                
-                if (text.includes(searchText)) {
-                    row.show();
-                } else {
-                    row.hide();
-                }
-            });
-        });
-    });
-    </script>
 </body>
 </html>

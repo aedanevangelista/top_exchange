@@ -442,10 +442,14 @@ window.prepareOrderData = function() {
         $('#ship_to').val(companyAddress);
     }
     
-    const orderData = JSON.stringify(selectedProducts);
-    $('#orders').val(orderData);
+    // Convert selectedProducts to a JSON string and set it to the hidden field
+    document.getElementById('orders').value = JSON.stringify(selectedProducts);
+    
+    // Calculate and set the total amount
     const totalAmount = calculateCartTotal();
-    $('#total_amount').val(totalAmount.toFixed(2));
+    document.getElementById('total_amount').value = totalAmount.toFixed(2);
+    
+    return true; // Allow the form submission to continue
 };
 
 window.viewOrderDetails = function(ordersJson) {
@@ -898,12 +902,18 @@ $(document).ready(function() {
             return;
         }
         
+        // Log what's being submitted for debugging
+        console.log('Submitting order:');
+        console.log('PO Number:', $('#po_number').val());
+        console.log('Orders JSON:', $('#orders').val());
+        console.log('Total Amount:', $('#total_amount').val());
+        
         // Show a toast notification when saving the order
         const poNumber = $('#po_number').val();
         const username = $('#username').val();
         
         if (poNumber && username) {
-            showToast(`The order: ${poNumber} has been created for ${username}.`, 'success');
+            showToast(`The order: ${poNumber} is being created for ${username}.`, 'info');
         }
 
         $.ajax({
@@ -913,6 +923,7 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
+                    showToast(`The order: ${poNumber} has been created for ${username}.`, 'success');
                     // Wait a moment for the toast to be visible before reloading
                     setTimeout(() => {
                         location.reload();
