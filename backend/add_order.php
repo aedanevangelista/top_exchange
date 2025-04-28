@@ -9,8 +9,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $username = $_POST['username'];
         $order_date = $_POST['order_date'];
         $delivery_date = $_POST['delivery_date'];
-        
-        // Get the new fields instead of delivery_address
         $bill_to = $_POST['bill_to'] ?? '';
         $bill_to_attn = $_POST['bill_to_attn'] ?? '';
         $ship_to = $_POST['ship_to']; // This replaces delivery_address
@@ -27,23 +25,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Invalid order data format');
         }
 
-        // Check if the po_number already exists
-        $checkStmt = $conn->prepare("SELECT COUNT(*) FROM orders WHERE po_number = ?");
-        if ($checkStmt === false) {
-            throw new Exception('Failed to prepare check statement: ' . $conn->error);
-        }
-        
-        $checkStmt->bind_param("s", $po_number);
-        $checkStmt->execute();
-        $checkStmt->bind_result($count);
-        $checkStmt->fetch();
-        $checkStmt->close();
-        
-        if ($count > 0) {
-            throw new Exception('This PO number already exists. Please generate a new one.');
-        }
-
-        // Insert into orders table with updated column names 
         // Let's drop 'status' from both the column list and VALUES since we're setting it to 'Pending' directly
         $insertOrder = $conn->prepare("
             INSERT INTO orders (username, order_date, delivery_date, bill_to, bill_to_attn, ship_to, ship_to_attn, po_number, orders, total_amount, status, special_instructions) 
