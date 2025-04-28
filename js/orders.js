@@ -509,14 +509,7 @@ $(document).ready(function() {
         }
 
         prepareOrderData();
-        
-        // Validate delivery address
-        const deliveryAddress = $('#delivery_address').val();
-        if (!deliveryAddress || deliveryAddress.trim() === '') {
-            alert('Please provide a delivery address');
-            return;
-        }
-        
+                
         // Show a toast notification when saving the order
         const poNumber = $('#po_number').val();
         const username = $('#username').val();
