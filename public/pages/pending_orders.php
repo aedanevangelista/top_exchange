@@ -924,17 +924,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         Total Amount: PHP <span id="printTotalAmount"></span>
                     </div>
                     
-                    <div class="po-signature">
-                        <div class="po-signature-block">
-                            <div class="po-signature-line"></div>
-                            <div>Authorized by</div>
-                        </div>
-                        
-                        <div class="po-signature-block">
-                            <div class="po-signature-line"></div>
-                            <div>Received by</div>
-                        </div>
-                    </div>
                 </div>
             </div>
             <div class="pdf-actions">
