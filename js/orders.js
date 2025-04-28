@@ -112,51 +112,39 @@ function updateCartTotal() {
 
 // Global function for updating order summary
 function updateOrderSummary() {
-    const summaryBody = $('#summaryBody');
-    summaryBody.empty();
-    let total = 0;
-
-    selectedProducts.forEach((product, index) => {
-        const subtotal = product.price * product.quantity;
-        total += subtotal;
-        
-        const row = `
-            <tr>
-                <td>${product.category}</td>
-                <td>${product.item_description}</td>
-                <td>${product.packaging}</td>
-                <td>PHP ${product.price.toFixed(2)}</td>
-                <td>
-                    <input type="number" 
-                        class="summary-quantity" 
-                        value="${product.quantity}" 
-                        min="1"
-                        max="200"
-                        data-index="${index}">
-                </td>
-            </tr>
-        `;
-        summaryBody.append(row);
-    });
-
-    $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`);
+    const summaryBody = document.getElementById('summaryBody');
+    const orderItems = [];
+    let totalAmount = 0;
     
-    // Add event listener for quantity changes in summary
-    $('.summary-quantity').on('change input', function() {
-        const index = $(this).data('index');
-        let newQuantity = parseInt($(this).val(), 10);
+    // Get all rows from the summary table
+    const rows = summaryBody.getElementsByTagName('tr');
+    for (let row of rows) {
+        const cells = row.cells;
+        const price = parseFloat(cells[3].textContent);
+        const quantity = parseInt(cells[4].textContent);
+        const itemTotal = price * quantity;
         
-        if (isNaN(newQuantity) || newQuantity < 1) {
-            newQuantity = 1;
-            $(this).val(1);
-        } else if (newQuantity > 200) {
-            newQuantity = 200;
-            $(this).val(200);
-        }
+        totalAmount += itemTotal;
         
-        selectedProducts[index].quantity = newQuantity;
-        updateSummaryTotal();
-    });
+        orderItems.push({
+            category: cells[0].textContent,
+            product: cells[1].textContent,
+            packaging: cells[2].textContent,
+            price: price,
+            quantity: quantity,
+            total: itemTotal
+        });
+    }
+    
+    // Update the hidden fields
+    document.getElementById('orders').value = JSON.stringify(orderItems);
+    document.getElementById('total_amount').value = totalAmount.toFixed(2);
+    
+    // Update the visible total amount display
+    const totalDisplay = document.querySelector('.summary-total-amount');
+    if (totalDisplay) {
+        totalDisplay.textContent = `PHP ${totalAmount.toFixed(2)}`;
+    }
 }
 
 // Function to update just the summary total without rebuilding the entire table
