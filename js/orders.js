@@ -279,20 +279,6 @@ window.generatePONumber = function() {
     }
 };
 
-window.prepareOrderData = function() {
-    // Update delivery address based on the selected type
-    const addressType = $('#delivery_address_type').val();
-    if (addressType === 'company') {
-        $('#delivery_address').val($('#company_address').val());
-    } else {
-        $('#delivery_address').val($('#custom_address').val());
-    }
-    
-    const orderData = JSON.stringify(selectedProducts);
-    $('#orders').val(orderData);
-    const totalAmount = calculateCartTotal();
-    $('#total_amount').val(totalAmount.toFixed(2));
-};
 
 window.viewOrderDetails = function(orders) {
     try {
