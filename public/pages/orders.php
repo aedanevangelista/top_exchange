@@ -462,7 +462,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td>
                                     <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
                                         <i class="fas fa-clipboard-list"></i>    
-                                        View Order Status
+                                        View
                                     </button>
                                 </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
@@ -497,7 +497,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 </td>
                                 <td class="action-buttons">
                                     <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
-                                        <i class="fas fa-exchange-alt"></i> Change Status
+                                        <i class="fas fa-exchange-alt"></i> Status
                                     </button>
                                     <button class="download-btn" onclick="downloadPODirectly(
                                         '<?= htmlspecialchars($order['po_number']) ?>', 
