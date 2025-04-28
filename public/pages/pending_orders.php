@@ -41,7 +41,7 @@ $stmt->close();
 $orders = []; // Initialize $orders as an empty array
 
 // Modified query to join with clients_accounts to get the company information
-$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, 
+$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.bill_to, o.bill_to_attn, o.ship_to, o.ship_to_attn, o.orders, o.total_amount, o.status, 
         o.special_instructions, COALESCE(o.company, c.company) as company
         FROM orders o
         LEFT JOIN clients_accounts c ON o.username = c.username
@@ -144,7 +144,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 Delivery Date <?= getSortIcon('delivery_date', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
-                        <th>Delivery Address</th>
+                        <th>Bill To</th>
+                        <th>Bill To Attn</th>
+                        <th>Ship To</th>
+                        <th>Ship To Attn</th>
                         <th>Orders</th>
                         <th class="sortable">
                             <a href="<?= getSortUrl('total_amount', $sort_column, $sort_direction) ?>">
@@ -164,7 +167,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['company'] ?: 'No Company') ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
-                                <td><?= htmlspecialchars($order['delivery_address']) ?></td>
+                                <td><?= htmlspecialchars($order['bill_to'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($order['bill_to_attn'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($order['ship_to'] ?: 'N/A') ?></td>
+                                <td><?= htmlspecialchars($order['ship_to_attn'] ?: 'N/A') ?></td>
                                 <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
                                 <i class="fas fa-clipboard-list"></i>    
                                 Orders</button></td>
@@ -189,7 +195,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     '<?= htmlspecialchars($order['company']) ?>', 
                                     '<?= htmlspecialchars($order['order_date']) ?>', 
                                     '<?= htmlspecialchars($order['delivery_date']) ?>', 
-                                    '<?= htmlspecialchars($order['delivery_address']) ?>', 
+                                    '<?= htmlspecialchars($order['bill_to']) ?>', 
+                                    '<?= htmlspecialchars($order['bill_to_attn']) ?>', 
+                                    '<?= htmlspecialchars($order['ship_to']) ?>', 
+                                    '<?= htmlspecialchars($order['ship_to_attn']) ?>', 
                                     '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
                                     '<?= htmlspecialchars($order['total_amount']) ?>', 
                                     '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
@@ -201,7 +210,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="10" class="no-orders">No pending orders found.</td>
+                            <td colspan="13" class="no-orders">No pending orders found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -234,8 +243,20 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <span id="printUsername"></span>
                             </div>
                             <div class="po-detail-row">
-                                <span class="po-detail-label">Delivery Address:</span>
-                                <span id="printDeliveryAddress"></span>
+                                <span class="po-detail-label">Bill To:</span>
+                                <span id="printBillTo"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Bill To Attn:</span>
+                                <span id="printBillToAttn"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Ship To:</span>
+                                <span id="printShipTo"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Ship To Attn:</span>
+                                <span id="printShipToAttn"></span>
                             </div>
                             <div class="po-detail-row" id="printInstructionsSection">
                                 <span class="po-detail-label">Special Instructions:</span>
@@ -317,22 +338,19 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <label for="delivery_date">Delivery Date:</label>
                     <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
                     
-                    <!-- New Delivery Address selection -->
-                    <label for="delivery_address_type">Delivery Address:</label>
-                    <select id="delivery_address_type" name="delivery_address_type" onchange="toggleDeliveryAddress()">
-                        <option value="company">Company Address</option>
-                        <option value="custom">Custom Address</option>
-                    </select>
+                    <!-- New Address Fields -->
+                    <label for="bill_to">Bill To:</label>
+                    <input type="text" id="bill_to" name="bill_to" placeholder="Enter billing address">
                     
-                    <div id="company_address_container">
-                        <input type="text" id="company_address" name="company_address" readonly placeholder="Company address will appear here">
-                    </div>
+                    <label for="bill_to_attn">Bill To Attn:</label>
+                    <input type="text" id="bill_to_attn" name="bill_to_attn" placeholder="Enter billing attention">
                     
-                    <div id="custom_address_container" style="display: none;">
-                        <textarea id="custom_address" name="custom_address" rows="3" placeholder="Enter delivery address"></textarea>
-                    </div>
+                    <label for="ship_to">Ship To:</label>
+                    <input type="text" id="ship_to" name="ship_to" placeholder="Enter shipping address">
                     
-                    <input type="hidden" name="delivery_address" id="delivery_address">
+                    <label for="ship_to_attn">Ship To Attn:</label>
+                    <input type="text" id="ship_to_attn" name="ship_to_attn" placeholder="Enter shipping attention">
+                    
                     <input type="hidden" name="special_instructions" id="special_instructions_hidden">
                     <!-- Add special instructions field -->
                     <label for="special_instructions">Special Instructions:</label>
@@ -531,7 +549,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     // Variables to store the current PO for PDF generation
     let currentPOData = null;
     
-function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, billTo, billToAttn, shipTo, shipToAttn, ordersJson, totalAmount, specialInstructions) {
     try {
         // Store current PO data
         currentPOData = {
@@ -540,17 +558,23 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             company,
             orderDate,
             deliveryDate,
-            deliveryAddress,
+            billTo,
+            billToAttn,
+            shipTo,
+            shipToAttn,
             ordersJson,
             totalAmount,
-            specialInstructions  // Keep storing this in case you need it elsewhere
+            specialInstructions
         };
         
         // Populate the hidden PDF content silently
         document.getElementById('printCompany').textContent = company || 'No Company Name';
         document.getElementById('printPoNumber').textContent = poNumber;
         document.getElementById('printUsername').textContent = username;
-        document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
+        document.getElementById('printBillTo').textContent = billTo || 'N/A';
+        document.getElementById('printBillToAttn').textContent = billToAttn || 'N/A';
+        document.getElementById('printShipTo').textContent = shipTo || 'N/A';
+        document.getElementById('printShipToAttn').textContent = shipToAttn || 'N/A';
         document.getElementById('printOrderDate').textContent = orderDate;
         document.getElementById('printDeliveryDate').textContent = deliveryDate;
         
@@ -623,8 +647,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
 }
 
     // Function to generate Purchase Order PDF
-    // Function to generate Purchase Order PDF
-function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+function generatePO(poNumber, username, company, orderDate, deliveryDate, billTo, billToAttn, shipTo, shipToAttn, ordersJson, totalAmount, specialInstructions) {
     try {
         // Store current PO data for later use
         currentPOData = {
@@ -633,17 +656,23 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
             company,
             orderDate,
             deliveryDate,
-            deliveryAddress,
+            billTo,
+            billToAttn,
+            shipTo,
+            shipToAttn,
             ordersJson,
             totalAmount,
-            specialInstructions  // Add special instructions to stored data
+            specialInstructions
         };
         
         // Set basic information
         document.getElementById('printCompany').textContent = company || 'No Company Name';
         document.getElementById('printPoNumber').textContent = poNumber;
         document.getElementById('printUsername').textContent = username;
-        document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
+        document.getElementById('printBillTo').textContent = billTo || 'N/A';
+        document.getElementById('printBillToAttn').textContent = billToAttn || 'N/A';
+        document.getElementById('printShipTo').textContent = shipTo || 'N/A';
+        document.getElementById('printShipToAttn').textContent = shipToAttn || 'N/A';
         document.getElementById('printOrderDate').textContent = orderDate;
         document.getElementById('printDeliveryDate').textContent = deliveryDate;
         
@@ -1072,32 +1101,32 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
     
     // Add function to update company name when username changes
 
-        function viewSpecialInstructions(poNumber, instructions) {
-                document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
-                const contentEl = document.getElementById('instructionsContent');
-                
-                if (instructions && instructions.trim().length > 0) {
-                    contentEl.textContent = instructions;
-                    contentEl.classList.remove('empty');
-                } else {
-                    contentEl.textContent = 'No special instructions provided for this order.';
-                    contentEl.classList.add('empty');
-                }
-                
-                document.getElementById('specialInstructionsModal').style.display = 'block';
+    function viewSpecialInstructions(poNumber, instructions) {
+            document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
+            const contentEl = document.getElementById('instructionsContent');
+            
+            if (instructions && instructions.trim().length > 0) {
+                contentEl.textContent = instructions;
+                contentEl.classList.remove('empty');
+            } else {
+                contentEl.textContent = 'No special instructions provided for this order.';
+                contentEl.classList.add('empty');
             }
-
-        function closeSpecialInstructions() {
-            document.getElementById('specialInstructionsModal').style.display = 'none';
+            
+            document.getElementById('specialInstructionsModal').style.display = 'block';
         }
-        
-        // Close modal when clicking outside
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('specialInstructionsModal');
-            if (event.target === modal) {
-                closeSpecialInstructions();
-            }
-        });
+
+    function closeSpecialInstructions() {
+        document.getElementById('specialInstructionsModal').style.display = 'none';
+    }
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('specialInstructionsModal');
+        if (event.target === modal) {
+            closeSpecialInstructions();
+        }
+    });
 
     </script>
     <script>
@@ -1137,9 +1166,27 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
                 });
             });
             
-            // Initialize company field if needed
+            // When a user is selected, try to autopopulate address fields from client account
             $('#username').change(function() {
                 updateCompany();
+                const username = $(this).val();
+                
+                if (username) {
+                    $.ajax({
+                        url: '/backend/get_client_address_info.php',
+                        type: 'GET',
+                        data: { username: username },
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.success) {
+                                $('#bill_to').val(response.bill_to || '');
+                                $('#bill_to_attn').val(response.bill_to_attn || '');
+                                $('#ship_to').val(response.ship_to || '');
+                                $('#ship_to_attn').val(response.ship_to_attn || '');
+                            }
+                        }
+                    });
+                }
             });
             
             // Make sure prepareOrderData includes company field
