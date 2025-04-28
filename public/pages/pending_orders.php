@@ -23,17 +23,26 @@ if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
 $clients = [];
 $clients_with_company_address = []; // Array to store clients with their company addresses
 $clients_with_company = []; // Array to store clients with their company names
+$clients_with_address_info = []; // Array to store clients' complete address info
 
-$stmt = $conn->prepare("SELECT username, company_address, company FROM clients_accounts WHERE status = 'active'");
+$stmt = $conn->prepare("SELECT username, company_address, company, bill_to, bill_to_attn, ship_to, ship_to_attn FROM clients_accounts WHERE status = 'active'");
 if ($stmt === false) {
     die('Prepare failed: ' . htmlspecialchars($conn->error));
 }
 $stmt->execute();
-$stmt->bind_result($username, $company_address, $company);
-while ($stmt->fetch()) {
-    $clients[] = $username;
-    $clients_with_company_address[$username] = $company_address;
-    $clients_with_company[$username] = $company;
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $clients[] = $row['username'];
+    $clients_with_company_address[$row['username']] = $row['company_address'];
+    $clients_with_company[$row['username']] = $row['company'];
+    $clients_with_address_info[$row['username']] = [
+        'bill_to' => $row['bill_to'],
+        'bill_to_attn' => $row['bill_to_attn'],
+        'ship_to' => $row['ship_to'],
+        'ship_to_attn' => $row['ship_to_attn'],
+        'company_address' => $row['company_address'],
+        'company' => $row['company']
+    ];
 }
 $stmt->close();
 
@@ -322,12 +331,16 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber();">
+                    <select id="username" name="username" required onchange="generatePONumber(); updateAddressInfo(this.value);">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
                                 data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
-                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>">
+                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>"
+                                data-bill-to="<?= htmlspecialchars($clients_with_address_info[$client]['bill_to'] ?? '') ?>"
+                                data-bill-to-attn="<?= htmlspecialchars($clients_with_address_info[$client]['bill_to_attn'] ?? '') ?>"
+                                data-ship-to="<?= htmlspecialchars($clients_with_address_info[$client]['ship_to'] ?? '') ?>"
+                                data-ship-to-attn="<?= htmlspecialchars($clients_with_address_info[$client]['ship_to_attn'] ?? '') ?>">
                                 <?= htmlspecialchars($client) ?>
                             </option>
                         <?php endforeach; ?>
@@ -548,6 +561,72 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <script>
     // Variables to store the current PO for PDF generation
     let currentPOData = null;
+    
+    // Function to update address fields based on selected user
+    function updateAddressInfo(username) {
+        if (!username) return;
+        
+        // Get the selected option element
+        const selectedOption = document.querySelector(`#username option[value="${username}"]`);
+        if (!selectedOption) return;
+        
+        // Get address data from data attributes
+        const billTo = selectedOption.getAttribute('data-bill-to') || selectedOption.getAttribute('data-company-address') || '';
+        const billToAttn = selectedOption.getAttribute('data-bill-to-attn') || selectedOption.getAttribute('data-company') || '';
+        const shipTo = selectedOption.getAttribute('data-ship-to') || selectedOption.getAttribute('data-company-address') || '';
+        const shipToAttn = selectedOption.getAttribute('data-ship-to-attn') || selectedOption.getAttribute('data-company') || '';
+        
+        // Set values to form fields
+        document.getElementById('bill_to').value = billTo;
+        document.getElementById('bill_to_attn').value = billToAttn;
+        document.getElementById('ship_to').value = shipTo;
+        document.getElementById('ship_to_attn').value = shipToAttn;
+        
+        // If any of the fields are empty, try to fetch from backend as a fallback
+        if (!billTo || !billToAttn || !shipTo || !shipToAttn) {
+            fetchAddressInfo(username);
+        }
+    }
+    
+    // Function to fetch address info from backend
+    function fetchAddressInfo(username) {
+        $.ajax({
+            url: '/backend/get_client_address_info.php',
+            type: 'GET',
+            data: { username: username },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Only update fields if they're empty or if the data from backend is more complete
+                    const billToField = document.getElementById('bill_to');
+                    const billToAttnField = document.getElementById('bill_to_attn');
+                    const shipToField = document.getElementById('ship_to');
+                    const shipToAttnField = document.getElementById('ship_to_attn');
+                    
+                    if (!billToField.value && response.bill_to) {
+                        billToField.value = response.bill_to;
+                    }
+                    
+                    if (!billToAttnField.value && response.bill_to_attn) {
+                        billToAttnField.value = response.bill_to_attn;
+                    }
+                    
+                    if (!shipToField.value && response.ship_to) {
+                        shipToField.value = response.ship_to;
+                    }
+                    
+                    if (!shipToAttnField.value && response.ship_to_attn) {
+                        shipToAttnField.value = response.ship_to_attn;
+                    }
+                } else {
+                    console.warn('Failed to fetch address info:', response.error);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching address info:', error);
+            }
+        });
+    }
     
 function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, billTo, billToAttn, shipTo, shipToAttn, ordersJson, totalAmount, specialInstructions) {
     try {
@@ -1128,6 +1207,28 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, billTo
         }
     });
 
+    // Initialize address fields when form opens
+    function openAddOrderForm() {
+        document.getElementById('addOrderOverlay').style.display = 'flex';
+        // Clear previous form data
+        document.getElementById('username').selectedIndex = 0;
+        document.getElementById('bill_to').value = '';
+        document.getElementById('bill_to_attn').value = '';
+        document.getElementById('ship_to').value = '';
+        document.getElementById('ship_to_attn').value = '';
+        document.getElementById('special_instructions').value = '';
+        
+        // Set current date as order date
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        document.getElementById('order_date').value = formattedDate;
+        
+        // Initialize datepicker for delivery date
+        $("#delivery_date").datepicker({
+            dateFormat: 'yy-mm-dd',
+            minDate: 0 // Prevent selecting dates in the past
+        }).datepicker("setDate", new Date(today.getTime() + 86400000)); // Set default to tomorrow
+    }
     </script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
@@ -1164,29 +1265,6 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, billTo
                         row.hide();
                     }
                 });
-            });
-            
-            // When a user is selected, try to autopopulate address fields from client account
-            $('#username').change(function() {
-                updateCompany();
-                const username = $(this).val();
-                
-                if (username) {
-                    $.ajax({
-                        url: '/backend/get_client_address_info.php',
-                        type: 'GET',
-                        data: { username: username },
-                        dataType: 'json',
-                        success: function(response) {
-                            if (response.success) {
-                                $('#bill_to').val(response.bill_to || '');
-                                $('#bill_to_attn').val(response.bill_to_attn || '');
-                                $('#ship_to').val(response.ship_to || '');
-                                $('#ship_to_attn').val(response.ship_to_attn || '');
-                            }
-                        }
-                    });
-                }
             });
             
             // Make sure prepareOrderData includes company field
