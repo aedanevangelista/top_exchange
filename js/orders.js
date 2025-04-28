@@ -259,50 +259,42 @@ window.generatePONumber = function() {
     const username = $('#username').val();
     if (username) {
         $.ajax({
-            url: '/backend/get_next_po_number.php',
+            url: '/backend/get_user_details.php', // We'll create this new file to get all user details
             type: 'POST',
             data: { username: username },
+            dataType: 'json',
             success: function(response) {
-                $('#po_number').val(response.po_number);
-                
-                // Get user data from the selected option
-                const selectedOption = $('#username option:selected');
-                const companyAddress = selectedOption.data('company-address') || '';
-                const company = selectedOption.data('company') || '';
-                
-                // Automatically populate all address fields
-                $('#bill_to').val(companyAddress);
-                $('#bill_to_attn').val(company);
-                $('#ship_to').val(companyAddress);
-                $('#ship_to_attn').val(company);
-                
-                // Make address fields readonly to prevent manual editing
-                $('#bill_to').prop('readonly', true);
-                $('#bill_to_attn').prop('readonly', true);
-                $('#ship_to').prop('readonly', true);
-                $('#ship_to_attn').prop('readonly', true);
+                if (response.success) {
+                    // Set the PO number
+                    $('#po_number').val(response.po_number);
+                    
+                    // Set the EXACT values from the database - not derived values
+                    $('#bill_to').val(response.bill_to || '');
+                    $('#bill_to_attn').val(response.bill_to_attn || '');
+                    $('#ship_to').val(response.ship_to || '');
+                    $('#ship_to_attn').val(response.ship_to_attn || '');
+                    
+                    // Make address fields readonly to prevent manual editing
+                    $('#bill_to').prop('readonly', true);
+                    $('#bill_to_attn').prop('readonly', true);
+                    $('#ship_to').prop('readonly', true);
+                    $('#ship_to_attn').prop('readonly', true);
+                } else {
+                    console.error("Error fetching user details:", response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("AJAX Error:", error);
             }
         });
     }
 };
 
 window.prepareOrderData = function() {
-    // Get selected user's data
-    const selectedOption = $('#username option:selected');
-    const companyAddress = selectedOption.data('company-address') || '';
-    const company = selectedOption.data('company') || '';
+    // Do NOT set bill_to and ship_to values here - use what was retrieved from the database
     
-    // Automatically set billing and shipping information
-    $('#bill_to').val(companyAddress);
-    $('#bill_to_attn').val(company);
-    $('#ship_to').val(companyAddress);
-    $('#ship_to_attn').val(company);
-    
-    // Set order JSON data
     const orderData = JSON.stringify(selectedProducts);
     $('#orders').val(orderData);
-    
-    // Calculate and set total amount
     const totalAmount = calculateCartTotal();
     $('#total_amount').val(totalAmount.toFixed(2));
 };
