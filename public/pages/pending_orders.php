@@ -50,8 +50,10 @@ $stmt->close();
 $orders = []; // Initialize $orders as an empty array
 
 // Modified query to join with clients_accounts to get the company information
-$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.bill_to, o.bill_to_attn, o.ship_to, o.ship_to_attn, o.orders, o.total_amount, o.status, 
-        o.special_instructions, COALESCE(o.company, c.company) as company
+$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, 
+        c.bill_to, c.bill_to_attn, c.ship_to, c.ship_to_attn, 
+        o.orders, o.total_amount, o.status, o.special_instructions, 
+        COALESCE(o.company, c.company) as company
         FROM orders o
         LEFT JOIN clients_accounts c ON o.username = c.username
         WHERE o.status = 'Pending'";
