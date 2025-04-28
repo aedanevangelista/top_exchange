@@ -212,6 +212,26 @@ function populateCart() {
     }
 }
 
+// Function to toggle delivery address fields
+window.toggleDeliveryAddress = function() {
+    const addressType = $('#delivery_address_type').val();
+    if (addressType === 'company') {
+        $('#company_address_container').show();
+        $('#custom_address_container').hide();
+        
+        // Update hidden delivery address field with company address
+        const companyAddress = $('#company_address').val();
+        $('#delivery_address').val(companyAddress);
+    } else {
+        $('#company_address_container').hide();
+        $('#custom_address_container').show();
+        
+        // Update hidden delivery address field with custom address
+        const customAddress = $('#custom_address').val();
+        $('#delivery_address').val(customAddress);
+    }
+};
+
 // Global functions for modal operations
 window.openCartModal = function() {
     $('#cartModal').show();
@@ -245,41 +265,33 @@ window.generatePONumber = function() {
             success: function(response) {
                 $('#po_number').val(response.po_number);
                 
-                // Now call updateAddressInfo to populate address fields
-                updateAddressInfo(username);
+                // Update the company address field with the selected user's company address
+                const selectedOption = $('#username option:selected');
+                const companyAddress = selectedOption.data('company-address');
+                $('#company_address').val(companyAddress || 'No company address available');
+                
+                // If company address is selected, update the delivery address field
+                if ($('#delivery_address_type').val() === 'company') {
+                    $('#delivery_address').val(companyAddress || 'No company address available');
+                }
             }
         });
     }
 };
 
 window.prepareOrderData = function() {
-    // Get address fields directly - no need for delivery_address handling anymore
+    // Update delivery address based on the selected type
+    const addressType = $('#delivery_address_type').val();
+    if (addressType === 'company') {
+        $('#delivery_address').val($('#company_address').val());
+    } else {
+        $('#delivery_address').val($('#custom_address').val());
+    }
+    
     const orderData = JSON.stringify(selectedProducts);
     $('#orders').val(orderData);
     const totalAmount = calculateCartTotal();
     $('#total_amount').val(totalAmount.toFixed(2));
-    
-    // Make sure special instructions are included
-    const specialInstructions = $('#special_instructions').val();
-    $('#special_instructions_hidden').val(specialInstructions);
-    
-    // Validate required fields
-    if (!$('#username').val()) {
-        alert('Please select a username');
-        return false;
-    }
-    
-    if (!$('#ship_to').val()) {
-        alert('Please provide a Ship To address');
-        return false;
-    }
-    
-    if (selectedProducts.length === 0) {
-        alert('Please add at least one product to the order');
-        return false;
-    }
-    
-    return true;
 };
 
 window.viewOrderDetails = function(orders) {
@@ -310,29 +322,6 @@ window.viewOrderDetails = function(orders) {
 
 window.openAddOrderForm = function() {
     $('#addOrderOverlay').show();
-    
-    // Clear previous form data
-    document.getElementById('username').selectedIndex = 0;
-    document.getElementById('bill_to').value = '';
-    document.getElementById('bill_to_attn').value = '';
-    document.getElementById('ship_to').value = '';
-    document.getElementById('ship_to_attn').value = '';
-    document.getElementById('special_instructions').value = '';
-    
-    // Set current date as order date
-    const today = new Date();
-    const formattedDate = today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
-    document.getElementById('order_date').value = formattedDate;
-    
-    // Initialize datepicker for delivery date
-    $("#delivery_date").datepicker({
-        dateFormat: 'yy-mm-dd',
-        minDate: 0 // Prevent selecting dates in the past
-    }).datepicker("setDate", new Date(today.getTime() + 86400000)); // Set default to tomorrow
-    
-    // Reset selected products
-    selectedProducts = [];
-    updateOrderSummary();
 };
 
 window.closeAddOrderForm = function() {
@@ -403,72 +392,6 @@ window.changeStatus = function(status) {
     });
 };
 
-// Function to update address fields based on selected user
-function updateAddressInfo(username) {
-    if (!username) return;
-    
-    // Get the selected option element
-    const selectedOption = document.querySelector(`#username option[value="${username}"]`);
-    if (!selectedOption) return;
-    
-    // Get address data from data attributes
-    const billTo = selectedOption.getAttribute('data-bill-to') || selectedOption.getAttribute('data-company-address') || '';
-    const billToAttn = selectedOption.getAttribute('data-bill-to-attn') || selectedOption.getAttribute('data-company') || '';
-    const shipTo = selectedOption.getAttribute('data-ship-to') || selectedOption.getAttribute('data-company-address') || '';
-    const shipToAttn = selectedOption.getAttribute('data-ship-to-attn') || selectedOption.getAttribute('data-company') || '';
-    
-    // Set values to form fields
-    document.getElementById('bill_to').value = billTo;
-    document.getElementById('bill_to_attn').value = billToAttn;
-    document.getElementById('ship_to').value = shipTo;
-    document.getElementById('ship_to_attn').value = shipToAttn;
-    
-    // If any of the fields are empty, try to fetch from backend as a fallback
-    if (!billTo || !billToAttn || !shipTo || !shipToAttn) {
-        fetchAddressInfo(username);
-    }
-}
-
-// Function to fetch address info from backend
-function fetchAddressInfo(username) {
-    $.ajax({
-        url: '/backend/get_client_address_info.php',
-        type: 'GET',
-        data: { username: username },
-        dataType: 'json',
-        success: function(response) {
-            if (response.success) {
-                // Only update fields if they're empty or if the data from backend is more complete
-                const billToField = document.getElementById('bill_to');
-                const billToAttnField = document.getElementById('bill_to_attn');
-                const shipToField = document.getElementById('ship_to');
-                const shipToAttnField = document.getElementById('ship_to_attn');
-                
-                if (!billToField.value && response.bill_to) {
-                    billToField.value = response.bill_to;
-                }
-                
-                if (!billToAttnField.value && response.bill_to_attn) {
-                    billToAttnField.value = response.bill_to_attn;
-                }
-                
-                if (!shipToField.value && response.ship_to) {
-                    shipToField.value = response.ship_to;
-                }
-                
-                if (!shipToAttnField.value && response.ship_to_attn) {
-                    shipToAttnField.value = response.ship_to_attn;
-                }
-            } else {
-                console.warn('Failed to fetch address info:', response.error);
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error('Error fetching address info:', error);
-        }
-    });
-}
-
 // Document ready function
 $(document).ready(function() {
     // Initialize datepicker for delivery date
@@ -484,11 +407,15 @@ $(document).ready(function() {
     // Set current date for order_date
     $('#order_date').val(new Date().toISOString().split('T')[0]);
 
-    // Add event listeners for username change to update address fields
-    $('#username').change(function() {
-        const username = $(this).val();
-        if (username) {
-            updateAddressInfo(username);
+    // Initialize delivery address type change handler
+    $('#delivery_address_type').change(function() {
+        toggleDeliveryAddress();
+    });
+
+    // Initialize custom address input change handler
+    $('#custom_address').on('input', function() {
+        if ($('#delivery_address_type').val() === 'custom') {
+            $('#delivery_address').val($(this).val());
         }
     });
 
@@ -576,8 +503,18 @@ $(document).ready(function() {
     $('#addOrderForm').on('submit', function(e) {
         e.preventDefault();
         
-        if (!prepareOrderData()) {
-            return; // Stop if validation fails
+        if (selectedProducts.length === 0) {
+            alert('Please add products to your order');
+            return;
+        }
+
+        prepareOrderData();
+        
+        // Validate delivery address
+        const deliveryAddress = $('#delivery_address').val();
+        if (!deliveryAddress || deliveryAddress.trim() === '') {
+            alert('Please provide a delivery address');
+            return;
         }
         
         // Show a toast notification when saving the order
