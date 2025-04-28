@@ -219,16 +219,16 @@ window.toggleDeliveryAddress = function() {
         $('#company_address_container').show();
         $('#custom_address_container').hide();
         
-        // Update hidden delivery address field with company address
+        // Update ship_to with company address
         const companyAddress = $('#company_address').val();
-        $('#delivery_address').val(companyAddress);
+        $('#ship_to').val(companyAddress);
     } else {
         $('#company_address_container').hide();
         $('#custom_address_container').show();
         
-        // Update hidden delivery address field with custom address
+        // Update ship_to with custom address
         const customAddress = $('#custom_address').val();
-        $('#delivery_address').val(customAddress);
+        $('#ship_to').val(customAddress);
     }
 };
 
@@ -268,11 +268,16 @@ window.generatePONumber = function() {
                 // Update the company address field with the selected user's company address
                 const selectedOption = $('#username option:selected');
                 const companyAddress = selectedOption.data('company-address');
-                $('#company_address').val(companyAddress || 'No company address available');
+                const company = selectedOption.data('company');
                 
-                // If company address is selected, update the delivery address field
-                if ($('#delivery_address_type').val() === 'company') {
-                    $('#delivery_address').val(companyAddress || 'No company address available');
+                // Set default values for bill_to and ship_to fields
+                $('#bill_to').val(companyAddress || '');
+                $('#ship_to').val(companyAddress || '');
+                
+                // Set company name for attention fields if available
+                if (company) {
+                    $('#bill_to_attn').val(company);
+                    $('#ship_to_attn').val(company);
                 }
             }
         });
@@ -280,12 +285,17 @@ window.generatePONumber = function() {
 };
 
 window.prepareOrderData = function() {
-    // Update delivery address based on the selected type
-    const addressType = $('#delivery_address_type').val();
-    if (addressType === 'company') {
-        $('#delivery_address').val($('#company_address').val());
-    } else {
-        $('#delivery_address').val($('#custom_address').val());
+    // Make sure all the address fields have values
+    if (!$('#bill_to').val() && $('#username').val()) {
+        // If bill_to is empty, use the company address as a default
+        const companyAddress = $('#username option:selected').data('company-address') || '';
+        $('#bill_to').val(companyAddress);
+    }
+    
+    if (!$('#ship_to').val() && $('#username').val()) {
+        // If ship_to is empty, use the company address as a default
+        const companyAddress = $('#username option:selected').data('company-address') || '';
+        $('#ship_to').val(companyAddress);
     }
     
     const orderData = JSON.stringify(selectedProducts);
@@ -578,7 +588,7 @@ $(document).ready(function() {
 // Variables to store the current PO for PDF generation
     let currentPOData = null;
     
-function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, shipTo, ordersJson, totalAmount, specialInstructions) {
     try {
         // Store current PO data
         currentPOData = {
@@ -587,20 +597,20 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             company,
             orderDate,
             deliveryDate,
-            deliveryAddress,
+            shipTo,  // Updated from deliveryAddress to shipTo
             ordersJson,
             totalAmount,
-            specialInstructions  // Keep storing this in case you need it elsewhere
+            specialInstructions
         };
         
         // Populate the hidden PDF content silently
         document.getElementById('printCompany').textContent = company || 'No Company Name';
         document.getElementById('printPoNumber').textContent = poNumber;
         document.getElementById('printUsername').textContent = username;
-        document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
+        document.getElementById('printDeliveryAddress').textContent = shipTo;  // Updated to use shipTo
         document.getElementById('printOrderDate').textContent = orderDate;
         document.getElementById('printDeliveryDate').textContent = deliveryDate;
-        
+          
         // Format the total amount
         document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
             minimumFractionDigits: 2,
@@ -670,8 +680,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
 }
 
     // Function to generate Purchase Order PDF
-    // Function to generate Purchase Order PDF
-function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+function generatePO(poNumber, username, company, orderDate, deliveryDate, shipTo, ordersJson, totalAmount, specialInstructions) {
     try {
         // Store current PO data for later use
         currentPOData = {
@@ -680,17 +689,17 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
             company,
             orderDate,
             deliveryDate,
-            deliveryAddress,
+            shipTo,  // Updated from deliveryAddress to shipTo
             ordersJson,
             totalAmount,
-            specialInstructions  // Add special instructions to stored data
+            specialInstructions
         };
         
         // Set basic information
         document.getElementById('printCompany').textContent = company || 'No Company Name';
         document.getElementById('printPoNumber').textContent = poNumber;
         document.getElementById('printUsername').textContent = username;
-        document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
+        document.getElementById('printDeliveryAddress').textContent = shipTo;  // Updated to use shipTo
         document.getElementById('printOrderDate').textContent = orderDate;
         document.getElementById('printDeliveryDate').textContent = deliveryDate;
         

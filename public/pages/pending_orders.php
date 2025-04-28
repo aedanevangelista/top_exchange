@@ -41,8 +41,9 @@ $stmt->close();
 $orders = []; // Initialize $orders as an empty array
 
 // Modified query to join with clients_accounts to get the company information
-$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, 
-        o.special_instructions, COALESCE(o.company, c.company) as company
+// Updated to use ship_to instead of delivery_address
+$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.ship_to, o.orders, o.total_amount, o.status, 
+        o.special_instructions, o.bill_to, o.bill_to_attn, o.ship_to_attn, COALESCE(o.company, c.company) as company
         FROM orders o
         LEFT JOIN clients_accounts c ON o.username = c.username
         WHERE o.status = 'Pending'";
@@ -164,7 +165,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['company'] ?: 'No Company') ?></td>
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
-                                <td><?= htmlspecialchars($order['delivery_address']) ?></td>
+                                <td><?= htmlspecialchars($order['ship_to']) ?></td>
                                 <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
                                 <i class="fas fa-clipboard-list"></i>    
                                 Orders</button></td>
@@ -189,7 +190,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     '<?= htmlspecialchars($order['company']) ?>', 
                                     '<?= htmlspecialchars($order['order_date']) ?>', 
                                     '<?= htmlspecialchars($order['delivery_date']) ?>', 
-                                    '<?= htmlspecialchars($order['delivery_address']) ?>', 
+                                    '<?= htmlspecialchars($order['ship_to']) ?>', 
                                     '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
                                     '<?= htmlspecialchars($order['total_amount']) ?>', 
                                     '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
@@ -317,24 +318,19 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <label for="delivery_date">Delivery Date:</label>
                     <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
                     
-                    <!-- New Delivery Address selection -->
-                    <label for="delivery_address_type">Delivery Address:</label>
-                    <select id="delivery_address_type" name="delivery_address_type" onchange="toggleDeliveryAddress()">
-                        <option value="company">Company Address</option>
-                        <option value="custom">Custom Address</option>
-                    </select>
+                    <!-- Updated shipping information fields -->
+                    <label for="bill_to">Bill To:</label>
+                    <textarea id="bill_to" name="bill_to" rows="2" placeholder="Enter billing address"></textarea>
                     
-                    <div id="company_address_container">
-                        <input type="text" id="company_address" name="company_address" readonly placeholder="Company address will appear here">
-                    </div>
+                    <label for="bill_to_attn">Bill To Attention:</label>
+                    <input type="text" id="bill_to_attn" name="bill_to_attn" placeholder="Enter billing contact">
                     
-                    <div id="custom_address_container" style="display: none;">
-                        <textarea id="custom_address" name="custom_address" rows="3" placeholder="Enter delivery address"></textarea>
-                    </div>
+                    <label for="ship_to">Ship To (Delivery Address):</label>
+                    <textarea id="ship_to" name="ship_to" rows="2" placeholder="Enter shipping address"></textarea>
                     
-                    <input type="hidden" name="delivery_address" id="delivery_address">
-                    <input type="hidden" name="special_instructions" id="special_instructions_hidden">
-                    <!-- Add special instructions field -->
+                    <label for="ship_to_attn">Ship To Attention:</label>
+                    <input type="text" id="ship_to_attn" name="ship_to_attn" placeholder="Enter delivery contact">
+                    
                     <label for="special_instructions">Special Instructions:</label>
                     <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
                     
@@ -368,7 +364,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <input type="hidden" name="total_amount" id="total_amount">
                 </div>
                 <div class="form-buttons">
-
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
