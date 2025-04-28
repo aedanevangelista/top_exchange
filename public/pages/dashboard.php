@@ -98,6 +98,7 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-left: auto;
         }
         
         .notification-badge:hover {
@@ -132,7 +133,7 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
                 <div class="header-container">
                     <h2>Dashboard</h2>
                     
-                    <!-- New Compact Pending Orders Notification Badge -->
+                    <!-- New Compact Pending Orders Notification Badge (positioned on the right) -->
                     <?php if ($pendingOrdersCount > 0): ?>
                     <a href="/public/pages/pending_orders.php" style="text-decoration: none;">
                         <div class="notification-badge">
@@ -172,12 +173,25 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
                     </div>
                 </div>
             </div>
+            
+            <!-- Sales Per Department Container -->
+            <div class="bottom-section">
+                <div class="sales-container">
+                    <div class="chart-header">
+                        <h3>SALES PER DEPARTMENT</h3>
+                        <select id="sales-year" class="sales-dropdown">
+                        </select>
+                    </div>
+                    <div class="sales-chart">
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
-    <!-- Use relative path for JavaScript -->
-    <script src="/js/dashboard.js"></script>
-
+    <script>
+        // Your existing JavaScript code here
+    </script>
 </body>
 </html>
