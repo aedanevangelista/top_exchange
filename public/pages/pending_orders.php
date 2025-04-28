@@ -310,7 +310,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber();">
+                    <select id="username" name="username" required onchange="generatePONumber(); updateClientInfo();">
                         <option value="" disabled selected>Select User</option>
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
@@ -574,7 +574,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             // Initialize company field if needed
             $('#username').change(function() {
                 updateCompany();
-                updateClientInfo();
+                // Removed updateClientInfo() from here as it's now directly called in the select's onchange attribute
             });
             
             // Make sure prepareOrderData includes company field
@@ -602,26 +602,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 }
                 // No need for a hidden field since the textarea already has the name attribute
             };
-
-            // Function to auto-fill billing and shipping information
-            function updateClientInfo() {
-                const usernameSelect = document.getElementById('username');
-                if (usernameSelect.selectedIndex <= 0) return; // Skip if no selection
-                
-                const selectedOption = usernameSelect.options[usernameSelect.selectedIndex];
-                
-                // Get data attributes
-                const billTo = selectedOption.getAttribute('data-bill-to');
-                const billToAttn = selectedOption.getAttribute('data-bill-to-attn');
-                const shipTo = selectedOption.getAttribute('data-ship-to');
-                const shipToAttn = selectedOption.getAttribute('data-ship-to-attn');
-                
-                // Set form values
-                document.getElementById('bill_to').value = billTo || '';
-                document.getElementById('bill_to_attn').value = billToAttn || '';
-                document.getElementById('ship_to').value = shipTo || '';
-                document.getElementById('ship_to_attn').value = shipToAttn || '';
-            }
         });
 
         // Define updateClientInfo in global scope to ensure it's available to other functions
@@ -631,17 +611,24 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             
             const selectedOption = usernameSelect.options[usernameSelect.selectedIndex];
             
-            // Get data attributes
-            const billTo = selectedOption.getAttribute('data-bill-to');
-            const billToAttn = selectedOption.getAttribute('data-bill-to-attn');
-            const shipTo = selectedOption.getAttribute('data-ship-to');
-            const shipToAttn = selectedOption.getAttribute('data-ship-to-attn');
+            // Get data attributes with the correct data attribute names
+            const billTo = selectedOption.getAttribute('data-bill-to') || '';
+            const billToAttn = selectedOption.getAttribute('data-bill-to-attn') || '';
+            const shipTo = selectedOption.getAttribute('data-ship-to') || '';
+            const shipToAttn = selectedOption.getAttribute('data-ship-to-attn') || '';
             
             // Set form values
-            document.getElementById('bill_to').value = billTo || '';
-            document.getElementById('bill_to_attn').value = billToAttn || '';
-            document.getElementById('ship_to').value = shipTo || '';
-            document.getElementById('ship_to_attn').value = shipToAttn || '';
+            document.getElementById('bill_to').value = billTo;
+            document.getElementById('bill_to_attn').value = billToAttn;
+            document.getElementById('ship_to').value = shipTo;
+            document.getElementById('ship_to_attn').value = shipToAttn;
+            
+            console.log('Auto-filling client data:', {
+                billTo: billTo,
+                billToAttn: billToAttn,
+                shipTo: shipTo, 
+                shipToAttn: shipToAttn
+            });
         }
 
         // Modify the existing openAddOrderForm function if it exists in your JS
