@@ -101,6 +101,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
     <!-- HTML2PDF Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>    
     <style>
+        /* Search container styles */
         .search-container {
             display: flex;
             align-items: center;
@@ -127,6 +128,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             background-color: #2471a3;
         }
 
+        /* Header styling */
         .orders-header {
             display: flex;
             justify-content: space-between;
@@ -155,6 +157,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
         .filter-group {
             display: flex;
             align-items: center;
+            margin-right: 15px;
         }
         
         .filter-label {
@@ -170,12 +173,51 @@ $statusOptions = ['For Delivery', 'In Transit'];
             min-width: 150px;
         }
 
+        /* Improved table styling */
+        .orders-table-container {
+            margin-bottom: 30px;
+            overflow-x: auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            font-size: 14px;
+        }
+        
+        .orders-table th,
+        .orders-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .orders-table th {
+            background-color: #34495e;
+            color: white;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .orders-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .orders-table tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+
         /* Status badge styles */
         .status-badge {
-            padding: 5px 10px;
-            border-radius: 15px;
+            padding: 6px 10px;
+            border-radius: 20px;
             font-size: 12px;
             font-weight: bold;
+            display: inline-block;
+            text-align: center;
         }
 
         .status-for-delivery {
@@ -192,12 +234,13 @@ $statusOptions = ['For Delivery', 'In Transit'];
         .driver-badge {
             background-color: #17a2b8;
             color: white;
-            padding: 4px 8px;
+            padding: 5px 8px;
             border-radius: 15px;
             font-size: 12px;
             display: inline-flex;
             align-items: center;
             gap: 5px;
+            margin-bottom: 5px;
         }
 
         .driver-btn {
@@ -208,30 +251,42 @@ $statusOptions = ['For Delivery', 'In Transit'];
             border-radius: 4px;
             cursor: pointer;
             font-size: 12px;
-            margin-left: 5px;
             transition: background-color 0.3s;
+            margin-top: 5px;
+            display: inline-block;
         }
 
         .driver-btn:hover {
             background-color: #510bc4;
         }
 
-        .assign-driver-btn {
-            background-color: #fd7e14;
+        /* Improved button styles */
+        .action-button {
+            display: inline-block;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 3px;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            font-weight: 500;
         }
-
-        .assign-driver-btn:hover {
-            background-color: #e67211;
+        
+        .view-orders-btn {
+            background-color: #3498db;
+            color: white;
         }
-
+        
+        .view-orders-btn:hover {
+            background-color: #2980b9;
+        }
+        
         .complete-delivery-btn {
             background-color: #28a745;
             color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s;
         }
 
         .complete-delivery-btn:hover {
@@ -241,67 +296,36 @@ $statusOptions = ['For Delivery', 'In Transit'];
         .toggle-transit-btn {
             background-color: #17a2b8;
             color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 5px;
-            transition: background-color 0.3s;
         }
         
         .toggle-transit-btn:hover {
             background-color: #138496;
         }
         
-        /* Order details modal */
-        .order-details-container {
-            max-height: 70vh;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            padding-right: 5px;
+        .download-btn {
+            background-color: #17a2b8;
+            color: white;
+            border-radius: 4px;
         }
         
-        /* No orders message */
-        .no-orders {
-            text-align: center;
-            padding: 20px;
-            font-style: italic;
-            color: #6c757d;
+        .download-btn:hover {
+            background-color: #138496;
         }
         
-        .action-buttons-cell {
-            min-width: 210px;
+        .instructions-btn {
+            background-color: #2980b9;
+            color: white;
         }
         
-        /* Sort indicators and clickable headers - updated to match requirements */
-        .sort-header {
-            cursor: pointer;
-            position: relative;
-            padding-right: 20px;
-            transition: background-color 0.2s;
+        .instructions-btn:hover {
+            background-color: #2471a3;
         }
-        
-        .sort-header:hover {
-            background-color:rgb(51, 51, 51);
-        }
-        
-        .sort-header::after {
-            content: '\f0dc';
-            font-family: 'Font Awesome 5 Free';
-            font-weight: 900;
-            position: absolute;
-            right: 5px;
-            color: #6c757d; /* Gray arrow */
-        }
-        
-        .sort-header.asc::after {
-            content: '\f0de';
-            color:rgb(255, 255, 255); /* Gray arrow when active */
-        }
-        
-        .sort-header.desc::after {
-            content: '\f0dd';
-            color:rgb(255, 255, 255); /* Gray arrow when active */
+
+        /* Action buttons container */
+        .action-buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
         
         /* Highlighted delivery date */
@@ -311,124 +335,147 @@ $statusOptions = ['For Delivery', 'In Transit'];
         }
         
         /* Modal styling */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+        
         .overlay-content {
-            max-width: 550px;
+            background-color: #fff;
+            width: 90%;
+            max-width: 700px;
             padding: 25px;
             border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+            margin: 40px auto;
         }
         
-        .modal-content h2 {
+        .overlay-content h2 {
             color: #333;
-            text-align: center;
-            border-bottom: 2px solid #f1f1f1;
-            padding-bottom: 15px;
+            margin-top: 0;
             margin-bottom: 20px;
-        }
-        
-        .modal-message {
-            margin: 25px 0;
-            font-size: 16px;
-            line-height: 1.6;
-            text-align: center;
-        }
-        
-        /* Updated modal buttons - centered and colored */
-        .modal-buttons {
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
             display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 25px;
+            align-items: center;
+            gap: 10px;
         }
         
-        .btn-no, .btn-yes {
-            padding: 10px 25px;
-            border-radius: 25px;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.3s;
-            min-width: 120px;
+        .modal-content h2 i,
+        .overlay-content h2 i {
+            color: #3498db;
         }
         
-        .btn-no {
-            background-color: #dc3545;
+        /* Order details modal */
+        .order-details-container {
+            max-height: 70vh;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        
+        .order-details-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .order-details-table th,
+        .order-details-table td {
+            padding: 10px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .order-details-table th {
+            background-color: #34495e;
             color: white;
+            font-weight: normal;
         }
         
-        .btn-no:hover {
-            background-color: #c82333;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        .order-details-table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
         
-        .btn-yes {
-            background-color: #28a745;
-            color: white;
-        }
-        
-        .btn-yes:hover {
-            background-color: #218838;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        
-        /* Status pill in modal */
-        .status-pill {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 25px;
-            font-weight: bold;
-            margin: 0 3px;
-            color: white;
-        }
-        
-        .status-pill.for-delivery {
-            background-color: #fd7e14;
-        }
-        
-        .status-pill.in-transit {
-            background-color: #17a2b8;
-        }
-        
-        /* Driver modal styling */
-        .overlay-content.driver-modal-content {
-            max-width: 450px;
-        }
-        
-        .driver-selection {
+        /* No orders message */
+        .no-orders {
+            text-align: center;
+            padding: 30px;
+            font-style: italic;
+            color: #6c757d;
+            background-color: #f9f9f9;
+            border-radius: 5px;
             margin: 20px 0;
         }
         
-        .driver-selection label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-        
-        .driver-selection select {
-            width: 100%;
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            background-color: #fff;
-            font-size: 16px;
-        }
-        
-        .driver-modal-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 25px;
-        }
-        
-        .cancel-btn, .save-btn {
-            padding: 10px 25px;
-            border-radius: 25px;
-            border: none;
+        /* Sort indicators and clickable headers */
+        .sort-header {
             cursor: pointer;
-            font-size: 16px;
-            transition: all 0.3s;
-            min-width: 120px;
+            position: relative;
+            padding-right: 25px;
+            transition: background-color 0.2s;
+        }
+        
+        .sort-header:hover {
+            background-color: #2c3e50;
+        }
+        
+        .sort-header::after {
+            content: '\f0dc';
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 8px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .sort-header.asc::after {
+            content: '\f0de';
+            color: white;
+        }
+        
+        .sort-header.desc::after {
+            content: '\f0dd';
+            color: white;
+        }
+        
+        /* Form buttons styling */
+        .form-buttons {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        
+        .back-btn,
+        .cancel-btn,
+        .save-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .back-btn {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .back-btn:hover {
+            background-color: #5a6268;
         }
         
         .cancel-btn {
@@ -438,8 +485,6 @@ $statusOptions = ['For Delivery', 'In Transit'];
         
         .cancel-btn:hover {
             background-color: #c82333;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         
         .save-btn {
@@ -449,41 +494,20 @@ $statusOptions = ['For Delivery', 'In Transit'];
         
         .save-btn:hover {
             background-color: #218838;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         
+        /* Date info styles */
         .date-info {
-            margin-bottom: 15px;
+            margin-left: 15px;
             padding: 5px 10px;
             background-color: #e9f2fa;
             border-radius: 4px;
             color: #2980b9;
             font-size: 14px;
             display: inline-block;
+            border-left: 3px solid #3498db;
         }
 
-        /* Download button styles */
-        .download-btn {
-            padding: 6px 12px;
-            background-color: #17a2b8;
-            color: white;
-            border: none;
-            border-radius: 40px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: 5px;
-            margin-bottom: 5px;
-        }
-        
-        .download-btn:hover {
-            background-color: #138496;
-        }
-        
-        .download-btn i {
-            margin-right: 5px;
-        }
-        
         /* PO PDF layout */
         .po-container {
             font-family: Arial, sans-serif;
@@ -554,23 +578,6 @@ $statusOptions = ['For Delivery', 'In Transit'];
             margin-bottom: 30px;
         }
         
-        .po-signature {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 50px;
-        }
-        
-        .po-signature-block {
-            width: 40%;
-            text-align: center;
-        }
-        
-        .po-signature-line {
-            border-bottom: 1px solid #000;
-            margin-bottom: 10px;
-            padding-top: 40px;
-        }
-        
         #pdfPreview {
             display: none;
             position: fixed;
@@ -589,7 +596,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             margin: 50px auto;
             padding: 20px;
             border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
             position: relative;
         }
         
@@ -643,9 +650,9 @@ $statusOptions = ['For Delivery', 'In Transit'];
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             animation: modalFadeIn 0.3s ease-in-out;
             overflow: hidden;
-            max-height: 90vh; /* 90% of the viewport height */
-            overflow-y: auto; /* Add scroll if content exceeds max height */
-            margin: 2vh auto; /* Center vertically with 5% top margin */
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: 2vh auto;
         }
 
         @keyframes modalFadeIn {
@@ -711,23 +718,6 @@ $statusOptions = ['For Delivery', 'In Transit'];
             background-color: #2471a3;
         }
         
-        .instructions-btn {
-            padding: 6px 12px;
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            min-width: 60px;
-            text-align: center;
-            transition: background-color 0.2s;
-        }
-        
-        .instructions-btn:hover {
-            background-color: #2471a3;
-        }
-        
         .no-instructions {
             color: #6c757d;
             font-style: italic;
@@ -752,6 +742,75 @@ $statusOptions = ['For Delivery', 'In Transit'];
 
         #contentToDownload .po-total {
             font-size: 12px;
+        }
+        
+        /* Improved modal button styling */
+        .btn-no, .btn-yes {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            min-width: 80px;
+            font-weight: 500;
+        }
+        
+        .btn-no {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .btn-no:hover {
+            background-color: #c82333;
+            transform: translateY(-2px);
+        }
+        
+        .btn-yes {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .btn-yes:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+        }
+        
+        /* Responsive design */
+        @media screen and (max-width: 992px) {
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .filter-section {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+            
+            .search-container {
+                width: 100%;
+            }
+            
+            .search-container input {
+                width: 100%;
+            }
+        }
+        
+        /* Responsive table for mobile */
+        @media screen and (max-width: 768px) {
+            .orders-table th,
+            .orders-table td {
+                padding: 8px;
+                font-size: 13px;
+            }
+            
+            .action-buttons-container {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
         }
     </style>
 </head>
@@ -818,20 +877,19 @@ $statusOptions = ['For Delivery', 'In Transit'];
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td class="<?= $isDeliveryDay ? 'today-delivery' : '' ?>">
                                     <?= htmlspecialchars($order['delivery_date']) ?>
-                                    <?= $isDeliveryDay ? ' (Today)' : '' ?>
+                                    <?= $isDeliveryDay ? ' <span class="today-tag">(Today)</span>' : '' ?>
                                 </td>
                                 <td><?= htmlspecialchars($order['delivery_address']) ?></td>
                                 <td>
-                                    <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
-                                        <i class="fas fa-clipboard-list"></i>    
-                                        View Order Items
+                                    <button class="action-button view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
+                                        <i class="fas fa-clipboard-list"></i> View Items
                                     </button>
                                 </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
                                     <?php if (!empty($order['special_instructions'])): ?>
-                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
-                                            View
+                                        <button class="action-button instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
+                                            <i class="fas fa-info-circle"></i> View
                                         </button>
                                     <?php else: ?>
                                         <span class="no-instructions">None</span>
@@ -846,7 +904,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                                             <i class="fas fa-exchange-alt"></i> Change
                                         </button>
                                     <?php else: ?>
-                                        <div>No driver assigned</div>
+                                        <span class="no-driver">No driver assigned</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
@@ -856,34 +914,36 @@ $statusOptions = ['For Delivery', 'In Transit'];
                                         <span class="status-badge status-in-transit">In Transit</span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="action-buttons-cell">
-                                    <button class="download-btn" onclick="downloadPODirectly(
-                                        '<?= htmlspecialchars($order['po_number']) ?>', 
-                                        '<?= htmlspecialchars($order['username']) ?>', 
-                                        '<?= htmlspecialchars($order['company'] ?? '') ?>', 
-                                        '<?= htmlspecialchars($order['order_date']) ?>', 
-                                        '<?= htmlspecialchars($order['delivery_date']) ?>', 
-                                        '<?= htmlspecialchars($order['delivery_address']) ?>', 
-                                        '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
-                                        '<?= htmlspecialchars($order['total_amount']) ?>', 
-                                        '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
-                                    )">
-                                        <i class="fas fa-file-pdf"></i> PDF
-                                    </button>
-                                    <br>
-                                    <?php if ($order['status'] === 'For Delivery'): ?>
-                                        <button class="toggle-transit-btn" onclick="openStatusChangeModal('<?= htmlspecialchars($order['po_number']) ?>', 'In Transit')">
-                                            <i class="fas fa-truck"></i> Mark In Transit
+                                <td>
+                                    <div class="action-buttons-container">
+                                        <button class="action-button download-btn" onclick="downloadPODirectly(
+                                            '<?= htmlspecialchars($order['po_number']) ?>', 
+                                            '<?= htmlspecialchars($order['username']) ?>', 
+                                            '<?= htmlspecialchars($order['company'] ?? '') ?>', 
+                                            '<?= htmlspecialchars($order['order_date']) ?>', 
+                                            '<?= htmlspecialchars($order['delivery_date']) ?>', 
+                                            '<?= htmlspecialchars($order['delivery_address']) ?>', 
+                                            '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
+                                            '<?= htmlspecialchars($order['total_amount']) ?>', 
+                                            '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
+                                        )">
+                                            <i class="fas fa-file-pdf"></i> PDF
                                         </button>
-                                    <?php else: ?>
-                                        <button class="toggle-transit-btn" onclick="openStatusChangeModal('<?= htmlspecialchars($order['po_number']) ?>', 'For Delivery')">
-                                            <i class="fas fa-warehouse"></i> Mark For Delivery
+                                        
+                                        <?php if ($order['status'] === 'For Delivery'): ?>
+                                            <button class="action-button toggle-transit-btn" onclick="openStatusChangeModal('<?= htmlspecialchars($order['po_number']) ?>', 'In Transit')">
+                                                <i class="fas fa-truck"></i> Mark In Transit
+                                            </button>
+                                        <?php else: ?>
+                                            <button class="action-button toggle-transit-btn" onclick="openStatusChangeModal('<?= htmlspecialchars($order['po_number']) ?>', 'For Delivery')">
+                                                <i class="fas fa-warehouse"></i> Mark For Delivery
+                                            </button>
+                                        <?php endif; ?>
+                                        
+                                        <button class="action-button complete-delivery-btn" onclick="openCompleteModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
+                                            <i class="fas fa-check-circle"></i> Complete
                                         </button>
-                                    <?php endif; ?>
-                                    
-                                    <button class="complete-delivery-btn" onclick="openCompleteModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
-                                        <i class="fas fa-check-circle"></i> Complete
-                                    </button>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -1032,10 +1092,10 @@ $statusOptions = ['For Delivery', 'In Transit'];
             </div>
             <div class="driver-modal-buttons">
                 <button class="cancel-btn" onclick="closeDriverModal()">
-                    <i class="fas fa-times"></i> No
+                    <i class="fas fa-times"></i> Cancel
                 </button>
                 <button class="save-btn" onclick="assignDriver()">
-                    <i class="fas fa-check"></i> Yes
+                    <i class="fas fa-check"></i> Confirm
                 </button>
             </div>
         </div>
@@ -1050,10 +1110,10 @@ $statusOptions = ['For Delivery', 'In Transit'];
             </div>
             <div class="modal-buttons">
                 <button class="btn-no" onclick="closeStatusChangeModal()">
-                    <i class="fas fa-times"></i> No
+                    <i class="fas fa-times"></i> Cancel
                 </button>
                 <button id="confirmStatusChange" class="btn-yes">
-                    <i class="fas fa-check"></i> Yes
+                    <i class="fas fa-check"></i> Confirm
                 </button>
             </div>
         </div>
@@ -1068,10 +1128,10 @@ $statusOptions = ['For Delivery', 'In Transit'];
             </div>
             <div class="modal-buttons">
                 <button class="btn-no" onclick="closeCompleteModal()">
-                    <i class="fas fa-times"></i> No
+                    <i class="fas fa-times"></i> Cancel
                 </button>
                 <button id="confirmCompleteOrder" class="btn-yes">
-                    <i class="fas fa-check"></i> Yes
+                    <i class="fas fa-check"></i> Confirm
                 </button>
             </div>
         </div>
@@ -1655,6 +1715,20 @@ $statusOptions = ['For Delivery', 'In Transit'];
                 const modal = document.getElementById('specialInstructionsModal');
                 if (event.target === modal) {
                     closeSpecialInstructions();
+                }
+            });
+            
+            // Add scrolling to tables for better mobile experience
+            if (window.innerWidth < 768) {
+                document.querySelector('.orders-table-container').style.overflowX = 'auto';
+                document.querySelector('.order-details-container').style.overflowX = 'auto';
+            }
+            
+            // Add tooltips for truncated text on mobile
+            const tableCells = document.querySelectorAll('.orders-table td');
+            tableCells.forEach(cell => {
+                if (cell.offsetWidth < cell.scrollWidth) {
+                    cell.title = cell.textContent.trim();
                 }
             });
         });
