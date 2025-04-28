@@ -1,24 +1,6 @@
 <?php
 include 'db_connection.php';
 
-error_log("===== START NEW ORDER SUBMISSION =====");
-error_log("POST data received: " . print_r($_POST, true));
-
-// Specifically log the orders data for debugging
-if (isset($_POST['orders'])) {
-    error_log("Orders JSON: " . $_POST['orders']);
-    $decoded = json_decode($_POST['orders'], true);
-    if ($decoded === null) {
-        error_log("JSON decode error: " . json_last_error_msg());
-    } else {
-        error_log("Decoded orders count: " . count($decoded));
-    }
-}
-
-if (isset($_POST['total_amount'])) {
-    error_log("Total amount: " . $_POST['total_amount']);
-}
-
 header('Content-Type: application/json'); // Ensure JSON response
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -39,13 +21,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $total_amount = $_POST['total_amount'];
         $special_instructions = $_POST['special_instructions'] ?? '';
 
-        // Debug: Log the orders JSON for diagnosis
-        error_log("Orders JSON received: " . $orders);
-
         // Validate that orders is valid JSON
         $decoded_orders = json_decode($orders, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Invalid order data format: ' . json_last_error_msg());
+            throw new Exception('Invalid order data format');
         }
 
         // Check if the po_number already exists
@@ -64,8 +43,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('This PO number already exists. Please generate a new one.');
         }
 
-        // Make sure to properly handle the orders JSON string - avoid any SQL escaping issues
-        // Insert into orders table with updated column names
+        // Insert into orders table with updated column names 
+        // Let's drop 'status' from both the column list and VALUES since we're setting it to 'Pending' directly
         $insertOrder = $conn->prepare("
             INSERT INTO orders (username, order_date, delivery_date, bill_to, bill_to_attn, ship_to, ship_to_attn, po_number, orders, total_amount, status, special_instructions) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
@@ -85,7 +64,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $ship_to, 
             $ship_to_attn, 
             $po_number, 
-            $orders,  // This is the JSON string of the order items
+            $orders, 
             $total_amount,
             $special_instructions
         );

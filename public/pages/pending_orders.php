@@ -49,6 +49,7 @@ $stmt->close();
 $orders = []; // Initialize $orders as an empty array
 
 // Modified query to join with clients_accounts to get the company information
+// Updated to use ship_to instead of delivery_address
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.ship_to, o.orders, o.total_amount, o.status, 
         o.special_instructions, o.bill_to, o.bill_to_attn, o.ship_to_attn, COALESCE(o.company, c.company) as company
         FROM orders o
@@ -113,6 +114,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <div class="main-content">
         <div class="orders-header">
             <h1>Pending Orders</h1>
+            <!-- Added search box matching order_history.php -->
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
                 <button class="search-btn"><i class="fas fa-search"></i></button>
@@ -135,6 +137,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 Username <?= getSortIcon('username', $sort_column, $sort_direction) ?>
                             </a>
                         </th>
+                        <!-- Modified Company column to be sortable -->
                         <th class="sortable">
                             <a href="<?= getSortUrl('company', $sort_column, $sort_direction) ?>">
                                 Company <?= getSortIcon('company', $sort_column, $sort_direction) ?>
@@ -172,9 +175,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td><?= htmlspecialchars($order['ship_to']) ?></td>
                                 <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
-                                    <i class="fas fa-clipboard-list"></i> Orders</button>
-                                </td>
+                                <i class="fas fa-clipboard-list"></i>    
+                                Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
+                                <!-- Add Special Instructions column with view button -->
                                 <td>
                                     <?php if (!empty($order['special_instructions'])): ?>
                                         <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
@@ -185,22 +189,22 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons">
-                                    <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
-                                        <i class="fas fa-exchange-alt"></i> Change Status
-                                    </button>
-                                    <button class="download-btn" onclick="downloadPODirectly(
-                                        '<?= htmlspecialchars($order['po_number']) ?>', 
-                                        '<?= htmlspecialchars($order['username']) ?>', 
-                                        '<?= htmlspecialchars($order['company']) ?>', 
-                                        '<?= htmlspecialchars($order['order_date']) ?>', 
-                                        '<?= htmlspecialchars($order['delivery_date']) ?>', 
-                                        '<?= htmlspecialchars($order['ship_to']) ?>', 
-                                        '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
-                                        '<?= htmlspecialchars($order['total_amount']) ?>', 
-                                        '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
-                                    )">
-                                        <i class="fas fa-file-pdf"></i> Download PDF
-                                    </button>
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
+                                    <i class="fas fa-exchange-alt"></i> Change Status
+                                </button>
+                                <button class="download-btn" onclick="downloadPODirectly(
+                                    '<?= htmlspecialchars($order['po_number']) ?>', 
+                                    '<?= htmlspecialchars($order['username']) ?>', 
+                                    '<?= htmlspecialchars($order['company']) ?>', 
+                                    '<?= htmlspecialchars($order['order_date']) ?>', 
+                                    '<?= htmlspecialchars($order['delivery_date']) ?>', 
+                                    '<?= htmlspecialchars($order['ship_to']) ?>', 
+                                    '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
+                                    '<?= htmlspecialchars($order['total_amount']) ?>', 
+                                    '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
+                                )">
+                                    <i class="fas fa-file-pdf"></i> Download PDF
+                                </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -217,88 +221,85 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- Add New Order Form -->
-    <div id="addOrderOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <h2><i class="fas fa-plus"></i> Add New Order</h2>
-            <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
-                <div class="left-section">
-                    <label for="username">Username:</label>
-                    <select id="username" name="username" required onchange="generatePONumber(); updateClientInfo();">
-                        <option value="" disabled selected>Select User</option>
-                        <?php foreach ($clients as $client): ?>
-                            <option value="<?= htmlspecialchars($client) ?>" 
-                                data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
-                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>"
-                                data-bill-to="<?= htmlspecialchars($clients_with_bill_to[$client] ?? '') ?>"
-                                data-bill-to-attn="<?= htmlspecialchars($clients_with_bill_to_attn[$client] ?? '') ?>"
-                                data-ship-to="<?= htmlspecialchars($clients_with_ship_to[$client] ?? '') ?>"
-                                data-ship-to-attn="<?= htmlspecialchars($clients_with_ship_to_attn[$client] ?? '') ?>">
-                                <?= htmlspecialchars($client) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                                        
-                    <label for="order_date">Order Date:</label>
-                    <input type="text" id="order_date" name="order_date" readonly>
-                    
-                    <label for="delivery_date">Delivery Date:</label>
-                    <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
-                    
-                    <label for="bill_to">Bill To:</label>
-                    <textarea id="bill_to" name="bill_to" rows="2" placeholder="Enter billing address"></textarea>
-                    
-                    <label for="bill_to_attn">Bill To Attention:</label>
-                    <input type="text" id="bill_to_attn" name="bill_to_attn" placeholder="Enter billing contact">
-                    
-                    <label for="ship_to">Ship To (Delivery Address):</label>
-                    <textarea id="ship_to" name="ship_to" rows="2" placeholder="Enter shipping address"></textarea>
-                    
-                    <label for="ship_to_attn">Ship To Attention:</label>
-                    <input type="text" id="ship_to_attn" name="ship_to_attn" placeholder="Enter delivery contact">
-                    
-                    <label for="special_instructions">Special Instructions:</label>
-                    <textarea id="special_instructions" name="special_instructions" rows="3" placeholder="Enter any special instructions here..."></textarea>
-                    
-                    <div class="centered-button">
-                        <button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()">
-                            <i class="fas fa-box-open"></i> Select Products
-                        </button>
+    <!-- PO PDF Preview Section -->
+    <div id="pdfPreview">
+        <div class="pdf-container">
+            <button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button>
+            <div id="contentToDownload">
+                <div class="po-container">
+                    <div class="po-header">
+                        <div class="po-company" id="printCompany"></div>
+                        <div class="po-title">Purchase Order</div>
                     </div>
                     
-                    <div class="order-summary">
-                        <h3>Order Summary</h3>
-                        <table class="summary-table">
-                            <thead>
-                                <tr>
-                                    <th>Category</th>
-                                    <th>Product</th>
-                                    <th>Packaging</th>
-                                    <th>Price</th>
-                                    <th>Quantity</th>
-                                </tr>
-                            </thead>
-                            <tbody id="summaryBody">
-                                <!-- Summary will be populated here -->
-                            </tbody>
-                        </table>
-                        <div class="summary-total">
-                            Total: <span class="summary-total-amount">PHP 0.00</span>
+                    <div class="po-details">
+                        <div class="po-left">
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">PO Number:</span>
+                                <span id="printPoNumber"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Username:</span>
+                                <span id="printUsername"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Delivery Address:</span>
+                                <span id="printDeliveryAddress"></span>
+                            </div>
+                            <div class="po-detail-row" id="printInstructionsSection">
+                                <span class="po-detail-label">Special Instructions:</span>
+                                <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="po-right">
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Order Date:</span>
+                                <span id="printOrderDate"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Delivery Date:</span>
+                                <span id="printDeliveryDate"></span>
+                            </div>
                         </div>
                     </div>
-                    <input type="hidden" name="po_number" id="po_number">
-                    <input type="hidden" name="orders" id="orders" value="[]">
-                    <input type="hidden" name="total_amount" id="total_amount" value="0.00">
+                    
+                    <table class="po-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Product</th>
+                                <th>Packaging</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="printOrderItems">
+                            <!-- Items will be populated here -->
+                        </tbody>
+                    </table>
+                    
+                    <div class="po-total">
+                        Total Amount: PHP <span id="printTotalAmount"></span>
+                    </div>
+                    
+                    <div class="po-signature">
+                        <div class="po-signature-block">
+                            <div class="po-signature-line"></div>
+                            <div>Authorized by</div>
+                        </div>
+                        
+                        <div class="po-signature-block">
+                            <div class="po-signature-line"></div>
+                            <div>Received by</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-buttons">
-                    <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button type="submit" class="save-btn">
-                        <i class="fas fa-save"></i> Save
-                    </button>
-                </div>
-            </form>
+            </div>
+            <div class="pdf-actions">
+                <button class="download-pdf-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button>
+            </div>
         </div>
     </div>
 
@@ -534,86 +535,122 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
     <script src="/js/orders.js"></script>
     <script>
-        // Updated JavaScript functions for handling order data
-        function updateOrderSummary() {
-            const summaryBody = document.getElementById('summaryBody');
-            const orderItems = [];
-            let totalAmount = 0;
+    <?php include('../../js/order_processing.js'); ?>
+
+        // Define updateCompany function
+        function updateCompany() {
+            const usernameSelect = document.getElementById('username');
+            if (usernameSelect.selectedIndex <= 0) return; // Skip if no selection
             
-            // Get all rows from the summary table
-            const rows = summaryBody.getElementsByTagName('tr');
-            for (let row of rows) {
-                const cells = row.cells;
-                const price = parseFloat(cells[3].textContent);
-                const quantity = parseInt(cells[4].textContent);
-                const itemTotal = price * quantity;
-                
-                totalAmount += itemTotal;
-                
-                orderItems.push({
-                    category: cells[0].textContent,
-                    product: cells[1].textContent,
-                    packaging: cells[2].textContent,
-                    price: price,
-                    quantity: quantity,
-                    total: itemTotal
+            const selectedOption = usernameSelect.options[usernameSelect.selectedIndex];
+            const company = selectedOption.getAttribute('data-company') || '';
+            
+            // You can do something with the company value if needed
+            console.log('Company updated:', company);
+        }
+        
+        // Search functionality (client-side, same as in order_history.php)
+        $(document).ready(function() {
+            // Search functionality
+            $("#searchInput").on("input", function() {
+                let searchText = $(this).val().toLowerCase().trim();
+
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
                 });
-            }
+            });
             
-            // Update the hidden fields
-            document.getElementById('orders').value = JSON.stringify(orderItems);
-            document.getElementById('total_amount').value = totalAmount.toFixed(2);
+            // Handle search button click (same functionality as typing)
+            $(".search-btn").on("click", function() {
+                let searchText = $("#searchInput").val().toLowerCase().trim();
+                
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+            });
             
-            // Update the visible total amount display
-            const totalDisplay = document.querySelector('.summary-total-amount');
-            if (totalDisplay) {
-                totalDisplay.textContent = `PHP ${totalAmount.toFixed(2)}`;
-            }
+            // Initialize company field if needed
+            $('#username').change(function() {
+                updateCompany();
+                // Removed updateClientInfo() from here as it's now directly called in the select's onchange attribute
+            });
+            
+            // Make sure prepareOrderData includes company field
+            window.originalPrepareOrderData = window.prepareOrderData;
+            window.prepareOrderData = function() {
+                if (window.originalPrepareOrderData) {
+                    window.originalPrepareOrderData();
+                }
+                
+                // Ensure company is included
+                const ordersInput = document.getElementById('orders');
+                if (ordersInput.value) {
+                    try {
+                        const ordersData = JSON.parse(ordersInput.value);
+                        ordersInput.value = JSON.stringify(ordersData);
+                    } catch (e) {
+                        console.error("Error preparing order data:", e);
+                    }
+                }
+                
+                // Include special instructions in form data
+                const specialInstructions = document.getElementById('special_instructions').value;
+                if (document.getElementById('special_instructions_hidden')) {
+                    document.getElementById('special_instructions_hidden').value = specialInstructions;
+                }
+                // No need for a hidden field since the textarea already has the name attribute
+            };
+        });
+
+        // Define updateClientInfo in global scope to ensure it's available to other functions
+        function updateClientInfo() {
+            const usernameSelect = document.getElementById('username');
+            if (usernameSelect.selectedIndex <= 0) return; // Skip if no selection
+            
+            const selectedOption = usernameSelect.options[usernameSelect.selectedIndex];
+            
+            // Get data attributes with the correct data attribute names
+            const billTo = selectedOption.getAttribute('data-bill-to') || '';
+            const billToAttn = selectedOption.getAttribute('data-bill-to-attn') || '';
+            const shipTo = selectedOption.getAttribute('data-ship-to') || '';
+            const shipToAttn = selectedOption.getAttribute('data-ship-to-attn') || '';
+            
+            // Set form values
+            document.getElementById('bill_to').value = billTo;
+            document.getElementById('bill_to_attn').value = billToAttn;
+            document.getElementById('ship_to').value = shipTo;
+            document.getElementById('ship_to_attn').value = shipToAttn;
+            
+            console.log('Auto-filling client data:', {
+                billTo: billTo,
+                billToAttn: billToAttn,
+                shipTo: shipTo, 
+                shipToAttn: shipToAttn
+            });
         }
 
-        // Modified saveCartChanges function
-        function saveCartChanges() {
-            // Your existing cart saving logic here...
-            
-            // After updating the summary table, call updateOrderSummary
-            updateOrderSummary();
-            
-            closeCartModal();
-        }
-
-        // Updated form submission handler
-        document.getElementById('addOrderForm').onsubmit = function(event) {
-            // First update the order summary one final time
-            updateOrderSummary();
-            
-            // Get the orders value
-            const orders = document.getElementById('orders').value;
-            const totalAmount = document.getElementById('total_amount').value;
-            
-            // Validate that we have order data
-            if (!orders || orders === '[]') {
-                alert('Please add at least one product to the order.');
-                event.preventDefault();
-                return false;
+        // Modify the existing openAddOrderForm function if it exists in your JS
+        const originalOpenAddOrderForm = window.openAddOrderForm;
+        window.openAddOrderForm = function() {
+            if (typeof originalOpenAddOrderForm === 'function') {
+                originalOpenAddOrderForm();
+            } else {
+                document.getElementById('addOrderOverlay').style.display = 'flex';
             }
-            
-            // Validate that we have a total amount
-            if (!totalAmount || parseFloat(totalAmount) <= 0) {
-                alert('Order total amount must be greater than 0.');
-                event.preventDefault();
-                return false;
-            }
-            
-            return true;
-        };
-
-        // Modified openAddOrderForm function
-        function openAddOrderForm() {
-            document.getElementById('addOrderOverlay').style.display = 'flex';
-            
-            // Initialize empty order data
-            document.getElementById('orders').value = '[]';
-            document.getElementById('total_amount').value = '0.00';
             
             // Set current date for order_date
             const today = new Date();
@@ -635,39 +672,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             document.getElementById('ship_to').value = '';
             document.getElementById('ship_to_attn').value = '';
             document.getElementById('special_instructions').value = '';
-            
-            // Clear the summary table
-            document.getElementById('summaryBody').innerHTML = '';
-            document.querySelector('.summary-total-amount').textContent = 'PHP 0.00';
-        }
-
-        // Keep your existing updateClientInfo and other functions
-        // ... (rest of your existing JavaScript code) ...
-
-        // Initialize on page load
-        $(document).ready(function() {
-            // Search functionality
-            $("#searchInput").on("input", function() {
-                let searchText = $(this).val().toLowerCase().trim();
-                $(".orders-table tbody tr").each(function() {
-                    let row = $(this);
-                    let text = row.text().toLowerCase();
-                    row.toggle(text.includes(searchText));
-                });
-            });
-            
-            // Initialize datepicker for delivery date
-            $("#delivery_date").datepicker({
-                dateFormat: 'yy-mm-dd',
-                minDate: 0
-            });
-            
-            // Handle username change
-            $('#username').change(function() {
-                updateClientInfo();
-                generatePONumber();
-            });
-        });
+        };
     </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Apr 28, 2025 at 05:30 AM
+-- Generation Time: Apr 28, 2025 at 05:08 AM
 -- Server version: 10.11.10-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -285,11 +285,7 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `po_number`, `username`, `company`, `order_date`, `delivery_date`, `ship_to`, `ship_to_attn`, `bill_to`, `bill_to_attn`, `orders`, `total_amount`, `status`, `driver_assigned`, `contact_number`, `special_instructions`, `subtotal`, `progress`, `completed_items`, `item_progress_data`, `quantity_progress_data`, `item_progress_percentages`) VALUES
-(1, 'Solaire-1', 'Solaire', NULL, '2025-04-28', '2025-04-30', 'SURESTE PROPERTIES, INC\r\nThe Executive Offices, Solaire Resort & Casino\r\nAsean Avenue, Entertainment City\r\nTambo\r\nParanaque City, Philippines, 1701, PH', 'Gillian Mendoza', 'SURESTE PROPERTIES, INC\r\nThe Executive Offices, Solaire Resort & Casino\r\nAsean Avenue, Entertainment City\r\nTambo\r\nParanaque City, Philippines, 1701, PH', 'PROCUREMENT', NULL, 3080.00, 'Pending', 0, NULL, '1', 0.00, 0, NULL, NULL, NULL, NULL),
-(100, 'aedantiu-1', 'aedantiu', NULL, '2025-04-28', '2025-04-30', 'asdasda', 'Top Exchange', 'asdasda', 'Top Exchange', '0', 3080.00, 'Pending', 0, NULL, '1', 0.00, 0, NULL, NULL, NULL, NULL),
-(101, 'Solaire-2', 'Solaire', NULL, '2025-04-28', '2025-04-30', 'SURESTE PROPERTIES, INC\r\nThe Executive Offices, Solaire Resort & Casino\r\nAsean Avenue, Entertainment City\r\nTambo\r\nParanaque City, Philippines, 1701, PH', 'Gillian Mendoza', 'SURESTE PROPERTIES, INC\r\nThe Executive Offices, Solaire Resort & Casino\r\nAsean Avenue, Entertainment City\r\nTambo\r\nParanaque City, Philippines, 1701, PH', 'PROCUREMENT', '0', 280.00, 'Pending', 0, NULL, '1', 0.00, 0, NULL, NULL, NULL, NULL),
-(102, 'aedantiu-2', 'aedantiu', NULL, '2025-04-28', '2025-04-30', 'asdasda', 'Top Exchange', 'asdasda', 'Top Exchange', '0', 3575.00, 'Pending', 0, NULL, '1', 0.00, 0, NULL, NULL, NULL, NULL),
-(103, 'Ryan-1', 'Ryan', NULL, '2025-04-28', '2025-04-30', '1-B Palomaria Street Veterans Village Project 7 ', '', '1-B Palomaria Street Veterans Village Project 7 ', '', '0', 605.00, 'Pending', 0, NULL, '', 0.00, 0, NULL, NULL, NULL, NULL);
+(0, 'Solaire-1', 'Solaire', NULL, '2025-04-28', '2025-04-30', 'SURESTE PROPERTIES, INC\r\nThe Executive Offices, Solaire Resort & Casino\r\nAsean Avenue, Entertainment City\r\nTambo\r\nParanaque City, Philippines, 1701, PH', 'Gillian Mendoza', 'SURESTE PROPERTIES, INC\r\nThe Executive Offices, Solaire Resort & Casino\r\nAsean Avenue, Entertainment City\r\nTambo\r\nParanaque City, Philippines, 1701, PH', 'PROCUREMENT', '0', 3080.00, 'Pending', 0, NULL, '1', 0.00, 0, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -782,16 +778,6 @@ ALTER TABLE `order_status_logs`
 ALTER TABLE `pages`
   ADD PRIMARY KEY (`page_id`),
   ADD UNIQUE KEY `page_name` (`page_name`);
-
---
--- AUTO_INCREMENT for dumped tables
---
-
---
--- AUTO_INCREMENT for table `orders`
---
-ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=104;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
