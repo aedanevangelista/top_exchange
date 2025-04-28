@@ -81,65 +81,44 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* Notification container styles */
-        .notification-container {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            margin-bottom: 20px;
+        .header-container {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .notification-badge {
+            background-color: #f8d7da;
+            border-radius: 6px;
+            padding: 5px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .notification-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
         
         .notification-icon {
-            background-color: #f8d7da;
             color: #721c24;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            margin-right: 15px;
-        }
-        
-        .notification-content {
-            flex-grow: 1;
-        }
-        
-        .notification-title {
             font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #333;
-        }
-        
-        .notification-text {
-            font-size: 14px;
-            color: #555;
         }
         
         .notification-count {
-            font-size: 24px;
+            font-size: 16px;
             font-weight: bold;
             color: #721c24;
         }
         
-        .notification-action {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 8px 15px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        }
-        
-        .notification-action:hover {
-            background-color: #0056b3;
+        .notification-label {
+            font-size: 12px;
+            color: #721c24;
         }
     </style>
 </head>
@@ -150,29 +129,21 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
 
         <div class="main-content">
             <div class="overview-container">
-                <h2>Dashboard</h2>
+                <div class="header-container">
+                    <h2>Dashboard</h2>
+                    
+                    <!-- New Compact Pending Orders Notification Badge -->
+                    <?php if ($pendingOrdersCount > 0): ?>
+                    <a href="/public/pages/pending_orders.php" style="text-decoration: none;">
+                        <div class="notification-badge">
+                            <i class="fas fa-bell notification-icon"></i>
+                            <span class="notification-count"><?php echo $pendingOrdersCount; ?></span>
+                            <span class="notification-label">Pending Orders</span>
+                        </div>
+                    </a>
+                    <?php endif; ?>
+                </div>
             </div>
-
-            <!-- New Pending Orders Notification Container -->
-            <?php if ($pendingOrdersCount > 0): ?>
-            <div class="notification-container">
-                <div class="notification-icon">
-                    <i class="fas fa-bell"></i>
-                </div>
-                <div class="notification-content">
-                    <div class="notification-title">Pending Orders</div>
-                    <div class="notification-text">You have pending orders that require attention</div>
-                </div>
-                <div class="notification-count">
-                    <?php echo $pendingOrdersCount; ?>
-                </div>
-                <a href="/public/pages/pending_orders.php">
-                    <button class="notification-action">
-                        <i class="fas fa-eye"></i> View All
-                    </button>
-                </a>
-            </div>
-            <?php endif; ?>
 
             <div class="top-section">
                 <div class="client-orders-container">
