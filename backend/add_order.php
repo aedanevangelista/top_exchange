@@ -58,6 +58,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             throw new Exception('Failed to prepare statement: ' . $conn->error);
         }
 
+        $status = 'Pending'; // This will be explicitly set in the query, not as a parameter
+        
+        // This line was causing the error - now the number of parameters matches the SQL placeholders (? marks)
         $insertOrder->bind_param("issssssssds", 
             $nextId,
             $username, 
@@ -69,7 +72,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $ship_to_attn, 
             $po_number, 
             $orders, 
-            $total_amount, 
+            $total_amount,
             $special_instructions
         );
 
