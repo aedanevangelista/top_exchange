@@ -1181,7 +1181,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             deliveryAddress,
             ordersJson,
             totalAmount,
-            specialInstructions  // Keep storing this in case you need it elsewhere
+            specialInstructions
         };
         
         // Populate the hidden PDF content silently
@@ -1198,9 +1198,14 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             maximumFractionDigits: 2
         });
         
-        // Hide special instructions section completely regardless of content
+        // Handle special instructions
         const instructionsSection = document.getElementById('printInstructionsSection');
-        instructionsSection.style.display = 'none';
+        if (specialInstructions && specialInstructions.trim() !== '') {
+            document.getElementById('printSpecialInstructions').textContent = specialInstructions;
+            instructionsSection.style.display = 'block';
+        } else {
+            instructionsSection.style.display = 'none';
+        }
         
         // Parse and populate order items
         const orderItems = JSON.parse(ordersJson);
@@ -1274,7 +1279,7 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
             deliveryAddress,
             ordersJson,
             totalAmount,
-            specialInstructions  // Add special instructions to stored data
+            specialInstructions
         };
         
         // Set basic information
@@ -1285,9 +1290,14 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
         document.getElementById('printOrderDate').textContent = orderDate;
         document.getElementById('printDeliveryDate').textContent = deliveryDate;
         
-        // Hide special instructions section completely
+        // Handle special instructions
         const instructionsSection = document.getElementById('printInstructionsSection');
-        instructionsSection.style.display = 'none';
+        if (specialInstructions && specialInstructions.trim() !== '') {
+            document.getElementById('printSpecialInstructions').textContent = specialInstructions;
+            instructionsSection.style.display = 'block';
+        } else {
+            instructionsSection.style.display = 'none';
+        }
         
         // Format the total amount with commas and decimals
         document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
@@ -1671,7 +1681,7 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
         }, 5000);
     }
     
-    function viewOrderDetails(ordersJson) {
+        function viewOrderDetails(ordersJson) {
         try {
             const orderDetails = JSON.parse(ordersJson);
             const orderDetailsBody = document.getElementById('orderDetailsBody');
@@ -1710,33 +1720,32 @@ function generatePO(poNumber, username, company, orderDate, deliveryDate, delive
     
     // Add function to update company name when username changes
 
-        function viewSpecialInstructions(poNumber, instructions) {
-                document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
-                const contentEl = document.getElementById('instructionsContent');
-                
-                if (instructions && instructions.trim().length > 0) {
-                    contentEl.textContent = instructions;
-                    contentEl.classList.remove('empty');
-                } else {
-                    contentEl.textContent = 'No special instructions provided for this order.';
-                    contentEl.classList.add('empty');
-                }
-                
-                document.getElementById('specialInstructionsModal').style.display = 'block';
-            }
-
-        function closeSpecialInstructions() {
-            document.getElementById('specialInstructionsModal').style.display = 'none';
+    function viewSpecialInstructions(poNumber, instructions) {
+        document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
+        const contentEl = document.getElementById('instructionsContent');
+        
+        if (instructions && instructions.trim().length > 0) {
+            contentEl.textContent = instructions;
+            contentEl.classList.remove('empty');
+        } else {
+            contentEl.textContent = 'No special instructions provided for this order.';
+            contentEl.classList.add('empty');
         }
         
-        // Close modal when clicking outside
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('specialInstructionsModal');
-            if (event.target === modal) {
-                closeSpecialInstructions();
-            }
-        });
+        document.getElementById('specialInstructionsModal').style.display = 'block';
+    }
 
+    function closeSpecialInstructions() {
+        document.getElementById('specialInstructionsModal').style.display = 'none';
+    }
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('specialInstructionsModal');
+        if (event.target === modal) {
+            closeSpecialInstructions();
+        }
+    });
     </script>
     <script>
         <?php include('../../js/order_processing.js'); ?>
