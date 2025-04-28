@@ -506,46 +506,50 @@ $(document).ready(function() {
 
     // Form submission
     $('#addOrderForm').on('submit', function(e) {
-            e.preventDefault();
-            
-            if (selectedProducts.length === 0) {
-                alert('Please add products to your order');
-                return;
-            }
-            
-            // Prepare order data
-            const orderData = JSON.stringify(selectedProducts);
-            $('#orders').val(orderData);
-            const totalAmount = calculateCartTotal();
-            $('#total_amount').val(totalAmount.toFixed(2));
-            
-            // Validate ship_to is not empty
-            if (!$('#ship_to').val() || $('#ship_to').val().trim() === '') {
-                alert('Shipping address is missing. Please select a valid user.');
-                return;
-            }
-            
-            // Submit the form via Ajax
-            $.ajax({
-                url: $(this).attr('action'),
-                type: 'POST',
-                data: $(this).serialize(),
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        showToast('Order successfully added!', 'success');
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1500);
-                    } else {
-                        alert('Error: ' + response.message);
-                    }
-                },
-                error: function() {
-                    alert('Error submitting order. Please try again.');
+        e.preventDefault();
+        
+        if (selectedProducts.length === 0) {
+            alert('Please add products to your order');
+            return;
+        }
+
+        prepareOrderData();
+        
+        // Validate ship_to field
+        const shipTo = $('#ship_to').val();
+        if (!shipTo || shipTo.trim() === '') {
+            alert('Please provide a shipping address');
+            return;
+        }
+        
+        // Show a toast notification when saving the order
+        const poNumber = $('#po_number').val();
+        const username = $('#username').val();
+        
+        if (poNumber && username) {
+            showToast(`The order: ${poNumber} has been created for ${username}.`, 'success');
+        }
+
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Wait a moment for the toast to be visible before reloading
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    alert('Error: ' + response.message);
                 }
-            });
+            },
+            error: function() {
+                alert('Error submitting order. Please try again.');
+            }
         });
+    });
     
     // Category filter change handler
     $('#inventoryFilter').on('change', function() {

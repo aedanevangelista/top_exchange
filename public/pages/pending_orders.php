@@ -554,6 +554,48 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         getUserDetails(username);
                     }
                 });
+
+            $('#addOrderForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            if (selectedProducts.length === 0) {
+                alert('Please add products to your order');
+                return;
+            }
+            
+            // Prepare order data
+            const orderData = JSON.stringify(selectedProducts);
+            $('#orders').val(orderData);
+            const totalAmount = calculateCartTotal();
+            $('#total_amount').val(totalAmount.toFixed(2));
+            
+            // Validate ship_to is not empty
+            if (!$('#ship_to').val() || $('#ship_to').val().trim() === '') {
+                alert('Shipping address is missing. Please select a valid user.');
+                return;
+            }
+            
+            // Submit the form via Ajax
+            $.ajax({
+                url: $(this).attr('action'),
+                type: 'POST',
+                data: $(this).serialize(),
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        showToast('Order successfully added!', 'success');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Error submitting order. Please try again.');
+                }
+            });
+        });
             
             // Handle search button click (same functionality as typing)
             $(".search-btn").on("click", function() {
