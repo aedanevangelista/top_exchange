@@ -23,17 +23,25 @@ if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
 $clients = [];
 $clients_with_company_address = []; // Array to store clients with their company addresses
 $clients_with_company = []; // Array to store clients with their company names
+$clients_with_bill_to = []; // Array to store clients with their bill_to
+$clients_with_bill_to_attn = []; // Array to store clients with their bill_to_attn
+$clients_with_ship_to = []; // Array to store clients with their ship_to
+$clients_with_ship_to_attn = []; // Array to store clients with their ship_to_attn
 
-$stmt = $conn->prepare("SELECT username, company_address, company FROM clients_accounts WHERE status = 'active'");
+$stmt = $conn->prepare("SELECT username, company_address, company, bill_to, bill_to_attn, ship_to, ship_to_attn FROM clients_accounts WHERE status = 'active'");
 if ($stmt === false) {
     die('Prepare failed: ' . htmlspecialchars($conn->error));
 }
 $stmt->execute();
-$stmt->bind_result($username, $company_address, $company);
+$stmt->bind_result($username, $company_address, $company, $bill_to, $bill_to_attn, $ship_to, $ship_to_attn);
 while ($stmt->fetch()) {
     $clients[] = $username;
     $clients_with_company_address[$username] = $company_address;
     $clients_with_company[$username] = $company;
+    $clients_with_bill_to[$username] = $bill_to;
+    $clients_with_bill_to_attn[$username] = $bill_to_attn;
+    $clients_with_ship_to[$username] = $ship_to;
+    $clients_with_ship_to_attn[$username] = $ship_to_attn;
 }
 $stmt->close();
 
@@ -181,7 +189,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 <button class="download-btn" onclick="downloadPODirectly(
@@ -307,7 +315,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         <?php foreach ($clients as $client): ?>
                             <option value="<?= htmlspecialchars($client) ?>" 
                                 data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
-                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>">
+                                data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>"
+                                data-bill-to="<?= htmlspecialchars($clients_with_bill_to[$client] ?? '') ?>"
+                                data-bill-to-attn="<?= htmlspecialchars($clients_with_bill_to_attn[$client] ?? '') ?>"
+                                data-ship-to="<?= htmlspecialchars($clients_with_ship_to[$client] ?? '') ?>"
+                                data-ship-to-attn="<?= htmlspecialchars($clients_with_ship_to_attn[$client] ?? '') ?>">
                                 <?= htmlspecialchars($client) ?>
                             </option>
                         <?php endforeach; ?>
@@ -562,6 +574,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             // Initialize company field if needed
             $('#username').change(function() {
                 updateCompany();
+                updateClientInfo();
             });
             
             // Make sure prepareOrderData includes company field
@@ -584,9 +597,83 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 
                 // Include special instructions in form data
                 const specialInstructions = document.getElementById('special_instructions').value;
-                document.getElementById('special_instructions_hidden').value = specialInstructions;
+                if (document.getElementById('special_instructions_hidden')) {
+                    document.getElementById('special_instructions_hidden').value = specialInstructions;
+                }
                 // No need for a hidden field since the textarea already has the name attribute
             };
+
+            // Function to auto-fill billing and shipping information
+            function updateClientInfo() {
+                const usernameSelect = document.getElementById('username');
+                if (usernameSelect.selectedIndex <= 0) return; // Skip if no selection
+                
+                const selectedOption = usernameSelect.options[usernameSelect.selectedIndex];
+                
+                // Get data attributes
+                const billTo = selectedOption.getAttribute('data-bill-to');
+                const billToAttn = selectedOption.getAttribute('data-bill-to-attn');
+                const shipTo = selectedOption.getAttribute('data-ship-to');
+                const shipToAttn = selectedOption.getAttribute('data-ship-to-attn');
+                
+                // Set form values
+                document.getElementById('bill_to').value = billTo || '';
+                document.getElementById('bill_to_attn').value = billToAttn || '';
+                document.getElementById('ship_to').value = shipTo || '';
+                document.getElementById('ship_to_attn').value = shipToAttn || '';
+            }
+        });
+
+        // Define updateClientInfo in global scope to ensure it's available to other functions
+        function updateClientInfo() {
+            const usernameSelect = document.getElementById('username');
+            if (usernameSelect.selectedIndex <= 0) return; // Skip if no selection
+            
+            const selectedOption = usernameSelect.options[usernameSelect.selectedIndex];
+            
+            // Get data attributes
+            const billTo = selectedOption.getAttribute('data-bill-to');
+            const billToAttn = selectedOption.getAttribute('data-bill-to-attn');
+            const shipTo = selectedOption.getAttribute('data-ship-to');
+            const shipToAttn = selectedOption.getAttribute('data-ship-to-attn');
+            
+            // Set form values
+            document.getElementById('bill_to').value = billTo || '';
+            document.getElementById('bill_to_attn').value = billToAttn || '';
+            document.getElementById('ship_to').value = shipTo || '';
+            document.getElementById('ship_to_attn').value = shipToAttn || '';
+        }
+
+        // Modify the existing openAddOrderForm function if it exists in your JS
+        const originalOpenAddOrderForm = window.openAddOrderForm;
+        window.openAddOrderForm = function() {
+            if (typeof originalOpenAddOrderForm === 'function') {
+                originalOpenAddOrderForm();
+            } else {
+                document.getElementById('addOrderOverlay').style.display = 'flex';
+            }
+            
+            // Set current date for order_date
+            const today = new Date();
+            const formattedDate = today.getFullYear() + '-' + 
+                                 String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                                 String(today.getDate()).padStart(2, '0');
+            document.getElementById('order_date').value = formattedDate;
+            
+            // Initialize the delivery date datepicker
+            $("#delivery_date").datepicker({
+                dateFormat: 'yy-mm-dd',
+                minDate: 0
+            });
+            
+            // Reset form fields
+            document.getElementById('username').selectedIndex = 0;
+            document.getElementById('bill_to').value = '';
+            document.getElementById('bill_to_attn').value = '';
+            document.getElementById('ship_to').value = '';
+            document.getElementById('ship_to_attn').value = '';
+            document.getElementById('special_instructions').value = '';
+        };
     </script> 
 </body>
 </html>
