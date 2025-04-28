@@ -57,7 +57,7 @@ if (!empty($filterStatus)) {
 }
 
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, 
-        o.orders, o.total_amount, o.status, o.driver_assigned, 
+        o.orders, o.total_amount, o.status, o.driver_assigned, o.special_instructions, o.company,
         IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
         FROM orders o 
         LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
@@ -98,6 +98,8 @@ $statusOptions = ['For Delivery', 'In Transit'];
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <!-- HTML2PDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>    
     <style>
         .search-container {
             display: flex;
@@ -460,6 +462,297 @@ $statusOptions = ['For Delivery', 'In Transit'];
             font-size: 14px;
             display: inline-block;
         }
+
+        /* Download button styles */
+        .download-btn {
+            padding: 6px 12px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .download-btn:hover {
+            background-color: #138496;
+        }
+        
+        .download-btn i {
+            margin-right: 5px;
+        }
+        
+        /* PO PDF layout */
+        .po-container {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+        }
+        
+        .po-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .po-company {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .po-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        
+        .po-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .po-left, .po-right {
+            width: 48%;
+        }
+        
+        .po-detail-row {
+            margin-bottom: 10px;
+        }
+        
+        .po-detail-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 120px;
+        }
+        
+        .po-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        
+        .po-table th, .po-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .po-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .po-total {
+            text-align: right;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        
+        .po-signature {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 50px;
+        }
+        
+        .po-signature-block {
+            width: 40%;
+            text-align: center;
+        }
+        
+        .po-signature-line {
+            border-bottom: 1px solid #000;
+            margin-bottom: 10px;
+            padding-top: 40px;
+        }
+        
+        #pdfPreview {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow: auto;
+        }
+        
+        .pdf-container {
+            background-color: white;
+            width: 80%;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        .close-pdf {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 18px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #333;
+        }
+        
+        .pdf-actions {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .download-pdf-btn {
+            padding: 10px 20px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* Special Instructions Modal */
+        .instructions-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .instructions-modal-content {
+            background-color: #ffffff;
+            margin: 10% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 60%;
+            max-width: 600px;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: modalFadeIn 0.3s ease-in-out;
+            overflow: hidden;
+            max-height: 90vh; /* 90% of the viewport height */
+            overflow-y: auto; /* Add scroll if content exceeds max height */
+            margin: 2vh auto; /* Center vertically with 5% top margin */
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .instructions-header {
+            background-color: #2980b9;
+            color: white;
+            padding: 15px 20px;
+            position: relative;
+        }
+
+        .instructions-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .instructions-po-number {
+            font-size: 12px;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+        
+        .instructions-body {
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .instructions-body.empty {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .instructions-footer {
+            padding: 15px 20px;
+            text-align: right;
+            background-color: #ffffff;
+        }
+        
+        .close-instructions-btn {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+        
+        .close-instructions-btn:hover {
+            background-color: #2471a3;
+        }
+        
+        .instructions-btn {
+            padding: 6px 12px;
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            min-width: 60px;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+        
+        .instructions-btn:hover {
+            background-color: #2471a3;
+        }
+        
+        .no-instructions {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        /* Content for PDF */
+        #contentToDownload {
+            font-size: 14px;
+        }
+
+        #contentToDownload .po-table {
+            font-size: 12px;
+        }
+
+        #contentToDownload .po-title {
+            font-size: 16px;
+        }
+
+        #contentToDownload .po-company {
+            font-size: 20px;
+        }
+
+        #contentToDownload .po-total {
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -508,6 +801,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                         <th>Delivery Address</th>
                         <th>Orders</th>
                         <th class="sort-header <?= $sortColumn == 'total_amount' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="total_amount">Total Amount</th>
+                        <th>Special Instructions</th>
                         <th>Driver</th>
                         <th class="sort-header <?= $sortColumn == 'status' ? ($sortOrder == 'ASC' ? 'asc' : 'desc') : '' ?>" data-column="status">Status</th>
                         <th>Actions</th>
@@ -535,6 +829,15 @@ $statusOptions = ['For Delivery', 'In Transit'];
                                 </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
+                                    <?php if (!empty($order['special_instructions'])): ?>
+                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
+                                            View
+                                        </button>
+                                    <?php else: ?>
+                                        <span class="no-instructions">None</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
                                     <?php if ($order['driver_assigned'] && !empty($order['driver_name'])): ?>
                                         <div class="driver-badge">
                                             <i class="fas fa-user"></i> <?= htmlspecialchars($order['driver_name']) ?>
@@ -554,6 +857,20 @@ $statusOptions = ['For Delivery', 'In Transit'];
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons-cell">
+                                    <button class="download-btn" onclick="downloadPODirectly(
+                                        '<?= htmlspecialchars($order['po_number']) ?>', 
+                                        '<?= htmlspecialchars($order['username']) ?>', 
+                                        '<?= htmlspecialchars($order['company'] ?? '') ?>', 
+                                        '<?= htmlspecialchars($order['order_date']) ?>', 
+                                        '<?= htmlspecialchars($order['delivery_date']) ?>', 
+                                        '<?= htmlspecialchars($order['delivery_address']) ?>', 
+                                        '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
+                                        '<?= htmlspecialchars($order['total_amount']) ?>', 
+                                        '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
+                                    )">
+                                        <i class="fas fa-file-pdf"></i> PDF
+                                    </button>
+                                    <br>
                                     <?php if ($order['status'] === 'For Delivery'): ?>
                                         <button class="toggle-transit-btn" onclick="openStatusChangeModal('<?= htmlspecialchars($order['po_number']) ?>', 'In Transit')">
                                             <i class="fas fa-truck"></i> Mark In Transit
@@ -572,7 +889,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="10" class="no-orders">No orders ready for delivery.</td>
+                            <td colspan="11" class="no-orders">No orders ready for delivery.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -582,6 +899,93 @@ $statusOptions = ['For Delivery', 'In Transit'];
 
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
+
+    <!-- PO PDF Preview Section -->
+    <div id="pdfPreview">
+        <div class="pdf-container">
+            <button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button>
+            <div id="contentToDownload">
+                <div class="po-container">
+                    <div class="po-header">
+                        <div class="po-company" id="printCompany"></div>
+                        <div class="po-title">Purchase Order</div>
+                    </div>
+                    
+                    <div class="po-details">
+                        <div class="po-left">
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">PO Number:</span>
+                                <span id="printPoNumber"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Username:</span>
+                                <span id="printUsername"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Delivery Address:</span>
+                                <span id="printDeliveryAddress"></span>
+                            </div>
+                            <div class="po-detail-row" id="printInstructionsSection">
+                                <span class="po-detail-label">Special Instructions:</span>
+                                <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="po-right">
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Order Date:</span>
+                                <span id="printOrderDate"></span>
+                            </div>
+                            <div class="po-detail-row">
+                                <span class="po-detail-label">Delivery Date:</span>
+                                <span id="printDeliveryDate"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <table class="po-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Product</th>
+                                <th>Packaging</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="printOrderItems">
+                            <!-- Items will be populated here -->
+                        </tbody>
+                    </table>
+                    
+                    <div class="po-total">
+                        Total Amount: PHP <span id="printTotalAmount"></span>
+                    </div>
+                    
+                </div>
+            </div>
+            <div class="pdf-actions">
+                <button class="download-pdf-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Special Instructions Modal -->
+    <div id="specialInstructionsModal" class="instructions-modal">
+        <div class="instructions-modal-content">
+            <div class="instructions-header">
+                <h3>Special Instructions</h3>
+                <div class="instructions-po-number" id="instructionsPoNumber"></div>
+            </div>
+            <div class="instructions-body" id="instructionsContent">
+                <!-- Instructions will be displayed here -->
+            </div>
+            <div class="instructions-footer">
+                <button type="button" class="close-instructions-btn" onclick="closeSpecialInstructions()">Close</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Order Details Modal -->
     <div id="orderDetailsModal" class="overlay" style="display: none;">
@@ -677,6 +1081,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
         let currentPoNumber = '';
         let currentDriverId = 0;
         let currentStatusChange = '';
+        let currentPOData = null; // For PDF generation
         
         function filterByStatus() {
             const status = document.getElementById('statusFilter').value;
@@ -932,6 +1337,237 @@ $statusOptions = ['For Delivery', 'In Transit'];
             });
         }
 
+        // PDF Functions
+        function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+            try {
+                // Store current PO data
+                currentPOData = {
+                    poNumber,
+                    username,
+                    company,
+                    orderDate,
+                    deliveryDate,
+                    deliveryAddress,
+                    ordersJson,
+                    totalAmount,
+                    specialInstructions
+                };
+                
+                // Populate the hidden PDF content silently
+                document.getElementById('printCompany').textContent = company || 'No Company Name';
+                document.getElementById('printPoNumber').textContent = poNumber;
+                document.getElementById('printUsername').textContent = username;
+                document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
+                document.getElementById('printOrderDate').textContent = orderDate;
+                document.getElementById('printDeliveryDate').textContent = deliveryDate;
+                
+                // Format the total amount
+                document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                
+                // Handle special instructions
+                const instructionsSection = document.getElementById('printInstructionsSection');
+                if (specialInstructions && specialInstructions.trim() !== '') {
+                    document.getElementById('printSpecialInstructions').textContent = specialInstructions;
+                    instructionsSection.style.display = 'block';
+                } else {
+                    instructionsSection.style.display = 'none';
+                }
+                
+                // Parse and populate order items
+                const orderItems = JSON.parse(ordersJson);
+                const orderItemsBody = document.getElementById('printOrderItems');
+                
+                // Clear previous content
+                orderItemsBody.innerHTML = '';
+                
+                // Add items to the table
+                orderItems.forEach(item => {
+                    const row = document.createElement('tr');
+                    
+                    // Calculate item total
+                    const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+                    
+                    row.innerHTML = `
+                        <td>${item.category || ''}</td>
+                        <td>${item.item_description}</td>
+                        <td>${item.packaging || ''}</td>
+                        <td>${item.quantity}</td>
+                        <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        })}</td>
+                        <td>PHP ${itemTotal.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        })}</td>
+                    `;
+                    
+                    orderItemsBody.appendChild(row);
+                });
+                
+                // Get the element to convert to PDF
+                const element = document.getElementById('contentToDownload');
+                
+                // Configure html2pdf options
+                const opt = {
+                    margin:       [10, 10, 10, 10],
+                    filename:     `PO_${poNumber}.pdf`,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                
+                // Generate and download PDF directly
+                html2pdf().set(opt).from(element).save().then(() => {
+                    showToast(`Purchase Order ${poNumber} has been downloaded.`, 'success');
+                }).catch(error => {
+                    console.error('Error generating PDF:', error);
+                    alert('Error generating PDF. Please try again.');
+                });
+                
+            } catch (e) {
+                console.error('Error preparing PDF data:', e);
+                alert('Error preparing PDF data');
+            }
+        }
+        
+        // Function to show PDF preview
+        function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+            try {
+                // Store current PO data for later use
+                currentPOData = {
+                    poNumber,
+                    username,
+                    company,
+                    orderDate,
+                    deliveryDate,
+                    deliveryAddress,
+                    ordersJson,
+                    totalAmount,
+                    specialInstructions
+                };
+                
+                // Set basic information
+                document.getElementById('printCompany').textContent = company || 'No Company Name';
+                document.getElementById('printPoNumber').textContent = poNumber;
+                document.getElementById('printUsername').textContent = username;
+                document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
+                document.getElementById('printOrderDate').textContent = orderDate;
+                document.getElementById('printDeliveryDate').textContent = deliveryDate;
+                
+                // Handle special instructions
+                const instructionsSection = document.getElementById('printInstructionsSection');
+                if (specialInstructions && specialInstructions.trim() !== '') {
+                    document.getElementById('printSpecialInstructions').textContent = specialInstructions;
+                    instructionsSection.style.display = 'block';
+                } else {
+                    instructionsSection.style.display = 'none';
+                }
+                
+                // Format the total amount with commas and decimals
+                document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                
+                // Parse and populate order items
+                const orderItems = JSON.parse(ordersJson);
+                const orderItemsBody = document.getElementById('printOrderItems');
+                
+                // Clear previous content
+                orderItemsBody.innerHTML = '';
+                
+                // Add items to the table
+                orderItems.forEach(item => {
+                    const row = document.createElement('tr');
+                    
+                    // Calculate item total
+                    const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+                    
+                    row.innerHTML = `
+                        <td>${item.category || ''}</td>
+                        <td>${item.item_description}</td>
+                        <td>${item.packaging || ''}</td>
+                        <td>${item.quantity}</td>
+                        <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        })}</td>
+                        <td>PHP ${itemTotal.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        })}</td>
+                    `;
+                    
+                    orderItemsBody.appendChild(row);
+                });
+                
+                // Show the PDF preview
+                document.getElementById('pdfPreview').style.display = 'block';
+                
+            } catch (e) {
+                console.error('Error preparing PDF data:', e);
+                alert('Error preparing PDF data');
+            }
+        }
+        
+        // Function to close PDF preview
+        function closePDFPreview() {
+            document.getElementById('pdfPreview').style.display = 'none';
+        }
+        
+        // Function to download the PDF
+        function downloadPDF() {
+            if (!currentPOData) {
+                alert('No PO data available for download.');
+                return;
+            }
+            
+            // Get the element to convert to PDF
+            const element = document.getElementById('contentToDownload');
+            
+            // Configure html2pdf options
+            const opt = {
+                margin:       [10, 10, 10, 10],
+                filename:     `PO_${currentPOData.poNumber}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            
+            // Generate and download PDF
+            html2pdf().set(opt).from(element).save().then(() => {
+                showToast(`Purchase Order ${currentPOData.poNumber} has been downloaded as PDF.`, 'success');
+                closePDFPreview();
+            }).catch(error => {
+                console.error('Error generating PDF:', error);
+                alert('Error generating PDF. Please try again.');
+            });
+        }
+        
+        // Special Instructions Modal Functions
+        function viewSpecialInstructions(poNumber, instructions) {
+            document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
+            const contentEl = document.getElementById('instructionsContent');
+            
+            if (instructions && instructions.trim().length > 0) {
+                contentEl.textContent = instructions;
+                contentEl.classList.remove('empty');
+            } else {
+                contentEl.textContent = 'No special instructions provided for this order.';
+                contentEl.classList.add('empty');
+            }
+            
+            document.getElementById('specialInstructionsModal').style.display = 'block';
+        }
+
+        function closeSpecialInstructions() {
+            document.getElementById('specialInstructionsModal').style.display = 'none';
+        }
+
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
@@ -1011,6 +1647,14 @@ $statusOptions = ['For Delivery', 'In Transit'];
                     else if (this.id === 'driverModal') closeDriverModal();
                     else if (this.id === 'statusChangeModal') closeStatusChangeModal();
                     else if (this.id === 'completeOrderModal') closeCompleteModal();
+                }
+            });
+
+            // Close special instructions modal when clicking outside
+            window.addEventListener('click', function(event) {
+                const modal = document.getElementById('specialInstructionsModal');
+                if (event.target === modal) {
+                    closeSpecialInstructions();
                 }
             });
         });
