@@ -286,24 +286,62 @@ window.generatePONumber = function() {
     }
 };
 
+// Replace the current prepareOrderData function completely
 window.prepareOrderData = function() {
-    // Make sure all the address fields have values
-    if (!$('#bill_to').val() && $('#username').val()) {
-        // If bill_to is empty, use the company address as a default
-        const companyAddress = $('#username option:selected').data('company-address') || '';
-        $('#bill_to').val(companyAddress);
+    // Get all selected products from the summary table
+    const summaryRows = document.querySelectorAll('#summaryBody tr');
+    const orderItems = [];
+    let totalAmount = 0;
+    
+    // Process each row in the summary table
+    summaryRows.forEach(row => {
+        const cells = row.cells;
+        const category = cells[0].textContent;
+        const product = cells[1].textContent;
+        const packaging = cells[2].textContent;
+        // Remove PHP and parse as float
+        const price = parseFloat(cells[3].textContent.replace('PHP ', ''));
+        const quantity = parseInt(cells[4].querySelector('input').value);
+        const itemTotal = price * quantity;
+        
+        totalAmount += itemTotal;
+        
+        // Add to order items array with correct property names to match viewOrderDetails
+        orderItems.push({
+            category: category,
+            item_description: product,
+            packaging: packaging,
+            price: price,
+            quantity: quantity
+        });
+    });
+    
+    // Convert the array to a JSON string and set hidden input values
+    document.getElementById('orders').value = JSON.stringify(orderItems);
+    document.getElementById('total_amount').value = totalAmount.toFixed(2);
+    
+    console.log("Order data prepared:", {
+        items: JSON.parse(document.getElementById('orders').value),
+        totalAmount: document.getElementById('total_amount').value
+    });
+    
+    // If there are no items, don't submit the form
+    if (orderItems.length === 0) {
+        alert("Please select at least one product before submitting the order.");
+        return false;
     }
     
-    if (!$('#ship_to').val() && $('#username').val()) {
-        // If ship_to is empty, use the company address as a default
-        const companyAddress = $('#username option:selected').data('company-address') || '';
-        $('#ship_to').val(companyAddress);
+    return true;
+};
+
+// Override the form submission to ensure order data is prepared
+document.getElementById('addOrderForm').onsubmit = function(event) {
+    // First prepare the order data
+    if (!prepareOrderData()) {
+        event.preventDefault();
+        return false;
     }
-    
-    const orderData = JSON.stringify(selectedProducts);
-    $('#orders').val(orderData);
-    const totalAmount = calculateCartTotal();
-    $('#total_amount').val(totalAmount.toFixed(2));
+    return true;
 };
 
 window.viewOrderDetails = function(orders) {

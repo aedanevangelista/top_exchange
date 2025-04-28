@@ -1,6 +1,24 @@
 <?php
 include 'db_connection.php';
 
+error_log("===== START NEW ORDER SUBMISSION =====");
+error_log("POST data received: " . print_r($_POST, true));
+
+// Specifically log the orders data for debugging
+if (isset($_POST['orders'])) {
+    error_log("Orders JSON: " . $_POST['orders']);
+    $decoded = json_decode($_POST['orders'], true);
+    if ($decoded === null) {
+        error_log("JSON decode error: " . json_last_error_msg());
+    } else {
+        error_log("Decoded orders count: " . count($decoded));
+    }
+}
+
+if (isset($_POST['total_amount'])) {
+    error_log("Total amount: " . $_POST['total_amount']);
+}
+
 header('Content-Type: application/json'); // Ensure JSON response
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
