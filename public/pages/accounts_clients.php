@@ -1260,7 +1260,6 @@ function truncate($text, $max = 15) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/js/toast.js"></script>
-    <script src="/js/accounts_clients.js"></script>
     
     <script>
     function openModal(imgElement) {
