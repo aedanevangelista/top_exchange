@@ -1,5 +1,7 @@
 <?php
-
+session_start();
+include "../../backend/db_connection.php";
+include "../../backend/check_role.php";
 checkRole('Accounts - Clients');
 
 
