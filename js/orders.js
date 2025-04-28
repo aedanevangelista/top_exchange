@@ -522,7 +522,7 @@ $('#addOrderForm').on('submit', function(e) {
 
     prepareOrderData();
     
-    // Validate ship_to as delivery address instead of delivery_address
+    // Validate ship_to as the delivery address field
     const shipTo = $('#ship_to').val();
     if (!shipTo || shipTo.trim() === '') {
         alert('Please provide a shipping address in the "Ship To" field');
@@ -552,8 +552,16 @@ $('#addOrderForm').on('submit', function(e) {
                 alert('Error: ' + response.message);
             }
         },
-        error: function() {
-            alert('Error submitting order. Please try again.');
+        error: function(xhr, status, error) {
+            // Add more detailed error handling
+            console.error('AJAX Error:', xhr.responseText);
+            
+            let errorMsg = 'Error submitting order. Please try again.';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMsg = 'Error: ' + xhr.responseJSON.message;
+            }
+            
+            alert(errorMsg);
         }
     });
 });
