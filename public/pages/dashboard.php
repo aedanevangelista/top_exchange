@@ -80,12 +80,11 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Notification container styles */
-        .header-container {
+        /* Header container with notification badge */
+        .overview-container {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 20px;
         }
         
         .notification-badge {
@@ -98,7 +97,6 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-left: auto;
         }
         
         .notification-badge:hover {
@@ -130,20 +128,18 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
 
         <div class="main-content">
             <div class="overview-container">
-                <div class="header-container">
-                    <h2>Dashboard</h2>
-                    
-                    <!-- New Compact Pending Orders Notification Badge (positioned on the right) -->
-                    <?php if ($pendingOrdersCount > 0): ?>
-                    <a href="/public/pages/pending_orders.php" style="text-decoration: none;">
-                        <div class="notification-badge">
-                            <i class="fas fa-bell notification-icon"></i>
-                            <span class="notification-count"><?php echo $pendingOrdersCount; ?></span>
-                            <span class="notification-label">Pending Orders</span>
-                        </div>
-                    </a>
-                    <?php endif; ?>
-                </div>
+                <h2>Dashboard</h2>
+                
+                <!-- New Compact Pending Orders Notification Badge -->
+                <?php if ($pendingOrdersCount > 0): ?>
+                <a href="/public/pages/pending_orders.php" style="text-decoration: none;">
+                    <div class="notification-badge">
+                        <i class="fas fa-bell notification-icon"></i>
+                        <span class="notification-count"><?php echo $pendingOrdersCount; ?></span>
+                        <span class="notification-label">Pending Orders</span>
+                    </div>
+                </a>
+                <?php endif; ?>
             </div>
 
             <div class="top-section">
@@ -170,28 +166,30 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
 
                     <div class="packs-comparison-row">
                         <span id="packs-sold-percentage" class="packs-comparison">0% since</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Sales Per Department Container -->
-            <div class="bottom-section">
-                <div class="sales-container">
-                    <div class="chart-header">
-                        <h3>SALES PER DEPARTMENT</h3>
-                        <select id="sales-year" class="sales-dropdown">
+                        <select id="packs-sold-compare-year" class="packs-sold-dropdown">
+
                         </select>
                     </div>
-                    <div class="sales-chart">
-                        <canvas id="salesChart"></canvas>
-                    </div>
+                </div>
+
+            </div>
+
+
+            <div class="sales-department-container">
+                <div class="chart-header">
+                    <h3>SALES PER DEPARTMENT</h3>
+                </div>
+                <div class="sales-department-chart">
+                    <canvas id="salesPerDepartmentChart"></canvas>
                 </div>
             </div>
+
         </div>
     </div>
 
-    <script>
-        // Your existing JavaScript code here
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+    <!-- Use relative path for JavaScript -->
+    <script src="/js/dashboard.js"></script>
+
 </body>
 </html>
