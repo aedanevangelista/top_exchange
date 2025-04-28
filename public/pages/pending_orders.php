@@ -49,6 +49,7 @@ $stmt->close();
 $orders = []; // Initialize $orders as an empty array
 
 // Modified query to join with clients_accounts to get the company information
+// Updated to use ship_to instead of delivery_address
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.ship_to, o.orders, o.total_amount, o.status, 
         o.special_instructions, o.bill_to, o.bill_to_attn, o.ship_to_attn, COALESCE(o.company, c.company) as company
         FROM orders o
@@ -173,7 +174,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td><?= htmlspecialchars($order['ship_to']) ?></td>
-                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
+                                <td><button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['orders']) ?>')">
                                 <i class="fas fa-clipboard-list"></i>    
                                 Orders</button></td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
@@ -188,7 +189,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons">
-                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
+                                <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['orders']) ?>')">
                                     <i class="fas fa-exchange-alt"></i> Change Status
                                 </button>
                                 <button class="download-btn" onclick="downloadPODirectly(
@@ -378,7 +379,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <button type="button" class="cancel-btn" onclick="closeAddOrderForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
-                    <button type="submit" id="save-order-btn" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                    <button type="submit" class="save-btn" onclick="prepareOrderData()"><i class="fas fa-save"></i> Save</button>
                 </div>
             </form>
         </div>
@@ -533,5 +534,145 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     </div>
 
     <script src="/js/orders.js"></script>
+    <script>
+    <?php include('../../js/order_processing.js'); ?>
+
+        // Define updateCompany function
+        function updateCompany() {
+            const usernameSelect = document.getElementById('username');
+            if (usernameSelect.selectedIndex <= 0) return; // Skip if no selection
+            
+            const selectedOption = usernameSelect.options[usernameSelect.selectedIndex];
+            const company = selectedOption.getAttribute('data-company') || '';
+            
+            // You can do something with the company value if needed
+            console.log('Company updated:', company);
+        }
+        
+        // Search functionality (client-side, same as in order_history.php)
+        $(document).ready(function() {
+            // Search functionality
+            $("#searchInput").on("input", function() {
+                let searchText = $(this).val().toLowerCase().trim();
+
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+            });
+            
+            // Handle search button click (same functionality as typing)
+            $(".search-btn").on("click", function() {
+                let searchText = $("#searchInput").val().toLowerCase().trim();
+                
+                $(".orders-table tbody tr").each(function() {
+                    let row = $(this);
+                    let text = row.text().toLowerCase();
+                    
+                    if (text.includes(searchText)) {
+                        row.show();
+                    } else {
+                        row.hide();
+                    }
+                });
+            });
+            
+            // Initialize company field if needed
+            $('#username').change(function() {
+                updateCompany();
+                // Removed updateClientInfo() from here as it's now directly called in the select's onchange attribute
+            });
+            
+            // Make sure prepareOrderData includes company field
+            window.originalPrepareOrderData = window.prepareOrderData;
+            window.prepareOrderData = function() {
+                if (window.originalPrepareOrderData) {
+                    window.originalPrepareOrderData();
+                }
+                
+                // Ensure company is included
+                const ordersInput = document.getElementById('orders');
+                if (ordersInput.value) {
+                    try {
+                        const ordersData = JSON.parse(ordersInput.value);
+                        ordersInput.value = JSON.stringify(ordersData);
+                    } catch (e) {
+                        console.error("Error preparing order data:", e);
+                    }
+                }
+                
+                // Include special instructions in form data
+                const specialInstructions = document.getElementById('special_instructions').value;
+                if (document.getElementById('special_instructions_hidden')) {
+                    document.getElementById('special_instructions_hidden').value = specialInstructions;
+                }
+                // No need for a hidden field since the textarea already has the name attribute
+            };
+        });
+
+        // Define updateClientInfo in global scope to ensure it's available to other functions
+        function updateClientInfo() {
+            const usernameSelect = document.getElementById('username');
+            if (usernameSelect.selectedIndex <= 0) return; // Skip if no selection
+            
+            const selectedOption = usernameSelect.options[usernameSelect.selectedIndex];
+            
+            // Get data attributes with the correct data attribute names
+            const billTo = selectedOption.getAttribute('data-bill-to') || '';
+            const billToAttn = selectedOption.getAttribute('data-bill-to-attn') || '';
+            const shipTo = selectedOption.getAttribute('data-ship-to') || '';
+            const shipToAttn = selectedOption.getAttribute('data-ship-to-attn') || '';
+            
+            // Set form values
+            document.getElementById('bill_to').value = billTo;
+            document.getElementById('bill_to_attn').value = billToAttn;
+            document.getElementById('ship_to').value = shipTo;
+            document.getElementById('ship_to_attn').value = shipToAttn;
+            
+            console.log('Auto-filling client data:', {
+                billTo: billTo,
+                billToAttn: billToAttn,
+                shipTo: shipTo, 
+                shipToAttn: shipToAttn
+            });
+        }
+
+        // Modify the existing openAddOrderForm function if it exists in your JS
+        const originalOpenAddOrderForm = window.openAddOrderForm;
+        window.openAddOrderForm = function() {
+            if (typeof originalOpenAddOrderForm === 'function') {
+                originalOpenAddOrderForm();
+            } else {
+                document.getElementById('addOrderOverlay').style.display = 'flex';
+            }
+            
+            // Set current date for order_date
+            const today = new Date();
+            const formattedDate = today.getFullYear() + '-' + 
+                                String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                                String(today.getDate()).padStart(2, '0');
+            document.getElementById('order_date').value = formattedDate;
+            
+            // Initialize the delivery date datepicker
+            $("#delivery_date").datepicker({
+                dateFormat: 'yy-mm-dd',
+                minDate: 0
+            });
+            
+            // Reset form fields
+            document.getElementById('username').selectedIndex = 0;
+            document.getElementById('bill_to').value = '';
+            document.getElementById('bill_to_attn').value = '';
+            document.getElementById('ship_to').value = '';
+            document.getElementById('ship_to_attn').value = '';
+            document.getElementById('special_instructions').value = '';
+        };
+    </script>
 </body>
 </html>
