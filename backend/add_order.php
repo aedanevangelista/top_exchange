@@ -11,10 +11,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $delivery_date = $_POST['delivery_date'];
         
         // Get the billing and shipping data directly from the form
-        $bill_to = $_POST['bill_to'] ?? '';
-        $bill_to_attn = $_POST['bill_to_attn'] ?? '';
-        $ship_to = $_POST['ship_to'] ?? '';  // This replaces delivery_address
-        $ship_to_attn = $_POST['ship_to_attn'] ?? '';
+        $bill_to = $_POST['bill_to'];
+        $bill_to_attn = $_POST['bill_to_attn'];
+        $ship_to = $_POST['ship_to'];  // This replaces delivery_address
+        $ship_to_attn = $_POST['ship_to_attn'];
         
         $po_number = $_POST['po_number'];
         $orders = $_POST['orders']; // Keep as JSON string
@@ -29,45 +29,50 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         // If ship_to is empty, get the user's ship_to from the database
         if (empty($ship_to)) {
-            $stmt = $conn->prepare("SELECT ship_to, bill_to, bill_to_attn, ship_to_attn FROM clients_accounts WHERE username = ?");
+            $stmt = $conn->prepare("SELECT bill_to, bill_to_attn, ship_to, ship_to_attn FROM clients_accounts WHERE username = ?");
             $stmt->bind_param("s", $username);
             $stmt->execute();
-            $stmt->bind_result($db_ship_to, $db_bill_to, $db_bill_to_attn, $db_ship_to_attn);
-            if ($stmt->fetch()) {
-                $ship_to = $db_ship_to;
-                
-                // If other fields are also empty, use database values
-                if (empty($bill_to)) $bill_to = $db_bill_to;
-                if (empty($bill_to_attn)) $bill_to_attn = $db_bill_to_attn;
-                if (empty($ship_to_attn)) $ship_to_attn = $db_ship_to_attn;
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows > 0) {
+                $user = $result->fetch_assoc();
+                if (empty($bill_to)) $bill_to = $user['bill_to'];
+                if (empty($bill_to_attn)) $bill_to_attn = $user['bill_to_attn'];
+                if (empty($ship_to)) $ship_to = $user['ship_to'];
+                if (empty($ship_to_attn)) $ship_to_attn = $user['ship_to_attn'];
             }
+            
             $stmt->close();
         }
 
         // Insert into orders table with updated column names
-        $insertOrder = $conn->prepare("
-            INSERT INTO orders (username, order_date, delivery_date, bill_to, bill_to_attn, ship_to, ship_to_attn, po_number, orders, total_amount, status, special_instructions) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)
-        ");
-
-        if ($insertOrder === false) {
-            throw new Exception('Failed to prepare statement: ' . $conn->error);
+        $sql = "INSERT INTO orders (username, order_date, delivery_date, bill_to, bill_to_attn, 
+                ship_to, ship_to_attn, po_number, orders, total_amount, status, special_instructions)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)";
+        
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Error preparing statement: " . $conn->error);
         }
-
-        $insertOrder->bind_param("ssssssssdss", $username, $order_date, $delivery_date, $bill_to, $bill_to_attn, $ship_to, $ship_to_attn, $po_number, $orders, $total_amount, $special_instructions);
-
-        if ($insertOrder->execute()) {
+        
+        $stmt->bind_param("ssssssssdss", 
+            $username, $order_date, $delivery_date, 
+            $bill_to, $bill_to_attn, $ship_to, $ship_to_attn,
+            $po_number, $orders, $total_amount, $special_instructions
+        );
+        
+        if ($stmt->execute()) {
             echo json_encode([
                 'success' => true,
                 'message' => 'Order successfully added!',
                 'order_id' => $conn->insert_id
             ]);
         } else {
-            throw new Exception('Failed to execute statement: ' . $insertOrder->error);
+            throw new Exception("Error executing statement: " . $stmt->error);
         }
-
-        $insertOrder->close();
-
+        
+        $stmt->close();
+        
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode([
