@@ -537,6 +537,49 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <script>
     <?php include('../../js/order_processing.js'); ?>
 
+    // Add this to your script section in pending_orders.php or update your existing prepareOrderData function
+    function prepareOrderData() {
+        // Get cart items
+        const cartItems = [];
+        document.querySelectorAll('.cart tr').forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 5) {
+                cartItems.push({
+                    category: cells[0].textContent,
+                    item_description: cells[1].textContent,
+                    packaging: cells[2].textContent,
+                    price: parseFloat(cells[3].textContent.replace('PHP ', '')),
+                    quantity: parseInt(cells[4].querySelector('input')?.value || cells[4].textContent)
+                });
+            }
+        });
+        
+        // Calculate total amount
+        let total = 0;
+        cartItems.forEach(item => {
+            total += item.price * item.quantity;
+        });
+        
+        // Set form values
+        document.getElementById('orders').value = JSON.stringify(cartItems);
+        document.getElementById('total_amount').value = total.toFixed(2);
+        
+        // Set other form values
+        const username = document.getElementById('username').value;
+        const poNumber = document.getElementById('po_number').value;
+        const specialInstructions = document.getElementById('special_instructions').value;
+        
+        console.log('Order data prepared:', {
+            poNumber: poNumber,
+            username: username,
+            orders: cartItems,
+            totalAmount: total.toFixed(2),
+            specialInstructions: specialInstructions
+        });
+        
+        return true;
+    }
+    
         // Define updateCompany function
         function updateCompany() {
             const usernameSelect = document.getElementById('username');
