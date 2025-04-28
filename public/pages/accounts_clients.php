@@ -1,4 +1,273 @@
+<?php
 
+checkRole('Accounts - Clients');
+
+
+error_reporting(0);
+
+
+function validateUnique($conn, $username, $email, $id = null) {
+    $query = "SELECT COUNT(*) as count FROM clients_accounts WHERE (username = ? OR email = ?)";
+    if ($id) {
+        $query .= " AND id != ?";
+    }
+    $stmt = $conn->prepare($query);
+    if ($id) {
+        $stmt->bind_param("ssi", $username, $email, $id);
+    } else {
+        $stmt->bind_param("ss", $username, $email);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $result['count'] > 0;
+}
+
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
+    header('Content-Type: application/json');
+
+    $username = trim($_POST['username']);
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $email = $_POST['email'];
+    $phone = $_POST['phone'] ?? null;
+    $region = $_POST['region'];
+    $city = $_POST['city'];
+    $company = $_POST['company'] ?? null; 
+    $company_address = $_POST['company_address'];
+    $bill_to = $_POST['bill_to'] ?? null;
+    $bill_to_attn = $_POST['bill_to_attn'] ?? null;
+    $ship_to = $_POST['ship_to'] ?? null;
+    $ship_to_attn = $_POST['ship_to_attn'] ?? null;
+    $business_proof = [];
+
+    if (validateUnique($conn, $username, $email)) {
+        echo json_encode(['success' => false, 'message' => 'Username or email already exists.']);
+        exit;
+    }
+
+    $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $username . '/';
+    if (!file_exists($user_upload_dir)) {
+        mkdir($user_upload_dir, 0777, true);
+    }
+
+    if (isset($_FILES['business_proof'])) {
+        if (count($_FILES['business_proof']['name']) > 3) {
+            echo json_encode(['success' => false, 'message' => 'Maximum of 3 photos allowed.']);
+            exit;
+        }
+        foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
+            if ($_FILES['business_proof']['error'][$key] == 0) {
+                $allowed_types = ['image/jpeg', 'image/png'];
+                $max_size = 20 * 1024 * 1024; 
+                $file_type = $_FILES['business_proof']['type'][$key];
+                $file_size = $_FILES['business_proof']['size'][$key];
+
+                if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
+                    $business_proof_path = '/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                    if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
+                        $business_proof[] = $business_proof_path;
+                    } else {
+                        echo json_encode(['success' => false, 'message' => 'Failed to upload file.']);
+                        exit;
+                    }
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
+                    exit;
+                }
+            }
+        }
+    }
+
+    $business_proof_json = json_encode($business_proof);
+
+    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to, bill_to_attn, ship_to, ship_to_attn, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
+    $stmt->bind_param("ssssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $bill_to_attn, $ship_to, $ship_to_attn, $business_proof_json);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'reload' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to add account.']);
+    }
+
+    $stmt->close();
+    exit;
+}
+
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'edit') {
+    header('Content-Type: application/json');
+
+    $id = $_POST['id'];
+    $username = trim($_POST['username']);
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $email = $_POST['email'];
+    $phone = $_POST['phone'] ?? null;
+    $region = $_POST['region'];
+    $city = $_POST['city'];
+    $company = $_POST['company'] ?? null; 
+    $company_address = $_POST['company_address'];
+    $bill_to = $_POST['bill_to'] ?? null;
+    $bill_to_attn = $_POST['bill_to_attn'] ?? null;
+    $ship_to = $_POST['ship_to'] ?? null;
+    $ship_to_attn = $_POST['ship_to_attn'] ?? null;
+    $business_proof = [];
+
+    if (validateUnique($conn, $username, $email, $id)) {
+        echo json_encode(['success' => false, 'message' => 'Username or email already exists.']);
+        exit;
+    }
+
+   
+    $old_username = '';
+    $stmt = $conn->prepare("SELECT username FROM clients_accounts WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($row = $result->fetch_assoc()) {
+        $old_username = $row['username'];
+    }
+    $stmt->close();
+
+   
+    $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $username . '/';
+    if (!file_exists($user_upload_dir)) {
+        mkdir($user_upload_dir, 0777, true);
+    }
+
+  
+    $existing_business_proof = json_decode($_POST['existing_business_proof'], true) ?? [];
+    $old_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $old_username . '/';
+
+  
+    if (isset($_FILES['business_proof']) && !empty($_FILES['business_proof']['name'][0])) {
+        $business_proof = [];
+
+      
+        if ($old_username !== $username && !file_exists($user_upload_dir)) {
+            mkdir($user_upload_dir, 0777, true);
+        }
+
+
+        if (file_exists($old_upload_dir)) {
+            $old_files = array_diff(scandir($old_upload_dir), array('.', '..'));
+            foreach ($old_files as $file) {
+                @unlink($old_upload_dir . $file);
+            }
+        }
+
+
+        if (count($_FILES['business_proof']['name']) > 3) {
+            echo json_encode(['success' => false, 'message' => 'Maximum of 3 photos allowed.']);
+            exit;
+        }
+
+        foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
+            if ($_FILES['business_proof']['error'][$key] == 0) {
+                $allowed_types = ['image/jpeg', 'image/png'];
+                $max_size = 20 * 1024 * 1024;
+                $file_type = $_FILES['business_proof']['type'][$key];
+                $file_size = $_FILES['business_proof']['size'][$key];
+
+                if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
+                    $business_proof_path = '/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                    if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
+                        $business_proof[] = $business_proof_path;
+                    } else {
+                        echo json_encode(['success' => false, 'message' => 'Failed to upload file.']);
+                        exit;
+                    }
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
+                    exit;
+                }
+            }
+        }
+    } else {
+       
+        if ($old_username !== $username) {
+           
+            foreach ($existing_business_proof as $index => $old_path) {
+                $old_file = basename($old_path);
+                $old_file_path = $old_upload_dir . $old_file;
+                $new_file_path = $user_upload_dir . $old_file;
+                $new_path = '/uploads/' . $username . '/' . $old_file;
+
+                if (file_exists($old_file_path) && copy($old_file_path, $new_file_path)) {
+                    $business_proof[] = $new_path;
+                    @unlink($old_file_path); 
+                }
+            }
+            
+           
+            if (file_exists($old_upload_dir) && count(array_diff(scandir($old_upload_dir), array('.', '..'))) == 0) {
+                @rmdir($old_upload_dir);
+            }
+        } else {
+           
+            $business_proof = $existing_business_proof;
+        }
+    }
+
+  
+    $business_proof_json = json_encode($business_proof);
+
+    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to = ?, bill_to_attn = ?, ship_to = ?, ship_to_attn = ?, business_proof = ? WHERE id = ?");
+    $stmt->bind_param("sssssssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to, $bill_to_attn, $ship_to, $ship_to_attn, $business_proof_json, $id);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'reload' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to update account.']);
+    }
+
+    $stmt->close();
+    exit;
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'status') {
+    header('Content-Type: application/json');
+
+    $id = $_POST['id'];
+    $status = $_POST['status'];
+    $stmt = $conn->prepare("UPDATE clients_accounts SET status = ? WHERE id = ?");
+    $stmt->bind_param("si", $status, $id);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'reload' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to change status.']);
+    }
+
+    $stmt->close();
+    exit;
+}
+
+
+$status_filter = $_GET['status'] ?? '';
+
+$sql = "SELECT id, username, email, phone, region, city, company, company_address, bill_to, bill_to_attn, ship_to, ship_to_attn, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
+if (!empty($status_filter)) {
+    $sql .= " AND status = ?";
+}
+$sql .= " ORDER BY 
+    CASE 
+        WHEN status = 'Pending' THEN 1
+        WHEN status = 'Active' THEN 2
+        WHEN status = 'Rejected' THEN 3
+        WHEN status = 'Inactive' THEN 4
+    END, created_at DESC"; // Changed from ASC to DESC to show newest first
+$stmt = $conn->prepare($sql);
+if (!empty($status_filter)) {
+    $stmt->bind_param("s", $status_filter);
+}
+$stmt->execute();
+$result = $stmt->get_result();
+
+function truncate($text, $max = 15) {
+    return (strlen($text) > $max) ? substr($text, 0, $max) . '...' : $text;
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
