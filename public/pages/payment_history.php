@@ -38,6 +38,7 @@ if ($result && $row = $result->fetch_assoc()) {
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="/css/payment_history.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         /* Year Tabs Styling */
@@ -559,12 +560,90 @@ if ($result && $row = $result->fetch_assoc()) {
         .fas.fa-file-pdf {
             margin-right: 5px;
         }
+
+        .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .toast {
+        min-width: 250px;
+        max-width: 350px;
+        background-color: #fff;
+        color: #333;
+        padding: 15px;
+        border-radius: 4px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        animation: slideIn 0.3s ease;
+    }
+    
+    .toast.success {
+        border-left: 5px solid #28a745;
+    }
+    
+    .toast.info {
+        border-left: 5px solid #17a2b8;
+    }
+    
+    .toast.warning {
+        border-left: 5px solid #ffc107;
+    }
+    
+    .toast.error {
+        border-left: 5px solid #dc3545;
+    }
+    
+    .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .toast i.close {
+        cursor: pointer;
+        font-size: 14px;
+        color: #666;
+    }
+    
+    .toast i.close:hover {
+        color: #333;
+    }
+    
+    .toast i.fa-check-circle {
+        color: #28a745;
+        font-size: 18px;
+    }
+    
+    .toast i.fa-info-circle {
+        color: #17a2b8;
+        font-size: 18px;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
         
     </style>
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
+        <div class="toast-container" id="toast-container"></div>
         <div class="orders-header">
             <h1>Payment History</h1>
             <!-- Updated search section to match inventory.php design -->
@@ -1214,57 +1293,213 @@ if ($result && $row = $result->fetch_assoc()) {
 
     // Function to download all POs for a month as PDF
 function downloadMonthlyOrdersPDF(username, month, monthName, year) {
-    // Show loading indicator
+    // Show loading spinner
     const downloadBtn = event.currentTarget;
     const originalText = downloadBtn.innerHTML;
     downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
     downloadBtn.disabled = true;
     
-    // Create a form to submit to generate the PDF
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '../../backend/generate_monthly_orders_pdf.php';
-    form.style.display = 'none'; // Hide the form
-    
-    // Add parameters
-    const params = {
-        username: username,
-        month: month,
-        year: year,
-        monthName: monthName
-    };
-    
-    for (const key in params) {
-        if (params.hasOwnProperty(key)) {
-            const hiddenField = document.createElement('input');
-            hiddenField.type = 'hidden';
-            hiddenField.name = key;
-            hiddenField.value = params[key];
-            form.appendChild(hiddenField);
+    // First, fetch the orders for this month
+    $.ajax({
+        url: '../../backend/get_monthly_orders.php',
+        method: 'GET',
+        data: {
+            username: username,
+            month: month,
+            year: year
+        },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success && response.data && response.data.length > 0) {
+                // Create a container for the PDF content
+                const pdfContainer = document.createElement('div');
+                pdfContainer.style.display = 'none';
+                pdfContainer.style.fontFamily = 'Arial, sans-serif';
+                pdfContainer.style.padding = '20px';
+                document.body.appendChild(pdfContainer);
+                
+                // Add title and header
+                let pdfContent = `
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h1>Monthly Orders Report</h1>
+                        <h2>${username} - ${monthName} ${year}</h2>
+                    </div>
+                `;
+                
+                // Add each order
+                let grandTotal = 0;
+                response.data.forEach((order, index) => {
+                    pdfContent += `
+                        <div style="margin-bottom: 30px; page-break-inside: avoid; ${index > 0 ? 'page-break-before: always;' : ''}">
+                            <h3>Purchase Order: ${order.po_number}</h3>
+                            <table style="width: 100%; margin-bottom: 10px;">
+                                <tr>
+                                    <td style="width: 50%;">
+                                        <strong>Order Date:</strong> ${order.order_date}<br>
+                                        <strong>Delivery Date:</strong> ${order.delivery_date}
+                                    </td>
+                                    <td style="width: 50%;">
+                                        <strong>Delivery Address:</strong><br>${order.delivery_address || 'Not specified'}
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                                <thead>
+                                    <tr style="background-color: #f2f2f2;">
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Category</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Item Description</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Packaging</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Price</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Quantity</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    // Add order items
+                    let orderTotal = 0;
+                    order.orders.forEach(item => {
+                        const subtotal = parseFloat(item.price) * parseInt(item.quantity);
+                        orderTotal += subtotal;
+                        
+                        pdfContent += `
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 8px;">${item.category || ''}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px;">${item.item_description}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px;">${item.packaging || ''}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                })}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.quantity}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PHP ${subtotal.toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                })}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    // Add order total
+                    pdfContent += `
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold;">Order Total:</td>
+                                        <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold;">PHP ${orderTotal.toLocaleString('en-US', {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        })}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    `;
+                    
+                    grandTotal += orderTotal;
+                });
+                
+                // Add summary page
+                pdfContent += `
+                    <div style="margin-top: 30px; page-break-before: always;">
+                        <h2>Monthly Summary</h2>
+                        <p><strong>Total Number of Orders:</strong> ${response.data.length}</p>
+                        <p><strong>Monthly Total Amount:</strong> PHP ${grandTotal.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        })}</p>
+                        
+                        <div style="margin-top: 50px; display: flex; justify-content: space-between;">
+                            <div style="width: 40%; text-align: center;">
+                                <div style="border-bottom: 1px solid black; margin-bottom: 10px; padding-top: 40px;"></div>
+                                Top Exchange<br>
+                                Date: _______________
+                            </div>
+                            <div style="width: 40%; text-align: center;">
+                                <div style="border-bottom: 1px solid black; margin-bottom: 10px; padding-top: 40px;"></div>
+                                ${username}<br>
+                                Date: _______________
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Set the HTML content
+                pdfContainer.innerHTML = pdfContent;
+                
+                // Configure html2pdf options
+                const opt = {
+                    margin: [10, 10, 10, 10],
+                    filename: `Orders_${username}_${monthName}_${year}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                
+                // Generate and download the PDF
+                html2pdf().set(opt).from(pdfContainer).save().then(() => {
+                    // Reset button
+                    downloadBtn.innerHTML = originalText;
+                    downloadBtn.disabled = false;
+                    
+                    // Clean up
+                    document.body.removeChild(pdfContainer);
+                    
+                    // Show success message
+                    showToast(`Monthly orders for ${monthName} ${year} have been downloaded.`, 'success');
+                }).catch(error => {
+                    console.error('Error generating PDF:', error);
+                    alert('Error generating PDF. Please try again.');
+                    
+                    // Reset button
+                    downloadBtn.innerHTML = originalText;
+                    downloadBtn.disabled = false;
+                    
+                    // Clean up
+                    document.body.removeChild(pdfContainer);
+                });
+            } else {
+                // Reset button
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+                
+                // Show message
+                alert('No completed orders found for this month.');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX Error:', error);
+            console.error('Response:', xhr.responseText);
+            
+            // Reset button
+            downloadBtn.innerHTML = originalText;
+            downloadBtn.disabled = false;
+            
+            // Show error message
+            alert('Error fetching orders. Please try again.');
         }
-    }
+    });
+}
+
+// Function to show toast messages
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <div class="toast-content">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+            <div class="message">${message}</div>
+        </div>
+        <i class="fas fa-times close" onclick="this.parentElement.remove()"></i>
+    `;
+    document.getElementById('toast-container').appendChild(toast);
     
-    // Add form to document body and submit it
-    document.body.appendChild(form);
-    
-    // Create iframe to handle the response
-    const iframe = document.createElement('iframe');
-    iframe.name = 'pdf-download-frame';
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-    
-    // Set form target to the iframe and submit
-    form.target = 'pdf-download-frame';
-    form.submit();
-    
-    // Reset button after a delay
+    // Automatically remove the toast after 5 seconds
     setTimeout(() => {
-        downloadBtn.innerHTML = originalText;
-        downloadBtn.disabled = false;
-        // Clean up
-        document.body.removeChild(form);
-        document.body.removeChild(iframe);
-    }, 3000);
+        toast.remove();
+    }, 5000);
 }
 
     function openPaymentModal(username, month, year, remainingBalance) {
