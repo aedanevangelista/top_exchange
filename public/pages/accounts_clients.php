@@ -2,1716 +2,1382 @@
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Payment History');
+checkRole('Accounts - Clients');
 
-// Fetch active and inactive users with their balance
-$sql = "SELECT username, status, balance FROM clients_accounts WHERE status IN ('Active', 'Inactive') ORDER BY username";
-$result = $conn->query($sql);
-$users = [];
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $users[] = $row;
+// Change this to see errors during development
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+function validateUnique($conn, $username, $email, $id = null) {
+    $query = "SELECT COUNT(*) as count FROM clients_accounts WHERE (username = ? OR email = ?)";
+    if ($id) {
+        $query .= " AND id != ?";
     }
+    $stmt = $conn->prepare($query);
+    if ($id) {
+        $stmt->bind_param("ssi", $username, $email, $id);
+    } else {
+        $stmt->bind_param("ss", $username, $email);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $result['count'] > 0;
 }
 
-// Update the payment_status enum if needed
-$check_status_values = "SHOW COLUMNS FROM monthly_payments LIKE 'payment_status'";
-$result = $conn->query($check_status_values);
-if ($result && $row = $result->fetch_assoc()) {
-    $type = $row['Type'];
-    if (strpos($type, 'Fully Paid') === false || strpos($type, 'Partially Paid') === false) {
-        // Update the enum to include the new statuses
-        $conn->query("ALTER TABLE monthly_payments 
-                     MODIFY COLUMN payment_status ENUM('Fully Paid', 'Partially Paid', 'Unpaid', 'For Approval') 
-                     NOT NULL DEFAULT 'Unpaid'");
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
+    header('Content-Type: application/json');
+
+    $username = trim($_POST['username']);
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $email = $_POST['email'];
+    $phone = $_POST['phone'] ?? null;
+    $region = $_POST['region'];
+    $city = $_POST['city'];
+    $company = $_POST['company'] ?? null; 
+    $company_address = $_POST['company_address'];
+    $bill_to_address = $_POST['bill_to_address'] ?? null; // Added bill_to_address field
+    $business_proof = [];
+
+    if (validateUnique($conn, $username, $email)) {
+        echo json_encode(['success' => false, 'message' => 'Username or email already exists.']);
+        exit;
     }
+
+    $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $username . '/';
+    if (!file_exists($user_upload_dir)) {
+        mkdir($user_upload_dir, 0777, true);
+    }
+
+    if (isset($_FILES['business_proof'])) {
+        if (count($_FILES['business_proof']['name']) > 3) {
+            echo json_encode(['success' => false, 'message' => 'Maximum of 3 photos allowed.']);
+            exit;
+        }
+        foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
+            if ($_FILES['business_proof']['error'][$key] == 0) {
+                $allowed_types = ['image/jpeg', 'image/png'];
+                $max_size = 20 * 1024 * 1024; 
+                $file_type = $_FILES['business_proof']['type'][$key];
+                $file_size = $_FILES['business_proof']['size'][$key];
+
+                if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
+                    $business_proof_path = '/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                    if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
+                        $business_proof[] = $business_proof_path;
+                    } else {
+                        echo json_encode(['success' => false, 'message' => 'Failed to upload file.']);
+                        exit;
+                    }
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
+                    exit;
+                }
+            }
+        }
+    }
+
+    $business_proof_json = json_encode($business_proof);
+
+    // Added bill_to_address field to the SQL query
+    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
+    $stmt->bind_param("ssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'reload' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to add account.']);
+    }
+
+    $stmt->close();
+    exit;
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'edit') {
+    header('Content-Type: application/json');
+
+    $id = $_POST['id'];
+    $username = trim($_POST['username']);
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $email = $_POST['email'];
+    $phone = $_POST['phone'] ?? null;
+    $region = $_POST['region'];
+    $city = $_POST['city'];
+    $company = $_POST['company'] ?? null; 
+    $company_address = $_POST['company_address'];
+    $bill_to_address = $_POST['bill_to_address'] ?? null; // Added bill_to_address field
+    $business_proof = [];
+
+    if (validateUnique($conn, $username, $email, $id)) {
+        echo json_encode(['success' => false, 'message' => 'Username or email already exists.']);
+        exit;
+    }
+
+    $old_username = '';
+    $stmt = $conn->prepare("SELECT username FROM clients_accounts WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($row = $result->fetch_assoc()) {
+        $old_username = $row['username'];
+    }
+    $stmt->close();
+
+    $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $username . '/';
+    if (!file_exists($user_upload_dir)) {
+        mkdir($user_upload_dir, 0777, true);
+    }
+
+    $existing_business_proof = json_decode($_POST['existing_business_proof'], true) ?? [];
+    $old_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $old_username . '/';
+
+    if (isset($_FILES['business_proof']) && !empty($_FILES['business_proof']['name'][0])) {
+        $business_proof = [];
+
+        if ($old_username !== $username && !file_exists($user_upload_dir)) {
+            mkdir($user_upload_dir, 0777, true);
+        }
+
+        if (file_exists($old_upload_dir)) {
+            $old_files = array_diff(scandir($old_upload_dir), array('.', '..'));
+            foreach ($old_files as $file) {
+                @unlink($old_upload_dir . $file);
+            }
+        }
+
+        if (count($_FILES['business_proof']['name']) > 3) {
+            echo json_encode(['success' => false, 'message' => 'Maximum of 3 photos allowed.']);
+            exit;
+        }
+
+        foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
+            if ($_FILES['business_proof']['error'][$key] == 0) {
+                $allowed_types = ['image/jpeg', 'image/png'];
+                $max_size = 20 * 1024 * 1024;
+                $file_type = $_FILES['business_proof']['type'][$key];
+                $file_size = $_FILES['business_proof']['size'][$key];
+
+                if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
+                    $business_proof_path = '/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                    if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
+                        $business_proof[] = $business_proof_path;
+                    } else {
+                        echo json_encode(['success' => false, 'message' => 'Failed to upload file.']);
+                        exit;
+                    }
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
+                    exit;
+                }
+            }
+        }
+    } else {
+        if ($old_username !== $username) {
+            foreach ($existing_business_proof as $index => $old_path) {
+                $old_file = basename($old_path);
+                $old_file_path = $old_upload_dir . $old_file;
+                $new_file_path = $user_upload_dir . $old_file;
+                $new_path = '/uploads/' . $username . '/' . $old_file;
+
+                if (file_exists($old_file_path) && copy($old_file_path, $new_file_path)) {
+                    $business_proof[] = $new_path;
+                    @unlink($old_file_path); 
+                }
+            }
+            
+            if (file_exists($old_upload_dir) && count(array_diff(scandir($old_upload_dir), array('.', '..'))) == 0) {
+                @rmdir($old_upload_dir);
+            }
+        } else {
+            $business_proof = $existing_business_proof;
+        }
+    }
+
+    $business_proof_json = json_encode($business_proof);
+
+    // Added bill_to_address field to the SQL query
+    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to_address = ?, business_proof = ? WHERE id = ?");
+    $stmt->bind_param("ssssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json, $id);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'reload' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to update account.']);
+    }
+
+    $stmt->close();
+    exit;
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'status') {
+    header('Content-Type: application/json');
+
+    $id = $_POST['id'];
+    $status = $_POST['status'];
+    $stmt = $conn->prepare("UPDATE clients_accounts SET status = ? WHERE id = ?");
+    $stmt->bind_param("si", $status, $id);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'reload' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to change status.']);
+    }
+
+    $stmt->close();
+    exit;
+}
+
+$status_filter = $_GET['status'] ?? '';
+
+// Added bill_to_address to the query
+$sql = "SELECT id, username, email, phone, region, city, company, company_address, bill_to_address, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
+if (!empty($status_filter)) {
+    $sql .= " AND status = ?";
+}
+$sql .= " ORDER BY 
+    CASE 
+        WHEN status = 'Pending' THEN 1
+        WHEN status = 'Active' THEN 2
+        WHEN status = 'Rejected' THEN 3
+        WHEN status = 'Inactive' THEN 4
+    END, created_at DESC"; // Changed from ASC to DESC to show newest first
+$stmt = $conn->prepare($sql);
+if (!empty($status_filter)) {
+    $stmt->bind_param("s", $status_filter);
+}
+$stmt->execute();
+$result = $stmt->get_result();
+
+function truncate($text, $max = 15) {
+    return (strlen($text) > $max) ? substr($text, 0, $max) . '...' : $text;
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment History</title>
-    <link rel="stylesheet" href="/css/orders.css">
+    <title>Client Accounts</title>
+    <link rel="stylesheet" href="/css/accounts.css">
     <link rel="stylesheet" href="/css/sidebar.css">
-    <link rel="stylesheet" href="/css/payment_history.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="/css/accounts_clients.css">
+    <link rel="stylesheet" href="/css/toast.css">
     <style>
-        /* Year Tabs Styling */
-        .year-tabs {
-            position: sticky;
-            top: 65px; /* Adjust based on header height */
-            background-color: #fefefe;
-            z-index: 4;
-            padding: 10px 0;
-            margin-bottom: 10px;
-        }
-        
-        .year-tab {
-            padding: 8px 16px;
-            margin-right: 10px;
-            cursor: pointer;
-            border: 1px solid #ddd;
-            border-radius: 4px 4px 0 0;
-            background-color: #f8f8f8;
-        }
-        
-        .year-tab.active {
-            background-color: #4CAF50;
-            color: white;
-            border-color: #4CAF50;
-        }
-
-        /* Status Text Styling */
-        .status-active {
-            color: #28a745;
-            font-weight: 600;
-        }
-
-        .status-inactive {
-            color: gray;
-            font-weight: 600;
-        }
-        
-        .far.fa-money-bill-alt {
-            margin-right: 5px;
-        }
-
-        .view-button, .status-toggle {
-            border-radius: 80px;
-            margin: 0 2px;
-            min-width: 85px;
-        }
-
-        .view-button.disabled, .status-toggle.disabled {
-            background-color: lightgray !important;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .payment-status-disabled, .payment-status-pending {
-            color: lightgray;
-            font-style: italic;
-        }
-
-        .payment-status-unpaid {
-            color: #dc3545;
-            font-weight: 600;
-        }
-
-        .payment-status-forapproval {
-            color: #ffc107;
-            font-weight: 600;
-        }
-
-        .payment-status-fullypaid {
-            color: #28a745;
-            font-weight: 600;
-        }
-        
-        .payment-status-partiallypaid {
-            color: #17a2b8;
-            font-weight: 600;
-        }
-
-        /* Total Balance Styling */
-        .total-balance-positive {
-            color: #28a745;
-            font-weight: 600;
-        }
-
-        .total-balance-negative {
-            color: #dc3545;
-            font-weight: 600;
-        }
-
-        .total-balance-zero {
-            color: #6c757d;
-            font-weight: 600;
-        }
-
-        /* Monthly Payment Header with Balance */
-        .modal-header-with-balance {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-right: 20px;
-        }
-
-        .add-balance-btn {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-left: 10px;
-            cursor: pointer;
-            font-size: 20px;
-            font-weight: bold;
-        }
-
-        .add-balance-btn:hover {
-            background-color: #218838;
-        }
-
-        .balance-display {
-            display: flex;
-            align-items: center;
-        }
-
-        /* Payment proof thumbnail */
-        .payment-proof-thumbnail {
-            max-width: 60px;
-            max-height: 60px;
-            cursor: pointer;
-        }
-
-        /* Payment proof modal */
-        #paymentProofModal img {
-            max-width: 100%;
-            max-height: 80vh;
-        }
-
-        /* Search Container Styling */
-        .search-container {
-            display: flex;
-            align-items: center;
-        }
-
-        .search-container input {
-            padding: 8px 12px;
-            border-radius: 20px 0 0 20px;
-            border: 1px solid #ddd;
-            font-size: 14px;
-            width: 220px;
-        }
-
-        .search-container .search-btn {
-            background-color: #2980b9;
-            color: white;
-            border: none;
-            border-radius: 0 20px 20px 0;
-            padding: 8px 12px;
-            cursor: pointer;
-        }
-
-        .search-container .search-btn:hover {
-            background-color: #2471a3;
-        }
-
-        /* Add Balance Modal */
-        #addBalanceModal .modal-content {
-            max-width: 400px;
-        }
-
-        /* Payment Modal */
-        #paymentModal .modal-content {
-            max-width: 500px;
-        }
-
-        .input-group {
-            margin-bottom: 15px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
-
-        .input-group input, .input-group select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        .button-group {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .submit-btn {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .cancel-btn {
-            background-color: #f44336;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        /* Status Modal */
-        #changeStatusModal .modal-content {
-            max-width: 450px;
-            padding: 25px;
-        }
-
-        .status-options {
-            margin: 20px 0;
-        }
-
-        .status-option {
-            display: flex;
-            align-items: center;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .status-option:hover {
-            background-color: #f9f9f9;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .status-option.selected {
-            background-color: #e6f7ff;
-            border-color: #1890ff;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .status-option .status-icon {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            margin-right: 15px;
-        }
-
-        .status-option span {
-            font-size: 16px;
-            font-weight: 500;
-        }
-
-        .status-unpaid {
-            background-color: #dc3545;
-        }
-
-        .status-forapproval {
-            background-color: #ffc107;
-        }
-
-        .status-fullypaid {
-            background-color: #28a745;
-        }
-        
-        .status-partiallypaid {
-            background-color: #17a2b8;
-        }
-
-        .status-pending {
-            background-color: #6c757d;
-        }
-
-        /* Preview image */
-        .preview-container {
-            display: none;
-            margin-top: 10px;
-        }
-
-        .preview-container img {
-            max-width: 100%;
-            max-height: 200px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        /* Improved Modal Styling */
-        .modal {
+        #myModal {
             display: none;
             position: fixed;
-            z-index: 1000;
+            z-index: 9999; 
+            padding-top: 100px;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(0,0,0,0.9);
         }
 
         .modal-content {
-            position: relative;
-            background-color: #fefefe;
-            margin: 0;
-            border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-            width: 80%;
-            max-width: 1200px;
-            max-height: 80vh;
-            animation: modalFade 0.3s ease;
-            overflow: hidden;
-            
-            /* Center the modal in viewport */
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            flex-direction: column;
+            margin: auto;
+            display: block;
+            max-width: 80%;
+            max-height: 80%;
         }
 
-        /* Make monthly payments modal wider */
-        #monthlyPaymentsModal .modal-content {
+        #caption {
+            margin: auto;
+            display: block;
             width: 80%;
-            max-width: 1200px;
-            max-height: 80vh;
-        }
-
-        @keyframes modalFade {
-            from {opacity: 0; transform: translate(-50%, -50%) scale(0.9);}
-            to {opacity: 1; transform: translate(-50%, -50%) scale(1);}
+            max-width: 700px;
+            text-align: center;
+            color: #ccc;
+            padding: 10px 0;
+            height: 150px;
         }
 
         .close {
             position: absolute;
             top: 15px;
-            right: 20px;
-            color: #aaa;
-            font-size: 28px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
             font-weight: bold;
+            transition: 0.3s;
             cursor: pointer;
-            transition: color 0.2s;
-            z-index: 10;
         }
 
-        .close:hover {
-            color: #f44336;
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
         }
 
-        /* User balance display */
-        .user-balance-info {
-            background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 12px 15px;
-            margin-bottom: 20px;
+        .photo-album img {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .photo-album img:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+
+        .file-info {
+            font-size: 0.9em;
+            color: #666;
+            font-style: italic;
+        }
+        
+        /* New styles for the 2-column layout */
+        .two-column-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px; /* Reduced gap */
+        }
+        
+        .form-column {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            flex-direction: column;
         }
-
-        .balance-label {
-            font-weight: 600;
-            color: #495057;
+        
+        .form-divider {
+            width: 1px;
+            background-color: #ddd;
+            margin: 0 auto;
         }
-
-        /* Action buttons spacing - Only for monthly payments table */
-        #monthlyPaymentsBody .action-buttons {
+        
+        .form-full-width {
+            grid-column: 1 / span 2;
+        }
+        
+        .required {
+            color: #ff0000;
+            font-weight: bold;
+        }
+        
+        .optional {
+            color: #666;
+            font-style: italic;
+            font-size: 0.9em;
+        }
+        
+        .overlay-content {
+            max-width: 800px;
+            width: 90%;
+            max-height: 95vh;
             display: flex;
-            justify-content: center;
-            gap: 8px;
+            flex-direction: column;
+        }
+        
+        /* Make inputs a bit wider as they have more space now */
+        .two-column-form input, 
+        .two-column-form textarea {
             width: 100%;
         }
         
-        /* Table cell styling only for monthly payments table */
-        #monthlyPaymentsModal .orders-table th:last-child,
-        #monthlyPaymentsModal .orders-table td:last-child {
-            width: 180px;
-            min-width: 180px;
-            max-width: 180px;
-            text-align: center;
+        /* Enhanced company address textarea */
+        textarea#company_address, textarea#edit-company_address,
+        textarea#bill_to_address, textarea#edit-bill_to_address {
+            height: 60px; /* Smaller text areas */
+            padding: 8px; /* Reduced padding */
+            font-size: 14px; /* Increased font size by 1px */
+            resize: vertical; /* Allow vertical resizing only */
+            min-height: 60px; /* Smaller minimum height */
         }
         
-        /* Notes styling */
-        .payment-notes {
-            max-width: 150px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        /* Style consistent input borders */
+        input, textarea {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 6px 10px; /* Reduced padding */
+            transition: border-color 0.3s;
+            outline: none;
+            font-size: 14px; /* Increased font size by 1px */
         }
         
-        .payment-notes-tooltip {
-            position: relative;
-            display: inline-block;
-            cursor: pointer;
+        input:focus, textarea:focus {
+            border-color: #4a90fe;
+            box-shadow: 0 0 5px rgba(77, 144, 254, 0.5);
         }
         
-        .payment-notes-tooltip .notes-tooltip-text {
-            visibility: hidden;
-            width: 200px;
-            background-color: #555;
-            color: #fff;
-            text-align: center;
-            border-radius: 6px;
-            padding: 5px;
-            position: absolute;
-            z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            margin-left: -100px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            white-space: normal;
-        }
-        
-        .payment-notes-tooltip:hover .notes-tooltip-text {
-            visibility: visible;
-            opacity: 1;
-        }
-        
-        /* Delivery Address styling */
-        .delivery-address {
-            max-width: 150px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        
-        .delivery-address:hover {
-            white-space: normal;
-            overflow: visible;
-        }
-        
-        /* Payment type styling */
-        .payment-type {
+        /* Style placeholder text */
+        input::placeholder, textarea::placeholder {
+            color: #aaa;
+            padding: 4px;
             font-style: italic;
-            color: #495057;
         }
-        
-        .payment-type-internal {
-            color: #17a2b8;
-            font-weight: bold;
+
+        /* View address button styles */
+        .view-address-btn, .view-contact-btn {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
         }
-        
-        .payment-type-external {
-            color: #fd7e14;
+
+        .view-address-btn:hover, .view-contact-btn:hover {
+            background-color: #357abf;
+        }
+
+        /* Improved Info Modal Styles - Unified Design */
+        #addressInfoModal, #contactInfoModal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Changed from auto to hidden to remove outer scrollbar */
+            background-color: rgba(0,0,0,0.7);
+        }
+
+        .info-modal-content {
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+            border-radius: 10px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh; /* Limit the height */
+            animation: modalFadeIn 0.3s;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Center the modal */
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes modalFadeIn {
+            from {opacity: 0; transform: translate(-50%, -55%);}
+            to {opacity: 1; transform: translate(-50%, -50%);}
+        }
+
+        .info-modal-header {
+            background-color: #4a90e2;
+            color: #fff;
+            padding: 15px 25px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .info-modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .info-modal-header h2 i {
+            margin-right: 10px;
+        }
+
+        .info-modal-close {
+            color: #fff;
+            font-size: 24px;
             font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 5px;
+            line-height: 1;
+        }
+
+        .info-modal-close:hover {
+            transform: scale(1.1);
+        }
+
+        .info-modal-body {
+            padding: 25px;
+            overflow-y: auto; /* Add scrollbar only to the body */
+            max-height: calc(80vh - 65px); /* Account for header height */
+            flex: 1;
+        }
+
+        .info-section {
+            margin-bottom: 25px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .info-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-section-title {
+            display: flex;
+            align-items: center;
+            color: #4a90e2;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 16px; /* Increased font size by 1px */
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .info-section-title i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Unified table styling */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+        }
+
+        .info-table th {
+            text-align: left;
+            background-color: #eef5ff;
+            padding: 12px 15px;
+            border: 1px solid #d1e1f9;
+            width: 30%;
+            vertical-align: top;
+            color: #3a5d85;
+            font-weight: 600;
+            font-size: 14px; /* Increased font size by 1px */
+        }
+
+        .info-table td {
+            padding: 12px 15px;
+            border: 1px solid #d1e1f9;
+            word-break: break-word;
+            vertical-align: top;
+            line-height: 1.5;
+            color: #333;
+            background-color: #fff;
+            font-size: 14px; /* Increased font size by 1px */
+        }
+
+        /* Contact info styling */
+        .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border: 1px solid #d1e1f9;
+        }
+
+        .contact-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .contact-icon {
+            width: 45px;
+            height: 45px;
+            background-color: #eef5ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4a90e2;
+            font-size: 18px;
+            margin-right: 15px;
+        }
+
+        .contact-text {
+            flex: 1;
+        }
+
+        .contact-value {
+            font-weight: bold;
+            color: #333;
+            font-size: 14px; /* Increased font size by 1px */
+            word-break: break-all;
+        }
+
+        .contact-label {
+            font-size: 13px; /* Increased font size by 1px */
+            color: #777;
+            display: block;
+            margin-top: 5px;
+        }
+
+        /* Overlays */
+        .overlay {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(3px);
+        }
+
+        /* Address groups in forms */
+        .address-group {
+            border: 1px solid #eee;
+            padding: 12px; /* Reduced padding */
+            border-radius: 8px;
+            margin-bottom: 15px; /* Reduced margin */
+            background-color: #fafafa;
+        }
+
+        .address-group h3 {
+            margin-top: 0;
+            color: #4a90e2;
+            font-size: 15px; /* Increased font size by 1px */
+            margin-bottom: 12px; /* Reduced margin */
+            border-bottom: 1px solid #eee;
+            padding-bottom: 6px; /* Reduced padding */
+        }
+
+        /* Fixed header and footer in modal */
+        .modal-header {
+            background-color: #ffffff;
+            padding-top: 24px;
+            padding: 12px; /* Reduced padding */
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 1px solid rgb(68, 68, 68);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            padding: 0;
+            font-size: 18px; /* Reduced font size */
+        }
+
+        .modal-footer {
+            background-color: #ffffff;
+            padding: 12px 12px; /* Reduced padding */
+            border-top: 1px solid rgb(68, 68, 68);
+            text-align: center; /* Center the buttons */
+            border-radius: 0 0 8px 8px;
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: auto; /* Push footer to bottom of content */
         }
 
         .modal-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0 20px 20px 20px;
+            padding: 15px; /* Reduced padding */
+            overflow-y: auto; /* Add scrollbar to modal body */
+            max-height: calc(85vh - 110px); /* Subtracting approximate header/footer height */
+            height: auto; /* Let content determine height */
         }
 
-        .modal-header-with-balance {
-            position: sticky;
-            top: 0;
-            background-color: #fefefe;
-            z-index: 5;
-            padding: 20px 20px 10px 20px;
-            margin-bottom: 0;
-            border-bottom: 1px solid #eee;
-        }
-
-        /* Action buttons in main table */
-        .action-buttons {
+        /* Style for form modals with fixed header and footer */
+        .form-modal-content {
             display: flex;
-            gap: 5px;
+            flex-direction: column;
+            max-height: 85vh; /* Changed from fixed height to max-height */
+            height: auto; /* Let content determine height */
+            width: 80%;
+            max-width: 650px;
+            background-color: #fff;
+            border-radius: 8px;
+            overflow: hidden; /* Keep this to contain child overflow */
+            margin: auto;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
 
-        /* Responsive styling */
-        @media (max-width: 768px) {
-            .modal-content {
-                margin: 10% auto;
-                width: 95%;
-                padding: 15px;
-            }
-            
-            .modal-header-with-balance {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .balance-display {
-                margin-top: 10px;
-            }
-        }
-        
-        .fas.fa-history {
-            margin-right: 5px;
+        /* Label styling - normal */
+        label {
+            font-size: 14px; /* Increased font size by 1px */
+            margin-bottom: 4px; /* Less spacing */
         }
 
+        /* Error message styling */
+        .error-message {
+            color: #ff3333;
+            padding: 5px 0;
+            font-size: 14px;
+        }
         
+        /* Form buttons - improved */
+        .modal-footer button {
+            padding: 8px 16px; /* Better padding */
+            font-size: 14px; /* Increased font size by 1px */
+            min-width: 100px; /* Minimum width for buttons */
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: none;
+            margin: 0; /* Remove margins */
+        }
+
+        .save-btn {
+            background-color: #4a90e2;
+            color: white;
+        }
+
+        .save-btn:hover {
+            background-color: #357abf;
+        }
+
+        .cancel-btn {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+
+        .cancel-btn:hover {
+            background-color: #e1e1e1;
+        }
+
+        /* Status styling */
+        .status-active {
+            color: #28a745;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .status-pending {
+            color: #ffc107;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .status-rejected {
+            color: #dc3545;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .status-inactive {
+            color: #6c757d;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
     </style>
 </head>
 <body>
     <?php include '../sidebar.php'; ?>
+    <div id="toast-container" class="toast-container"></div>
     <div class="main-content">
-        <div class="orders-header">
-            <h1>Payment History</h1>
-            <!-- Updated search section to match inventory.php design -->
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search by username...">
-                <button class="search-btn"><i class="fas fa-search"></i></button>
+        <div class="accounts-header">
+            <h1>Client Accounts</h1>
+            <div class="filter-section">
+                <label for="statusFilter">Filter by Status:</label>
+                <select id="statusFilter" onchange="filterByStatus()">
+                    <option value="">All</option>
+                    <option value="Pending" <?= $status_filter == 'Pending' ? 'selected' : '' ?>>Pending</option>
+                    <option value="Active" <?= $status_filter == 'Active' ? 'selected' : '' ?>>Active</option>
+                    <option value="Rejected" <?= $status_filter == 'Rejected' ? 'selected' : '' ?>>Rejected</option>
+                    <option value="Inactive" <?= $status_filter == 'Inactive' ? 'selected' : '' ?>>Inactive</option>
+                </select>
             </div>
+            <button onclick="openAddAccountForm()" class="add-account-btn">
+                <i class="fas fa-user-plus"></i> Add New Account
+            </button>
         </div>
-
-        <!-- Main Table -->
-        <div class="orders-table-container">
-            <table class="orders-table">
+        <div class="accounts-table-container">
+            <table class="accounts-table">
                 <thead>
                     <tr>
                         <th>Username</th>
-                        <th>Remaining Credits</th>
-                        <th>Total Amount</th>
+                        <th>Contact Info</th>
+                        <th>Company Name</th>
+                        <th>Address Info</th>
+                        <th>Business Proof</th>
                         <th>Status</th>
-                        <th>Action</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($users as $user): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($user['username']) ?></td>
-                            <td>
-                                <?php 
-                                    $balanceClass = 'total-balance-zero';
-                                    if ($user['balance'] > 0) {
-                                        $balanceClass = 'total-balance-positive';
-                                    } elseif ($user['balance'] < 0) {
-                                        $balanceClass = 'total-balance-negative';
+                    <?php if ($result && $result->num_rows > 0): ?>
+                        <?php while ($row = $result->fetch_assoc()): ?>
+                            <tr>
+                                <td><?= htmlspecialchars(truncate($row['username'] ?? 'N/A')) ?></td>
+                                <td>
+                                    <button class="view-contact-btn" 
+                                        onclick='showContactInfo(
+                                            <?= json_encode($row["email"]) ?>,
+                                            <?= json_encode($row["phone"]) ?>
+                                        )'>
+                                        <i class="fas fa-address-card"></i> View
+                                    </button>
+                                </td>
+                                <td><?= htmlspecialchars(truncate($row['company'] ?? 'N/A')) ?></td>
+                                <td>
+                                    <button class="view-address-btn" 
+                                        onclick='showAddressInfo(
+                                            <?= json_encode($row["company_address"]) ?>,
+                                            <?= json_encode($row["region"]) ?>,
+                                            <?= json_encode($row["city"]) ?>,
+                                            <?= json_encode($row["bill_to_address"]) ?>
+                                        )'>
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                </td>
+                                <td class="photo-album">
+                                    <?php
+                                    $proofs = json_decode($row['business_proof'], true);
+                                    if ($proofs) {
+                                        foreach ($proofs as $proof) {
+                                            echo '<img src="' . htmlspecialchars($proof) . '" alt="Business Proof" width="50" onclick="openModal(this)">';
+                                        }
                                     }
+                                    ?>
+                                </td>
+                                <td class="<?= 'status-' . strtolower($row['status'] ?? 'pending') ?>"><?= htmlspecialchars($row['status'] ?? 'Pending') ?></td>
+                                <td class="action-buttons">
+                                <?php
+                                    $business_proof_json = htmlspecialchars($row['business_proof'], ENT_QUOTES);
                                 ?>
-                                <span class="<?= $balanceClass ?>">
-                                    PHP <?= number_format($user['balance'], 2) ?>
-                                </span>
-                            </td>
-                            <td>
-                                <span class="yearly-amount" data-username="<?= htmlspecialchars($user['username']) ?>">
-                                    Loading...
-                                </span>
-                            </td>
-                            <td>
-                                <span class="status-<?= strtolower($user['status']) ?>">
-                                    <?= htmlspecialchars($user['status']) ?>
-                                </span>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="view-button" onclick="viewPaymentHistory('<?= htmlspecialchars($user['username']) ?>', <?= $user['balance'] ?>)">
-                                        <i class="far fa-money-bill-alt"></i>View Payments
-                                    </button>
-                                    <button class="view-button" onclick="viewPaymentHistoryOnly('<?= htmlspecialchars($user['username']) ?>')">
-                                        <i class="fas fa-history"></i>Payment History
-                                    </button>
-                                </div>
-                            </td>
+                                <button class="edit-btn"
+                                    onclick='openEditAccountForm(
+                                        <?= json_encode($row["id"]) ?>,
+                                        <?= json_encode($row["username"]) ?>,
+                                        <?= json_encode($row["email"]) ?>,
+                                        <?= json_encode($row["phone"]) ?>,
+                                        <?= json_encode($row["region"]) ?>,
+                                        <?= json_encode($row["city"]) ?>,
+                                        <?= json_encode($row["company"]) ?>,
+                                        <?= json_encode($row["company_address"]) ?>,
+                                        <?= json_encode($row["bill_to_address"]) ?>,
+                                        <?= $business_proof_json ?>
+                                    )'>
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username']) ?>', '<?= htmlspecialchars($row['email']) ?>')">
+                                    <i class="fas fa-exchange-alt"></i> Change Status
+                                </button>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="7" class="no-accounts">No accounts found.</td>
                         </tr>
-                    <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
-
-        <!-- Monthly Payments Modal -->
-        <div id="monthlyPaymentsModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('monthlyPaymentsModal')">&times;</span>
-                
-                <div class="modal-header-with-balance">
-                    <h2>Monthly Payments - <span id="modalUsername"></span></h2>
-                    <div class="balance-display">
-                        <span>Remaining Credits: <span id="userRemainingBalance" class="total-balance-positive">PHP 0.00</span></span>
-                        <button class="add-balance-btn" onclick="openAddBalanceModal()">+</button>
-                    </div>
-                </div>
-                
-                <!-- Year Tabs -->
-                <div class="year-tabs" id="yearTabs">
-                    <!-- Tabs will be added dynamically -->
-                </div>
-                
-                <div class="modal-body">
-                    <table class="orders-table">
-                        <thead>
-                            <tr>
-                                <th>Month</th>
-                                <th>Orders</th>
-                                <th>Total Amount</th>
-                                <th>Remaining Credits</th>
-                                <th>Proof</th>
-                                <th>Notes</th>
-                                <th>Payment Type</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="monthlyPaymentsBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Monthly Orders Modal -->
-        <div id="monthlyOrdersModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('monthlyOrdersModal')">&times;</span>
-                <h2>Orders - <span id="modalMonth"></span></h2>
-                <table class="orders-table">
-                    <thead>
-                        <tr>
-                            <th>PO Number</th>
-                            <th>Order Date</th>
-                            <th>Delivery Date</th>
-                            <th>Delivery Address</th>
-                            <th>Orders</th>
-                            <th>Total Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody id="monthlyOrdersBody">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Order Details Modal -->
-        <div id="orderDetailsModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('orderDetailsModal')">&times;</span>
-                <h2>Order Details</h2>
-                <div id="orderDetailsContent"></div>
-            </div>
-        </div>
-
-        <!-- Add Balance Modal -->
-        <div id="addBalanceModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('addBalanceModal')">&times;</span>
-                <h2>Add Balance</h2>
-                <div class="input-group">
-                    <label for="amount">Amount (PHP)</label>
-                    <input type="number" id="amountToAdd" min="1" step="0.01" placeholder="Enter amount">
-                </div>
-                <div class="input-group">
-                    <label for="notes">Notes (Optional)</label>
-                    <input type="text" id="balanceNotes" placeholder="Enter notes">
-                </div>
-                <div class="button-group">
-                    <button class="cancel-btn" onclick="closeModal('addBalanceModal')">Cancel</button>
-                    <button class="submit-btn" onclick="addBalance()">Add Balance</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Make Payment Modal -->
-        <div id="paymentModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('paymentModal')">&times;</span>
-                <h2>Make Payment</h2>
-                
-                <div class="user-balance-info">
-                    <span class="balance-label">Available Balance:</span>
-                    <span id="availableBalance" class="total-balance-positive">PHP 0.00</span>
-                </div>
-                
-                <div class="input-group">
-                    <label for="paymentType">Payment Type</label>
-                    <select id="paymentType" onchange="togglePaymentFields()">
-                        <option value="Internal">Internal Payment (Use Available Balance)</option>
-                        <option value="External">External Payment (Bank Transfer)</option>
-                    </select>
-                </div>
-                
-                <div class="input-group">
-                    <label for="amountToPay">Amount to Pay (PHP)</label>
-                    <input type="number" id="amountToPay" min="1" step="0.01">
-                </div>
-                
-                <div class="input-group" id="proofFileGroup">
-                    <label for="paymentProof">Payment Proof</label>
-                    <input type="file" id="paymentProof" accept="image/*" onchange="previewImage(this)">
-                    <small>Upload proof of payment (image file)</small>
-                </div>
-                
-                <div class="preview-container" id="imagePreview">
-                    <img id="previewImg" src="#" alt="Preview">
-                </div>
-                
-                <div class="input-group">
-                    <label for="paymentNotes">Notes (Optional)</label>
-                    <input type="text" id="paymentNotes" placeholder="Enter notes">
-                </div>
-                
-                <div class="button-group">
-                    <button class="cancel-btn" onclick="closeModal('paymentModal')">Cancel</button>
-                    <button class="submit-btn" onclick="submitPayment()">Submit Payment</button>
-                </div>
-                
-                <input type="hidden" id="paymentMonth">
-                <input type="hidden" id="paymentYear">
-            </div>
-        </div>
-
-        <!-- Change Status Modal -->
-        <div id="changeStatusModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('changeStatusModal')">&times;</span>
-                <h2>Change Payment Status</h2>
-                <div class="status-options">
-                    <div class="status-option" data-status="Unpaid" onclick="selectStatus(this)">
-                        <div class="status-icon status-unpaid"></div>
-                        <span>Unpaid</span>
-                    </div>
-                    <div class="status-option" data-status="For Approval" onclick="selectStatus(this)">
-                        <div class="status-icon status-forapproval"></div>
-                        <span>For Approval</span>
-                    </div>
-                    <div class="status-option" data-status="Partially Paid" onclick="selectStatus(this)">
-                        <div class="status-icon status-partiallypaid"></div>
-                        <span>Partially Paid</span>
-                    </div>
-                    <div class="status-option" data-status="Fully Paid" onclick="selectStatus(this)">
-                        <div class="status-icon status-fullypaid"></div>
-                        <span>Fully Paid</span>
-                    </div>
-                </div>
-                <div class="button-group">
-                    <button class="cancel-btn" onclick="closeModal('changeStatusModal')">Cancel</button>
-                    <button class="submit-btn" onclick="updateStatus()">Update Status</button>
-                </div>
-                <input type="hidden" id="statusUsername">
-                <input type="hidden" id="statusMonth">
-                <input type="hidden" id="statusYear">
-                <input type="hidden" id="selectedStatus">
-            </div>
-        </div>
-
-        <!-- Payment Proof Modal -->
-        <div id="paymentProofModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('paymentProofModal')">&times;</span>
-                <h2>Payment Proof</h2>
-                <div id="proofImageContainer">
-                    <img id="fullProofImage" src="#" alt="Payment Proof">
-                </div>
-            </div>
-        </div>
-
-        <!-- Payment History Only Modal -->
-        <div id="paymentHistoryOnlyModal" class="modal">
-            <div class="modal-content">
-                <span class="close" onclick="closeModal('paymentHistoryOnlyModal')">&times;</span>
-                <h2>Payment History - <span id="historyModalUsername"></span></h2>
-                <div class="modal-body">
-                    <table class="orders-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Month/Year</th>
-                                <th>Amount</th>
-                                <th>Payment Type</th>
-                                <th>Notes</th>
-                                <th>Proof</th>
-                                <th>Created By</th>
-                            </tr>
-                        </thead>
-                        <tbody id="paymentHistoryOnlyBody">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
     </div>
-<script>
-    // Define months array at the top level of your script
-    const months = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    
-    // Store the current active username and year
-    let currentUsername = '';
-    let availableYears = [];
-    let currentYear = new Date().getFullYear();
-    let currentUserBalance = 0;
-    
-    // Current date for comparison in UTC (as per the user's timestamp: 2025-04-29 12:34:21)
-    const currentDate = new Date('2025-04-29T12:34:21Z');
-    const currentYearValue = currentDate.getFullYear();
-    const currentMonthValue = currentDate.getMonth(); // 0-based index
 
-    // Store yearly total amounts for each user
-    let yearlyTotalAmounts = {};
-
-    // Fetch and update yearly total amounts for all users when the page loads
-    $(document).ready(function() {
-        // Get all usernames from the table
-        $('.yearly-amount').each(function() {
-            const username = $(this).data('username');
-            fetchYearlyTotalAmount(username);
-        });
-    });
-
-    // Function to fetch yearly total amount for a specific user
-    function fetchYearlyTotalAmount(username) {
-        $.ajax({
-            url: `../../backend/get_yearly_total.php?username=${username}&year=${currentYearValue}`,
-            method: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    const totalAmount = parseFloat(response.total_amount || 0);
-                    yearlyTotalAmounts[username] = totalAmount;
-                    
-                    // Update the UI
-                    const cell = $(`.yearly-amount[data-username="${username}"]`);
-                    if (totalAmount > 0) {
-                        cell.html(`<span class="total-balance-positive">PHP ${numberFormat(totalAmount)}</span>`);
-                    } else {
-                        cell.html(`<span class="total-balance-zero">PHP ${numberFormat(totalAmount)}</span>`);
-                    }
-                } else {
-                    $(`.yearly-amount[data-username="${username}"]`).html('Error loading');
-                }
-            },
-            error: function() {
-                $(`.yearly-amount[data-username="${username}"]`).html('Error loading');
-            }
-        });
-    }
-
-    function viewPaymentHistory(username, balance) {
-        $('#modalUsername').text(username);
-        currentUsername = username;
-        currentUserBalance = balance;
-        
-        // Update balance display
-        updateBalanceDisplay();
-        
-        // Always clear any cached data when opening the payment history
-        availableYears = [];
-        
-        // Fetch available years for this user
-        fetchAvailableYears(username, true);
-    }
-    
-    function updateBalanceDisplay() {
-        const balanceDisplay = $('#userRemainingBalance');
-        balanceDisplay.text(`PHP ${numberFormat(currentUserBalance)}`);
-        
-        // Set the appropriate class based on balance amount
-        if (currentUserBalance > 0) {
-            balanceDisplay.attr('class', 'total-balance-positive');
-        } else if (currentUserBalance < 0) {
-            balanceDisplay.attr('class', 'total-balance-negative');
-        } else {
-            balanceDisplay.attr('class', 'total-balance-zero');
-        }
-    }
-    
-    function openAddBalanceModal() {
-        $('#amountToAdd').val('');
-        $('#balanceNotes').val('');
-        $('#addBalanceModal').show();
-    }
-    
-    function addBalance() {
-        const amount = parseFloat($('#amountToAdd').val());
-        const notes = $('#balanceNotes').val();
-        
-        if (!amount || amount <= 0) {
-            alert('Please enter a valid amount');
-            return;
-        }
-        
-        $.ajax({
-            url: '../../backend/update_client_balance.php',
-            method: 'POST',
-            data: {
-                username: currentUsername,
-                amount: amount,
-                notes: notes
-            },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    currentUserBalance = parseFloat(response.new_balance);
-                    
-                    // Update the balance display in the modal
-                    updateBalanceDisplay();
-                    
-                    // Update the balance in the main table
-                    const mainTableRow = $(`.orders-table tbody tr:contains("${currentUsername}")`);
-                    if (mainTableRow.length) {
-                        const balanceCell = mainTableRow.find('td:nth-child(2) span');
-                        balanceCell.text(`PHP ${numberFormat(currentUserBalance)}`);
-                        
-                        if (currentUserBalance > 0) {
-                            balanceCell.attr('class', 'total-balance-positive');
-                        } else if (currentUserBalance < 0) {
-                            balanceCell.attr('class', 'total-balance-negative');
-                        } else {
-                            balanceCell.attr('class', 'total-balance-zero');
-                        }
-                    }
-                    
-                    // Reload the current year data
-                    loadYearData(currentYear, true);
-                    
-                    closeModal('addBalanceModal');
-                } else {
-                    alert('Error updating balance: ' + (response.message || 'Unknown error'));
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Ajax Error:', error);
-                alert('Error updating balance. Please try again.');
-            }
-        });
-    }
-    
-    function fetchAvailableYears(username, refreshData = false) {
-        // Show loading state
-        $('#yearTabs').html('<div>Loading years...</div>');
-        $('#monthlyPaymentsBody').html('<tr><td colspan="9">Please select a year...</td></tr>');
-        $('#monthlyPaymentsModal').show();
-        
-        // Add cache-busting parameter to prevent browser caching
-        const cacheBuster = refreshData ? `&_=${new Date().getTime()}` : '';
-        
-        $.ajax({
-            url: `../../backend/get_available_years.php?username=${username}${cacheBuster}`,
-            method: 'GET',
-            dataType: 'json',
-            cache: false, // Prevent caching
-            success: function(response) {
-                if (!response.success || !response.data || response.data.length === 0) {
-                    // If no years found, default to current year
-                    currentYear = currentYearValue;
-                    availableYears = [currentYear];
-                } else {
-                    availableYears = response.data;
-                    // Ensure current year is included if it's not in the response
-                    if (!availableYears.includes(currentYearValue)) {
-                        availableYears.push(currentYearValue);
-                    }
-                }
-                
-                // Generate year tabs
-                generateYearTabs();
-                
-                // Load the most recent year's data by default
-                const mostRecentYear = Math.max(...availableYears);
-                currentYear = mostRecentYear;
-                loadYearData(mostRecentYear, refreshData);
-            },
-            error: function(xhr, status, error) {
-                console.error('Ajax Error:', error);
-                currentYear = currentYearValue;
-                availableYears = [currentYear, currentYear - 1]; // Default to current year and previous year
-                
-                // Generate year tabs
-                generateYearTabs();
-                
-                // Load current year's data
-                loadYearData(currentYear, refreshData);
-            }
-        });
-    }
-    
-    function generateYearTabs() {
-        let tabsHtml = '';
-        
-        // Sort years in descending order (most recent first)
-        availableYears.sort((a, b) => b - a);
-        
-        availableYears.forEach((year, index) => {
-            const activeClass = year === currentYear ? 'active' : '';
-            tabsHtml += `<div class="year-tab ${activeClass}" onclick="loadYearData(${year}, true)">${year}</div>`;
-        });
-        
-        $('#yearTabs').html(tabsHtml);
-    }
-    
-    function loadYearData(year, refreshData = false) {
-        // Update active tab
-        $('.year-tab').removeClass('active');
-        $(`.year-tab:contains(${year})`).addClass('active');
-        currentYear = year;
-        
-        // Show loading state
-        $('#monthlyPaymentsBody').html('<tr><td colspan="9">Loading...</td></tr>');
-        
-        console.log('Fetching payments for:', currentUsername, year);
-
-        // Add cache-busting parameter to prevent browser caching
-        const cacheBuster = refreshData ? `&_=${new Date().getTime()}` : '';
-        
-        $.ajax({
-            url: `../../backend/get_monthly_payments.php?username=${currentUsername}&year=${year}${cacheBuster}`,
-            method: 'GET',
-            dataType: 'json',
-            cache: false,
-            success: function(response) {
-                console.log('Payments response:', response); // Log the response to check if payment_type is included
-                
-                let monthlyPaymentsHtml = '';
-                
-                if (!response.success) {
-                    $('#monthlyPaymentsBody').html(
-                        `<tr><td colspan="9" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
-                    );
-                    return;
-                }
-
-                const payments = response.data || [];
-                
-                // Use the months array defined at the top of the script
-                months.forEach((month, index) => {
-                    const monthData = payments.find(p => p.month === index + 1) || {
-                        total_amount: 0,
-                        payment_status: 'Unpaid',
-                        remaining_balance: 0,
-                        proof_image: null,
-                        notes: '',
-                        payment_type: null
-                    };
-
-                    // Ensure remaining balance is set correctly
-                    let remainingBalance = parseFloat(monthData.remaining_balance);
-                    if (monthData.payment_status === 'Fully Paid') {
-                        remainingBalance = 0;
-                    } else if (remainingBalance === 0 && parseFloat(monthData.total_amount) > 0 && 
-                              monthData.payment_status !== 'Fully Paid' && monthData.payment_status !== 'Partially Paid') {
-                        // If remaining balance is 0 but payment isn't Paid and there's a total amount
-                        remainingBalance = parseFloat(monthData.total_amount);
-                    }
-
-                    // Check if the month is in the future or current month
-                    const isFutureMonth = (year > currentYearValue) || 
-                                     (year === currentYearValue && index > currentMonthValue);
-                    
-                    // Determine the correct status to display
-                    let displayStatus = monthData.payment_status;
-                    if (isFutureMonth) {
-                        displayStatus = 'Pending';
-                    }
-                    
-                    // Convert old 'Paid' status to 'Fully Paid' for display purposes
-                    if (displayStatus === 'Paid') {
-                        displayStatus = 'Fully Paid';
-                    }
-                    
-                    // Get the correct CSS class for the status
-                    let statusClass = isFutureMonth ? 'payment-status-pending' : '';
-                    
-                    if (!isFutureMonth) {
-                        if (displayStatus === 'Unpaid') {
-                            statusClass = 'payment-status-unpaid';
-                        } else if (displayStatus === 'For Approval') {
-                            statusClass = 'payment-status-forapproval';
-                        } else if (displayStatus === 'Fully Paid') {
-                            statusClass = 'payment-status-fullypaid';
-                        } else if (displayStatus === 'Partially Paid') {
-                            statusClass = 'payment-status-partiallypaid';
-                        }
-                    }
-                    
-                    // Determine button status and classes
-                    const viewOrdersButtonDisabled = false; // Allow viewing orders even for future months
-                    const payButtonDisabled = isFutureMonth || displayStatus === 'Fully Paid' || parseFloat(monthData.total_amount) === 0;
-                    const statusButtonDisabled = isFutureMonth;
-                    
-                    const viewOrdersBtnClass = viewOrdersButtonDisabled ? 'view-button disabled' : 'view-button';
-                    const payBtnClass = payButtonDisabled ? 'view-button disabled' : 'view-button';
-                    const statusBtnClass = statusButtonDisabled ? 'status-toggle disabled' : 'status-toggle';
-
-                    // Proof image
-                    let proofHtml = 'No proof';
-                    if (monthData.proof_image) {
-                        proofHtml = `<img src="../../payments/${currentUsername}/${month} - ${year}/${monthData.proof_image}" 
-                                    class="payment-proof-thumbnail" 
-                                    onclick="viewPaymentProof('${currentUsername}', '${month}', ${year}, '${monthData.proof_image}')"
-                                    alt="Payment Proof">`;
-                    }
-                    
-                    // Notes with tooltip for longer notes
-                    let notesHtml = 'None';
-                    if (monthData.notes && monthData.notes.trim() !== '') {
-                        const notesText = monthData.notes.trim();
-                        if (notesText.length > 25) {
-                            notesHtml = `
-                                <div class="payment-notes-tooltip">
-                                    <span class="payment-notes">${notesText.substring(0, 25)}...</span>
-                                    <span class="notes-tooltip-text">${notesText}</span>
-                                </div>`;
-                        } else {
-                            notesHtml = `<span class="payment-notes">${notesText}</span>`;
-                        }
-                    }
-                    
-                    // Payment type display
-                    let paymentTypeHtml = 'N/A';
-                    if (monthData.payment_type) {
-                        const paymentTypeClass = `payment-type-${monthData.payment_type.toLowerCase()}`;
-                        paymentTypeHtml = `<span class="payment-type ${paymentTypeClass}">${monthData.payment_type}</span>`;
-                    }
-                    
-                    const tooltip = isFutureMonth ? 'Month has not ended yet' : 
-                                   (displayStatus === 'Fully Paid' ? 'Already paid' : 
-                                   (parseFloat(monthData.total_amount) === 0 ? 'No orders to pay' : 'Make payment'));
-                    
-                    monthlyPaymentsHtml += `
-                        <tr>
-                            <td>${month}</td>
-                            <td>
-                                <button class="${viewOrdersBtnClass}" onclick="viewMonthlyOrders('${currentUsername}', ${index + 1}, '${month}', ${year})">
-                                    <i class="fas fa-clipboard-list"></i>
-                                    View Orders
-                                </button>
-                            </td>
-                            <td>PHP ${numberFormat(monthData.total_amount)}</td>
-                            <td>PHP ${numberFormat(remainingBalance)}</td>
-                            <td>${proofHtml}</td>
-                            <td>${notesHtml}</td>
-                            <td>${paymentTypeHtml}</td>
-                            <td class="${statusClass}">${displayStatus}</td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="${payBtnClass}" 
-                                            ${payButtonDisabled ? 'disabled' : ''}
-                                            onclick="${payButtonDisabled ? '' : `openPaymentModal('${currentUsername}', ${index + 1}, ${year}, ${remainingBalance})`}"
-                                            title="${tooltip}">
-                                        <i class="fas fa-credit-card"></i>
-                                        Pay
-                                    </button>
-                                    <button class="${statusBtnClass}"
-                                            ${statusButtonDisabled ? 'disabled' : ''}
-                                            onclick="${statusButtonDisabled ? '' : `openChangeStatusModal('${currentUsername}', ${index + 1}, ${year}, '${monthData.payment_status}')`}"
-                                            title="${statusButtonDisabled ? 'Month has not ended yet' : 'Click to change status'}">
-                                        <i class="fas fa-exchange-alt"></i>
-                                        Status
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                $('#monthlyPaymentsBody').html(monthlyPaymentsHtml);
-            },
-            error: function(xhr, status, error) {
-                console.error('Ajax Error:', error);
-                console.error('Response:', xhr.responseText);
-                console.error('Status:', status);
-                $('#monthlyPaymentsBody').html(
-                    '<tr><td colspan="9" style="color: red;">Error loading payment history. Please try again.</td></tr>'
-                );
-            }
-        });
-    }
-
-    function openPaymentModal(username, month, year, remainingBalance) {
-        // Set the values in the payment modal
-        $('#amountToPay').val(remainingBalance);
-        $('#availableBalance').text(`PHP ${numberFormat(currentUserBalance)}`);
-        
-        // Set appropriate color for available balance
-        if (currentUserBalance > 0) {
-            $('#availableBalance').attr('class', 'total-balance-positive');
-        } else if (currentUserBalance < 0) {
-            $('#availableBalance').attr('class', 'total-balance-negative');
-        } else {
-            $('#availableBalance').attr('class', 'total-balance-zero');
-        }
-        
-        // Reset payment type dropdown
-        $('#paymentType').val('Internal');
-        
-        // Update fields based on payment type
-        togglePaymentFields();
-        
-        $('#paymentNotes').val('');
-        $('#paymentMonth').val(month);
-        $('#paymentYear').val(year);
-        
-        // Clear any previous file selection and preview
-        $('#paymentProof').val('');
-        $('#imagePreview').hide();
-        
-        // Show the modal
-        $('#paymentModal').show();
-    }
-    
-    function togglePaymentFields() {
-        const paymentType = $('#paymentType').val();
-        
-        if (paymentType === 'Internal') {
-            // For internal payments, no proof image required
-            $('#proofFileGroup').hide();
-            $('#amountToPay').prop('readonly', false);
-        } else {
-            // For external payments, proof image required
-            $('#proofFileGroup').show();
-            $('#amountToPay').prop('readonly', false);
-        }
-    }
-
-    function submitPayment() {
-        const month = $('#paymentMonth').val();
-        const year = $('#paymentYear').val();
-        const amount = parseFloat($('#amountToPay').val());
-        const notes = $('#paymentNotes').val();
-        const paymentType = $('#paymentType').val();
-        
-        if (!amount || amount <= 0) {
-            alert('Please enter a valid amount');
-            return;
-        }
-        
-        // Validation for internal payments
-        if (paymentType === 'Internal') {
-            if (amount > currentUserBalance) {
-                alert('Insufficient balance. Please add more funds to your account or select External Payment.');
-                return;
-            }
-        }
-        
-        // Validation for external payments
-        if (paymentType === 'External') {
-            const fileInput = document.getElementById('paymentProof');
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert('Please upload proof of payment for external payments');
-                return;
-            }
-        }
-        
-        // Create FormData object for file upload
-        const formData = new FormData();
-        formData.append('username', currentUsername);
-        formData.append('month', month);
-        formData.append('year', year);
-        formData.append('amount', amount);
-        formData.append('notes', notes);
-        formData.append('payment_type', paymentType);
-        
-        // Only append proof file for External payments
-        if (paymentType === 'External') {
-            const fileInput = document.getElementById('paymentProof');
-            if (fileInput.files && fileInput.files.length > 0) {
-                formData.append('proof', fileInput.files[0]);
-            }
-        }
-        
-        // Show loading indicator
-        $('#paymentModal .submit-btn').prop('disabled', true).text('Processing...');
-        
-        $.ajax({
-            url: '../../backend/process_payment.php',
-            method: 'POST',
-            data: formData,
-            dataType: 'json',
-            contentType: false,
-            processData: false,
-            success: function(response) {
-                console.log('Payment response:', response);
-                
-                // Reset button
-                $('#paymentModal .submit-btn').prop('disabled', false).text('Submit Payment');
-                
-                if (response.success) {
-                    // Update the user balance
-                    currentUserBalance = parseFloat(response.new_balance);
-                    updateBalanceDisplay();
-                    
-                    // Update the balance in the main table
-                    const mainTableRow = $(`.orders-table tbody tr:contains("${currentUsername}")`);
-                    if (mainTableRow.length) {
-                        const balanceCell = mainTableRow.find('td:nth-child(2) span');
-                        balanceCell.text(`PHP ${numberFormat(currentUserBalance)}`);
-                        
-                        if (currentUserBalance > 0) {
-                            balanceCell.attr('class', 'total-balance-positive');
-                        } else if (currentUserBalance < 0) {
-                            balanceCell.attr('class', 'total-balance-negative');
-                        } else {
-                            balanceCell.attr('class', 'total-balance-zero');
-                        }
-                    }
-                    
-                    // Reload the current year data
-                    loadYearData(currentYear, true);
-                    
-                    // Update the yearly total amount
-                    fetchYearlyTotalAmount(currentUsername);
-                    
-                    closeModal('paymentModal');
-                } else {
-                    alert('Error processing payment: ' + (response.message || 'Unknown error'));
-                }
-            },
-            error: function(xhr, status, error) {
-                // Reset button
-                $('#paymentModal .submit-btn').prop('disabled', false).text('Submit Payment');
-                
-                console.error('Ajax Error:', error);
-                console.error('Status Code:', xhr.status);
-                console.error('Response Text:', xhr.responseText);
-                alert(`Error processing payment. Status: ${xhr.status}. Please check the server logs.`);
-            }
-        });
-    }
-
-    function openChangeStatusModal(username, month, year, currentStatus) {
-        // Set the hidden inputs
-        $('#statusUsername').val(username);
-        $('#statusMonth').val(month);
-        $('#statusYear').val(year);
-        $('#selectedStatus').val('');
-        
-        // Reset all status options
-        $('.status-option').removeClass('selected');
-        
-        // Convert old 'Paid' status to 'Fully Paid' if needed
-        if (currentStatus === 'Paid') {
-            currentStatus = 'Fully Paid';
-        }
-        
-        // Pre-select the current status if it exists
-        $(`.status-option[data-status="${currentStatus}"]`).addClass('selected');
-        $('#selectedStatus').val(currentStatus);
-        
-        // Show the modal
-        $('#changeStatusModal').show();
-    }
-
-    function selectStatus(element) {
-        $('.status-option').removeClass('selected');
-        $(element).addClass('selected');
-        $('#selectedStatus').val($(element).data('status'));
-    }
-
-    function updateStatus() {
-        const username = $('#statusUsername').val();
-        const month = $('#statusMonth').val();
-        const year = $('#statusYear').val();
-        const newStatus = $('#selectedStatus').val();
-        
-        if (!newStatus) {
-            alert('Please select a status');
-            return;
-        }
-        
-        // Show loading indicator
-        $('#changeStatusModal .submit-btn').prop('disabled', true).text('Updating...');
-        
-        $.ajax({
-            url: '../../backend/update_payment_status.php',
-            method: 'POST',
-            data: {
-                username: username,
-                month: month,
-                year: year,
-                status: newStatus
-            },
-            dataType: 'json',
-            success: function(response) {
-                // Reset button
-                $('#changeStatusModal .submit-btn').prop('disabled', false).text('Update Status');
-                
-                if (response.success) {
-                    // Reload the current year data
-                    loadYearData(currentYear, true);
-                    
-                    // Update the yearly total amount
-                    fetchYearlyTotalAmount(currentUsername);
-                    
-                    closeModal('changeStatusModal');
-                } else {
-                    alert('Error updating status: ' + (response.message || 'Unknown error'));
-                }
-            },
-            error: function(xhr, status, error) {
-                // Reset button
-                $('#changeStatusModal .submit-btn').prop('disabled', false).text('Update Status');
-                
-                console.error('Ajax Error:', error);
-                console.error('Status Code:', xhr.status);
-                console.error('Response Text:', xhr.responseText);
-                alert('Error updating status. Please try again.');
-            }
-        });
-    }
-
-    function previewImage(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
+    <!-- Improved Contact Info Modal with Unified Design -->
+    <div id="contactInfoModal" class="overlay">
+        <div class="info-modal-content">
+            <div class="info-modal-header">
+                <h2><i class="fas fa-address-card"></i> Contact Information</h2>
+                <span class="info-modal-close" onclick="closeContactInfoModal()">&times;</span>
+            </div>
             
-            reader.onload = function(e) {
-                $('#previewImg').attr('src', e.target.result);
-                $('#imagePreview').show();
-            }
-            
-            reader.readAsDataURL(input.files[0]);
-        } else {
-            $('#imagePreview').hide();
-        }
-    }
-
-    function viewPaymentProof(username, month, year, filename) {
-        const imgUrl = `../../payments/${username}/${month} - ${year}/${filename}`;
-        $('#fullProofImage').attr('src', imgUrl);
-        $('#paymentProofModal').show();
-    }
-
-    function viewMonthlyOrders(username, month, monthName, year) {
-        $('#modalMonth').text(`${monthName} ${year}`);
-        
-        // Add cache-busting parameter
-        const cacheBuster = `&_=${new Date().getTime()}`;
-        
-        $.ajax({
-            url: `../../backend/get_monthly_orders.php?username=${username}&month=${month}&year=${year}${cacheBuster}`,
-            method: 'GET',
-            dataType: 'json',
-            cache: false,
-            success: function(response) {
-                let orders = [];
-                try {
-                    orders = response.data || response;
-                } catch (e) {
-                    console.error('Error processing orders:', e);
-                    orders = [];
-                }
-
-                let ordersHtml = '';
-                if (orders && orders.length > 0) {
-                    orders.forEach(order => {
-                        // Handle delivery address with proper escaping and default value
-                        const deliveryAddress = order.delivery_address ? escapeHtml(order.delivery_address) : 'Not specified';
-                        
-                        ordersHtml += `
-                            <tr>
-                                <td>${order.po_number}</td>
-                                <td>${order.order_date}</td>
-                                <td>${order.delivery_date}</td>
-                                <td class="delivery-address">${deliveryAddress}</td>
-                                <td>
-                                    <button class="view-button" onclick="viewOrderDetails(${JSON.stringify(order.orders).replace(/"/g, '&quot;')}, '${order.po_number}', '${username}', '${deliveryAddress}')">
-                                        View Orders
-                                    </button>
-                                </td>
-                                <td>PHP ${numberFormat(order.total_amount)}</td>
-                            </tr>
-                        `;
-                    });
-                } else {
-                    ordersHtml = '<tr><td colspan="6">No orders found for this month</td></tr>';
-                }
-
-                $('#monthlyOrdersBody').html(ordersHtml);
-                $('#monthlyOrdersModal').show();
-            },
-            error: function(xhr, status, error) {
-                console.error('Ajax Error:', error);
-                $('#monthlyOrdersBody').html(
-                    '<tr><td colspan="6" style="color: red;">Error loading orders. Please try again.</td></tr>'
-                );
-            }
-        });
-    }
-
-    function viewOrderDetails(orders, poNumber, username, deliveryAddress = '') {
-        try {
-            // If orders is a string, parse it, otherwise use it as is
-            const ordersList = typeof orders === 'string' ? JSON.parse(orders) : orders;
-            
-            let orderDetailsHtml = `
-                <div id="orderDetailsHeader">
-                    <p><strong>PO Number:</strong> ${poNumber}</p>
-                    <p><strong>Username:</strong> ${username}</p>
-                    <p><strong>Delivery Address:</strong> ${deliveryAddress || 'Not specified'}</p>
+            <div class="info-modal-body">
+                <div class="info-section">
+                    <h3 class="info-section-title"><i class="fas fa-user"></i> Contact Details</h3>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="contact-text">
+                            <div class="contact-value" id="modalEmail"></div>
+                            <div class="contact-label">Email Address</div>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <div class="contact-icon">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <div class="contact-text">
+                            <div class="contact-value" id="modalPhone"></div>
+                            <div class="contact-label">Phone Number</div>
+                        </div>
+                    </div>
                 </div>
-                <table class="orders-table">
-                    <thead>
-                        <tr>
-                            <th>Category</th>
-                            <th>Item Description</th>
-                            <th>Packaging</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
+            </div>
+        </div>
+    </div>
 
-            ordersList.forEach(item => {
-                orderDetailsHtml += `
-                    <tr>
-                        <td>${item.category}</td>
-                        <td>${item.item_description}</td>
-                        <td>${item.packaging}</td>
-                        <td>PHP ${numberFormat(item.price)}</td>
-                        <td>${item.quantity}</td>
-                        <td>PHP ${numberFormat(item.price * item.quantity)}</td>
-                    </tr>
-                `;
+    <!-- Updated Address Info Modal with Bill To Address -->
+    <div id="addressInfoModal" class="overlay">
+        <div class="info-modal-content">
+            <div class="info-modal-header">
+                <h2><i class="fas fa-map-marker-alt"></i> Address Information</h2>
+                <span class="info-modal-close" onclick="closeAddressInfoModal()">&times;</span>
+            </div>
+            
+            <div class="info-modal-body">
+                <div class="info-section">
+                    <h3 class="info-section-title"><i class="fas fa-building"></i> Company Location</h3>
+                    <table class="info-table">
+                        <tr>
+                            <th>Company Address</th>
+                            <td id="modalCompanyAddress"></td>
+                        </tr>
+                        <tr>
+                            <th>Bill To Address</th>
+                            <td id="modalBillToAddress"></td>
+                        </tr>
+                        <tr>
+                            <th>Region</th>
+                            <td id="modalRegion"></td>
+                        </tr>
+                        <tr>
+                            <th>City</th>
+                            <td id="modalCity"></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Updated Add Account Modal with Bill To Address Field -->
+    <div id="addAccountOverlay" class="overlay" style="display: none;">
+        <div class="form-modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-plus"></i> Add New Account</h2>
+                <div id="addAccountError" class="error-message"></div>
+            </div>
+            
+            <form id="addAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
+                <input type="hidden" name="formType" value="add">
+                
+                <div class="modal-body">
+                    <div class="two-column-form">
+                        <div class="form-column">
+                            <label for="username">Username: <span class="required">*</span></label>
+                            <input type="text" id="username" name="username" autocomplete="username" required 
+                                placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" 
+                                title="Username can only contain letters, numbers, and underscores. Maximum 15 characters.">
+                            
+                            <label for="password">Password: <span class="required">*</span></label>
+                            <input type="password" id="password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
+                            
+                            <label for="email">Email: <span class="required">*</span></label>
+                            <input type="email" id="email" name="email" required placeholder="e.g., johndoe@example.com">
+                            
+                            <label for="phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
+                            <input type="tel" id="phone" name="phone" placeholder="e.g., +1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
+                        </div>
+                        
+                        <div class="form-column">
+                            <label for="region">Region: <span class="required">*</span></label>
+                            <input type="text" id="region" name="region" required placeholder="e.g., Metro Manila">
+                            
+                            <label for="city">City: <span class="required">*</span></label>
+                            <input type="text" id="city" name="city" required placeholder="e.g., Quezon City">
+                            
+                            <label for="company">Company Name: <span class="optional">(optional)</span></label>
+                            <input type="text" id="company" name="company" placeholder="e.g., Top Exchange Food Corp">
+                        </div>
+                        
+                        <div class="form-full-width">
+                            <div class="address-group">
+                                <h3><i class="fas fa-building"></i> Company Address</h3>
+                                <label for="company_address">Company Address: <span class="required">*</span></label>
+                                <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
+                                
+                                <label for="bill_to_address">Bill To Address: <span class="optional">(optional)</span></label>
+                                <textarea id="bill_to_address" name="bill_to_address" placeholder="e.g., 456 Billing St, Metro Manila, Quezon City"></textarea>
+                            </div>
+                            
+                            <label for="business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
+                            <input type="file" id="business_proof" name="business_proof[]" required accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Updated Edit Account Modal with Bill To Address Field -->
+    <div id="editAccountOverlay" class="overlay" style="display: none;">
+        <div class="form-modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Edit Account</h2>
+                <div id="editAccountError" class="error-message"></div>
+            </div>
+            
+            <form id="editAccountForm" method="POST" class="account-form" enctype="multipart/form-data">
+                <input type="hidden" name="formType" value="edit">
+                <input type="hidden" id="edit-id" name="id">
+                <input type="hidden" id="existing-business-proof" name="existing_business_proof">
+                
+                <div class="modal-body">
+                    <div class="two-column-form">
+                        <div class="form-column">
+                            <label for="edit-username">Username: <span class="required">*</span></label>
+                            <input type="text" id="edit-username" name="username" autocomplete="username" required 
+                                placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" 
+                                title="Username can only contain letters, numbers, and underscores. Maximum 15 characters.">
+                            
+                            <label for="edit-password">Password: <span class="required">*</span></label>
+                            <input type="password" id="edit-password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
+                            
+                            <label for="edit-email">Email: <span class="required">*</span></label>
+                            <input type="email" id="edit-email" name="email" required placeholder="e.g., johndoe@example.com">
+                            
+                            <label for="edit-phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
+                            <input type="tel" id="edit-phone" name="phone" placeholder="e.g., +1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
+                        </div>
+                        
+                        <div class="form-column">
+                            <label for="edit-region">Region: <span class="required">*</span></label>
+                            <input type="text" id="edit-region" name="region" required placeholder="e.g., North America">
+                            
+                            <label for="edit-city">City: <span class="required">*</span></label>
+                            <input type="text" id="edit-city" name="city" required placeholder="e.g., New York">
+                            
+                            <label for="edit-company">Company Name: <span class="optional">(optional)</span></label>
+                            <input type="text" id="edit-company" name="company" placeholder="e.g., ABC Corp">
+                        </div>
+                        
+                        <div class="form-full-width">
+                            <div class="address-group">
+                                <h3><i class="fas fa-building"></i> Company Address</h3>
+                                <label for="edit-company_address">Company Address: <span class="required">*</span></label>
+                                <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
+                                
+                                <label for="edit-bill_to_address">Bill To Address: <span class="optional">(optional)</span></label>
+                                <textarea id="edit-bill_to_address" name="bill_to_address" placeholder="e.g., 456 Billing St, New York, NY 10001"></textarea>
+                            </div>
+                            
+                            <div id="edit-business-proof-container"></div>
+                            <label for="edit-business_proof">Business Proof: <span class="optional">(optional)</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
+                            <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="statusModal" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2>Change Status</h2>
+            <p id="statusMessage"></p>
+            <div class="modal-buttons">
+                <button class="approve-btn" onclick="changeStatus('Active')">
+                    <i class="fas fa-check"></i> Active
+                </button>
+                <button class="reject-btn" onclick="changeStatus('Rejected')">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+                <button class="pending-btn" onclick="changeStatus('Pending')">
+                    <i class="fas fa-hourglass-half"></i> Pending
+                </button>
+                <button class="inactive-btn" onclick="changeStatus('Inactive')">
+                    <i class="fas fa-ban"></i> Archive
+                </button>
+            </div>
+            <div class="modal-buttons single-button">
+                <button class="cancel-btn" onclick="closeStatusModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="myModal" class="modal">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="img01">
+        <div id="caption"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="/js/toast.js"></script>
+    <script src="/js/accounts_clients.js"></script>
+    
+    <script>
+    // Variable to store the current account ID for status changes
+    let currentAccountId = 0;
+
+    function openModal(imgElement) {
+        var modal = document.getElementById("myModal");
+        var modalImg = document.getElementById("img01");
+        var captionText = document.getElementById("caption");
+        modal.style.display = "block";
+        modalImg.src = imgElement.src;
+        captionText.innerHTML = imgElement.alt;
+    }
+
+    function closeModal() {
+        var modal = document.getElementById("myModal");
+        modal.style.display = "none";
+    }
+    
+    function showContactInfo(email, phone) {
+        document.getElementById("modalEmail").textContent = email || 'N/A';
+        document.getElementById("modalPhone").textContent = phone || 'N/A';
+        document.getElementById("contactInfoModal").style.display = "block";
+    }
+    
+    function closeContactInfoModal() {
+        document.getElementById("contactInfoModal").style.display = "none";
+    }
+
+    // Updated to add bill_to_address parameter
+    function showAddressInfo(companyAddress, region, city, billToAddress) {
+        document.getElementById("modalCompanyAddress").textContent = companyAddress || 'N/A';
+        document.getElementById("modalBillToAddress").textContent = billToAddress || 'N/A';
+        document.getElementById("modalRegion").textContent = region || 'N/A';
+        document.getElementById("modalCity").textContent = city || 'N/A';
+        document.getElementById("addressInfoModal").style.display = "block";
+    }
+
+    function closeAddressInfoModal() {
+        document.getElementById("addressInfoModal").style.display = "none";
+    }
+    
+    // Client-side validation for username (prevent special characters)
+    document.addEventListener('DOMContentLoaded', function() {
+        const usernameInputs = document.querySelectorAll('#username, #edit-username');
+        
+        usernameInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                // Replace any characters that aren't alphanumeric or underscore
+                this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '');
+                
+                // Enforce max length (redundant with maxlength attribute, but good for extra security)
+                if (this.value.length > 15) {
+                    this.value = this.value.slice(0, 15);
+                }
             });
-
-            orderDetailsHtml += '</tbody></table>';
-            $('#orderDetailsContent').html(orderDetailsHtml);
-            $('#orderDetailsModal').show();
-        } catch (e) {
-            console.error('Error parsing orders JSON:', e);
-            alert('Error displaying order details. Please try again.');
-        }
-    }
-
-    // New function to view payment history only
-    function viewPaymentHistoryOnly(username) {
-        $('#historyModalUsername').text(username);
+        });
         
-        // Show loading state
-        $('#paymentHistoryOnlyBody').html('<tr><td colspan="7">Loading payment history...</td></tr>');
-        $('#paymentHistoryOnlyModal').show();
+        // Phone number validation (digits only)
+        const phoneInputs = document.querySelectorAll('#phone, #edit-phone');
         
-        // Add cache-busting parameter
-        const cacheBuster = `&_=${new Date().getTime()}`;
-        
-        $.ajax({
-            url: `../../backend/get_payment_history.php?username=${username}${cacheBuster}`,
-            method: 'GET',
-            dataType: 'json',
-            cache: false,
-            success: function(response) {
-                let historyHtml = '';
+        phoneInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                // Replace any non-digit characters
+                this.value = this.value.replace(/\D/g, '');
                 
-                if (!response.success) {
-                    $('#paymentHistoryOnlyBody').html(
-                        `<tr><td colspan="7" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
-                    );
-                    return;
+                // Enforce max length (12 digits)
+                if (this.value.length > 12) {
+                    this.value = this.value.slice(0, 12);
                 }
+            });
+        });
 
-                const payments = response.data || [];
-                
-                if (payments.length === 0) {
-                    $('#paymentHistoryOnlyBody').html('<tr><td colspan="7">No payment history found</td></tr>');
-                    return;
-                }
-                
-                payments.forEach(payment => {
-                    const date = new Date(payment.created_at).toLocaleDateString();
-                    const monthName = months[payment.month - 1];
-                    
-                    // Payment proof image handling
-                    let proofHtml = 'No proof';
-                    if (payment.proof_image) {
-                        proofHtml = `<img src="../../payments/${username}/${monthName} - ${payment.year}/${payment.proof_image}" 
-                                    class="payment-proof-thumbnail" 
-                                    onclick="viewPaymentProof('${username}', '${monthName}', ${payment.year}, '${payment.proof_image}')"
-                                    alt="Payment Proof">`;
-                    }
-                    
-                    // Notes formatting
-                    let notesHtml = 'None';
-                    if (payment.notes && payment.notes.trim() !== '') {
-                        const notesText = payment.notes.trim();
-                        if (notesText.length > 25) {
-                            notesHtml = `
-                                <div class="payment-notes-tooltip">
-                                    <span class="payment-notes">${notesText.substring(0, 25)}...</span>
-                                    <span class="notes-tooltip-text">${notesText}</span>
-                                </div>`;
-                        } else {
-                            notesHtml = `<span class="payment-notes">${notesText}</span>`;
-                        }
-                    }
-                    
-                    // Payment type styling
-                    let paymentTypeHtml = 'N/A';
-                    if (payment.payment_type) {
-                        const paymentTypeClass = `payment-type-${payment.payment_type.toLowerCase()}`;
-                        paymentTypeHtml = `<span class="payment-type ${paymentTypeClass}">${payment.payment_type}</span>`;
-                    }
-                    
-                    historyHtml += `
-                        <tr>
-                            <td>${date}</td>
-                            <td>${monthName} ${payment.year}</td>
-                            <td>PHP ${numberFormat(payment.amount)}</td>
-                            <td>${paymentTypeHtml}</td>
-                            <td>${notesHtml}</td>
-                            <td>${proofHtml}</td>
-                            <td>${payment.created_by || 'System'}</td>
-                        </tr>
-                    `;
-                });
-                
-                $('#paymentHistoryOnlyBody').html(historyHtml);
-            },
-            error: function(xhr, status, error) {
-                console.error('Ajax Error:', error);
-                console.error('Response:', xhr.responseText);
-                $('#paymentHistoryOnlyBody').html(
-                    '<tr><td colspan="7" style="color: red;">Error loading payment history. Please try again.</td></tr>'
-                );
+        // When the user clicks anywhere outside of the modals, close them
+        window.onclick = function(event) {
+            var addressModal = document.getElementById('addressInfoModal');
+            var contactModal = document.getElementById('contactInfoModal');
+            var imageModal = document.getElementById('myModal');
+            
+            if (event.target == addressModal) {
+                addressModal.style.display = "none";
             }
-        });
-    }
+            
+            if (event.target == contactModal) {
+                contactModal.style.display = "none";
+            }
+            
+            if (event.target == imageModal) {
+                imageModal.style.display = "none";
+            }
+        };
 
-    function closeModal(modalId) {
-        document.getElementById(modalId).style.display = 'none';
-        
-        // Clear modal content when closing to avoid stale data
-        if (modalId === 'monthlyPaymentsModal') {
-            $('#monthlyPaymentsBody').html('');
-        } else if (modalId === 'monthlyOrdersModal') {
-            $('#monthlyOrdersBody').html('');
-        } else if (modalId === 'paymentHistoryOnlyModal') {
-            $('#paymentHistoryOnlyBody').html('');
+        // Add Form Submission via AJAX
+        const addAccountForm = document.getElementById('addAccountForm');
+        if (addAccountForm) {
+            addAccountForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                formData.append('ajax', true);
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Account added successfully', 'success');
+                        setTimeout(() => { window.location.reload(); }, 1500);
+                    } else {
+                        document.getElementById('addAccountError').textContent = data.message || 'Error adding account.';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('addAccountError').textContent = 'Error submitting form: ' + error;
+                });
+            });
         }
-    }
-
-    function numberFormat(number) {
-        return parseFloat(number || 0).toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-    }
-    
-    // Helper function to escape HTML special characters
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-        // Close modal when clicking outside
-    window.onclick = function(event) {
-        if (event.target.className === 'modal') {
-            event.target.style.display = 'none';
-        }
-    }
-
-    // Search functionality
-    document.getElementById('searchInput').addEventListener('keyup', function() {
-        const searchText = this.value.toLowerCase();
-        const rows = document.querySelectorAll('.orders-table tbody tr');
         
-        rows.forEach(row => {
-            const username = row.cells[0].textContent.toLowerCase();
-            row.style.display = username.includes(searchText) ? '' : 'none';
+        // Edit Form Submission via AJAX
+        const editAccountForm = document.getElementById('editAccountForm');
+        if (editAccountForm) {
+            editAccountForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                formData.append('ajax', true);
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Account updated successfully', 'success');
+                        setTimeout(() => { window.location.reload(); }, 1500);
+                    } else {
+                        document.getElementById('editAccountError').textContent = data.message || 'Error updating account.';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('editAccountError').textContent = 'Error submitting form: ' + error;
+                });
+            });
+        }
+    });
+
+    // Form management functions
+    function openAddAccountForm() {
+        document.getElementById('addAccountOverlay').style.display = 'block';
+    }
+
+    function closeAddAccountForm() {
+        document.getElementById('addAccountForm').reset();
+        document.getElementById('addAccountError').textContent = '';
+        document.getElementById('addAccountOverlay').style.display = 'none';
+    }
+
+    function closeEditAccountForm() {
+        document.getElementById('editAccountForm').reset();
+        document.getElementById('editAccountError').textContent = '';
+        document.getElementById('editAccountOverlay').style.display = 'none';
+    }
+
+    // Status management functions
+    function openStatusModal(id, username, email) {
+        currentAccountId = id;
+        document.getElementById('statusMessage').textContent = `Change status for ${username} (${email})`;
+        document.getElementById('statusModal').style.display = 'block';
+    }
+
+    function closeStatusModal() {
+        document.getElementById('statusModal').style.display = 'none';
+    }
+
+    function changeStatus(status) {
+        const formData = new FormData();
+        formData.append('formType', 'status');
+        formData.append('ajax', true);
+        formData.append('id', currentAccountId);
+        formData.append('status', status);
+
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`Account status changed to ${status}`, 'success');
+                setTimeout(() => { window.location.reload(); }, 1500);
+            } else {
+                showToast('Error changing status: ' + (data.message || 'Unknown error'), 'error');
+            }
+            closeStatusModal();
+        })
+        .catch(error => {
+            showToast('Error: ' + error, 'error');
+            closeStatusModal();
         });
-    });
-    
-    // Initialize by hiding the proof file group when page loads
-    $(document).ready(function() {
-        togglePaymentFields();
-    });
-</script>
+    }
+
+    function filterByStatus() {
+        const status = document.getElementById('statusFilter').value;
+        window.location.href = '?status=' + encodeURIComponent(status);
+    }
+
+    // Updated to add bill_to_address parameter
+    function openEditAccountForm(id, username, email, phone, region, city, company, company_address, bill_to_address, business_proof) {
+        document.getElementById("edit-id").value = id;
+        document.getElementById("edit-username").value = username;
+        document.getElementById("edit-email").value = email;
+        document.getElementById("edit-phone").value = phone || '';
+        document.getElementById("edit-region").value = region;
+        document.getElementById("edit-city").value = city;
+        document.getElementById("edit-company").value = company || '';
+        document.getElementById("edit-company_address").value = company_address;
+        document.getElementById("edit-bill_to_address").value = bill_to_address || '';
+        
+        // Parse business_proof if it's a string
+        let proofs = business_proof;
+        if (typeof business_proof === 'string') {
+            try {
+                proofs = JSON.parse(business_proof);
+            } catch (e) {
+                console.error("Error parsing business proof:", e);
+                proofs = [];
+            }
+        }
+        
+        document.getElementById("existing-business-proof").value = JSON.stringify(proofs);
+        
+        var proofContainer = document.getElementById("edit-business-proof-container");
+        proofContainer.innerHTML = '';
+        
+        if (proofs && Array.isArray(proofs) && proofs.length > 0) {
+            var proofLabel = document.createElement('label');
+            proofLabel.innerHTML = 'Current Business Proof:';
+            proofContainer.appendChild(proofLabel);
+            
+            var proofDiv = document.createElement('div');
+            proofDiv.className = 'current-proofs';
+            proofDiv.style.marginBottom = '15px';
+            
+            proofs.forEach(function(proof) {
+                var img = document.createElement('img');
+                img.src = proof;
+                img.alt = 'Business Proof';
+                img.style.width = '80px';
+                img.style.height = 'auto';
+                img.style.margin = '5px';
+                img.style.cursor = 'pointer';
+                img.onclick = function() { openModal(this); };
+                proofDiv.appendChild(img);
+            });
+            
+            proofContainer.appendChild(proofDiv);
+        }
+        
+        document.getElementById("editAccountOverlay").style.display = "block";
+    }
+    </script>
 </body>
 </html>

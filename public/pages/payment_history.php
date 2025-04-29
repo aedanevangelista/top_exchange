@@ -564,7 +564,8 @@ if ($result && $row = $result->fetch_assoc()) {
                 <thead>
                     <tr>
                         <th>Username</th>
-                        <th>Total Balance</th>
+                        <th>Remaining Credits</th>
+                        <th>Total Amount</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
@@ -584,6 +585,11 @@ if ($result && $row = $result->fetch_assoc()) {
                                 ?>
                                 <span class="<?= $balanceClass ?>">
                                     PHP <?= number_format($user['balance'], 2) ?>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="yearly-amount" data-username="<?= htmlspecialchars($user['username']) ?>">
+                                    Loading...
                                 </span>
                             </td>
                             <td>
@@ -615,7 +621,7 @@ if ($result && $row = $result->fetch_assoc()) {
                 <div class="modal-header-with-balance">
                     <h2>Monthly Payments - <span id="modalUsername"></span></h2>
                     <div class="balance-display">
-                        <span>Remaining Balance: <span id="userRemainingBalance" class="total-balance-positive">PHP 0.00</span></span>
+                        <span>Remaining Credits: <span id="userRemainingBalance" class="total-balance-positive">PHP 0.00</span></span>
                         <button class="add-balance-btn" onclick="openAddBalanceModal()">+</button>
                     </div>
                 </div>
@@ -632,7 +638,7 @@ if ($result && $row = $result->fetch_assoc()) {
                                 <th>Month</th>
                                 <th>Orders</th>
                                 <th>Total Amount</th>
-                                <th>Remaining Balance</th>
+                                <th>Remaining Credits</th>
                                 <th>Proof</th>
                                 <th>Notes</th>
                                 <th>Payment Type</th>
@@ -831,10 +837,50 @@ if ($result && $row = $result->fetch_assoc()) {
     let currentYear = new Date().getFullYear();
     let currentUserBalance = 0;
     
-    // Current date for comparison in UTC (as per the user's timestamp: 2025-03-26 03:54:05)
-    const currentDate = new Date('2025-03-26T03:54:05Z');
+    // Current date for comparison in UTC (as per the user's timestamp: 2025-04-29 12:34:21)
+    const currentDate = new Date('2025-04-29T12:34:21Z');
     const currentYearValue = currentDate.getFullYear();
     const currentMonthValue = currentDate.getMonth(); // 0-based index
+
+    // Store yearly total amounts for each user
+    let yearlyTotalAmounts = {};
+
+    // Fetch and update yearly total amounts for all users when the page loads
+    $(document).ready(function() {
+        // Get all usernames from the table
+        $('.yearly-amount').each(function() {
+            const username = $(this).data('username');
+            fetchYearlyTotalAmount(username);
+        });
+    });
+
+    // Function to fetch yearly total amount for a specific user
+    function fetchYearlyTotalAmount(username) {
+        $.ajax({
+            url: `../../backend/get_yearly_total.php?username=${username}&year=${currentYearValue}`,
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    const totalAmount = parseFloat(response.total_amount || 0);
+                    yearlyTotalAmounts[username] = totalAmount;
+                    
+                    // Update the UI
+                    const cell = $(`.yearly-amount[data-username="${username}"]`);
+                    if (totalAmount > 0) {
+                        cell.html(`<span class="total-balance-positive">PHP ${numberFormat(totalAmount)}</span>`);
+                    } else {
+                        cell.html(`<span class="total-balance-zero">PHP ${numberFormat(totalAmount)}</span>`);
+                    }
+                } else {
+                    $(`.yearly-amount[data-username="${username}"]`).html('Error loading');
+                }
+            },
+            error: function() {
+                $(`.yearly-amount[data-username="${username}"]`).html('Error loading');
+            }
+        });
+    }
 
     function viewPaymentHistory(username, balance) {
         $('#modalUsername').text(username);
@@ -1298,6 +1344,9 @@ if ($result && $row = $result->fetch_assoc()) {
                     // Reload the current year data
                     loadYearData(currentYear, true);
                     
+                    // Update the yearly total amount
+                    fetchYearlyTotalAmount(currentUsername);
+                    
                     closeModal('paymentModal');
                 } else {
                     alert('Error processing payment: ' + (response.message || 'Unknown error'));
@@ -1375,6 +1424,9 @@ if ($result && $row = $result->fetch_assoc()) {
                 if (response.success) {
                     // Reload the current year data
                     loadYearData(currentYear, true);
+                    
+                    // Update the yearly total amount
+                    fetchYearlyTotalAmount(currentUsername);
                     
                     closeModal('changeStatusModal');
                 } else {
@@ -1638,7 +1690,7 @@ if ($result && $row = $result->fetch_assoc()) {
         return div.innerHTML;
     }
 
-    // Close modal when clicking outside
+        // Close modal when clicking outside
     window.onclick = function(event) {
         if (event.target.className === 'modal') {
             event.target.style.display = 'none';
