@@ -638,7 +638,7 @@ if ($result && $row = $result->fetch_assoc()) {
                                 <th>Month</th>
                                 <th>Orders</th>
                                 <th>Total Amount</th>
-                                <th>Remaining Credits</th>
+                                <th>Remaining Balance</th>
                                 <th>Proof</th>
                                 <th>Notes</th>
                                 <th>Payment Type</th>
@@ -837,8 +837,8 @@ if ($result && $row = $result->fetch_assoc()) {
     let currentYear = new Date().getFullYear();
     let currentUserBalance = 0;
     
-    // Current date for comparison in UTC (as per the user's timestamp: 2025-04-29 12:34:21)
-    const currentDate = new Date('2025-04-29T12:34:21Z');
+    // Current date for comparison in UTC (as per the user's timestamp: 2025-04-29 12:51:15)
+    const currentDate = new Date('2025-04-29T12:51:15Z');
     const currentYearValue = currentDate.getFullYear();
     const currentMonthValue = currentDate.getMonth(); // 0-based index
 
@@ -1690,14 +1690,14 @@ if ($result && $row = $result->fetch_assoc()) {
         return div.innerHTML;
     }
 
-        // Close modal when clicking outside
+    // Close modal when clicking outside
     window.onclick = function(event) {
         if (event.target.className === 'modal') {
             event.target.style.display = 'none';
         }
     }
 
-    // Search functionality
+        // Search functionality
     document.getElementById('searchInput').addEventListener('keyup', function() {
         const searchText = this.value.toLowerCase();
         const rows = document.querySelectorAll('.orders-table tbody tr');

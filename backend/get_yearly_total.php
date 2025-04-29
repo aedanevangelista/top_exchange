@@ -17,27 +17,35 @@ if (!isset($_GET['username']) || !isset($_GET['year'])) {
 $username = $_GET['username'];
 $year = (int) $_GET['year'];
 
-// Get the yearly total of remaining payments for the user
-$sql = "SELECT SUM(remaining_balance) as total_amount 
-        FROM monthly_payments 
-        WHERE username = ? AND year = ? AND payment_status != 'Fully Paid'";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("si", $username, $year);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result && $row = $result->fetch_assoc()) {
+try {
+    // Calculate the total amount from actual orders in the database
+    // This ensures that if orders are deleted, the total amount will reflect that
+    $sql = "SELECT SUM(total_amount) as total_amount 
+            FROM orders 
+            WHERE username = ? 
+            AND YEAR(order_date) = ? 
+            AND status NOT IN ('Rejected', 'Completed')";
+    
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("si", $username, $year);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    
+    // Get total amount from orders
+    $totalAmount = $row['total_amount'] ?: 0;
+    
     echo json_encode([
         'success' => true,
-        'total_amount' => $row['total_amount'] ?: 0,
+        'total_amount' => $totalAmount,
         'username' => $username,
         'year' => $year
     ]);
-} else {
+} catch (Exception $e) {
     echo json_encode([
         'success' => false,
         'message' => 'Failed to fetch yearly total',
-        'error' => $conn->error
+        'error' => $e->getMessage()
     ]);
 }
 
