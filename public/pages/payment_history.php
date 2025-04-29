@@ -2224,6 +2224,30 @@ function showToast(message, type = 'info') {
     $(document).ready(function() {
         togglePaymentFields();
     });
+
+    function shouldDisablePaymentButton(year, month) {
+    // Get current date in UTC
+    const now = new Date();
+    
+    // Create date objects for comparison (using UTC)
+    const currentYear = now.getUTCFullYear();
+    const currentMonth = now.getUTCMonth() + 1; // JavaScript months are 0-indexed
+    
+    // Convert parameters to numbers to ensure proper comparison
+    const yearNum = parseInt(year);
+    const monthNum = parseInt(month);
+    
+    // Logic for disabling:
+    // 1. Disable if year is in the future
+    // 2. Disable if same year but month is current or future
+    if (yearNum > currentYear) {
+        return true;
+    } else if (yearNum === currentYear && monthNum >= currentMonth) {
+        return true;
+    }
+    
+    return false;
+}
 </script>
 </body>
 </html>
