@@ -80,13 +80,25 @@ if ($result && $row = $result->fetch_assoc()) {
             margin-right: 5px;
         }
 
-        .view-button, .status-toggle {
+        .view-button, .status-toggle, .download-button {
             border-radius: 80px;
             margin: 0 2px;
             min-width: 85px;
         }
 
-        .view-button.disabled, .status-toggle.disabled {
+        .download-button {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .download-button:hover {
+            background-color: #138496;
+        }
+
+        .view-button.disabled, .status-toggle.disabled, .download-button.disabled {
             background-color: lightgray !important;
             cursor: not-allowed;
             opacity: 0.6;
@@ -421,15 +433,16 @@ if ($result && $row = $result->fetch_assoc()) {
             display: flex;
             justify-content: center;
             gap: 8px;
+            flex-wrap: wrap;
             width: 100%;
         }
         
         /* Table cell styling only for monthly payments table */
         #monthlyPaymentsModal .orders-table th:last-child,
         #monthlyPaymentsModal .orders-table td:last-child {
-            width: 180px;
-            min-width: 180px;
-            max-width: 180px;
+            width: 230px;
+            min-width: 230px;
+            max-width: 230px;
             text-align: center;
         }
         
@@ -543,6 +556,9 @@ if ($result && $row = $result->fetch_assoc()) {
             margin-right: 5px;
         }
 
+        .fas.fa-file-pdf {
+            margin-right: 5px;
+        }
         
     </style>
 </head>
@@ -837,8 +853,8 @@ if ($result && $row = $result->fetch_assoc()) {
     let currentYear = new Date().getFullYear();
     let currentUserBalance = 0;
     
-    // Current date for comparison in UTC (as per the user's timestamp: 2025-04-29 13:07:59)
-    const currentDate = new Date('2025-04-29T13:07:59Z');
+    // Current date for comparison in UTC (as per the user's timestamp: 2025-04-29 13:25:00)
+    const currentDate = new Date('2025-04-29T13:25:00Z');
     const currentYearValue = currentDate.getFullYear();
     const currentMonthValue = currentDate.getMonth(); // 0-based index
 
@@ -1097,10 +1113,12 @@ if ($result && $row = $result->fetch_assoc()) {
                     const viewOrdersButtonDisabled = false; // Allow viewing orders even for future months
                     const payButtonDisabled = isFutureMonth || displayStatus === 'Fully Paid' || parseFloat(monthData.total_amount) === 0;
                     const statusButtonDisabled = isFutureMonth;
+                    const downloadButtonDisabled = parseFloat(monthData.total_amount) === 0;
                     
                     const viewOrdersBtnClass = viewOrdersButtonDisabled ? 'view-button disabled' : 'view-button';
                     const payBtnClass = payButtonDisabled ? 'view-button disabled' : 'view-button';
                     const statusBtnClass = statusButtonDisabled ? 'status-toggle disabled' : 'status-toggle';
+                    const downloadBtnClass = downloadButtonDisabled ? 'download-button disabled' : 'download-button';
 
                     // Proof image
                     let proofHtml = 'No proof';
@@ -1168,6 +1186,13 @@ if ($result && $row = $result->fetch_assoc()) {
                                         <i class="fas fa-exchange-alt"></i>
                                         Status
                                     </button>
+                                    <button class="${downloadBtnClass}"
+                                            ${downloadButtonDisabled ? 'disabled' : ''}
+                                            onclick="${downloadButtonDisabled ? '' : `downloadMonthlyOrdersPDF('${currentUsername}', ${index + 1}, '${month}', ${year})`}"
+                                            title="${downloadButtonDisabled ? 'No orders to download' : 'Download all POs as PDF'}">
+                                        <i class="fas fa-file-pdf"></i>
+                                        Download PDF
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -1185,6 +1210,37 @@ if ($result && $row = $result->fetch_assoc()) {
                 );
             }
         });
+    }
+
+    // Function to download all POs for a month as PDF
+    function downloadMonthlyOrdersPDF(username, month, monthName, year) {
+        // Create a form to submit to generate the PDF
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '../../backend/generate_monthly_orders_pdf.php';
+        form.target = '_blank'; // Open in new tab
+        
+        // Add parameters
+        const params = {
+            username: username,
+            month: month,
+            year: year,
+            monthName: monthName
+        };
+        
+        for (const key in params) {
+            if (params.hasOwnProperty(key)) {
+                const hiddenField = document.createElement('input');
+                hiddenField.type = 'hidden';
+                hiddenField.name = key;
+                hiddenField.value = params[key];
+                form.appendChild(hiddenField);
+            }
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
     }
 
     function openPaymentModal(username, month, year, remainingBalance) {
