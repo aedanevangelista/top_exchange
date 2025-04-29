@@ -1291,7 +1291,7 @@ if ($result && $row = $result->fetch_assoc()) {
         });
     }
 
-    // Function to download all POs for a month as PDF
+// Function to download all POs for a month as PDF
 function downloadMonthlyOrdersPDF(username, month, monthName, year) {
     // Show loading spinner
     const downloadBtn = event.currentTarget;
@@ -1311,28 +1311,36 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
         dataType: 'json',
         success: function(response) {
             if (response.success && response.data && response.data.length > 0) {
-                // Create a container for the PDF content
-                const pdfContainer = document.createElement('div');
-                pdfContainer.style.display = 'none';
-                pdfContainer.style.fontFamily = 'Arial, sans-serif';
-                pdfContainer.style.padding = '20px';
-                document.body.appendChild(pdfContainer);
+                // Create a visible container for the PDF content
+                if (!document.getElementById('pdfContentContainer')) {
+                    const pdfContainer = document.createElement('div');
+                    pdfContainer.id = 'pdfContentContainer';
+                    pdfContainer.style.position = 'absolute';
+                    pdfContainer.style.left = '-9999px';
+                    pdfContainer.style.top = '-9999px';
+                    document.body.appendChild(pdfContainer);
+                }
+                
+                const pdfContainer = document.getElementById('pdfContentContainer');
                 
                 // Add title and header
                 let pdfContent = `
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <h1>Monthly Orders Report</h1>
-                        <h2>${username} - ${monthName} ${year}</h2>
+                    <div style="text-align: center; margin-bottom: 20px; font-family: Arial, sans-serif;">
+                        <h1 style="font-size: 24px; margin-bottom: 10px;">Monthly Orders Report</h1>
+                        <h2 style="font-size: 18px;">${username} - ${monthName} ${year}</h2>
                     </div>
                 `;
                 
                 // Add each order
                 let grandTotal = 0;
                 response.data.forEach((order, index) => {
+                    const orderItems = typeof order.orders === 'string' ? 
+                        JSON.parse(order.orders) : order.orders;
+                    
                     pdfContent += `
-                        <div style="margin-bottom: 30px; page-break-inside: avoid; ${index > 0 ? 'page-break-before: always;' : ''}">
-                            <h3>Purchase Order: ${order.po_number}</h3>
-                            <table style="width: 100%; margin-bottom: 10px;">
+                        <div style="margin-bottom: 30px; font-family: Arial, sans-serif; ${index > 0 ? 'page-break-before: always;' : ''}">
+                            <h3 style="font-size: 16px; margin-bottom: 10px;">Purchase Order: ${order.po_number}</h3>
+                            <table style="width: 100%; margin-bottom: 10px; font-family: Arial, sans-serif; font-size: 12px;">
                                 <tr>
                                     <td style="width: 50%;">
                                         <strong>Order Date:</strong> ${order.order_date}<br>
@@ -1344,7 +1352,7 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
                                 </tr>
                             </table>
                             
-                            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-family: Arial, sans-serif; font-size: 12px;">
                                 <thead>
                                     <tr style="background-color: #f2f2f2;">
                                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Category</th>
@@ -1360,7 +1368,7 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
                     
                     // Add order items
                     let orderTotal = 0;
-                    order.orders.forEach(item => {
+                    orderItems.forEach(item => {
                         const subtotal = parseFloat(item.price) * parseInt(item.quantity);
                         orderTotal += subtotal;
                         
@@ -1403,15 +1411,15 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
                 
                 // Add summary page
                 pdfContent += `
-                    <div style="margin-top: 30px; page-break-before: always;">
-                        <h2>Monthly Summary</h2>
-                        <p><strong>Total Number of Orders:</strong> ${response.data.length}</p>
-                        <p><strong>Monthly Total Amount:</strong> PHP ${grandTotal.toLocaleString('en-US', {
+                    <div style="margin-top: 30px; page-break-before: always; font-family: Arial, sans-serif;">
+                        <h2 style="font-size: 18px; margin-bottom: 15px;">Monthly Summary</h2>
+                        <p style="font-size: 14px;"><strong>Total Number of Orders:</strong> ${response.data.length}</p>
+                        <p style="font-size: 14px;"><strong>Monthly Total Amount:</strong> PHP ${grandTotal.toLocaleString('en-US', {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2
                         })}</p>
                         
-                        <div style="margin-top: 50px; display: flex; justify-content: space-between;">
+                        <div style="margin-top: 50px; display: flex; justify-content: space-between; font-family: Arial, sans-serif; font-size: 12px;">
                             <div style="width: 40%; text-align: center;">
                                 <div style="border-bottom: 1px solid black; margin-bottom: 10px; padding-top: 40px;"></div>
                                 Top Exchange<br>
@@ -1429,36 +1437,36 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
                 // Set the HTML content
                 pdfContainer.innerHTML = pdfContent;
                 
+                // Log to console for debugging
+                console.log("Creating PDF with content length:", pdfContent.length);
+                
+                // Make sure the container has dimensions
+                pdfContainer.style.width = '210mm';  // A4 width
+                
                 // Configure html2pdf options
                 const opt = {
                     margin: [10, 10, 10, 10],
                     filename: `Orders_${username}_${monthName}_${year}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true },
+                    html2canvas: { scale: 2, useCORS: true, logging: true },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
                 
                 // Generate and download the PDF
-                html2pdf().set(opt).from(pdfContainer).save().then(() => {
+                html2pdf().from(pdfContainer).set(opt).save().then(() => {
                     // Reset button
                     downloadBtn.innerHTML = originalText;
                     downloadBtn.disabled = false;
-                    
-                    // Clean up
-                    document.body.removeChild(pdfContainer);
                     
                     // Show success message
                     showToast(`Monthly orders for ${monthName} ${year} have been downloaded.`, 'success');
                 }).catch(error => {
                     console.error('Error generating PDF:', error);
-                    alert('Error generating PDF. Please try again.');
+                    alert('Error generating PDF: ' + error.message);
                     
                     // Reset button
                     downloadBtn.innerHTML = originalText;
                     downloadBtn.disabled = false;
-                    
-                    // Clean up
-                    document.body.removeChild(pdfContainer);
                 });
             } else {
                 // Reset button
@@ -1482,7 +1490,6 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
         }
     });
 }
-
 // Function to show toast messages
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
