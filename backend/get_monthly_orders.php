@@ -1,72 +1,60 @@
 <?php
+session_start();
+include "db_connection.php";
+
+// Set content type to JSON
 header('Content-Type: application/json');
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
+
+// Check if username, month, and year are provided
+if (!isset($_GET['username']) || !isset($_GET['month']) || !isset($_GET['year'])) {
+    echo json_encode(['success' => false, 'message' => 'Username, month and year are required']);
+    exit;
+}
+
+$username = $_GET['username'];
+$month = (int) $_GET['month'];
+$year = (int) $_GET['year'];
+
+// Calculate date range for the month
+$firstDayOfMonth = sprintf("%04d-%02d-01", $year, $month);
+$lastDayOfMonth = date('Y-m-t', strtotime($firstDayOfMonth));
 
 try {
-    // Include the database connection file
-    require_once "db_connection.php";
-
-    // Validate input
-    if (!isset($_GET['username']) || empty($_GET['username'])) {
-        throw new Exception('Username is required');
-    }
-    
-    if (!isset($_GET['month']) || !is_numeric($_GET['month'])) {
-        throw new Exception('Valid month is required');
-    }
-    
-    if (!isset($_GET['year']) || !is_numeric($_GET['year'])) {
-        throw new Exception('Valid year is required');
-    }
-    
-    // Sanitize inputs
-    $username = $_GET['username'];
-    $month = (int)$_GET['month'];
-    $year = (int)$_GET['year'];
-    
-    // Get orders for the specified month
-    $sql = "SELECT 
-                po_number,
-                order_date,
-                delivery_date,
-                delivery_address,
-                orders,
-                total_amount
+    // Get completed orders for this month
+    $sql = "SELECT po_number, order_date, delivery_date, delivery_address, orders, total_amount 
             FROM orders 
             WHERE username = ? 
-            AND MONTH(order_date) = ? 
-            AND YEAR(order_date) = ?
+            AND order_date BETWEEN ? AND ? 
             AND status = 'Completed'
             ORDER BY order_date DESC";
-            
+    
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sii", $username, $month, $year);
+    $stmt->bind_param("sss", $username, $firstDayOfMonth, $lastDayOfMonth);
     $stmt->execute();
     $result = $stmt->get_result();
     
     $orders = [];
     while ($row = $result->fetch_assoc()) {
-        $orders[] = [
-            'po_number' => $row['po_number'],
-            'order_date' => $row['order_date'],
-            'delivery_date' => $row['delivery_date'],
-            'delivery_address' => $row['delivery_address'],
-            'orders' => $row['orders'],
-            'total_amount' => floatval($row['total_amount'])
-        ];
+        // Parse orders JSON data if it's stored as a string
+        if (isset($row['orders']) && is_string($row['orders'])) {
+            $row['orders'] = json_decode($row['orders'], true);
+        }
+        $orders[] = $row;
     }
     
     echo json_encode([
         'success' => true,
-        'data' => $orders
+        'data' => $orders,
+        'month' => $month,
+        'year' => $year
     ]);
-    
 } catch (Exception $e) {
-    http_response_code(500);
     echo json_encode([
-        'error' => true,
-        'message' => 'An error occurred: ' . $e->getMessage()
+        'success' => false,
+        'message' => 'Error fetching orders: ' . $e->getMessage()
     ]);
 }
+
+$stmt->close();
+$conn->close();
 ?>

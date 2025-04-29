@@ -1036,58 +1036,74 @@ if ($result && $row = $result->fetch_assoc()) {
     }
     
     function loadYearData(year, refreshData = false) {
-        // Update active tab
-        $('.year-tab').removeClass('active');
-        $(`.year-tab:contains(${year})`).addClass('active');
-        currentYear = year;
-        
-        // Show loading state
-        $('#monthlyPaymentsBody').html('<tr><td colspan="9">Loading...</td></tr>');
-        
-        console.log('Fetching payments for:', currentUsername, year);
+    // Update active tab
+    $('.year-tab').removeClass('active');
+    $(`.year-tab:contains(${year})`).addClass('active');
+    currentYear = year;
+    
+    // Show loading state
+    $('#monthlyPaymentsBody').html('<tr><td colspan="9">Loading...</td></tr>');
+    
+    console.log('Fetching payments for:', currentUsername, year);
 
-        // Add cache-busting parameter to prevent browser caching
-        const cacheBuster = refreshData ? `&_=${new Date().getTime()}` : '';
-        
-        $.ajax({
-            url: `../../backend/get_monthly_payments.php?username=${currentUsername}&year=${year}${cacheBuster}`,
-            method: 'GET',
-            dataType: 'json',
-            cache: false,
-            success: function(response) {
-                console.log('Payments response:', response); // Log the response to check if payment_type is included
-                
-                let monthlyPaymentsHtml = '';
-                
-                if (!response.success) {
-                    $('#monthlyPaymentsBody').html(
-                        `<tr><td colspan="9" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
-                    );
-                    return;
-                }
-
-                const payments = response.data || [];
-                
-                // Use the months array defined at the top of the script
-                months.forEach((month, index) => {
-                    const monthData = payments.find(p => p.month === index + 1) || {
-                        total_amount: 0,
-                        payment_status: 'Unpaid',
-                        remaining_balance: 0,
-                        proof_image: null,
-                        notes: '',
-                        payment_type: null
-                    };
-
-                    // Ensure remaining balance is set correctly
-                    let remainingBalance = parseFloat(monthData.remaining_balance);
-                    if (monthData.payment_status === 'Fully Paid') {
-                        remainingBalance = 0;
-                    } else if (remainingBalance === 0 && parseFloat(monthData.total_amount) > 0 && 
-                              monthData.payment_status !== 'Fully Paid' && monthData.payment_status !== 'Partially Paid') {
-                        // If remaining balance is 0 but payment isn't Paid and there's a total amount
-                        remainingBalance = parseFloat(monthData.total_amount);
+    // Add cache-busting parameter to prevent browser caching
+    const cacheBuster = refreshData ? `&_=${new Date().getTime()}` : '';
+    
+    // First, fetch completed orders for this year to calculate monthly totals
+    $.ajax({
+        url: `../../backend/get_completed_orders_totals.php?username=${currentUsername}&year=${year}${cacheBuster}`,
+        method: 'GET',
+        dataType: 'json',
+        cache: false,
+        success: function(orderResponse) {
+            // Now fetch monthly payments to get payment status
+            $.ajax({
+                url: `../../backend/get_monthly_payments.php?username=${currentUsername}&year=${year}${cacheBuster}`,
+                method: 'GET',
+                dataType: 'json',
+                cache: false,
+                success: function(response) {
+                    console.log('Payments response:', response);
+                    
+                    let monthlyPaymentsHtml = '';
+                    
+                    if (!response.success) {
+                        $('#monthlyPaymentsBody').html(
+                            `<tr><td colspan="9" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
+                        );
+                        return;
                     }
+
+                    const payments = response.data || [];
+                    const orderTotals = orderResponse.success ? orderResponse.data : {};
+                    
+                    // Use the months array defined at the top of the script
+                    months.forEach((month, index) => {
+                        const monthNumber = index + 1;
+                        const monthData = payments.find(p => p.month === monthNumber) || {
+                            total_amount: 0,
+                            payment_status: 'Unpaid',
+                            remaining_balance: 0,
+                            proof_image: null,
+                            notes: '',
+                            payment_type: null
+                        };
+                        
+                        // Use the order totals from completed orders
+                        const orderTotal = orderTotals[monthNumber] || 0;
+                        
+                        // Set the total amount from completed orders
+                        monthData.total_amount = orderTotal;
+
+                        // Ensure remaining balance is set correctly
+                        let remainingBalance = parseFloat(monthData.remaining_balance);
+                        if (monthData.payment_status === 'Fully Paid') {
+                            remainingBalance = 0;
+                        } else if (remainingBalance === 0 && parseFloat(orderTotal) > 0 && 
+                                  monthData.payment_status !== 'Fully Paid' && monthData.payment_status !== 'Partially Paid') {
+                            // If remaining balance is 0 but payment isn't Paid and there's a total amount
+                            remainingBalance = parseFloat(orderTotal);
+                        }
 
                     // Check if the month is in the future or current month
                     const isFutureMonth = (year > currentYearValue) || 
@@ -1199,15 +1215,21 @@ if ($result && $row = $result->fetch_assoc()) {
                         </tr>
                     `;
                 });
-
-                $('#monthlyPaymentsBody').html(monthlyPaymentsHtml);
+                },
+                    error: function(xhr, status, error) {
+                        console.error('Ajax Error:', error);
+                        console.error('Response:', xhr.responseText);
+                        console.error('Status:', status);
+                        $('#monthlyPaymentsBody').html(
+                            '<tr><td colspan="9" style="color: red;">Error loading payment history. Please try again.</td></tr>'
+                        );
+                    }
+                });
             },
             error: function(xhr, status, error) {
                 console.error('Ajax Error:', error);
-                console.error('Response:', xhr.responseText);
-                console.error('Status:', status);
                 $('#monthlyPaymentsBody').html(
-                    '<tr><td colspan="9" style="color: red;">Error loading payment history. Please try again.</td></tr>'
+                    '<tr><td colspan="9" style="color: red;">Error loading order data. Please try again.</td></tr>'
                 );
             }
         });

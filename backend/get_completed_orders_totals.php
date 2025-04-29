@@ -18,32 +18,37 @@ $username = $_GET['username'];
 $year = (int) $_GET['year'];
 
 try {
-    // Calculate the total amount from completed orders only
-    $sql = "SELECT SUM(total_amount) as total_amount 
+    // Calculate the total amount from completed orders by month
+    $sql = "SELECT 
+                MONTH(order_date) as month, 
+                SUM(total_amount) as total_amount 
             FROM orders 
             WHERE username = ? 
             AND YEAR(order_date) = ? 
-            AND status = 'Completed'";
+            AND status = 'Completed'
+            GROUP BY MONTH(order_date)";
     
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("si", $username, $year);
     $stmt->execute();
     $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
     
-    // Get total amount from completed orders
-    $totalAmount = $row['total_amount'] ?: 0;
+    // Create an associative array with month as the key
+    $monthlyTotals = array();
+    while ($row = $result->fetch_assoc()) {
+        $monthlyTotals[$row['month']] = (float)$row['total_amount'];
+    }
     
     echo json_encode([
         'success' => true,
-        'total_amount' => $totalAmount,
+        'data' => $monthlyTotals,
         'username' => $username,
         'year' => $year
     ]);
 } catch (Exception $e) {
     echo json_encode([
         'success' => false,
-        'message' => 'Failed to fetch yearly total',
+        'message' => 'Failed to fetch monthly totals',
         'error' => $e->getMessage()
     ]);
 }
