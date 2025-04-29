@@ -201,7 +201,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                     <div class="submenu-items">
                         <?php if (in_array('Accounts - Admin', $allowedPages)): ?>
                             <a href="/public/pages/accounts.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Admin
+                                <i class="fas fa-arrow-right"></i> Staff
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Accounts - Clients', $allowedPages)): ?>
