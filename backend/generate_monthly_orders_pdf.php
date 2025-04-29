@@ -45,295 +45,6 @@ if (count($orders) === 0) {
     die("No completed orders found for $username in $monthName $year.");
 }
 
-// Try to locate FPDF library in different possible locations
-$fpdfPaths = [
-    // Try the original path first
-    '../../libs/fpdf/fpdf.php',
-    // Look in vendor directory if using composer
-    '../../vendor/fpdf/fpdf/fpdf.php',
-    // Look in vendor directory with different structure
-    '../../vendor/setasign/fpdf/fpdf.php',
-    // Try common library directory
-    '../../lib/fpdf/fpdf.php',
-    // Try in current directory
-    'fpdf/fpdf.php',
-    // Try absolute path if running on a web server
-    $_SERVER['DOCUMENT_ROOT'] . '/libs/fpdf/fpdf.php',
-    $_SERVER['DOCUMENT_ROOT'] . '/lib/fpdf/fpdf.php',
-    $_SERVER['DOCUMENT_ROOT'] . '/fpdf/fpdf.php'
-];
-
-$fpdfFound = false;
-foreach ($fpdfPaths as $path) {
-    if (file_exists($path)) {
-        require($path);
-        $fpdfFound = true;
-        break;
-    }
-}
-
-// If FPDF is not found in any of the common locations, display an error message
-if (!$fpdfFound) {
-    // Create HTML output instead if FPDF is not available
-    header('Content-type: text/html');
-    echo '<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Monthly Orders - ' . htmlspecialchars($username) . ' - ' . htmlspecialchars($monthName) . ' ' . $year . '</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                margin: 20px;
-                line-height: 1.6;
-            }
-            h1 {
-                text-align: center;
-                margin-bottom: 20px;
-            }
-            h2 {
-                margin-top: 30px;
-                border-bottom: 1px solid #ddd;
-                padding-bottom: 10px;
-            }
-            .order-header {
-                background-color: #f9f9f9;
-                padding: 15px;
-                border: 1px solid #ddd;
-                margin-bottom: 15px;
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 30px;
-            }
-            th, td {
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
-            }
-            th {
-                background-color: #f2f2f2;
-            }
-            tr:nth-child(even) {
-                background-color: #f9f9f9;
-            }
-            .summary {
-                margin-top: 30px;
-                padding: 15px;
-                background-color: #f2f2f2;
-                border: 1px solid #ddd;
-            }
-            .signature-area {
-                display: flex;
-                justify-content: space-between;
-                margin-top: 50px;
-            }
-            .signature {
-                width: 45%;
-            }
-            .signature hr {
-                margin-top: 40px;
-            }
-            @media print {
-                .no-print {
-                    display: none;
-                }
-                body {
-                    margin: 0;
-                    padding: 20px;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="no-print" style="background:#f44336; color:white; padding:10px; margin-bottom:15px; text-align:center;">
-            <p><strong>Notice:</strong> PDF generation library (FPDF) not found. Displaying orders in HTML format instead.</p>
-            <p>You can print this page using your browser\'s print function.</p>
-            <button onclick="window.print()">Print This Page</button>
-        </div>
-        
-        <h1>Monthly Orders: ' . htmlspecialchars($username) . ' - ' . htmlspecialchars($monthName) . ' ' . $year . '</h1>';
-    
-    $grandTotal = 0;
-    
-    // Loop through each order
-    foreach ($orders as $order) {
-        echo '<div class="order">';
-        echo '<div class="order-header">';
-        echo '<h2>Purchase Order: ' . htmlspecialchars($order['po_number']) . '</h2>';
-        echo '<p><strong>Customer:</strong> ' . htmlspecialchars($username) . '</p>';
-        echo '<p><strong>Order Date:</strong> ' . htmlspecialchars($order['order_date']) . '</p>';
-        echo '<p><strong>Delivery Date:</strong> ' . htmlspecialchars($order['delivery_date']) . '</p>';
-        echo '<p><strong>Delivery Address:</strong> ' . htmlspecialchars($order['delivery_address'] ?: 'Not specified') . '</p>';
-        echo '</div>';
-        
-        echo '<table>';
-        echo '<thead><tr>
-                <th>Category</th>
-                <th>Item Description</th>
-                <th>Packaging</th>
-                <th>Price</th>
-                <th>Qty</th>
-                <th>Subtotal</th>
-              </tr></thead>';
-        echo '<tbody>';
-        
-        $orderTotal = 0;
-        foreach ($order['orders'] as $item) {
-            $subtotal = $item['price'] * $item['quantity'];
-            $orderTotal += $subtotal;
-            
-            echo '<tr>';
-            echo '<td>' . htmlspecialchars($item['category']) . '</td>';
-            echo '<td>' . htmlspecialchars($item['item_description']) . '</td>';
-            echo '<td>' . htmlspecialchars($item['packaging']) . '</td>';
-            echo '<td>PHP ' . number_format($item['price'], 2) . '</td>';
-            echo '<td>' . htmlspecialchars($item['quantity']) . '</td>';
-            echo '<td>PHP ' . number_format($subtotal, 2) . '</td>';
-            echo '</tr>';
-        }
-        
-        echo '</tbody>';
-        echo '<tfoot><tr>
-                <td colspan="5" style="text-align:right;"><strong>Total:</strong></td>
-                <td><strong>PHP ' . number_format($orderTotal, 2) . '</strong></td>
-              </tr></tfoot>';
-        echo '</table>';
-        echo '</div>';
-        
-        $grandTotal += $orderTotal;
-    }
-    
-    // Get the details of the client
-    $clientSql = "SELECT * FROM clients_accounts WHERE username = ?";
-    $clientStmt = $conn->prepare($clientSql);
-    $clientStmt->bind_param("s", $username);
-    $clientStmt->execute();
-    $clientResult = $clientStmt->get_result();
-    $clientData = $clientResult->fetch_assoc();
-    
-    echo '<div class="summary">';
-    echo '<h2>Monthly Summary</h2>';
-    echo '<p><strong>Total Number of Orders:</strong> ' . count($orders) . '</p>';
-    echo '<p><strong>Monthly Total Amount:</strong> PHP ' . number_format($grandTotal, 2) . '</p>';
-    echo '</div>';
-    
-    echo '<div class="signature-area">';
-    echo '<div class="signature">
-            <p><strong>Prepared by:</strong></p>
-            <hr>
-            <p>Top Exchange</p>
-            <p>Date: _______________</p>
-          </div>';
-    echo '<div class="signature">
-            <p><strong>Received by:</strong></p>
-            <hr>
-            <p>' . htmlspecialchars($clientData['full_name'] ?: $username) . '</p>
-            <p>Date: _______________</p>
-          </div>';
-    echo '</div>';
-    
-    echo '</body></html>';
-    
-    $stmt->close();
-    $clientStmt->close();
-    $conn->close();
-    exit;
-}
-
-// If FPDF was found, proceed with PDF generation
-class PDF extends FPDF {
-    function Header() {
-        // Logo
-        if (file_exists('../../images/logo.png')) {
-            $this->Image('../../images/logo.png', 10, 6, 30);
-        }
-        // Arial bold 15
-        $this->SetFont('Arial', 'B', 15);
-        // Move to the right
-        $this->Cell(80);
-        // Title
-        $this->Cell(30, 10, 'Top Exchange', 0, 0, 'C');
-        // Line break
-        $this->Ln(20);
-    }
-
-    function Footer() {
-        // Position at 1.5 cm from bottom
-        $this->SetY(-15);
-        // Arial italic 8
-        $this->SetFont('Arial', 'I', 8);
-        // Page number
-        $this->Cell(0, 10, 'Page ' . $this->PageNo() . '/{nb}', 0, 0, 'C');
-    }
-    
-    function OrderHeader($poNumber, $orderDate, $deliveryDate, $deliveryAddress, $username) {
-        $this->SetFont('Arial', 'B', 14);
-        $this->Cell(0, 10, 'Purchase Order: ' . $poNumber, 0, 1);
-        $this->SetFont('Arial', '', 11);
-        $this->Cell(0, 6, 'Customer: ' . $username, 0, 1);
-        $this->Cell(0, 6, 'Order Date: ' . $orderDate, 0, 1);
-        $this->Cell(0, 6, 'Delivery Date: ' . $deliveryDate, 0, 1);
-        $this->Cell(0, 6, 'Delivery Address: ' . $deliveryAddress, 0, 1);
-        $this->Ln(5);
-    }
-    
-    function OrderTable($header, $data) {
-        // Colors, line width and bold font
-        $this->SetFillColor(200, 220, 255);
-        $this->SetTextColor(0);
-        $this->SetDrawColor(128, 128, 128);
-        $this->SetLineWidth(0.3);
-        $this->SetFont('Arial', 'B', 10);
-        
-        // Header
-        $w = array(40, 70, 25, 25, 15, 25);
-        for($i=0; $i<count($header); $i++)
-            $this->Cell($w[$i], 7, $header[$i], 1, 0, 'C', true);
-        $this->Ln();
-        
-        // Data
-        $this->SetFillColor(224, 235, 255);
-        $this->SetTextColor(0);
-        $this->SetFont('Arial', '', 9);
-        $fill = false;
-        $total = 0;
-        
-        foreach($data as $row) {
-            $subtotal = $row['price'] * $row['quantity'];
-            $total += $subtotal;
-            
-            $this->Cell($w[0], 6, $row['category'], 'LR', 0, 'L', $fill);
-            $this->Cell($w[1], 6, $row['item_description'], 'LR', 0, 'L', $fill);
-            $this->Cell($w[2], 6, $row['packaging'], 'LR', 0, 'L', $fill);
-            $this->Cell($w[3], 6, 'PHP ' . number_format($row['price'], 2), 'LR', 0, 'R', $fill);
-            $this->Cell($w[4], 6, $row['quantity'], 'LR', 0, 'C', $fill);
-            $this->Cell($w[5], 6, 'PHP ' . number_format($subtotal, 2), 'LR', 0, 'R', $fill);
-            $this->Ln();
-            $fill = !$fill;
-        }
-        
-        // Closing line and total
-        $this->Cell(array_sum($w), 0, '', 'T');
-        $this->Ln();
-        $this->SetFont('Arial', 'B', 11);
-        $this->Cell(array_sum($w) - 25, 6, 'Total:', 0, 0, 'R');
-        $this->Cell(25, 6, 'PHP ' . number_format($total, 2), 0, 0, 'R');
-        $this->Ln(15);
-        
-        return $total;
-    }
-}
-
-// Initialize PDF
-$pdf = new PDF();
-$pdf->AliasNbPages();
-$title = "Monthly Orders - $username - $monthName $year";
-$pdf->SetTitle($title);
-$pdf->SetAuthor('Top Exchange');
-
 // Get the details of the client
 $clientSql = "SELECT * FROM clients_accounts WHERE username = ?";
 $clientStmt = $conn->prepare($clientSql);
@@ -342,56 +53,126 @@ $clientStmt->execute();
 $clientResult = $clientStmt->get_result();
 $clientData = $clientResult->fetch_assoc();
 
+// Create PDF content
+require_once '../tcpdf/tcpdf.php'; 
+
+// Create new PDF document
+$pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+// Set document information
+$pdf->SetCreator(PDF_CREATOR);
+$pdf->SetAuthor('Top Exchange');
+$pdf->SetTitle("Monthly Orders - $username - $monthName $year");
+$pdf->SetSubject('Monthly Orders Report');
+$pdf->SetKeywords('Orders, Monthly, Report, PDF');
+
+// Set default header data
+$pdf->SetHeaderData(PDF_HEADER_LOGO, PDF_HEADER_LOGO_WIDTH, 'Top Exchange', "Monthly Orders Report\n$username - $monthName $year");
+
+// Set header and footer fonts
+$pdf->setHeaderFont(Array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
+$pdf->setFooterFont(Array(PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA));
+
+// Set default monospaced font
+$pdf->SetDefaultMonospacedFont(PDF_FONT_MONOSPACED);
+
+// Set margins
+$pdf->SetMargins(PDF_MARGIN_LEFT, PDF_MARGIN_TOP, PDF_MARGIN_RIGHT);
+$pdf->SetHeaderMargin(PDF_MARGIN_HEADER);
+$pdf->SetFooterMargin(PDF_MARGIN_FOOTER);
+
+// Set auto page breaks
+$pdf->SetAutoPageBreak(TRUE, PDF_MARGIN_BOTTOM);
+
+// Set image scale factor
+$pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
+
+// Set font
+$pdf->SetFont('dejavusans', '', 10);
+
 $grandTotal = 0;
 
 foreach ($orders as $orderIndex => $order) {
+    // Add a page
     $pdf->AddPage();
     
     // Order header with PO details
-    $pdf->OrderHeader(
-        $order['po_number'],
-        $order['order_date'],
-        $order['delivery_date'],
-        $order['delivery_address'] ?: 'Not specified',
-        $username
-    );
+    $pdf->SetFont('dejavusans', 'B', 14);
+    $pdf->Cell(0, 10, 'Purchase Order: ' . $order['po_number'], 0, 1);
     
-    // Order items table
-    $header = array('Category', 'Item Description', 'Packaging', 'Price', 'Qty', 'Subtotal');
-    $orderTotal = $pdf->OrderTable($header, $order['orders']);
-    $grandTotal += $orderTotal;
+    $pdf->SetFont('dejavusans', '', 11);
+    $pdf->Cell(0, 6, 'Customer: ' . $username, 0, 1);
+    $pdf->Cell(0, 6, 'Order Date: ' . $order['order_date'], 0, 1);
+    $pdf->Cell(0, 6, 'Delivery Date: ' . $order['delivery_date'], 0, 1);
+    $pdf->Cell(0, 6, 'Delivery Address: ' . ($order['delivery_address'] ?: 'Not specified'), 0, 1);
+    $pdf->Ln(5);
     
-    // Add signature fields if this is the last order
-    if ($orderIndex == count($orders) - 1) {
-        $pdf->Ln(10);
-        $pdf->SetFont('Arial', 'B', 12);
-        $pdf->Cell(0, 10, 'Monthly Summary - ' . $monthName . ' ' . $year, 0, 1);
-        $pdf->SetFont('Arial', '', 11);
-        $pdf->Cell(0, 8, 'Total Number of Orders: ' . count($orders), 0, 1);
-        $pdf->Cell(0, 8, 'Monthly Total Amount: PHP ' . number_format($grandTotal, 2), 0, 1);
-        $pdf->Ln(10);
+    // Items table header
+    $pdf->SetFont('dejavusans', 'B', 10);
+    $pdf->SetFillColor(240, 240, 240);
+    
+    // Table header
+    $pdf->Cell(40, 7, 'Category', 1, 0, 'C', true);
+    $pdf->Cell(60, 7, 'Item Description', 1, 0, 'C', true);
+    $pdf->Cell(30, 7, 'Packaging', 1, 0, 'C', true);
+    $pdf->Cell(20, 7, 'Price', 1, 0, 'C', true);
+    $pdf->Cell(15, 7, 'Qty', 1, 0, 'C', true);
+    $pdf->Cell(25, 7, 'Subtotal', 1, 1, 'C', true);
+    
+    // Table data
+    $pdf->SetFont('dejavusans', '', 9);
+    $totalAmount = 0;
+    
+    foreach ($order['orders'] as $item) {
+        $subtotal = $item['price'] * $item['quantity'];
+        $totalAmount += $subtotal;
         
-        // Signature fields
-        $pdf->Cell(90, 10, 'Prepared by:', 0, 0);
-        $pdf->Cell(90, 10, 'Received by:', 0, 1);
-        $pdf->Ln(10);
-        
-        $pdf->Cell(90, 0, '', 'T', 0);
-        $pdf->Cell(15, 0, '', 0, 0);
-        $pdf->Cell(75, 0, '', 'T', 1);
-        
-        $pdf->Cell(90, 10, 'Top Exchange', 0, 0, 'C');
-        $pdf->Cell(15, 10, '', 0, 0);
-        $pdf->Cell(75, 10, $clientData['full_name'] ?: $username, 0, 1, 'C');
-        
-        $pdf->Cell(90, 10, 'Date: _______________', 0, 0);
-        $pdf->Cell(15, 10, '', 0, 0);
-        $pdf->Cell(75, 10, 'Date: _______________', 0, 1);
+        $pdf->Cell(40, 6, $item['category'], 1);
+        $pdf->Cell(60, 6, $item['item_description'], 1);
+        $pdf->Cell(30, 6, $item['packaging'], 1);
+        $pdf->Cell(20, 6, 'PHP ' . number_format($item['price'], 2), 1, 0, 'R');
+        $pdf->Cell(15, 6, $item['quantity'], 1, 0, 'C');
+        $pdf->Cell(25, 6, 'PHP ' . number_format($subtotal, 2), 1, 1, 'R');
     }
+    
+    // Total for this order
+    $pdf->SetFont('dejavusans', 'B', 10);
+    $pdf->Cell(165, 7, 'Total:', 1, 0, 'R');
+    $pdf->Cell(25, 7, 'PHP ' . number_format($totalAmount, 2), 1, 1, 'R');
+    
+    $grandTotal += $totalAmount;
 }
 
-// Send the PDF to the browser
-$pdf->Output('D', "Orders_$username" . "_$monthName" . "_$year.pdf");
+// Add a summary page
+$pdf->AddPage();
+$pdf->SetFont('dejavusans', 'B', 14);
+$pdf->Cell(0, 10, 'Monthly Summary - ' . $monthName . ' ' . $year, 0, 1);
+
+$pdf->SetFont('dejavusans', '', 11);
+$pdf->Cell(0, 8, 'Username: ' . $username, 0, 1);
+$pdf->Cell(0, 8, 'Total Number of Orders: ' . count($orders), 0, 1);
+$pdf->Cell(0, 8, 'Monthly Total Amount: PHP ' . number_format($grandTotal, 2), 0, 1);
+$pdf->Ln(10);
+
+// Signature fields
+$pdf->Cell(90, 10, 'Prepared by:', 0, 0);
+$pdf->Cell(90, 10, 'Received by:', 0, 1);
+$pdf->Ln(15);
+
+$pdf->Cell(90, 0, '', 'T', 0);
+$pdf->Cell(15, 0, '', 0, 0);
+$pdf->Cell(75, 0, '', 'T', 1);
+
+$pdf->Cell(90, 10, 'Top Exchange', 0, 0, 'C');
+$pdf->Cell(15, 10, '', 0, 0);
+$pdf->Cell(75, 10, $clientData['full_name'] ?: $username, 0, 1, 'C');
+
+$pdf->Cell(90, 10, 'Date: _______________', 0, 0);
+$pdf->Cell(15, 10, '', 0, 0);
+$pdf->Cell(75, 10, 'Date: _______________', 0, 1);
+
+// Output the PDF
+$pdf->Output("Orders_$username" . "_$monthName" . "_$year.pdf", 'D');
 
 $stmt->close();
 $clientStmt->close();

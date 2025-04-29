@@ -1213,35 +1213,59 @@ if ($result && $row = $result->fetch_assoc()) {
     }
 
     // Function to download all POs for a month as PDF
-    function downloadMonthlyOrdersPDF(username, month, monthName, year) {
-        // Create a form to submit to generate the PDF
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '../../backend/generate_monthly_orders_pdf.php';
-        form.target = '_blank'; // Open in new tab
-        
-        // Add parameters
-        const params = {
-            username: username,
-            month: month,
-            year: year,
-            monthName: monthName
-        };
-        
-        for (const key in params) {
-            if (params.hasOwnProperty(key)) {
-                const hiddenField = document.createElement('input');
-                hiddenField.type = 'hidden';
-                hiddenField.name = key;
-                hiddenField.value = params[key];
-                form.appendChild(hiddenField);
-            }
+function downloadMonthlyOrdersPDF(username, month, monthName, year) {
+    // Show loading indicator
+    const downloadBtn = event.currentTarget;
+    const originalText = downloadBtn.innerHTML;
+    downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+    downloadBtn.disabled = true;
+    
+    // Create a form to submit to generate the PDF
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '../../backend/generate_monthly_orders_pdf.php';
+    form.style.display = 'none'; // Hide the form
+    
+    // Add parameters
+    const params = {
+        username: username,
+        month: month,
+        year: year,
+        monthName: monthName
+    };
+    
+    for (const key in params) {
+        if (params.hasOwnProperty(key)) {
+            const hiddenField = document.createElement('input');
+            hiddenField.type = 'hidden';
+            hiddenField.name = key;
+            hiddenField.value = params[key];
+            form.appendChild(hiddenField);
         }
-        
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
     }
+    
+    // Add form to document body and submit it
+    document.body.appendChild(form);
+    
+    // Create iframe to handle the response
+    const iframe = document.createElement('iframe');
+    iframe.name = 'pdf-download-frame';
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    
+    // Set form target to the iframe and submit
+    form.target = 'pdf-download-frame';
+    form.submit();
+    
+    // Reset button after a delay
+    setTimeout(() => {
+        downloadBtn.innerHTML = originalText;
+        downloadBtn.disabled = false;
+        // Clean up
+        document.body.removeChild(form);
+        document.body.removeChild(iframe);
+    }, 3000);
+}
 
     function openPaymentModal(username, month, year, remainingBalance) {
         // Set the values in the payment modal
