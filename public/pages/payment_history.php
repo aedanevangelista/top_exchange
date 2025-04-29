@@ -1614,20 +1614,6 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
                                                 </tr>
                                             </tfoot>
                                         </table>
-                                        
-                                        <!-- Signature section for each order -->
-                                        <div class="signature-area">
-                                            <div class="signature-block">
-                                                <div class="signature-line"></div>
-                                                <div class="signature-name">Top Exchange</div>
-                                                <div class="signature-date">Date: _______________</div>
-                                            </div>
-                                            <div class="signature-block">
-                                                <div class="signature-line"></div>
-                                                <div class="signature-name">${username}</div>
-                                                <div class="signature-date">Date: _______________</div>
-                                            </div>
-                                        </div>
                                     </div>
                                 `;
                             });
