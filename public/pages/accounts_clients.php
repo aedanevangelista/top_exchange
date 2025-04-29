@@ -36,6 +36,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $city = $_POST['city'];
     $company = $_POST['company'] ?? null; 
     $company_address = $_POST['company_address'];
+    $bill_to_address = $_POST['bill_to_address'] ?? null; // Added bill_to_address field
     $business_proof = [];
 
     if (validateUnique($conn, $username, $email)) {
@@ -78,9 +79,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $business_proof_json = json_encode($business_proof);
 
-    // Removed bill_to, bill_to_attn, ship_to, ship_to_attn fields
-    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
-    $stmt->bind_param("sssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json);
+    // Added bill_to_address field to the SQL query
+    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
+    $stmt->bind_param("ssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
@@ -104,6 +105,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     $city = $_POST['city'];
     $company = $_POST['company'] ?? null; 
     $company_address = $_POST['company_address'];
+    $bill_to_address = $_POST['bill_to_address'] ?? null; // Added bill_to_address field
     $business_proof = [];
 
     if (validateUnique($conn, $username, $email, $id)) {
@@ -193,9 +195,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $business_proof_json = json_encode($business_proof);
 
-    // Removed bill_to, bill_to_attn, ship_to, ship_to_attn fields
-    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, business_proof = ? WHERE id = ?");
-    $stmt->bind_param("sssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $business_proof_json, $id);
+    // Added bill_to_address field to the SQL query
+    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to_address = ?, business_proof = ? WHERE id = ?");
+    $stmt->bind_param("ssssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json, $id);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'reload' => true]);
@@ -227,8 +229,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
 $status_filter = $_GET['status'] ?? '';
 
-// Removed bill_to, bill_to_attn, ship_to, ship_to_attn fields from the query
-$sql = "SELECT id, username, email, phone, region, city, company, company_address, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
+// Added bill_to_address to the query
+$sql = "SELECT id, username, email, phone, region, city, company, company_address, bill_to_address, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
 if (!empty($status_filter)) {
     $sql .= " AND status = ?";
 }
@@ -375,7 +377,8 @@ function truncate($text, $max = 15) {
         }
         
         /* Enhanced company address textarea */
-        textarea#company_address, textarea#edit-company_address {
+        textarea#company_address, textarea#edit-company_address,
+        textarea#bill_to_address, textarea#edit-bill_to_address {
             height: 60px; /* Smaller text areas */
             padding: 8px; /* Reduced padding */
             font-size: 14px; /* Increased font size by 1px */
@@ -819,7 +822,8 @@ function truncate($text, $max = 15) {
                                         onclick='showAddressInfo(
                                             <?= json_encode($row["company_address"]) ?>,
                                             <?= json_encode($row["region"]) ?>,
-                                            <?= json_encode($row["city"]) ?>
+                                            <?= json_encode($row["city"]) ?>,
+                                            <?= json_encode($row["bill_to_address"]) ?>
                                         )'>
                                         <i class="fas fa-eye"></i> View
                                     </button>
@@ -849,6 +853,7 @@ function truncate($text, $max = 15) {
                                         <?= json_encode($row["city"]) ?>,
                                         <?= json_encode($row["company"]) ?>,
                                         <?= json_encode($row["company_address"]) ?>,
+                                        <?= json_encode($row["bill_to_address"]) ?>,
                                         <?= $business_proof_json ?>
                                     )'>
                                     <i class="fas fa-edit"></i> Edit
@@ -905,7 +910,7 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- Simplified Address Info Modal - Removed billing and shipping sections -->
+    <!-- Updated Address Info Modal with Bill To Address -->
     <div id="addressInfoModal" class="overlay">
         <div class="info-modal-content">
             <div class="info-modal-header">
@@ -922,6 +927,10 @@ function truncate($text, $max = 15) {
                             <td id="modalCompanyAddress"></td>
                         </tr>
                         <tr>
+                            <th>Bill To Address</th>
+                            <td id="modalBillToAddress"></td>
+                        </tr>
+                        <tr>
                             <th>Region</th>
                             <td id="modalRegion"></td>
                         </tr>
@@ -935,7 +944,7 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- Add Account Modal with Fixed Header and Footer - Removed billing and shipping fields -->
+    <!-- Updated Add Account Modal with Bill To Address Field -->
     <div id="addAccountOverlay" class="overlay" style="display: none;">
         <div class="form-modal-content">
             <div class="modal-header">
@@ -980,6 +989,9 @@ function truncate($text, $max = 15) {
                                 <h3><i class="fas fa-building"></i> Company Address</h3>
                                 <label for="company_address">Company Address: <span class="required">*</span></label>
                                 <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
+                                
+                                <label for="bill_to_address">Bill To Address: <span class="optional">(optional)</span></label>
+                                <textarea id="bill_to_address" name="bill_to_address" placeholder="e.g., 456 Billing St, Metro Manila, Quezon City"></textarea>
                             </div>
                             
                             <label for="business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
@@ -998,7 +1010,7 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- Edit Account Modal with Fixed Header and Footer - Removed billing and shipping fields -->
+    <!-- Updated Edit Account Modal with Bill To Address Field -->
     <div id="editAccountOverlay" class="overlay" style="display: none;">
         <div class="form-modal-content">
             <div class="modal-header">
@@ -1045,6 +1057,9 @@ function truncate($text, $max = 15) {
                                 <h3><i class="fas fa-building"></i> Company Address</h3>
                                 <label for="edit-company_address">Company Address: <span class="required">*</span></label>
                                 <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
+                                
+                                <label for="edit-bill_to_address">Bill To Address: <span class="optional">(optional)</span></label>
+                                <textarea id="edit-bill_to_address" name="bill_to_address" placeholder="e.g., 456 Billing St, New York, NY 10001"></textarea>
                             </div>
                             
                             <div id="edit-business-proof-container"></div>
@@ -1129,9 +1144,10 @@ function truncate($text, $max = 15) {
         document.getElementById("contactInfoModal").style.display = "none";
     }
 
-    // Updated to remove bill_to, bill_to_attn, ship_to, ship_to_attn parameters
-    function showAddressInfo(companyAddress, region, city) {
+    // Updated to add bill_to_address parameter
+    function showAddressInfo(companyAddress, region, city, billToAddress) {
         document.getElementById("modalCompanyAddress").textContent = companyAddress || 'N/A';
+        document.getElementById("modalBillToAddress").textContent = billToAddress || 'N/A';
         document.getElementById("modalRegion").textContent = region || 'N/A';
         document.getElementById("modalCity").textContent = city || 'N/A';
         document.getElementById("addressInfoModal").style.display = "block";
@@ -1308,8 +1324,8 @@ function truncate($text, $max = 15) {
         window.location.href = '?status=' + encodeURIComponent(status);
     }
 
-    // Updated to remove bill_to, bill_to_attn, ship_to, ship_to_attn parameters
-    function openEditAccountForm(id, username, email, phone, region, city, company, company_address, business_proof) {
+    // Updated to add bill_to_address parameter
+    function openEditAccountForm(id, username, email, phone, region, city, company, company_address, bill_to_address, business_proof) {
         document.getElementById("edit-id").value = id;
         document.getElementById("edit-username").value = username;
         document.getElementById("edit-email").value = email;
@@ -1318,6 +1334,7 @@ function truncate($text, $max = 15) {
         document.getElementById("edit-city").value = city;
         document.getElementById("edit-company").value = company || '';
         document.getElementById("edit-company_address").value = company_address;
+        document.getElementById("edit-bill_to_address").value = bill_to_address || '';
         
         // Parse business_proof if it's a string
         let proofs = business_proof;
