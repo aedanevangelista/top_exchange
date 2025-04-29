@@ -45,13 +45,211 @@ if (count($orders) === 0) {
     die("No completed orders found for $username in $monthName $year.");
 }
 
-// Require FPDF library
-require('../../libs/fpdf/fpdf.php');
+// Try to locate FPDF library in different possible locations
+$fpdfPaths = [
+    // Try the original path first
+    '../../libs/fpdf/fpdf.php',
+    // Look in vendor directory if using composer
+    '../../vendor/fpdf/fpdf/fpdf.php',
+    // Look in vendor directory with different structure
+    '../../vendor/setasign/fpdf/fpdf.php',
+    // Try common library directory
+    '../../lib/fpdf/fpdf.php',
+    // Try in current directory
+    'fpdf/fpdf.php',
+    // Try absolute path if running on a web server
+    $_SERVER['DOCUMENT_ROOT'] . '/libs/fpdf/fpdf.php',
+    $_SERVER['DOCUMENT_ROOT'] . '/lib/fpdf/fpdf.php',
+    $_SERVER['DOCUMENT_ROOT'] . '/fpdf/fpdf.php'
+];
 
+$fpdfFound = false;
+foreach ($fpdfPaths as $path) {
+    if (file_exists($path)) {
+        require($path);
+        $fpdfFound = true;
+        break;
+    }
+}
+
+// If FPDF is not found in any of the common locations, display an error message
+if (!$fpdfFound) {
+    // Create HTML output instead if FPDF is not available
+    header('Content-type: text/html');
+    echo '<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Monthly Orders - ' . htmlspecialchars($username) . ' - ' . htmlspecialchars($monthName) . ' ' . $year . '</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 20px;
+                line-height: 1.6;
+            }
+            h1 {
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            h2 {
+                margin-top: 30px;
+                border-bottom: 1px solid #ddd;
+                padding-bottom: 10px;
+            }
+            .order-header {
+                background-color: #f9f9f9;
+                padding: 15px;
+                border: 1px solid #ddd;
+                margin-bottom: 15px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 30px;
+            }
+            th, td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+            th {
+                background-color: #f2f2f2;
+            }
+            tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .summary {
+                margin-top: 30px;
+                padding: 15px;
+                background-color: #f2f2f2;
+                border: 1px solid #ddd;
+            }
+            .signature-area {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 50px;
+            }
+            .signature {
+                width: 45%;
+            }
+            .signature hr {
+                margin-top: 40px;
+            }
+            @media print {
+                .no-print {
+                    display: none;
+                }
+                body {
+                    margin: 0;
+                    padding: 20px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="no-print" style="background:#f44336; color:white; padding:10px; margin-bottom:15px; text-align:center;">
+            <p><strong>Notice:</strong> PDF generation library (FPDF) not found. Displaying orders in HTML format instead.</p>
+            <p>You can print this page using your browser\'s print function.</p>
+            <button onclick="window.print()">Print This Page</button>
+        </div>
+        
+        <h1>Monthly Orders: ' . htmlspecialchars($username) . ' - ' . htmlspecialchars($monthName) . ' ' . $year . '</h1>';
+    
+    $grandTotal = 0;
+    
+    // Loop through each order
+    foreach ($orders as $order) {
+        echo '<div class="order">';
+        echo '<div class="order-header">';
+        echo '<h2>Purchase Order: ' . htmlspecialchars($order['po_number']) . '</h2>';
+        echo '<p><strong>Customer:</strong> ' . htmlspecialchars($username) . '</p>';
+        echo '<p><strong>Order Date:</strong> ' . htmlspecialchars($order['order_date']) . '</p>';
+        echo '<p><strong>Delivery Date:</strong> ' . htmlspecialchars($order['delivery_date']) . '</p>';
+        echo '<p><strong>Delivery Address:</strong> ' . htmlspecialchars($order['delivery_address'] ?: 'Not specified') . '</p>';
+        echo '</div>';
+        
+        echo '<table>';
+        echo '<thead><tr>
+                <th>Category</th>
+                <th>Item Description</th>
+                <th>Packaging</th>
+                <th>Price</th>
+                <th>Qty</th>
+                <th>Subtotal</th>
+              </tr></thead>';
+        echo '<tbody>';
+        
+        $orderTotal = 0;
+        foreach ($order['orders'] as $item) {
+            $subtotal = $item['price'] * $item['quantity'];
+            $orderTotal += $subtotal;
+            
+            echo '<tr>';
+            echo '<td>' . htmlspecialchars($item['category']) . '</td>';
+            echo '<td>' . htmlspecialchars($item['item_description']) . '</td>';
+            echo '<td>' . htmlspecialchars($item['packaging']) . '</td>';
+            echo '<td>PHP ' . number_format($item['price'], 2) . '</td>';
+            echo '<td>' . htmlspecialchars($item['quantity']) . '</td>';
+            echo '<td>PHP ' . number_format($subtotal, 2) . '</td>';
+            echo '</tr>';
+        }
+        
+        echo '</tbody>';
+        echo '<tfoot><tr>
+                <td colspan="5" style="text-align:right;"><strong>Total:</strong></td>
+                <td><strong>PHP ' . number_format($orderTotal, 2) . '</strong></td>
+              </tr></tfoot>';
+        echo '</table>';
+        echo '</div>';
+        
+        $grandTotal += $orderTotal;
+    }
+    
+    // Get the details of the client
+    $clientSql = "SELECT * FROM clients_accounts WHERE username = ?";
+    $clientStmt = $conn->prepare($clientSql);
+    $clientStmt->bind_param("s", $username);
+    $clientStmt->execute();
+    $clientResult = $clientStmt->get_result();
+    $clientData = $clientResult->fetch_assoc();
+    
+    echo '<div class="summary">';
+    echo '<h2>Monthly Summary</h2>';
+    echo '<p><strong>Total Number of Orders:</strong> ' . count($orders) . '</p>';
+    echo '<p><strong>Monthly Total Amount:</strong> PHP ' . number_format($grandTotal, 2) . '</p>';
+    echo '</div>';
+    
+    echo '<div class="signature-area">';
+    echo '<div class="signature">
+            <p><strong>Prepared by:</strong></p>
+            <hr>
+            <p>Top Exchange</p>
+            <p>Date: _______________</p>
+          </div>';
+    echo '<div class="signature">
+            <p><strong>Received by:</strong></p>
+            <hr>
+            <p>' . htmlspecialchars($clientData['full_name'] ?: $username) . '</p>
+            <p>Date: _______________</p>
+          </div>';
+    echo '</div>';
+    
+    echo '</body></html>';
+    
+    $stmt->close();
+    $clientStmt->close();
+    $conn->close();
+    exit;
+}
+
+// If FPDF was found, proceed with PDF generation
 class PDF extends FPDF {
     function Header() {
         // Logo
-        $this->Image('../../images/logo.png', 10, 6, 30);
+        if (file_exists('../../images/logo.png')) {
+            $this->Image('../../images/logo.png', 10, 6, 30);
+        }
         // Arial bold 15
         $this->SetFont('Arial', 'B', 15);
         // Move to the right
