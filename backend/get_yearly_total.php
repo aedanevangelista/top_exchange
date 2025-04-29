@@ -43,8 +43,7 @@ try {
 } catch (Exception $e) {
     echo json_encode([
         'success' => false,
-        'message' => 'Failed to fetch yearly total',
-        'error' => $e->getMessage()
+        'message' => 'Failed to fetch yearly total: ' . $e->getMessage()
     ]);
 }
 

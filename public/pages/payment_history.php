@@ -837,8 +837,8 @@ if ($result && $row = $result->fetch_assoc()) {
     let currentYear = new Date().getFullYear();
     let currentUserBalance = 0;
     
-    // Current date for comparison in UTC (as per the user's timestamp: 2025-04-29 12:51:15)
-    const currentDate = new Date('2025-04-29T12:51:15Z');
+    // Current date for comparison in UTC (as per the user's timestamp: 2025-04-29 13:07:59)
+    const currentDate = new Date('2025-04-29T13:07:59Z');
     const currentYearValue = currentDate.getFullYear();
     const currentMonthValue = currentDate.getMonth(); // 0-based index
 
@@ -873,11 +873,13 @@ if ($result && $row = $result->fetch_assoc()) {
                         cell.html(`<span class="total-balance-zero">PHP ${numberFormat(totalAmount)}</span>`);
                     }
                 } else {
-                    $(`.yearly-amount[data-username="${username}"]`).html('Error loading');
+                    $(`.yearly-amount[data-username="${username}"]`).html('PHP 0.00');
+                    console.error("Error fetching yearly total:", response.message);
                 }
             },
-            error: function() {
-                $(`.yearly-amount[data-username="${username}"]`).html('Error loading');
+            error: function(xhr, status, error) {
+                $(`.yearly-amount[data-username="${username}"]`).html('PHP 0.00');
+                console.error("AJAX Error fetching yearly total:", error);
             }
         });
     }
@@ -978,47 +980,15 @@ if ($result && $row = $result->fetch_assoc()) {
         $('#monthlyPaymentsBody').html('<tr><td colspan="9">Please select a year...</td></tr>');
         $('#monthlyPaymentsModal').show();
         
-        // Add cache-busting parameter to prevent browser caching
-        const cacheBuster = refreshData ? `&_=${new Date().getTime()}` : '';
+        // Define current year as default
+        currentYear = currentYearValue;
+        availableYears = [currentYear];
         
-        $.ajax({
-            url: `../../backend/get_available_years.php?username=${username}${cacheBuster}`,
-            method: 'GET',
-            dataType: 'json',
-            cache: false, // Prevent caching
-            success: function(response) {
-                if (!response.success || !response.data || response.data.length === 0) {
-                    // If no years found, default to current year
-                    currentYear = currentYearValue;
-                    availableYears = [currentYear];
-                } else {
-                    availableYears = response.data;
-                    // Ensure current year is included if it's not in the response
-                    if (!availableYears.includes(currentYearValue)) {
-                        availableYears.push(currentYearValue);
-                    }
-                }
-                
-                // Generate year tabs
-                generateYearTabs();
-                
-                // Load the most recent year's data by default
-                const mostRecentYear = Math.max(...availableYears);
-                currentYear = mostRecentYear;
-                loadYearData(mostRecentYear, refreshData);
-            },
-            error: function(xhr, status, error) {
-                console.error('Ajax Error:', error);
-                currentYear = currentYearValue;
-                availableYears = [currentYear, currentYear - 1]; // Default to current year and previous year
-                
-                // Generate year tabs
-                generateYearTabs();
-                
-                // Load current year's data
-                loadYearData(currentYear, refreshData);
-            }
-        });
+        // Generate year tabs with current year
+        generateYearTabs();
+        
+        // Load current year's data
+        loadYearData(currentYear, refreshData);
     }
     
     function generateYearTabs() {
@@ -1036,74 +1006,62 @@ if ($result && $row = $result->fetch_assoc()) {
     }
     
     function loadYearData(year, refreshData = false) {
-    // Update active tab
-    $('.year-tab').removeClass('active');
-    $(`.year-tab:contains(${year})`).addClass('active');
-    currentYear = year;
-    
-    // Show loading state
-    $('#monthlyPaymentsBody').html('<tr><td colspan="9">Loading...</td></tr>');
-    
-    console.log('Fetching payments for:', currentUsername, year);
+        // Update active tab
+        $('.year-tab').removeClass('active');
+        $(`.year-tab:contains(${year})`).addClass('active');
+        currentYear = year;
+        
+        // Show loading state
+        $('#monthlyPaymentsBody').html('<tr><td colspan="9">Loading...</td></tr>');
+        
+        console.log('Fetching payments for:', currentUsername, year);
 
-    // Add cache-busting parameter to prevent browser caching
-    const cacheBuster = refreshData ? `&_=${new Date().getTime()}` : '';
-    
-    // First, fetch completed orders for this year to calculate monthly totals
-    $.ajax({
-        url: `../../backend/get_completed_orders_totals.php?username=${currentUsername}&year=${year}${cacheBuster}`,
-        method: 'GET',
-        dataType: 'json',
-        cache: false,
-        success: function(orderResponse) {
-            // Now fetch monthly payments to get payment status
-            $.ajax({
-                url: `../../backend/get_monthly_payments.php?username=${currentUsername}&year=${year}${cacheBuster}`,
-                method: 'GET',
-                dataType: 'json',
-                cache: false,
-                success: function(response) {
-                    console.log('Payments response:', response);
-                    
-                    let monthlyPaymentsHtml = '';
-                    
-                    if (!response.success) {
-                        $('#monthlyPaymentsBody').html(
-                            `<tr><td colspan="9" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
-                        );
-                        return;
+        // Use the existing monthly_payments table data first
+        $.ajax({
+            url: '../../backend/get_monthly_payments.php',
+            method: 'GET',
+            data: {
+                username: currentUsername,
+                year: year
+            },
+            dataType: 'json',
+            success: function(response) {
+                console.log('Monthly payments response:', response);
+                
+                let monthlyPaymentsHtml = '';
+                
+                if (!response.success) {
+                    $('#monthlyPaymentsBody').html(
+                        `<tr><td colspan="9" style="color: red;">${response.message || 'Error loading payment history'}</td></tr>`
+                    );
+                    return;
+                }
+
+                const payments = response.data || [];
+                
+                // Create a month-by-month display
+                months.forEach((month, index) => {
+                    const monthNumber = index + 1;
+                    const monthData = payments.find(p => p.month === monthNumber) || {
+                        month: monthNumber,
+                        year: year,
+                        total_amount: 0,
+                        payment_status: 'Unpaid',
+                        remaining_balance: 0,
+                        proof_image: null,
+                        notes: '',
+                        payment_type: null
+                    };
+
+                    // Ensure remaining balance is set correctly
+                    let remainingBalance = parseFloat(monthData.remaining_balance || 0);
+                    if (monthData.payment_status === 'Fully Paid') {
+                        remainingBalance = 0;
+                    } else if (remainingBalance === 0 && parseFloat(monthData.total_amount) > 0 && 
+                              monthData.payment_status !== 'Fully Paid' && monthData.payment_status !== 'Partially Paid') {
+                        // If remaining balance is 0 but payment isn't Paid and there's a total amount
+                        remainingBalance = parseFloat(monthData.total_amount);
                     }
-
-                    const payments = response.data || [];
-                    const orderTotals = orderResponse.success ? orderResponse.data : {};
-                    
-                    // Use the months array defined at the top of the script
-                    months.forEach((month, index) => {
-                        const monthNumber = index + 1;
-                        const monthData = payments.find(p => p.month === monthNumber) || {
-                            total_amount: 0,
-                            payment_status: 'Unpaid',
-                            remaining_balance: 0,
-                            proof_image: null,
-                            notes: '',
-                            payment_type: null
-                        };
-                        
-                        // Use the order totals from completed orders
-                        const orderTotal = orderTotals[monthNumber] || 0;
-                        
-                        // Set the total amount from completed orders
-                        monthData.total_amount = orderTotal;
-
-                        // Ensure remaining balance is set correctly
-                        let remainingBalance = parseFloat(monthData.remaining_balance);
-                        if (monthData.payment_status === 'Fully Paid') {
-                            remainingBalance = 0;
-                        } else if (remainingBalance === 0 && parseFloat(orderTotal) > 0 && 
-                                  monthData.payment_status !== 'Fully Paid' && monthData.payment_status !== 'Partially Paid') {
-                            // If remaining balance is 0 but payment isn't Paid and there's a total amount
-                            remainingBalance = parseFloat(orderTotal);
-                        }
 
                     // Check if the month is in the future or current month
                     const isFutureMonth = (year > currentYearValue) || 
@@ -1215,21 +1173,15 @@ if ($result && $row = $result->fetch_assoc()) {
                         </tr>
                     `;
                 });
-                },
-                    error: function(xhr, status, error) {
-                        console.error('Ajax Error:', error);
-                        console.error('Response:', xhr.responseText);
-                        console.error('Status:', status);
-                        $('#monthlyPaymentsBody').html(
-                            '<tr><td colspan="9" style="color: red;">Error loading payment history. Please try again.</td></tr>'
-                        );
-                    }
-                });
+
+                $('#monthlyPaymentsBody').html(monthlyPaymentsHtml);
             },
             error: function(xhr, status, error) {
                 console.error('Ajax Error:', error);
+                console.error('Response:', xhr.responseText);
+                console.error('Status:', status);
                 $('#monthlyPaymentsBody').html(
-                    '<tr><td colspan="9" style="color: red;">Error loading order data. Please try again.</td></tr>'
+                    '<tr><td colspan="9" style="color: red;">Error loading payment history. Please try again.</td></tr>'
                 );
             }
         });
@@ -1490,54 +1442,62 @@ if ($result && $row = $result->fetch_assoc()) {
 
     function viewMonthlyOrders(username, month, monthName, year) {
         $('#modalMonth').text(`${monthName} ${year}`);
+        $('#monthlyOrdersBody').html('<tr><td colspan="6">Loading orders...</td></tr>');
+        $('#monthlyOrdersModal').show();
         
-        // Add cache-busting parameter
-        const cacheBuster = `&_=${new Date().getTime()}`;
-        
+        // Make the AJAX call to get orders
         $.ajax({
-            url: `../../backend/get_monthly_orders.php?username=${username}&month=${month}&year=${year}${cacheBuster}`,
+            url: '../../backend/get_monthly_orders.php',
             method: 'GET',
+            data: {
+                username: username,
+                month: month,
+                year: year
+            },
             dataType: 'json',
-            cache: false,
             success: function(response) {
-                let orders = [];
-                try {
-                    orders = response.data || response;
-                } catch (e) {
-                    console.error('Error processing orders:', e);
-                    orders = [];
+                console.log('Orders response:', response);
+                
+                if (!response.success) {
+                    $('#monthlyOrdersBody').html(
+                        `<tr><td colspan="6" style="color: red;">${response.message || 'Error loading orders'}</td></tr>`
+                    );
+                    return;
                 }
-
+                
+                const orders = response.data || [];
+                
+                if (orders.length === 0) {
+                    $('#monthlyOrdersBody').html('<tr><td colspan="6">No orders found for this month</td></tr>');
+                    return;
+                }
+                
                 let ordersHtml = '';
-                if (orders && orders.length > 0) {
-                    orders.forEach(order => {
-                        // Handle delivery address with proper escaping and default value
-                        const deliveryAddress = order.delivery_address ? escapeHtml(order.delivery_address) : 'Not specified';
-                        
-                        ordersHtml += `
-                            <tr>
-                                <td>${order.po_number}</td>
-                                <td>${order.order_date}</td>
-                                <td>${order.delivery_date}</td>
-                                <td class="delivery-address">${deliveryAddress}</td>
-                                <td>
-                                    <button class="view-button" onclick="viewOrderDetails(${JSON.stringify(order.orders).replace(/"/g, '&quot;')}, '${order.po_number}', '${username}', '${deliveryAddress}')">
-                                        View Orders
-                                    </button>
-                                </td>
-                                <td>PHP ${numberFormat(order.total_amount)}</td>
-                            </tr>
-                        `;
-                    });
-                } else {
-                    ordersHtml = '<tr><td colspan="6">No orders found for this month</td></tr>';
-                }
-
+                orders.forEach(order => {
+                    // Handle delivery address with proper escaping and default value
+                    const deliveryAddress = order.delivery_address ? escapeHtml(order.delivery_address) : 'Not specified';
+                    
+                    ordersHtml += `
+                        <tr>
+                            <td>${order.po_number}</td>
+                            <td>${order.order_date}</td>
+                            <td>${order.delivery_date}</td>
+                            <td class="delivery-address">${deliveryAddress}</td>
+                            <td>
+                                <button class="view-button" onclick="viewOrderDetails(${JSON.stringify(order.orders).replace(/"/g, '&quot;')}, '${order.po_number}', '${username}', '${deliveryAddress}')">
+                                    View Orders
+                                </button>
+                            </td>
+                            <td>PHP ${numberFormat(order.total_amount)}</td>
+                        </tr>
+                    `;
+                });
+                
                 $('#monthlyOrdersBody').html(ordersHtml);
-                $('#monthlyOrdersModal').show();
             },
             error: function(xhr, status, error) {
-                console.error('Ajax Error:', error);
+                console.error('AJAX Error:', error);
+                console.error('Response:', xhr.responseText);
                 $('#monthlyOrdersBody').html(
                     '<tr><td colspan="6" style="color: red;">Error loading orders. Please try again.</td></tr>'
                 );
@@ -1719,7 +1679,7 @@ if ($result && $row = $result->fetch_assoc()) {
         }
     }
 
-        // Search functionality
+    // Search functionality
     document.getElementById('searchInput').addEventListener('keyup', function() {
         const searchText = this.value.toLowerCase();
         const rows = document.querySelectorAll('.orders-table tbody tr');
