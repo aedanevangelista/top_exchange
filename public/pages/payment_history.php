@@ -1291,7 +1291,7 @@ if ($result && $row = $result->fetch_assoc()) {
         });
     }
 
-// Alternate version with a simpler approach
+// Function to download all POs for a month as PDF
 function downloadMonthlyOrdersPDF(username, month, monthName, year) {
     // Show loading spinner
     const downloadBtn = event.currentTarget;
@@ -1299,7 +1299,7 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
     downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
     downloadBtn.disabled = true;
     
-    // Create a form to submit to a temporary backend PDF generator
+    // First, fetch the orders for this month
     $.ajax({
         url: '../../backend/get_monthly_orders.php',
         method: 'GET',
@@ -1311,153 +1311,291 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
         dataType: 'json',
         success: function(response) {
             if (response.success && response.data && response.data.length > 0) {
-                // Create PDF content using a div
-                const printDiv = document.createElement('div');
-                printDiv.style.width = '100%';
-                printDiv.style.padding = '20px';
-                printDiv.style.backgroundColor = 'white';
-                printDiv.style.fontFamily = 'Arial, sans-serif';
-                
-                let htmlContent = `
-                    <div style="text-align: center; margin-bottom: 20px">
-                        <h1 style="font-size: 24px">Monthly Orders Report</h1>
-                        <h2 style="font-size: 18px">${username} - ${monthName} ${year}</h2>
-                    </div>
-                `;
-                
-                // Process each order
-                let grandTotal = 0;
-                response.data.forEach((order, index) => {
-                    const orderItems = Array.isArray(order.orders) ? 
-                        order.orders : JSON.parse(order.orders);
+                try {
+                    // Create a container that's hidden from view
+                    const pdfContainer = document.createElement('div');
+                    pdfContainer.id = 'pdfContainer';
+                    pdfContainer.style.position = 'absolute';
+                    pdfContainer.style.left = '-9999px';
+                    pdfContainer.style.width = '210mm'; // A4 width
                     
-                    htmlContent += `
-                        <div style="margin-bottom: 20px; ${index > 0 ? 'page-break-before: always' : ''}">
-                            <h3>Purchase Order: ${order.po_number}</h3>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px">
-                                <div>
-                                    <p><strong>Order Date:</strong> ${order.order_date}</p>
-                                    <p><strong>Delivery Date:</strong> ${order.delivery_date}</p>
-                                </div>
-                                <div>
-                                    <p><strong>Delivery Address:</strong></p>
-                                    <p>${order.delivery_address || 'Not specified'}</p>
-                                </div>
-                            </div>
-                            
-                            <table style="width: 100%; border-collapse: collapse">
-                                <tr style="background-color: #f2f2f2">
-                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left">Category</th>
-                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left">Item Description</th>
-                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left">Packaging</th>
-                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: right">Price</th>
-                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center">Quantity</th>
-                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: right">Subtotal</th>
-                                </tr>
+                    // Build the PDF content with proper styling
+                    let htmlContent = `
+                        <style>
+                            body {
+                                font-family: 'Arial', sans-serif;
+                                margin: 0;
+                                padding: 0;
+                                color: #333;
+                                line-height: 1.5;
+                            }
+                            .header {
+                                text-align: center;
+                                margin-bottom: 20px;
+                                padding-bottom: 10px;
+                                border-bottom: 2px solid #ddd;
+                            }
+                            .header h1 {
+                                font-size: 24px;
+                                margin: 0 0 5px 0;
+                                color: #2980b9;
+                            }
+                            .header h2 {
+                                font-size: 18px;
+                                margin: 0;
+                                font-weight: normal;
+                            }
+                            .order-container {
+                                margin-bottom: 30px;
+                                page-break-inside: avoid;
+                                page-break-before: always;
+                            }
+                            .order-container:first-child {
+                                page-break-before: auto;
+                            }
+                            .order-header {
+                                background-color: #f8f9fa;
+                                padding: 10px;
+                                border: 1px solid #ddd;
+                                border-radius: 4px;
+                                margin-bottom: 15px;
+                            }
+                            .order-header h3 {
+                                margin: 0 0 10px 0;
+                                color: #2980b9;
+                                font-size: 16px;
+                            }
+                            .order-details {
+                                display: flex;
+                                justify-content: space-between;
+                                font-size: 12px;
+                            }
+                            .order-details-left {
+                                width: 50%;
+                            }
+                            .order-details-right {
+                                width: 50%;
+                            }
+                            .order-details p {
+                                margin: 3px 0;
+                            }
+                            .items-table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                font-size: 12px;
+                                margin-bottom: 15px;
+                            }
+                            .items-table th {
+                                background-color: #f2f2f2;
+                                text-align: left;
+                                padding: 8px;
+                                border: 1px solid #ddd;
+                                font-size: 12px;
+                            }
+                            .items-table td {
+                                padding: 8px;
+                                border: 1px solid #ddd;
+                                vertical-align: top;
+                            }
+                            .items-table .text-right {
+                                text-align: right;
+                            }
+                            .items-table .text-center {
+                                text-align: center;
+                            }
+                            .total-row {
+                                font-weight: bold;
+                                background-color: #f8f9fa;
+                            }
+                            .summary {
+                                margin-top: 30px;
+                                page-break-before: always;
+                            }
+                            .summary h2 {
+                                color: #2980b9;
+                                font-size: 18px;
+                                margin-bottom: 15px;
+                            }
+                            .signature-area {
+                                margin-top: 50px;
+                                display: flex;
+                                justify-content: space-between;
+                            }
+                            .signature-block {
+                                width: 45%;
+                                text-align: center;
+                            }
+                            .signature-line {
+                                border-top: 1px solid black;
+                                margin-bottom: 10px;
+                            }
+                            .signature-name {
+                                font-size: 14px;
+                            }
+                            .signature-date {
+                                margin-top: 5px;
+                                font-size: 12px;
+                            }
+                            .page-break {
+                                page-break-after: always;
+                            }
+                        </style>
+                        <div class="header">
+                            <h1>Monthly Orders Report</h1>
+                            <h2>${username} - ${monthName} ${year}</h2>
+                        </div>
                     `;
                     
-                    // Add order items
-                    let orderTotal = 0;
-                    orderItems.forEach(item => {
-                        const price = parseFloat(item.price);
-                        const quantity = parseInt(item.quantity);
-                        const subtotal = price * quantity;
-                        orderTotal += subtotal;
+                    // Add each order
+                    let grandTotal = 0;
+                    response.data.forEach((order, index) => {
+                        const orderItems = typeof order.orders === 'string' ? 
+                            JSON.parse(order.orders) : order.orders;
                         
                         htmlContent += `
-                            <tr>
-                                <td style="border: 1px solid #ddd; padding: 8px">${item.category || ''}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px">${item.item_description}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px">${item.packaging || ''}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right">PHP ${price.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center">${quantity}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right">PHP ${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                            </tr>
+                            <div class="order-container">
+                                <div class="order-header">
+                                    <h3>Purchase Order: ${order.po_number}</h3>
+                                    <div class="order-details">
+                                        <div class="order-details-left">
+                                            <p><strong>Order Date:</strong> ${order.order_date}</p>
+                                            <p><strong>Delivery Date:</strong> ${order.delivery_date}</p>
+                                        </div>
+                                        <div class="order-details-right">
+                                            <p><strong>Delivery Address:</strong></p>
+                                            <p>${order.delivery_address || 'Not specified'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <table class="items-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 15%">Category</th>
+                                            <th style="width: 25%">Item Description</th>
+                                            <th style="width: 15%">Packaging</th>
+                                            <th style="width: 15%" class="text-right">Price</th>
+                                            <th style="width: 10%" class="text-center">Quantity</th>
+                                            <th style="width: 20%" class="text-right">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
                         `;
+                        
+                        // Add order items
+                        let orderTotal = 0;
+                        orderItems.forEach(item => {
+                            const price = parseFloat(item.price);
+                            const quantity = parseInt(item.quantity);
+                            const subtotal = price * quantity;
+                            orderTotal += subtotal;
+                            
+                            htmlContent += `
+                                <tr>
+                                    <td>${item.category || ''}</td>
+                                    <td>${item.item_description}</td>
+                                    <td>${item.packaging || ''}</td>
+                                    <td class="text-right">PHP ${price.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                    <td class="text-center">${quantity}</td>
+                                    <td class="text-right">PHP ${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        // Add order total
+                        htmlContent += `
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="total-row">
+                                            <td colspan="5" class="text-right">Total:</td>
+                                            <td class="text-right">PHP ${orderTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        `;
+                        
+                        grandTotal += orderTotal;
                     });
                     
-                    // Add order total
+                    // Add summary page
                     htmlContent += `
-                                <tr>
-                                    <td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold">Order Total:</td>
-                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold">PHP ${orderTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                                </tr>
-                            </table>
+                        <div class="summary">
+                            <h2>Monthly Summary</h2>
+                            <p><strong>Total Number of Orders:</strong> ${response.data.length}</p>
+                            <p><strong>Monthly Total Amount:</strong> PHP ${grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                            
+                            <div class="signature-area">
+                                <div class="signature-block">
+                                    <div class="signature-line"></div>
+                                    <div class="signature-name">Top Exchange</div>
+                                    <div class="signature-date">Date: _______________</div>
+                                </div>
+                                <div class="signature-block">
+                                    <div class="signature-line"></div>
+                                    <div class="signature-name">${username}</div>
+                                    <div class="signature-date">Date: _______________</div>
+                                </div>
+                            </div>
                         </div>
                     `;
                     
-                    grandTotal += orderTotal;
-                });
-                
-                // Add summary
-                htmlContent += `
-                    <div style="margin-top: 40px; page-break-before: always">
-                        <h2>Monthly Summary</h2>
-                        <p><strong>Total Number of Orders:</strong> ${response.data.length}</p>
-                        <p><strong>Monthly Total Amount:</strong> PHP ${grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
-                        
-                        <div style="margin-top: 60px; display: flex; justify-content: space-between">
-                            <div style="width: 40%; text-align: center">
-                                <div style="border-top: 1px solid black; margin-bottom: 10px"></div>
-                                <p>Top Exchange</p>
-                                <p>Date: _______________</p>
-                            </div>
-                            <div style="width: 40%; text-align: center">
-                                <div style="border-top: 1px solid black; margin-bottom: 10px"></div>
-                                <p>${username}</p>
-                                <p>Date: _______________</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                printDiv.innerHTML = htmlContent;
-                document.body.appendChild(printDiv);
-                
-                // Configure html2pdf
-                const opt = {
-                    margin: 10,
-                    filename: `Orders_${username}_${monthName}_${year}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2 },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
-                
-                // Generate PDF
-                html2pdf()
-                    .from(printDiv)
-                    .set(opt)
-                    .save()
-                    .then(() => {
-                        // Clean up
-                        document.body.removeChild(printDiv);
-                        
-                        // Reset button
-                        downloadBtn.innerHTML = originalText;
-                        downloadBtn.disabled = false;
-                        
-                        // Show success message
-                        showToast(`Monthly orders for ${monthName} ${year} have been downloaded`, 'success');
-                    })
-                    .catch(err => {
-                        console.error("PDF generation error:", err);
-                        alert("Error generating PDF: " + err.message);
-                        
-                        // Clean up
-                        if (document.body.contains(printDiv)) {
-                            document.body.removeChild(printDiv);
+                    // Add content to the container but don't attach to DOM yet
+                    pdfContainer.innerHTML = htmlContent;
+                    
+                    // Configure html2pdf options
+                    const opt = {
+                        margin: [15, 15, 15, 15],
+                        filename: `Orders_${username}_${monthName}_${year}.pdf`,
+                        image: { type: 'jpeg', quality: 1 },
+                        html2canvas: { 
+                            scale: 2,
+                            useCORS: true,
+                            letterRendering: true
+                        },
+                        jsPDF: { 
+                            unit: 'mm', 
+                            format: 'a4', 
+                            orientation: 'portrait',
+                            compress: true
                         }
-                        
-                        // Reset button
-                        downloadBtn.innerHTML = originalText;
-                        downloadBtn.disabled = false;
-                    });
+                    };
+                    
+                    // Create a worker to generate the PDF in the background
+                    const worker = html2pdf().from(htmlContent).set(opt);
+                    
+                    // Generate and download the PDF
+                    worker.save()
+                        .then(() => {
+                            // Reset button
+                            downloadBtn.innerHTML = originalText;
+                            downloadBtn.disabled = false;
+                            
+                            // Show success message
+                            showToast(`Monthly orders for ${monthName} ${year} have been downloaded`, 'success');
+                        })
+                        .catch(error => {
+                            console.error('Error generating PDF:', error);
+                            alert('Error generating PDF. Please try again.');
+                            
+                            // Reset button
+                            downloadBtn.innerHTML = originalText;
+                            downloadBtn.disabled = false;
+                        });
+                } catch (error) {
+                    console.error('Error in PDF creation:', error);
+                    alert('Error creating PDF: ' + error.message);
+                    
+                    // Reset button
+                    downloadBtn.innerHTML = originalText;
+                    downloadBtn.disabled = false;
+                }
             } else {
-                // Reset button state
+                // Reset button
                 downloadBtn.innerHTML = originalText;
                 downloadBtn.disabled = false;
                 
-                // Show error
+                // Show message
                 alert('No completed orders found for this month.');
             }
         },
