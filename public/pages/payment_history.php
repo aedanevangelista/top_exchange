@@ -1312,276 +1312,377 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
         success: function(response) {
             if (response.success && response.data && response.data.length > 0) {
                 try {
-                    // Create a container that's hidden from view
-                    const pdfContainer = document.createElement('div');
-                    pdfContainer.id = 'pdfContainer';
-                    pdfContainer.style.position = 'absolute';
-                    pdfContainer.style.left = '-9999px';
-                    pdfContainer.style.width = '210mm'; // A4 width
-                    
-                    // Build the PDF content with proper styling
-                    let htmlContent = `
-                        <style>
-                            body {
-                                font-family: 'Arial', sans-serif;
-                                margin: 0;
-                                padding: 0;
-                                color: #333;
-                                line-height: 1.5;
-                            }
-                            .header {
-                                text-align: center;
-                                margin-bottom: 20px;
-                                padding-bottom: 10px;
-                                border-bottom: 2px solid #ddd;
-                            }
-                            .header h1 {
-                                font-size: 24px;
-                                margin: 0 0 5px 0;
-                                color: #2980b9;
-                            }
-                            .header h2 {
-                                font-size: 18px;
-                                margin: 0;
-                                font-weight: normal;
-                            }
-                            .order-container {
-                                margin-bottom: 30px;
-                                page-break-inside: avoid;
-                                page-break-before: always;
-                            }
-                            .order-container:first-child {
-                                page-break-before: auto;
-                            }
-                            .order-header {
-                                background-color: #f8f9fa;
-                                padding: 10px;
-                                border: 1px solid #ddd;
-                                border-radius: 4px;
-                                margin-bottom: 15px;
-                            }
-                            .order-header h3 {
-                                margin: 0 0 10px 0;
-                                color: #2980b9;
-                                font-size: 16px;
-                            }
-                            .order-details {
-                                display: flex;
-                                justify-content: space-between;
-                                font-size: 12px;
-                            }
-                            .order-details-left {
-                                width: 50%;
-                            }
-                            .order-details-right {
-                                width: 50%;
-                            }
-                            .order-details p {
-                                margin: 3px 0;
-                            }
-                            .items-table {
-                                width: 100%;
-                                border-collapse: collapse;
-                                font-size: 12px;
-                                margin-bottom: 15px;
-                            }
-                            .items-table th {
-                                background-color: #f2f2f2;
-                                text-align: left;
-                                padding: 8px;
-                                border: 1px solid #ddd;
-                                font-size: 12px;
-                            }
-                            .items-table td {
-                                padding: 8px;
-                                border: 1px solid #ddd;
-                                vertical-align: top;
-                            }
-                            .items-table .text-right {
-                                text-align: right;
-                            }
-                            .items-table .text-center {
-                                text-align: center;
-                            }
-                            .total-row {
-                                font-weight: bold;
-                                background-color: #f8f9fa;
-                            }
-                            .summary {
-                                margin-top: 30px;
-                                page-break-before: always;
-                            }
-                            .summary h2 {
-                                color: #2980b9;
-                                font-size: 18px;
-                                margin-bottom: 15px;
-                            }
-                            .signature-area {
-                                margin-top: 50px;
-                                display: flex;
-                                justify-content: space-between;
-                            }
-                            .signature-block {
-                                width: 45%;
-                                text-align: center;
-                            }
-                            .signature-line {
-                                border-top: 1px solid black;
-                                margin-bottom: 10px;
-                            }
-                            .signature-name {
-                                font-size: 14px;
-                            }
-                            .signature-date {
-                                margin-top: 5px;
-                                font-size: 12px;
-                            }
-                            .page-break {
-                                page-break-after: always;
-                            }
-                        </style>
-                        <div class="header">
-                            <h1>Monthly Orders Report</h1>
-                            <h2>${username} - ${monthName} ${year}</h2>
-                        </div>
-                    `;
-                    
-                    // Add each order
-                    let grandTotal = 0;
-                    response.data.forEach((order, index) => {
-                        const orderItems = typeof order.orders === 'string' ? 
-                            JSON.parse(order.orders) : order.orders;
-                        
-                        htmlContent += `
-                            <div class="order-container">
-                                <div class="order-header">
-                                    <h3>Purchase Order: ${order.po_number}</h3>
-                                    <div class="order-details">
-                                        <div class="order-details-left">
-                                            <p><strong>Order Date:</strong> ${order.order_date}</p>
-                                            <p><strong>Delivery Date:</strong> ${order.delivery_date}</p>
+                    // Get client account details for the first page
+                    $.ajax({
+                        url: '../../backend/get_client_details.php',
+                        method: 'GET',
+                        data: { username: username },
+                        dataType: 'json',
+                        success: function(clientResponse) {
+                            const clientDetails = clientResponse.success ? clientResponse.data : { 
+                                full_name: username,
+                                company: 'Not specified',
+                                company_address: 'Not specified',
+                                email: 'Not specified',
+                                contact_number: 'Not specified'
+                            };
+                            
+                            // Calculate grand total from orders
+                            let grandTotal = 0;
+                            let totalItems = 0;
+                            
+                            response.data.forEach(order => {
+                                const orderItems = typeof order.orders === 'string' ? 
+                                    JSON.parse(order.orders) : order.orders;
+                                
+                                // Calculate order total
+                                let orderTotal = 0;
+                                orderItems.forEach(item => {
+                                    const price = parseFloat(item.price);
+                                    const quantity = parseInt(item.quantity);
+                                    orderTotal += price * quantity;
+                                    totalItems += quantity;
+                                });
+                                
+                                grandTotal += orderTotal;
+                            });
+                            
+                            // Build the PDF content with proper styling
+                            let htmlContent = `
+                                <style>
+                                    body {
+                                        font-family: 'Arial', sans-serif;
+                                        margin: 0;
+                                        padding: 0;
+                                        color: #333;
+                                        line-height: 1.5;
+                                    }
+                                    .header {
+                                        text-align: center;
+                                        margin-bottom: 20px;
+                                        padding-bottom: 10px;
+                                        border-bottom: 2px solid #ddd;
+                                    }
+                                    .header h1 {
+                                        font-size: 24px;
+                                        margin: 0 0 5px 0;
+                                        color: #2980b9;
+                                    }
+                                    .header h2 {
+                                        font-size: 18px;
+                                        margin: 0;
+                                        font-weight: normal;
+                                    }
+                                    .summary-container {
+                                        margin-bottom: 30px;
+                                    }
+                                    .client-info {
+                                        background-color: #f8f9fa;
+                                        padding: 15px;
+                                        border: 1px solid #ddd;
+                                        border-radius: 4px;
+                                        margin-bottom: 20px;
+                                    }
+                                    .client-info h3 {
+                                        margin: 0 0 10px 0;
+                                        color: #2980b9;
+                                        font-size: 16px;
+                                    }
+                                    .client-details {
+                                        display: flex;
+                                        flex-wrap: wrap;
+                                    }
+                                    .client-detail-item {
+                                        width: 50%;
+                                        margin-bottom: 8px;
+                                        font-size: 12px;
+                                    }
+                                    .summary-box {
+                                        background-color: #e9f7fe;
+                                        border: 1px solid #b3e5fc;
+                                        border-radius: 4px;
+                                        padding: 15px;
+                                        margin: 20px 0;
+                                    }
+                                    .summary-box h3 {
+                                        margin: 0 0 10px 0;
+                                        color: #2980b9;
+                                        font-size: 16px;
+                                    }
+                                    .summary-stats {
+                                        display: flex;
+                                        justify-content: space-between;
+                                        flex-wrap: wrap;
+                                    }
+                                    .summary-stat-item {
+                                        width: 30%;
+                                        text-align: center;
+                                        padding: 10px;
+                                        background: white;
+                                        border: 1px solid #ddd;
+                                        border-radius: 4px;
+                                        margin-bottom: 10px;
+                                    }
+                                    .stat-value {
+                                        font-size: 18px;
+                                        font-weight: bold;
+                                        color: #2980b9;
+                                    }
+                                    .stat-label {
+                                        font-size: 12px;
+                                        color: #777;
+                                    }
+                                    .order-container {
+                                        margin-bottom: 30px;
+                                        page-break-inside: avoid;
+                                        page-break-before: always;
+                                    }
+                                    .order-header {
+                                        background-color: #f8f9fa;
+                                        padding: 10px;
+                                        border: 1px solid #ddd;
+                                        border-radius: 4px;
+                                        margin-bottom: 15px;
+                                    }
+                                    .order-header h3 {
+                                        margin: 0 0 10px 0;
+                                        color: #2980b9;
+                                        font-size: 16px;
+                                    }
+                                    .order-details {
+                                        display: flex;
+                                        justify-content: space-between;
+                                        font-size: 12px;
+                                    }
+                                    .order-details-left {
+                                        width: 50%;
+                                    }
+                                    .order-details-right {
+                                        width: 50%;
+                                    }
+                                    .order-details p {
+                                        margin: 3px 0;
+                                    }
+                                    .items-table {
+                                        width: 100%;
+                                        border-collapse: collapse;
+                                        font-size: 12px;
+                                        margin-bottom: 15px;
+                                    }
+                                    .items-table th {
+                                        background-color: #f2f2f2;
+                                        text-align: left;
+                                        padding: 8px;
+                                        border: 1px solid #ddd;
+                                        font-size: 12px;
+                                    }
+                                    .items-table td {
+                                        padding: 8px;
+                                        border: 1px solid #ddd;
+                                        vertical-align: top;
+                                    }
+                                    .items-table .text-right {
+                                        text-align: right;
+                                    }
+                                    .items-table .text-center {
+                                        text-align: center;
+                                    }
+                                    .total-row {
+                                        font-weight: bold;
+                                        background-color: #f8f9fa;
+                                    }
+                                    .signature-area {
+                                        margin-top: 30px;
+                                        display: flex;
+                                        justify-content: space-between;
+                                    }
+                                    .signature-block {
+                                        width: 45%;
+                                        text-align: center;
+                                    }
+                                    .signature-line {
+                                        border-top: 1px solid black;
+                                        margin-bottom: 10px;
+                                    }
+                                    .signature-name {
+                                        font-size: 14px;
+                                    }
+                                    .signature-date {
+                                        margin-top: 5px;
+                                        font-size: 12px;
+                                    }
+                                </style>
+                                <div class="header">
+                                    <h1>Monthly Orders Report</h1>
+                                    <h2>${username} - ${monthName} ${year}</h2>
+                                </div>
+                                
+                                <!-- Summary Section (First Page) -->
+                                <div class="summary-container">
+                                    <div class="client-info">
+                                        <h3>Client Information</h3>
+                                        <div class="client-details">
+                                            <div class="client-detail-item"><strong>Username:</strong> ${username}</div>
+                                            <div class="client-detail-item"><strong>Full Name:</strong> ${clientDetails.full_name || 'Not specified'}</div>
+                                            <div class="client-detail-item"><strong>Company:</strong> ${clientDetails.company || 'Not specified'}</div>
+                                            <div class="client-detail-item"><strong>Email:</strong> ${clientDetails.email || 'Not specified'}</div>
+                                            <div class="client-detail-item"><strong>Contact:</strong> ${clientDetails.contact_number || 'Not specified'}</div>
+                                            <div class="client-detail-item"><strong>Address:</strong> ${clientDetails.company_address || 'Not specified'}</div>
                                         </div>
-                                        <div class="order-details-right">
-                                            <p><strong>Delivery Address:</strong></p>
-                                            <p>${order.delivery_address || 'Not specified'}</p>
+                                    </div>
+                                    
+                                    <div class="summary-box">
+                                        <h3>Monthly Summary</h3>
+                                        <div class="summary-stats">
+                                            <div class="summary-stat-item">
+                                                <div class="stat-value">${response.data.length}</div>
+                                                <div class="stat-label">Total Orders</div>
+                                            </div>
+                                            <div class="summary-stat-item">
+                                                <div class="stat-value">${totalItems}</div>
+                                                <div class="stat-label">Total Items</div>
+                                            </div>
+                                            <div class="summary-stat-item">
+                                                <div class="stat-value">PHP ${grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                                                <div class="stat-label">Total Amount</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <table class="items-table">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 15%">Category</th>
-                                            <th style="width: 25%">Item Description</th>
-                                            <th style="width: 15%">Packaging</th>
-                                            <th style="width: 15%" class="text-right">Price</th>
-                                            <th style="width: 10%" class="text-center">Quantity</th>
-                                            <th style="width: 20%" class="text-right">Subtotal</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                        `;
-                        
-                        // Add order items
-                        let orderTotal = 0;
-                        orderItems.forEach(item => {
-                            const price = parseFloat(item.price);
-                            const quantity = parseInt(item.quantity);
-                            const subtotal = price * quantity;
-                            orderTotal += subtotal;
-                            
-                            htmlContent += `
-                                <tr>
-                                    <td>${item.category || ''}</td>
-                                    <td>${item.item_description}</td>
-                                    <td>${item.packaging || ''}</td>
-                                    <td class="text-right">PHP ${price.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                                    <td class="text-center">${quantity}</td>
-                                    <td class="text-right">PHP ${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                                </tr>
                             `;
-                        });
-                        
-                        // Add order total
-                        htmlContent += `
-                                    </tbody>
-                                    <tfoot>
-                                        <tr class="total-row">
-                                            <td colspan="5" class="text-right">Total:</td>
-                                            <td class="text-right">PHP ${orderTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                            
+                            // Add each order
+                            response.data.forEach((order, index) => {
+                                const orderItems = typeof order.orders === 'string' ? 
+                                    JSON.parse(order.orders) : order.orders;
+                                
+                                htmlContent += `
+                                    <div class="order-container">
+                                        <div class="order-header">
+                                            <h3>Purchase Order: ${order.po_number}</h3>
+                                            <div class="order-details">
+                                                <div class="order-details-left">
+                                                    <p><strong>Order Date:</strong> ${order.order_date}</p>
+                                                    <p><strong>Delivery Date:</strong> ${order.delivery_date}</p>
+                                                </div>
+                                                <div class="order-details-right">
+                                                    <p><strong>Delivery Address:</strong></p>
+                                                    <p>${order.delivery_address || 'Not specified'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <table class="items-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 15%">Category</th>
+                                                    <th style="width: 25%">Item Description</th>
+                                                    <th style="width: 15%">Packaging</th>
+                                                    <th style="width: 15%" class="text-right">Price</th>
+                                                    <th style="width: 10%" class="text-center">Quantity</th>
+                                                    <th style="width: 20%" class="text-right">Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                `;
+                                
+                                // Add order items
+                                let orderTotal = 0;
+                                orderItems.forEach(item => {
+                                    const price = parseFloat(item.price);
+                                    const quantity = parseInt(item.quantity);
+                                    const subtotal = price * quantity;
+                                    orderTotal += subtotal;
+                                    
+                                    htmlContent += `
+                                        <tr>
+                                            <td>${item.category || ''}</td>
+                                            <td>${item.item_description}</td>
+                                            <td>${item.packaging || ''}</td>
+                                            <td class="text-right">PHP ${price.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                            <td class="text-center">${quantity}</td>
+                                            <td class="text-right">PHP ${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                                         </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        `;
-                        
-                        grandTotal += orderTotal;
-                    });
-                    
-                    // Add summary page
-                    htmlContent += `
-                        <div class="summary">
-                            <h2>Monthly Summary</h2>
-                            <p><strong>Total Number of Orders:</strong> ${response.data.length}</p>
-                            <p><strong>Monthly Total Amount:</strong> PHP ${grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                                    `;
+                                });
+                                
+                                // Add order total and signature section
+                                htmlContent += `
+                                            </tbody>
+                                            <tfoot>
+                                                <tr class="total-row">
+                                                    <td colspan="5" class="text-right">Total:</td>
+                                                    <td class="text-right">PHP ${orderTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                        
+                                        <!-- Signature section for each order -->
+                                        <div class="signature-area">
+                                            <div class="signature-block">
+                                                <div class="signature-line"></div>
+                                                <div class="signature-name">Top Exchange</div>
+                                                <div class="signature-date">Date: _______________</div>
+                                            </div>
+                                            <div class="signature-block">
+                                                <div class="signature-line"></div>
+                                                <div class="signature-name">${username}</div>
+                                                <div class="signature-date">Date: _______________</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            });
                             
-                            <div class="signature-area">
-                                <div class="signature-block">
-                                    <div class="signature-line"></div>
-                                    <div class="signature-name">Top Exchange</div>
-                                    <div class="signature-date">Date: _______________</div>
-                                </div>
-                                <div class="signature-block">
-                                    <div class="signature-line"></div>
-                                    <div class="signature-name">${username}</div>
-                                    <div class="signature-date">Date: _______________</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Add content to the container but don't attach to DOM yet
-                    pdfContainer.innerHTML = htmlContent;
-                    
-                    // Configure html2pdf options
-                    const opt = {
-                        margin: [15, 15, 15, 15],
-                        filename: `Orders_${username}_${monthName}_${year}.pdf`,
-                        image: { type: 'jpeg', quality: 1 },
-                        html2canvas: { 
-                            scale: 2,
-                            useCORS: true,
-                            letterRendering: true
+                            // Configure html2pdf options
+                            const opt = {
+                                margin: [15, 15, 15, 15],
+                                filename: `Orders_${username}_${monthName}_${year}.pdf`,
+                                image: { type: 'jpeg', quality: 1 },
+                                html2canvas: { 
+                                    scale: 2,
+                                    useCORS: true,
+                                    letterRendering: true
+                                },
+                                jsPDF: { 
+                                    unit: 'mm', 
+                                    format: 'a4', 
+                                    orientation: 'portrait',
+                                    compress: true
+                                }
+                            };
+                            
+                            // Create a worker to generate the PDF in the background
+                            const worker = html2pdf().from(htmlContent).set(opt);
+                            
+                            // Generate and download the PDF
+                            worker.save()
+                                .then(() => {
+                                    // Reset button
+                                    downloadBtn.innerHTML = originalText;
+                                    downloadBtn.disabled = false;
+                                    
+                                    // Show success message
+                                    showToast(`Monthly orders for ${monthName} ${year} have been downloaded`, 'success');
+                                })
+                                .catch(error => {
+                                    console.error('Error generating PDF:', error);
+                                    alert('Error generating PDF. Please try again.');
+                                    
+                                    // Reset button
+                                    downloadBtn.innerHTML = originalText;
+                                    downloadBtn.disabled = false;
+                                });
                         },
-                        jsPDF: { 
-                            unit: 'mm', 
-                            format: 'a4', 
-                            orientation: 'portrait',
-                            compress: true
+                        error: function() {
+                            // If we can't get client details, just continue with username
+                            alert('Could not fetch client details, continuing with basic information.');
+                            
+                            // Reset button
+                            downloadBtn.innerHTML = originalText;
+                            downloadBtn.disabled = false;
                         }
-                    };
-                    
-                    // Create a worker to generate the PDF in the background
-                    const worker = html2pdf().from(htmlContent).set(opt);
-                    
-                    // Generate and download the PDF
-                    worker.save()
-                        .then(() => {
-                            // Reset button
-                            downloadBtn.innerHTML = originalText;
-                            downloadBtn.disabled = false;
-                            
-                            // Show success message
-                            showToast(`Monthly orders for ${monthName} ${year} have been downloaded`, 'success');
-                        })
-                        .catch(error => {
-                            console.error('Error generating PDF:', error);
-                            alert('Error generating PDF. Please try again.');
-                            
-                            // Reset button
-                            downloadBtn.innerHTML = originalText;
-                            downloadBtn.disabled = false;
-                        });
+                    });
                 } catch (error) {
                     console.error('Error in PDF creation:', error);
                     alert('Error creating PDF: ' + error.message);
