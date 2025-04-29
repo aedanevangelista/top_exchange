@@ -1320,7 +1320,6 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
                         dataType: 'json',
                         success: function(clientResponse) {
                             const clientDetails = clientResponse.success ? clientResponse.data : { 
-                                full_name: username,
                                 company: 'Not specified',
                                 company_address: 'Not specified',
                                 email: 'Not specified',
@@ -1523,7 +1522,6 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
                                         <h3>Client Information</h3>
                                         <div class="client-details">
                                             <div class="client-detail-item"><strong>Username:</strong> ${username}</div>
-                                            <div class="client-detail-item"><strong>Full Name:</strong> ${clientDetails.full_name || 'Not specified'}</div>
                                             <div class="client-detail-item"><strong>Company:</strong> ${clientDetails.company || 'Not specified'}</div>
                                             <div class="client-detail-item"><strong>Email:</strong> ${clientDetails.email || 'Not specified'}</div>
                                             <div class="client-detail-item"><strong>Contact:</strong> ${clientDetails.contact_number || 'Not specified'}</div>
