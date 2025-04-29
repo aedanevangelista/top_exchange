@@ -1291,7 +1291,7 @@ if ($result && $row = $result->fetch_assoc()) {
         });
     }
 
-// Function to download all POs for a month as PDF
+// Alternate version with a simpler approach
 function downloadMonthlyOrdersPDF(username, month, monthName, year) {
     // Show loading spinner
     const downloadBtn = event.currentTarget;
@@ -1299,7 +1299,7 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
     downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
     downloadBtn.disabled = true;
     
-    // First, fetch the orders for this month
+    // Create a form to submit to a temporary backend PDF generator
     $.ajax({
         url: '../../backend/get_monthly_orders.php',
         method: 'GET',
@@ -1311,97 +1311,77 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
         dataType: 'json',
         success: function(response) {
             if (response.success && response.data && response.data.length > 0) {
-                // Create a visible container for the PDF content
-                if (!document.getElementById('pdfContentContainer')) {
-                    const pdfContainer = document.createElement('div');
-                    pdfContainer.id = 'pdfContentContainer';
-                    pdfContainer.style.position = 'absolute';
-                    pdfContainer.style.left = '-9999px';
-                    pdfContainer.style.top = '-9999px';
-                    document.body.appendChild(pdfContainer);
-                }
+                // Create PDF content using a div
+                const printDiv = document.createElement('div');
+                printDiv.style.width = '100%';
+                printDiv.style.padding = '20px';
+                printDiv.style.backgroundColor = 'white';
+                printDiv.style.fontFamily = 'Arial, sans-serif';
                 
-                const pdfContainer = document.getElementById('pdfContentContainer');
-                
-                // Add title and header
-                let pdfContent = `
-                    <div style="text-align: center; margin-bottom: 20px; font-family: Arial, sans-serif;">
-                        <h1 style="font-size: 24px; margin-bottom: 10px;">Monthly Orders Report</h1>
-                        <h2 style="font-size: 18px;">${username} - ${monthName} ${year}</h2>
+                let htmlContent = `
+                    <div style="text-align: center; margin-bottom: 20px">
+                        <h1 style="font-size: 24px">Monthly Orders Report</h1>
+                        <h2 style="font-size: 18px">${username} - ${monthName} ${year}</h2>
                     </div>
                 `;
                 
-                // Add each order
+                // Process each order
                 let grandTotal = 0;
                 response.data.forEach((order, index) => {
-                    const orderItems = typeof order.orders === 'string' ? 
-                        JSON.parse(order.orders) : order.orders;
+                    const orderItems = Array.isArray(order.orders) ? 
+                        order.orders : JSON.parse(order.orders);
                     
-                    pdfContent += `
-                        <div style="margin-bottom: 30px; font-family: Arial, sans-serif; ${index > 0 ? 'page-break-before: always;' : ''}">
-                            <h3 style="font-size: 16px; margin-bottom: 10px;">Purchase Order: ${order.po_number}</h3>
-                            <table style="width: 100%; margin-bottom: 10px; font-family: Arial, sans-serif; font-size: 12px;">
-                                <tr>
-                                    <td style="width: 50%;">
-                                        <strong>Order Date:</strong> ${order.order_date}<br>
-                                        <strong>Delivery Date:</strong> ${order.delivery_date}
-                                    </td>
-                                    <td style="width: 50%;">
-                                        <strong>Delivery Address:</strong><br>${order.delivery_address || 'Not specified'}
-                                    </td>
-                                </tr>
-                            </table>
+                    htmlContent += `
+                        <div style="margin-bottom: 20px; ${index > 0 ? 'page-break-before: always' : ''}">
+                            <h3>Purchase Order: ${order.po_number}</h3>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px">
+                                <div>
+                                    <p><strong>Order Date:</strong> ${order.order_date}</p>
+                                    <p><strong>Delivery Date:</strong> ${order.delivery_date}</p>
+                                </div>
+                                <div>
+                                    <p><strong>Delivery Address:</strong></p>
+                                    <p>${order.delivery_address || 'Not specified'}</p>
+                                </div>
+                            </div>
                             
-                            <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-family: Arial, sans-serif; font-size: 12px;">
-                                <thead>
-                                    <tr style="background-color: #f2f2f2;">
-                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Category</th>
-                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Item Description</th>
-                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Packaging</th>
-                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Price</th>
-                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Quantity</th>
-                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Subtotal</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                            <table style="width: 100%; border-collapse: collapse">
+                                <tr style="background-color: #f2f2f2">
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left">Category</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left">Item Description</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: left">Packaging</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: right">Price</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: center">Quantity</th>
+                                    <th style="border: 1px solid #ddd; padding: 8px; text-align: right">Subtotal</th>
+                                </tr>
                     `;
                     
                     // Add order items
                     let orderTotal = 0;
                     orderItems.forEach(item => {
-                        const subtotal = parseFloat(item.price) * parseInt(item.quantity);
+                        const price = parseFloat(item.price);
+                        const quantity = parseInt(item.quantity);
+                        const subtotal = price * quantity;
                         orderTotal += subtotal;
                         
-                        pdfContent += `
+                        htmlContent += `
                             <tr>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${item.category || ''}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${item.item_description}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px;">${item.packaging || ''}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PHP ${parseFloat(item.price).toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                })}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${item.quantity}</td>
-                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">PHP ${subtotal.toLocaleString('en-US', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                })}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px">${item.category || ''}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px">${item.item_description}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px">${item.packaging || ''}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right">PHP ${price.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center">${quantity}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right">PHP ${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                             </tr>
                         `;
                     });
                     
                     // Add order total
-                    pdfContent += `
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold;">Order Total:</td>
-                                        <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold;">PHP ${orderTotal.toLocaleString('en-US', {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2
-                                        })}</td>
-                                    </tr>
-                                </tfoot>
+                    htmlContent += `
+                                <tr>
+                                    <td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold">Order Total:</td>
+                                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold">PHP ${orderTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                </tr>
                             </table>
                         </div>
                     `;
@@ -1409,71 +1389,75 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
                     grandTotal += orderTotal;
                 });
                 
-                // Add summary page
-                pdfContent += `
-                    <div style="margin-top: 30px; page-break-before: always; font-family: Arial, sans-serif;">
-                        <h2 style="font-size: 18px; margin-bottom: 15px;">Monthly Summary</h2>
-                        <p style="font-size: 14px;"><strong>Total Number of Orders:</strong> ${response.data.length}</p>
-                        <p style="font-size: 14px;"><strong>Monthly Total Amount:</strong> PHP ${grandTotal.toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        })}</p>
+                // Add summary
+                htmlContent += `
+                    <div style="margin-top: 40px; page-break-before: always">
+                        <h2>Monthly Summary</h2>
+                        <p><strong>Total Number of Orders:</strong> ${response.data.length}</p>
+                        <p><strong>Monthly Total Amount:</strong> PHP ${grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
                         
-                        <div style="margin-top: 50px; display: flex; justify-content: space-between; font-family: Arial, sans-serif; font-size: 12px;">
-                            <div style="width: 40%; text-align: center;">
-                                <div style="border-bottom: 1px solid black; margin-bottom: 10px; padding-top: 40px;"></div>
-                                Top Exchange<br>
-                                Date: _______________
+                        <div style="margin-top: 60px; display: flex; justify-content: space-between">
+                            <div style="width: 40%; text-align: center">
+                                <div style="border-top: 1px solid black; margin-bottom: 10px"></div>
+                                <p>Top Exchange</p>
+                                <p>Date: _______________</p>
                             </div>
-                            <div style="width: 40%; text-align: center;">
-                                <div style="border-bottom: 1px solid black; margin-bottom: 10px; padding-top: 40px;"></div>
-                                ${username}<br>
-                                Date: _______________
+                            <div style="width: 40%; text-align: center">
+                                <div style="border-top: 1px solid black; margin-bottom: 10px"></div>
+                                <p>${username}</p>
+                                <p>Date: _______________</p>
                             </div>
                         </div>
                     </div>
                 `;
                 
-                // Set the HTML content
-                pdfContainer.innerHTML = pdfContent;
+                printDiv.innerHTML = htmlContent;
+                document.body.appendChild(printDiv);
                 
-                // Log to console for debugging
-                console.log("Creating PDF with content length:", pdfContent.length);
-                
-                // Make sure the container has dimensions
-                pdfContainer.style.width = '210mm';  // A4 width
-                
-                // Configure html2pdf options
+                // Configure html2pdf
                 const opt = {
-                    margin: [10, 10, 10, 10],
+                    margin: 10,
                     filename: `Orders_${username}_${monthName}_${year}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, logging: true },
+                    html2canvas: { scale: 2 },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
                 
-                // Generate and download the PDF
-                html2pdf().from(pdfContainer).set(opt).save().then(() => {
-                    // Reset button
-                    downloadBtn.innerHTML = originalText;
-                    downloadBtn.disabled = false;
-                    
-                    // Show success message
-                    showToast(`Monthly orders for ${monthName} ${year} have been downloaded.`, 'success');
-                }).catch(error => {
-                    console.error('Error generating PDF:', error);
-                    alert('Error generating PDF: ' + error.message);
-                    
-                    // Reset button
-                    downloadBtn.innerHTML = originalText;
-                    downloadBtn.disabled = false;
-                });
+                // Generate PDF
+                html2pdf()
+                    .from(printDiv)
+                    .set(opt)
+                    .save()
+                    .then(() => {
+                        // Clean up
+                        document.body.removeChild(printDiv);
+                        
+                        // Reset button
+                        downloadBtn.innerHTML = originalText;
+                        downloadBtn.disabled = false;
+                        
+                        // Show success message
+                        showToast(`Monthly orders for ${monthName} ${year} have been downloaded`, 'success');
+                    })
+                    .catch(err => {
+                        console.error("PDF generation error:", err);
+                        alert("Error generating PDF: " + err.message);
+                        
+                        // Clean up
+                        if (document.body.contains(printDiv)) {
+                            document.body.removeChild(printDiv);
+                        }
+                        
+                        // Reset button
+                        downloadBtn.innerHTML = originalText;
+                        downloadBtn.disabled = false;
+                    });
             } else {
-                // Reset button
+                // Reset button state
                 downloadBtn.innerHTML = originalText;
                 downloadBtn.disabled = false;
                 
-                // Show message
+                // Show error
                 alert('No completed orders found for this month.');
             }
         },
@@ -1490,6 +1474,7 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
         }
     });
 }
+
 // Function to show toast messages
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
