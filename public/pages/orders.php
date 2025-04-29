@@ -397,7 +397,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="orders-header">
-            <h1>Orders Management</h1>
+            <h1>Orders</h1>
             <!-- Updated search section to exactly match order_history.php -->
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">

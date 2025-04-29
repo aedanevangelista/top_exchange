@@ -97,7 +97,7 @@ if (isset($_GET['success'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Roles Management</title>
+    <title>User Roles</title>
     <link rel="stylesheet" href="/css/user_roles.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -343,7 +343,7 @@ if (isset($_GET['success'])) {
 
     <div class="main-content">
         <div class="accounts-header">
-            <h1>User Roles Management</h1>
+            <h1>User Roles</h1>
             <button onclick="showRoleForm()" class="add-account-btn">
                 <i class="fas fa-user-plus"></i> Add New Role
             </button>

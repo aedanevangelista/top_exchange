@@ -188,7 +188,7 @@ if (!empty($status_filter) && !empty($area_filter)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Drivers Management</title>
+    <title>Drivers List</title>
     <link rel="stylesheet" href="/css/accounts.css">
     <link rel="stylesheet" href="/css/drivers.css">
     <link rel="stylesheet" href="/css/sidebar.css">
@@ -369,7 +369,7 @@ if (!empty($status_filter) && !empty($area_filter)) {
     <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="accounts-header">
-            <h1>Drivers Management</h1>
+            <h1>Drivers List</h1>
             <div class="filter-section">
                 <label for="statusFilter">Filter by Status:</label>
                 <select id="statusFilter" onchange="filterByStatus()">
