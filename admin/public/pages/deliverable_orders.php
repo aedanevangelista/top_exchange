@@ -991,6 +991,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                 <label for="driverSelect">Select Driver:</label>
                 <select id="driverSelect">
                     <option value="0">-- Select a driver --</option>
+                    <option value="-1">-- Remove driver --</option>
                     <?php foreach ($drivers as $driver): ?>
                         <option value="<?= $driver['id'] ?>"><?= htmlspecialchars($driver['name']) ?></option>
                     <?php endforeach; ?>
@@ -1282,7 +1283,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             const driverId = document.getElementById('driverSelect').value;
             
             if (driverId == 0) {
-                showToast('Please select a driver', 'error');
+                showToast('Please select a driver or choose to remove driver', 'error');
                 return;
             }
             
@@ -1292,7 +1293,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
             saveBtn.disabled = true;
 
-            // Send request to assign driver
+            // Send request to assign driver or remove driver assignment
             fetch('/admin/backend/assign_driver.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1304,7 +1305,11 @@ $statusOptions = ['For Delivery', 'In Transit'];
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showToast('Driver updated successfully', 'success');
+                    if (driverId == -1) {
+                        showToast('Driver removed successfully', 'success');
+                    } else {
+                        showToast('Driver updated successfully', 'success');
+                    }
                     setTimeout(() => { window.location.reload(); }, 1000);
                 } else {
                     showToast('Error: ' + (data.message || 'Unknown error'), 'error');
