@@ -132,7 +132,7 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
                 
                 <!-- New Compact Pending Orders Notification Badge -->
                 <?php if ($pendingOrdersCount > 0): ?>
-                <a href="/public/pages/pending_orders.php" style="text-decoration: none;">
+                <a href="/public/pages/orders.php" style="text-decoration: none;">
                     <div class="notification-badge">
                         <i class="fas fa-bell notification-icon"></i>
                         <span class="notification-count"><?php echo $pendingOrdersCount; ?></span>

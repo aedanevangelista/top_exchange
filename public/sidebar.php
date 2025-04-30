@@ -118,19 +118,9 @@ $allowedPages = array_map('trim', explode(',', $pages));
                                 <i class="fas fa-arrow-right"></i> Orders
                             </a>
                         <?php endif; ?>
-                        <?php if (in_array('Pending Orders', $allowedPages)): ?>
-                            <a href="/public/pages/pending_orders.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Pending Orders
-                            </a>
-                        <?php endif; ?>
                         <?php if (in_array('Deliverable Orders', $allowedPages)): ?>
                             <a href="/public/pages/deliverable_orders.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Deliverable Orders
-                            </a>
-                        <?php endif; ?>
-                        <?php if (in_array('Rejected Orders', $allowedPages)): ?>
-                            <a href="/public/pages/rejected_orders.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Rejected Orders
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Order History', $allowedPages)): ?>
