@@ -1053,10 +1053,10 @@ function changeStatus(status) {
             });
     } else {
         // For going back to Pending or Rejected from Active, we need to return materials to inventory
-        const isRestoringInventory = (status === 'Pending' || status === 'Rejected');
+        const returnMaterials = (status === 'Pending' || status === 'Rejected');
         
         // For other statuses, proceed directly
-        updateOrderStatus(status, isRestoringInventory);
+        updateOrderStatus(status, returnMaterials);
     }
 }
 
@@ -1966,12 +1966,13 @@ function closeSpecialInstructions() {
     document.getElementById('specialInstructionsModal').style.display = 'none';
 }
 
-// Functions for handling pending orders status changes
 function changeStatusWithCheck(status) {
     var poNumber = $('#pendingStatusModal').data('po_number');
     
     // Only deduct materials if changing to Active
     const deductMaterials = (status === 'Active');
+    // Only return materials if changing from Active to Pending/Rejected
+    const returnMaterials = (status === 'Pending' || status === 'Rejected');
     
     // Show loading indicator
     const originalBtnText = $('#activeStatusBtn').html();
@@ -1983,11 +1984,13 @@ function changeStatusWithCheck(status) {
     formData.append('po_number', poNumber);
     formData.append('status', status);
     formData.append('deduct_materials', deductMaterials ? '1' : '0');
+    formData.append('return_materials', returnMaterials ? '1' : '0');
     
     console.log("Sending status change request:", {
         po_number: poNumber,
         status: status,
-        deduct_materials: deductMaterials
+        deduct_materials: deductMaterials,
+        return_materials: returnMaterials
     });
     
     // Use basic XMLHttpRequest for better debugging
@@ -2013,10 +2016,12 @@ function changeStatusWithCheck(status) {
                         if (toastType === 'completed') toastType = 'complete';
                         if (toastType === 'rejected') toastType = 'reject';
                         
-                        // Create message
+                        // Create message with inventory information
                         let message = `Changed status for ${poNumber} to ${status}.`;
-                        if (status === 'Active' && deductMaterials) {
+                        if (status === 'Active' && deductMaterials && data.inventory_updated) {
                             message = `Changed status for ${poNumber} to ${status}. Inventory has been updated.`;
+                        } else if ((status === 'Pending' || status === 'Rejected') && returnMaterials && data.inventory_updated) {
+                            message = `Changed status for ${poNumber} to ${status}. Materials have been returned to inventory.`;
                         }
                         
                         // Show toast and reload
@@ -2046,6 +2051,8 @@ function changeStatusWithCheck(status) {
     };
     xhr.send(formData);
 }
+
+
 function openPendingStatusModal(poNumber, username, ordersJson) {
     $('#pendingStatusMessage').text('Change order status for ' + poNumber);
     $('#pendingStatusModal').data('po_number', poNumber).show();
