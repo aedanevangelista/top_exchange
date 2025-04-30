@@ -106,6 +106,12 @@ try {
                     log_debug("Progress reset and driver assignment removed");
                 }
                 
+                // Log the status change
+                $changed_by = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
+                $stmt = $conn->prepare("INSERT INTO order_status_logs (po_number, old_status, new_status, changed_by, changed_at) VALUES (?, ?, ?, ?, NOW())");
+                $stmt->bind_param("ssss", $po_number, $currentStatus, $status, $changed_by);
+                $stmt->execute();
+                
                 // Commit the transaction
                 $conn->commit();
                 log_debug("Transaction committed");
@@ -165,34 +171,35 @@ function processInventoryDeduction($conn, $po_number, $ordersJson) {
     
     // For each product in the order
     foreach ($orders as $item) {
-        $productName = $item['item_description'];
+        $productId = $item['product_id'];
+        $itemDescription = $item['item_description'];
         $quantityNeeded = (int)$item['quantity'];
         
-        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Processing product: $productName, quantity: $quantityNeeded\n", FILE_APPEND);
+        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Processing product: $itemDescription (ID: $productId), quantity: $quantityNeeded\n", FILE_APPEND);
         
         // Check if product exists in products table
-        $stmt = $conn->prepare("SELECT id, stock FROM products WHERE item_description = ?");
+        $stmt = $conn->prepare("SELECT product_id, stock_quantity, ingredients FROM products WHERE product_id = ?");
         if (!$stmt) {
             file_put_contents($log_file, date('Y-m-d H:i:s') . ": Prepare failed for products: " . $conn->error . "\n", FILE_APPEND);
             return false;
         }
         
-        $stmt->bind_param("s", $productName);
+        $stmt->bind_param("i", $productId);
         $stmt->execute();
         $result = $stmt->get_result();
         
         if ($result->num_rows > 0) {
-            // Update existing product
+            // Product exists
             $row = $result->fetch_assoc();
-            $productId = $row['id'];
-            $currentStock = (int)$row['stock'];
+            $currentStock = (int)$row['stock_quantity'];
+            $ingredients = $row['ingredients'];
             
             file_put_contents($log_file, date('Y-m-d H:i:s') . ": Found in products. Current stock: $currentStock\n", FILE_APPEND);
             
             if ($currentStock >= $quantityNeeded) {
                 // Enough stock, deduct from products
                 $newStock = $currentStock - $quantityNeeded;
-                $updateStmt = $conn->prepare("UPDATE products SET stock = ? WHERE id = ?");
+                $updateStmt = $conn->prepare("UPDATE products SET stock_quantity = ? WHERE product_id = ?");
                 $updateStmt->bind_param("ii", $newStock, $productId);
                 
                 if (!$updateStmt->execute()) {
@@ -201,58 +208,49 @@ function processInventoryDeduction($conn, $po_number, $ordersJson) {
                 }
                 
                 // Record movement
-                recordInventoryMovement($conn, $productName, $quantityNeeded, 'deduction', $po_number, 'Order Activated');
+                recordInventoryMovement($conn, $itemDescription, 'finished_product', $quantityNeeded, $po_number, 'Order Activated');
                 
                 file_put_contents($log_file, date('Y-m-d H:i:s') . ": Successfully deducted $quantityNeeded units from stock\n", FILE_APPEND);
             } else {
                 // Not enough stock, check if we have ingredients to manufacture
-                $checkIngredientsStmt = $conn->prepare("SELECT ingredients FROM products WHERE id = ?");
-                $checkIngredientsStmt->bind_param("i", $productId);
-                $checkIngredientsStmt->execute();
-                $ingredientsResult = $checkIngredientsStmt->get_result();
-                
-                if ($ingredientsResult->num_rows > 0) {
-                    $ingredientsData = $ingredientsResult->fetch_assoc();
-                    $ingredients = $ingredientsData['ingredients'];
+                if (!empty($ingredients)) {
+                    file_put_contents($log_file, date('Y-m-d H:i:s') . ": Not enough stock. Checking ingredients: $ingredients\n", FILE_APPEND);
                     
-                    // If we have ingredients data, try to manufacture by deducting raw materials
-                    if (!empty($ingredients)) {
-                        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Not enough stock. Checking ingredients: $ingredients\n", FILE_APPEND);
+                    // Deduct what we have from stock first
+                    if ($currentStock > 0) {
+                        $updateStmt = $conn->prepare("UPDATE products SET stock_quantity = 0 WHERE product_id = ?");
+                        $updateStmt->bind_param("i", $productId);
+                        $updateStmt->execute();
                         
-                        // Deduct what we have from stock first
-                        if ($currentStock > 0) {
-                            $updateStmt = $conn->prepare("UPDATE products SET stock = 0 WHERE id = ?");
-                            $updateStmt->bind_param("i", $productId);
-                            $updateStmt->execute();
-                            
-                            // Record movement for what we used from stock
-                            recordInventoryMovement($conn, $productName, $currentStock, 'deduction', $po_number, 'Order Activated (Partial Stock)');
-                            
-                            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Deducted $currentStock units from available stock\n", FILE_APPEND);
-                        }
+                        // Record movement for what we used from stock
+                        recordInventoryMovement($conn, $itemDescription, 'finished_product', $currentStock, $po_number, 'Order Activated (Partial Stock)');
                         
-                        // Calculate remaining quantity needed
-                        $remainingNeeded = $quantityNeeded - $currentStock;
-                        
-                        // Try to deduct from raw materials for the remainder
-                        if (!deductRawMaterials($conn, $productName, $remainingNeeded, $ingredients, $po_number)) {
-                            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Failed to deduct raw materials\n", FILE_APPEND);
-                            return false;
-                        }
-                        
-                        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Successfully deducted raw materials for remaining $remainingNeeded units\n", FILE_APPEND);
-                    } else {
-                        file_put_contents($log_file, date('Y-m-d H:i:s') . ": No ingredients data available for manufacturing\n", FILE_APPEND);
-                        return false; // Can't manufacture without ingredients data
+                        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Deducted $currentStock units from available stock\n", FILE_APPEND);
                     }
+                    
+                    // Calculate remaining quantity needed
+                    $remainingNeeded = $quantityNeeded - $currentStock;
+                    
+                    // Try to deduct from raw materials for the remainder
+                    if (!deductRawMaterials($conn, $itemDescription, $remainingNeeded, $ingredients, $po_number)) {
+                        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Failed to deduct raw materials\n", FILE_APPEND);
+                        return false;
+                    }
+                    
+                    // Log the manufacturing in manufacturing_logs
+                    $stmt = $conn->prepare("INSERT INTO manufacturing_logs (po_number, product_id, product_name, quantity, created_at) VALUES (?, ?, ?, ?, NOW())");
+                    $stmt->bind_param("sisi", $po_number, $productId, $itemDescription, $remainingNeeded);
+                    $stmt->execute();
+                    
+                    file_put_contents($log_file, date('Y-m-d H:i:s') . ": Successfully deducted raw materials for remaining $remainingNeeded units\n", FILE_APPEND);
                 } else {
-                    file_put_contents($log_file, date('Y-m-d H:i:s') . ": Failed to get ingredients data\n", FILE_APPEND);
-                    return false;
+                    file_put_contents($log_file, date('Y-m-d H:i:s') . ": No ingredients data available for manufacturing\n", FILE_APPEND);
+                    return false; // Can't manufacture without ingredients data
                 }
             }
         } else {
             // Product not found
-            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Product not found in database: $productName\n", FILE_APPEND);
+            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Product not found in database: ID $productId\n", FILE_APPEND);
             return false;
         }
     }
@@ -267,7 +265,10 @@ function deductRawMaterials($conn, $productName, $quantity, $ingredientsJson, $p
     $log_file = $log_dir . "/inventory_log.txt";
     
     // Try to parse ingredients JSON
+    // It looks like your ingredients are stored as a JSON array of arrays, not objects
+    // Example format from your DB: [[\"Minced Pork\", 480], [\"Soy Sauce\", 30], [...]]
     $ingredients = json_decode($ingredientsJson, true);
+    
     if (!$ingredients || !is_array($ingredients)) {
         file_put_contents($log_file, date('Y-m-d H:i:s') . ": Failed to parse ingredients JSON: $ingredientsJson\n", FILE_APPEND);
         return false;
@@ -277,13 +278,14 @@ function deductRawMaterials($conn, $productName, $quantity, $ingredientsJson, $p
     
     // Check if we have enough of each raw material
     foreach ($ingredients as $ingredient) {
-        $materialName = $ingredient['name'];
-        $amountNeeded = $ingredient['amount'] * $quantity;
+        $materialName = $ingredient[0]; // Name is the first element
+        $amountPerUnit = $ingredient[1]; // Amount per unit is the second element
+        $amountNeeded = $amountPerUnit * $quantity;
         
         file_put_contents($log_file, date('Y-m-d H:i:s') . ": Checking material: $materialName, amount needed: $amountNeeded\n", FILE_APPEND);
         
         // Check current stock of this material
-        $stmt = $conn->prepare("SELECT id, quantity FROM raw_materials WHERE material_name = ?");
+        $stmt = $conn->prepare("SELECT material_id, stock_quantity FROM raw_materials WHERE name = ?");
         $stmt->bind_param("s", $materialName);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -294,8 +296,8 @@ function deductRawMaterials($conn, $productName, $quantity, $ingredientsJson, $p
         }
         
         $row = $result->fetch_assoc();
-        $materialId = $row['id'];
-        $currentQuantity = (float)$row['quantity'];
+        $materialId = $row['material_id'];
+        $currentQuantity = (float)$row['stock_quantity'];
         
         if ($currentQuantity < $amountNeeded) {
             file_put_contents($log_file, date('Y-m-d H:i:s') . ": Not enough material. Have: $currentQuantity, Need: $amountNeeded\n", FILE_APPEND);
@@ -305,10 +307,11 @@ function deductRawMaterials($conn, $productName, $quantity, $ingredientsJson, $p
     
     // If we get here, we have enough of all materials, so deduct them
     foreach ($ingredients as $ingredient) {
-        $materialName = $ingredient['name'];
-        $amountNeeded = $ingredient['amount'] * $quantity;
+        $materialName = $ingredient[0];
+        $amountPerUnit = $ingredient[1];
+        $amountNeeded = $amountPerUnit * $quantity;
         
-        $stmt = $conn->prepare("UPDATE raw_materials SET quantity = quantity - ? WHERE material_name = ?");
+        $stmt = $conn->prepare("UPDATE raw_materials SET stock_quantity = stock_quantity - ? WHERE name = ?");
         $stmt->bind_param("ds", $amountNeeded, $materialName);
         
         if (!$stmt->execute()) {
@@ -317,7 +320,7 @@ function deductRawMaterials($conn, $productName, $quantity, $ingredientsJson, $p
         }
         
         // Record movement
-        recordRawMaterialMovement($conn, $materialName, $amountNeeded, 'deduction', $po_number, "Manufacturing for $productName");
+        recordInventoryMovement($conn, $materialName, 'raw_material', $amountNeeded, $po_number, "Manufacturing for $productName");
         
         file_put_contents($log_file, date('Y-m-d H:i:s') . ": Deducted $amountNeeded of $materialName\n", FILE_APPEND);
     }
@@ -333,7 +336,7 @@ function processInventoryReturn($conn, $po_number, $ordersJson) {
     file_put_contents($log_file, date('Y-m-d H:i:s') . ": " . $log_message, FILE_APPEND);
     
     // Get all inventory movements for this PO where type is 'deduction'
-    $stmt = $conn->prepare("SELECT id, item_name, quantity, item_type FROM inventory_movements WHERE po_number = ? AND action_type = 'deduction'");
+    $stmt = $conn->prepare("SELECT id, item_name, item_type, quantity FROM inventory_movements WHERE po_number = ?");
     
     if (!$stmt) {
         file_put_contents($log_file, date('Y-m-d H:i:s') . ": Prepare failed for inventory movements: " . $conn->error . "\n", FILE_APPEND);
@@ -355,14 +358,15 @@ function processInventoryReturn($conn, $po_number, $ordersJson) {
         }
         
         foreach ($orders as $item) {
-            $productName = $item['item_description'];
+            $productId = $item['product_id'];
+            $itemDescription = $item['item_description'];
             $quantity = (int)$item['quantity'];
             
-            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Returning product: $productName, quantity: $quantity\n", FILE_APPEND);
+            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Returning product: $itemDescription (ID: $productId), quantity: $quantity\n", FILE_APPEND);
             
             // Update product stock
-            $stmt = $conn->prepare("UPDATE products SET stock = stock + ? WHERE item_description = ?");
-            $stmt->bind_param("is", $quantity, $productName);
+            $stmt = $conn->prepare("UPDATE products SET stock_quantity = stock_quantity + ? WHERE product_id = ?");
+            $stmt->bind_param("ii", $quantity, $productId);
             
             if (!$stmt->execute()) {
                 file_put_contents($log_file, date('Y-m-d H:i:s') . ": Failed to update product stock: " . $conn->error . "\n", FILE_APPEND);
@@ -370,9 +374,9 @@ function processInventoryReturn($conn, $po_number, $ordersJson) {
             }
             
             // Record movement
-            recordInventoryMovement($conn, $productName, $quantity, 'addition', $po_number, 'Order Status Change Return');
+            recordInventoryMovement($conn, $itemDescription, 'finished_product', $quantity, $po_number, 'Order Status Change Return');
             
-            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Successfully returned $quantity units of $productName\n", FILE_APPEND);
+            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Successfully returned $quantity units of $itemDescription\n", FILE_APPEND);
         }
         
         return true;
@@ -384,15 +388,18 @@ function processInventoryReturn($conn, $po_number, $ordersJson) {
     while ($row = $result->fetch_assoc()) {
         $movementId = $row['id'];
         $itemName = $row['item_name'];
-        $quantity = (float)$row['quantity']; // This was deducted, so it's a positive number
-        $itemType = $row['item_type']; // 'product' or 'raw_material'
+        $itemType = $row['item_type'];
+        $quantity = (float)$row['quantity']; // This may be a negative number if it was deducted
         
-        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Returning $quantity of $itemName (type: $itemType)\n", FILE_APPEND);
+        // Make sure quantity is a positive number for updating inventory
+        $returnQuantity = abs($quantity);
         
-        if ($itemType === 'product') {
-            // Return to products stock
-            $stmt = $conn->prepare("UPDATE products SET stock = stock + ? WHERE item_description = ?");
-            $stmt->bind_param("is", $quantity, $itemName);
+        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Returning $returnQuantity of $itemName (type: $itemType)\n", FILE_APPEND);
+        
+        if ($itemType === 'finished_product') {
+            // Return to products table
+            $stmt = $conn->prepare("UPDATE products SET stock_quantity = stock_quantity + ? WHERE item_description = ?");
+            $stmt->bind_param("is", $returnQuantity, $itemName);
             
             if (!$stmt->execute()) {
                 file_put_contents($log_file, date('Y-m-d H:i:s') . ": Failed to update product stock: " . $conn->error . "\n", FILE_APPEND);
@@ -400,13 +407,13 @@ function processInventoryReturn($conn, $po_number, $ordersJson) {
             }
             
             // Record movement
-            recordInventoryMovement($conn, $itemName, $quantity, 'addition', $po_number, 'Order Status Change Return');
+            recordInventoryMovement($conn, $itemName, 'finished_product', $returnQuantity, $po_number, 'Order Status Change Return');
             
-            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Successfully returned $quantity units to product stock\n", FILE_APPEND);
+            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Successfully returned $returnQuantity units to product stock\n", FILE_APPEND);
         } else if ($itemType === 'raw_material') {
             // Return to raw materials
-            $stmt = $conn->prepare("UPDATE raw_materials SET quantity = quantity + ? WHERE material_name = ?");
-            $stmt->bind_param("ds", $quantity, $itemName);
+            $stmt = $conn->prepare("UPDATE raw_materials SET stock_quantity = stock_quantity + ? WHERE name = ?");
+            $stmt->bind_param("ds", $returnQuantity, $itemName);
             
             if (!$stmt->execute()) {
                 file_put_contents($log_file, date('Y-m-d H:i:s') . ": Failed to update raw material quantity: " . $conn->error . "\n", FILE_APPEND);
@@ -414,9 +421,9 @@ function processInventoryReturn($conn, $po_number, $ordersJson) {
             }
             
             // Record movement
-            recordRawMaterialMovement($conn, $itemName, $quantity, 'addition', $po_number, 'Order Status Change Return');
+            recordInventoryMovement($conn, $itemName, 'raw_material', $returnQuantity, $po_number, 'Order Status Change Return');
             
-            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Successfully returned $quantity units to raw material\n", FILE_APPEND);
+            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Successfully returned $returnQuantity units to raw material\n", FILE_APPEND);
         }
     }
     
@@ -424,31 +431,16 @@ function processInventoryReturn($conn, $po_number, $ordersJson) {
     return true;
 }
 
-// Helper function to record inventory movements for products
-function recordInventoryMovement($conn, $itemName, $quantity, $actionType, $po_number, $reason) {
-    $userId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 'system';
-    $itemType = 'product';
+// Helper function to record inventory movements
+function recordInventoryMovement($conn, $itemName, $itemType, $quantity, $po_number, $reason) {
+    $userId = isset($_SESSION['username']) ? $_SESSION['username'] : 'system';
     
-    $stmt = $conn->prepare("INSERT INTO inventory_movements (item_name, item_type, quantity, action_type, po_number, reason, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO inventory_movements (item_name, item_type, quantity, po_number, reason, user_id) VALUES (?, ?, ?, ?, ?, ?)");
     if (!$stmt) {
         return false;
     }
     
-    $stmt->bind_param("ssdssss", $itemName, $itemType, $quantity, $actionType, $po_number, $reason, $userId);
-    return $stmt->execute();
-}
-
-// Helper function to record inventory movements for raw materials
-function recordRawMaterialMovement($conn, $materialName, $quantity, $actionType, $po_number, $reason) {
-    $userId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 'system';
-    $itemType = 'raw_material';
-    
-    $stmt = $conn->prepare("INSERT INTO inventory_movements (item_name, item_type, quantity, action_type, po_number, reason, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    if (!$stmt) {
-        return false;
-    }
-    
-    $stmt->bind_param("ssdssss", $materialName, $itemType, $quantity, $actionType, $po_number, $reason, $userId);
+    $stmt->bind_param("ssdsss", $itemName, $itemType, $quantity, $po_number, $reason, $userId);
     return $stmt->execute();
 }
 ?>
