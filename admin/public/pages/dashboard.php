@@ -52,28 +52,15 @@ function getActiveOrdersCount($conn) {
     return $count;
 }
 
-// Count for delivery orders
-function getForDeliveryOrdersCount($conn) {
+// Count deliverable orders (For Delivery and In Transit)
+function getDeliverableOrdersCount($conn) {
     $count = 0;
-    $sql = "SELECT COUNT(*) as for_delivery_count FROM orders WHERE status = 'For Delivery'";
+    $sql = "SELECT COUNT(*) as deliverable_count FROM orders WHERE status IN ('For Delivery', 'In Transit')";
     $result = $conn->query($sql);
     
     if ($result && $result->num_rows > 0) {
         $row = $result->fetch_assoc();
-        $count = $row['for_delivery_count'];
-    }
-    return $count;
-}
-
-// Count in transit orders
-function getInTransitOrdersCount($conn) {
-    $count = 0;
-    $sql = "SELECT COUNT(*) as in_transit_count FROM orders WHERE status = 'In Transit'";
-    $result = $conn->query($sql);
-    
-    if ($result && $result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-        $count = $row['in_transit_count'];
+        $count = $row['deliverable_count'];
     }
     return $count;
 }
@@ -120,18 +107,7 @@ $clientOrders = getClientOrdersCount($conn, $selectedYear);
 $pendingOrdersCount = getPendingOrdersCount($conn);
 $rejectedOrdersCount = getRejectedOrdersCount($conn);
 $activeOrdersCount = getActiveOrdersCount($conn);
-$forDeliveryOrdersCount = getForDeliveryOrdersCount($conn);
-$inTransitOrdersCount = getInTransitOrdersCount($conn);
-
-// Count today's deliveries
-$today = date('Y-m-d');
-$todayDeliveriesQuery = "SELECT COUNT(*) as today_count FROM orders WHERE status IN ('For Delivery', 'In Transit') AND DATE(delivery_date) = '$today'";
-$todayDeliveriesResult = $conn->query($todayDeliveriesQuery);
-$todayDeliveriesCount = 0;
-if ($todayDeliveriesResult && $todayDeliveriesResult->num_rows > 0) {
-    $row = $todayDeliveriesResult->fetch_assoc();
-    $todayDeliveriesCount = $row['today_count'];
-}
+$deliverableOrdersCount = getDeliverableOrdersCount($conn);
 
 ?>
 
@@ -187,6 +163,10 @@ if ($todayDeliveriesResult && $todayDeliveriesResult->num_rows > 0) {
             background-color: #d4edda;
         }
         
+        .notification-badge.deliverable {
+            background-color: #fff3cd;
+        }
+        
         .notification-icon {
             font-size: 16px;
         }
@@ -212,6 +192,10 @@ if ($todayDeliveriesResult && $todayDeliveriesResult->num_rows > 0) {
             color: #155724;
         }
         
+        .deliverable .notification-icon, .deliverable .notification-count, .deliverable .notification-label {
+            color: #856404;
+        }
+        
         /* Dashboard sections */
         .dashboard-section {
             margin-bottom: 20px;
@@ -230,103 +214,6 @@ if ($todayDeliveriesResult && $todayDeliveriesResult->num_rows > 0) {
         
         .top-section > div {
             flex: 1;
-        }
-        
-        /* Deliverable container - important to make it stand out */
-        .deliverable-container {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-            padding: 20px;
-            margin: 20px 0;
-            border-left: 4px solid #fd7e14;
-        }
-        
-        .deliverable-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #fd7e14;
-        }
-        
-        .deliverable-header h3 {
-            margin: 0;
-            color: #333;
-            font-size: 18px;
-        }
-        
-        .view-all {
-            padding: 6px 12px;
-            background-color: #fd7e14;
-            color: white;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        }
-        
-        .view-all:hover {
-            background-color: #e67211;
-        }
-        
-        .deliverable-content {
-            display: flex;
-            gap: 15px;
-        }
-        
-        .deliverable-stats {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            border: 1px solid #e9ecef;
-            text-align: center;
-        }
-        
-        .stats-label {
-            font-size: 14px;
-            color: #6c757d;
-            margin-bottom: 10px;
-        }
-        
-        .stats-count {
-            font-size: 28px;
-            font-weight: bold;
-        }
-        
-        .for-delivery .stats-count {
-            color: #fd7e14; /* Orange for For Delivery */
-        }
-        
-        .in-transit .stats-count {
-            color: #0d6efd; /* Blue for In Transit */
-        }
-        
-        .total-today .stats-count {
-            color: #20c997; /* Teal for Today's Total */
-        }
-        
-        .stats-icon {
-            margin-bottom: 8px;
-            font-size: 24px;
-        }
-        
-        .for-delivery .stats-icon {
-            color: #fd7e14;
-        }
-        
-        .in-transit .stats-icon {
-            color: #0d6efd;
-        }
-        
-        .total-today .stats-icon {
-            color: #20c997;
         }
     </style>
 </head>
@@ -370,34 +257,16 @@ if ($todayDeliveriesResult && $todayDeliveriesResult->num_rows > 0) {
                         </div>
                     </a>
                     <?php endif; ?>
-                </div>
-            </div>
-
-            <!-- New Deliverable Orders Container - With separated counts -->
-            <div class="deliverable-container">
-                <div class="deliverable-header">
-                    <h3><i class="fas fa-truck"></i> DELIVERABLES</h3>
-                    <a href="/admin/public/pages/deliverable_orders.php" class="view-all">View All <i class="fas fa-arrow-right"></i></a>
-                </div>
-                <div class="deliverable-content">
-                    <div class="deliverable-stats for-delivery">
-                        <i class="fas fa-box stats-icon"></i>
-                        <span class="stats-label">For Delivery</span>
-                        <span class="stats-count"><?php echo $forDeliveryOrdersCount; ?></span>
-                        <a href="/admin/public/pages/deliverable_orders.php?status=For Delivery" style="margin-top: 10px; font-size: 12px;">View Details</a>
-                    </div>
-                    <div class="deliverable-stats in-transit">
-                        <i class="fas fa-shipping-fast stats-icon"></i>
-                        <span class="stats-label">In Transit</span>
-                        <span class="stats-count"><?php echo $inTransitOrdersCount; ?></span>
-                        <a href="/admin/public/pages/deliverable_orders.php?status=In Transit" style="margin-top: 10px; font-size: 12px;">View Details</a>
-                    </div>
-                    <div class="deliverable-stats total-today">
-                        <i class="fas fa-calendar-day stats-icon"></i>
-                        <span class="stats-label">Today's Shipments</span>
-                        <span class="stats-count"><?php echo $todayDeliveriesCount; ?></span>
-                        <span style="font-size: 12px; color: #6c757d; margin-top: 10px;"><?php echo date('F j, Y'); ?></span>
-                    </div>
+                    
+                    <?php if ($deliverableOrdersCount > 0): ?>
+                    <a href="/admin/public/pages/deliverable_orders.php" style="text-decoration: none;">
+                        <div class="notification-badge deliverable">
+                            <i class="fas fa-truck notification-icon"></i>
+                            <span class="notification-count"><?php echo $deliverableOrdersCount; ?></span>
+                            <span class="notification-label">Deliverables</span>
+                        </div>
+                    </a>
+                    <?php endif; ?>
                 </div>
             </div>
 
