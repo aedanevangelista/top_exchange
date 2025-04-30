@@ -48,7 +48,7 @@ $(document).ready(function() {
 
         $.ajax({
             type: 'POST',
-            url: '/public/pages/drivers.php',
+            url: '/admin/public/pages/drivers.php',
             data: formData,
             processData: false,
             contentType: false,
@@ -131,7 +131,7 @@ function changeStatus(status) {
     
     $.ajax({
         type: 'POST',
-        url: '/public/pages/drivers.php',
+        url: '/admin/public/pages/drivers.php',
         data: { id: id, status: status, formType: 'status', ajax: true },
         dataType: 'json',
         success: function(response) {

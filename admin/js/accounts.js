@@ -48,7 +48,7 @@ $(document).ready(function() {
 
         $.ajax({
             type: 'POST',
-            url: '/public/pages/accounts.php',
+            url: '/admin/public/pages/accounts.php',
             data: formData,
             processData: false,
             contentType: false,
@@ -130,7 +130,7 @@ function changeStatus(status) {
     
     $.ajax({
         type: 'POST',
-        url: '/public/pages/accounts.php',
+        url: '/admin/public/pages/accounts.php',
         data: { id: id, status: status, formType: 'status', ajax: true },
         dataType: 'json',
         success: function(response) {

@@ -28,7 +28,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['admin_role'] = $user['role'];
 
             // Updated redirect path
-            header("Location: /public/pages/dashboard.php");
+            header("Location: /admin/public/pages/dashboard.php");
             exit();
         } else {
             $_SESSION['error'] = "Incorrect password. Please try again.";

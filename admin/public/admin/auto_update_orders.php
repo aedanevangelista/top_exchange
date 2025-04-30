@@ -204,7 +204,7 @@ $pending_count = $count_result['count'];
     </style>
 </head>
 <body>
-    <?php include '../../public/sidebar.php'; ?>
+    <?php include '../../admin/public/sidebar.php'; ?>
     <div class="main-content">
         <div class="card">
             <h1 class="card-title">

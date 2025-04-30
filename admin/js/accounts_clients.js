@@ -48,7 +48,7 @@ $(document).ready(function() {
 
         $.ajax({
             type: 'POST',
-            url: '/public/pages/accounts_clients.php',
+            url: '/admin/public/pages/accounts_clients.php',
             data: formData,
             processData: false,
             contentType: false,
@@ -91,7 +91,7 @@ $(document).ready(function() {
         var id = $('#statusModal').data('id');
         $.ajax({
             type: 'POST',
-            url: '/public/pages/accounts_clients.php',
+            url: '/admin/public/pages/accounts_clients.php',
             data: { id: id, status: status, formType: 'status', ajax: true },
             dataType: 'json',
             success: handleAjaxResponse,
@@ -128,7 +128,7 @@ function changeStatus(status) {
     
     $.ajax({
         type: 'POST',
-        url: '/public/pages/accounts_clients.php',
+        url: '/admin/public/pages/accounts_clients.php',
         data: { id: id, status: status, formType: 'status', ajax: true },
         dataType: 'json',
         success: function(response) {

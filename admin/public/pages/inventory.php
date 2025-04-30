@@ -5,7 +5,7 @@ include "../../backend/check_role.php";
 checkRole('Inventory');
 
 if (!isset($_SESSION['admin_user_id'])) {
-    header("Location: /public/login.php");
+    header("Location: /admin/public/login.php");
     exit();
 }
 

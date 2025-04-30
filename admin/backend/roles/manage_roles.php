@@ -33,7 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($isAjax) {
             jsonResponse(false, "The 'admin' role cannot be modified.");
         } else {
-            header("Location: ../../public/pages/user_roles.php?error=restricted");
+            header("Location: ../../admin/public/pages/user_roles.php?error=restricted");
         }
         exit;
     }
@@ -47,7 +47,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($isAjax) {
             jsonResponse(false, "Role name already exists. Please choose a different name.");
         } else {
-            header("Location: ../../public/pages/user_roles.php?error=duplicate");
+            header("Location: ../../admin/public/pages/user_roles.php?error=duplicate");
         }
         exit;
     }
@@ -90,7 +90,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($isAjax) {
         jsonResponse(true, "Operation completed successfully.");
     } else {
-        header("Location: ../../public/pages/user_roles.php?success=" . $successMessage);
+        header("Location: ../../admin/public/pages/user_roles.php?success=" . $successMessage);
     }
     exit;
 }
