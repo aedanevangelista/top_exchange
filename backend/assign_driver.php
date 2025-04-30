@@ -10,6 +10,22 @@ if (!isset($_SESSION['admin_user_id'])) {
     exit;
 }
 
+$statusCheck = $conn->prepare("SELECT status FROM orders WHERE po_number = ?");
+$statusCheck->bind_param("s", $po_number);
+$statusCheck->execute();
+$statusResult = $statusCheck->get_result();
+
+if ($statusResult->num_rows === 0) {
+    echo json_encode(['success' => false, 'message' => 'Order not found']);
+    exit;
+}
+
+$statusRow = $statusResult->fetch_assoc();
+if ($statusRow['status'] !== 'Active') {
+    echo json_encode(['success' => false, 'message' => 'Driver assignment is only allowed for Active orders']);
+    exit;
+}
+
 // Set content type to JSON
 header('Content-Type: application/json');
 
