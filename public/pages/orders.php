@@ -1941,7 +1941,7 @@ function changeStatusWithCheck(status) {
         data: { 
             po_number: poNumber, 
             status: status,
-            deduct_materials: deductMaterials // This flag needs to be processed in the backend
+            deduct_materials: deductMaterials
         },
         dataType: 'json',
         success: function(response) {
