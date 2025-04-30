@@ -238,7 +238,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                 <?php echo htmlspecialchars($username); ?>
             </strong> (<?= htmlspecialchars(ucfirst($role)) ?>)
         </div>
-        <a href="/admin//admin/backend/logout.php" class="logout-btn">
+        <a href="/admin/admin/backend/logout.php" class="logout-btn">
             <i class="fas fa-sign-out-alt"></i> Logout
         </a>
     </div>
