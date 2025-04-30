@@ -619,10 +619,17 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <button class="view-orders-btn" onclick="viewOrderInfo('<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['status']) ?>')">
-                                        <i class="fas fa-clipboard-list"></i>    
-                                        View
-                                    </button>
+                                    <?php if ($order['status'] === 'Active'): ?>
+                                        <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
+                                            <i class="fas fa-clipboard-list"></i>    
+                                            View
+                                        </button>
+                                    <?php else: ?>
+                                        <button class="view-orders-btn" onclick="viewOrderInfo('<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['status']) ?>')">
+                                            <i class="fas fa-clipboard-list"></i>    
+                                            View
+                                        </button>
+                                    <?php endif; ?>
                                 </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
@@ -806,7 +813,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
-    <!-- Fixed Order Details Modal with Progress Tracking -->
+    <!-- Order Details Modal with Progress Tracking -->
     <div id="orderDetailsModal" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-box-open"></i> Order Details (<span id="orderStatus"></span>)</h2>
@@ -819,6 +826,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             <th>Packaging</th>
                             <th>Price</th>
                             <th>Quantity</th>
+                            <th id="status-header-cell">Status</th>
                         </tr>
                     </thead>
                     <tbody id="orderDetailsBody">
@@ -1066,6 +1074,12 @@ function viewOrderDetails(poNumber) {
             const orderDetailsBody = document.getElementById('orderDetailsBody');
             orderDetailsBody.innerHTML = '';
             
+            // Make sure the Status header is visible for active orders
+            document.getElementById('status-header-cell').style.display = '';
+            
+            // Update order status in the modal title
+            document.getElementById('orderStatus').textContent = 'Active';
+            
             // Calculate item contributions to overall progress
             const totalItems = currentOrderItems.length;
             const contributionPerItem = totalItems > 0 ? (100 / totalItems) : 0;
@@ -1189,6 +1203,28 @@ function viewOrderDetails(poNumber) {
             
             // Update overall progress display
             updateOverallProgressDisplay();
+            
+            // Calculate the total amount (needed for display)
+            let totalAmount = 0;
+            currentOrderItems.forEach(item => {
+                const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+                totalAmount += itemTotal;
+            });
+            
+            // Update total amount in the modal
+            document.getElementById('orderTotalAmount').textContent = `PHP ${totalAmount.toFixed(2)}`;
+            
+            // Show progress tracking controls for active orders
+            const overallProgressInfo = document.getElementById('overall-progress-info');
+            if (overallProgressInfo) {
+                overallProgressInfo.style.display = 'block';
+            }
+            
+            // Show save button for active orders
+            const saveButton = document.querySelector('.save-progress-btn');
+            if (saveButton) {
+                saveButton.style.display = 'block';
+            }
             
             document.getElementById('orderDetailsModal').style.display = 'flex';
         } else {
@@ -1446,6 +1482,12 @@ function viewOrderInfo(ordersJson, orderStatus) {
         // Clear previous content
         orderDetailsBody.innerHTML = '';
         
+        // Hide the Status header for read-only view
+        document.getElementById('status-header-cell').style.display = 'none';
+        
+        // Update order status in the modal title
+        document.getElementById('orderStatus').textContent = orderStatus;
+        
         // Calculate total amount
         let totalAmount = 0;
         
@@ -1465,11 +1507,10 @@ function viewOrderInfo(ordersJson, orderStatus) {
             orderDetailsBody.appendChild(row);
         });
         
-        // Update order status and total amount in the modal
-        document.getElementById('orderStatus').textContent = orderStatus;
+        // Update total amount in the modal
         document.getElementById('orderTotalAmount').textContent = `PHP ${totalAmount.toFixed(2)}`;
         
-        // Hide progress bar elements if they exist
+        // Hide progress bar elements
         const overallProgressInfo = document.getElementById('overall-progress-info');
         if (overallProgressInfo) {
             overallProgressInfo.style.display = 'none';
@@ -1574,7 +1615,7 @@ function assignDriver() {
         return;
     }
     
-    // Show a loading state
+        // Show a loading state
     const saveBtn = document.querySelector('#driverModal .save-btn');
     const originalBtnText = saveBtn.innerHTML;
     saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assigning...';
@@ -1620,7 +1661,7 @@ function assignDriver() {
     .then(data => {
         if (data === null) return; // Skip if first attempt succeeded
         
-                if (data.success) {
+        if (data.success) {
             showToast('Driver assigned successfully', 'success');
             setTimeout(() => { window.location.reload(); }, 1000);
         } else {
