@@ -238,7 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
-    <script src="/LandingPage/js/jquery.min.js"></script>
+    <script src="/LandingPage/admin/js/jquery.min.js"></script>
     <script>
         $(document).ready(function() {
             // Auto focus on code input

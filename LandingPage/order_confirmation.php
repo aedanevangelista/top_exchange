@@ -186,12 +186,12 @@ $orderItems = json_decode($order['orders'], true);
     </div>
 
     <!-- Javascript files-->
-    <script src="/LandingPage/js/jquery.min.js"></script>
-    <script src="/LandingPage/js/popper.min.js"></script>
-    <script src="/LandingPage/js/bootstrap.bundle.min.js"></script>
-    <script src="/LandingPage/js/jquery-3.0.0.min.js"></script>
-    <script src="/LandingPage/js/plugin.js"></script>
-    <script src="/LandingPage/js/jquery.mCustomScrollbar.concat.min.js"></script>
-    <script src="/LandingPage/js/custom.js"></script>
+    <script src="/LandingPage/admin/js/jquery.min.js"></script>
+    <script src="/LandingPage/admin/js/popper.min.js"></script>
+    <script src="/LandingPage/admin/js/bootstrap.bundle.min.js"></script>
+    <script src="/LandingPage/admin/js/jquery-3.0.0.min.js"></script>
+    <script src="/LandingPage/admin/js/plugin.js"></script>
+    <script src="/LandingPage/admin/js/jquery.mCustomScrollbar.concat.min.js"></script>
+    <script src="/LandingPage/admin/js/custom.js"></script>
 </body>
 </html>

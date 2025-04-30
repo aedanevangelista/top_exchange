@@ -7,16 +7,16 @@
     <!-- copyright section end -->
     
     <!-- Javascript files-->
-    <script src="/LandingPage/js/jquery.min.js"></script>
-    <script src="/LandingPage/js/popper.min.js"></script>
-    <script src="/LandingPage/js/bootstrap.bundle.min.js"></script>
-    <script src="/LandingPage/js/jquery-3.0.0.min.js"></script>
-    <script src="/LandingPage/js/plugin.js"></script>
+    <script src="/LandingPage/admin/js/jquery.min.js"></script>
+    <script src="/LandingPage/admin/js/popper.min.js"></script>
+    <script src="/LandingPage/admin/js/bootstrap.bundle.min.js"></script>
+    <script src="/LandingPage/admin/js/jquery-3.0.0.min.js"></script>
+    <script src="/LandingPage/admin/js/plugin.js"></script>
     <!-- AOS Animation -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <!-- sidebar -->
-    <script src="/LandingPage/js/jquery.mCustomScrollbar.concat.min.js"></script>
-    <script src="/LandingPage/js/custom.js"></script>
+    <script src="/LandingPage/admin/js/jquery.mCustomScrollbar.concat.min.js"></script>
+    <script src="/LandingPage/admin/js/custom.js"></script>
     
     <script>
         // Initialize AOS animation

@@ -490,7 +490,7 @@ $navigation = getMonthNavigation($month, $year);
         </div>
     </div>
     
-    <script src="/js/orders.js"></script>
+    <script src="/admin/js/orders.js"></script>
     <script>
     function showOrders(date) {
         const modal = document.getElementById('ordersModal');
