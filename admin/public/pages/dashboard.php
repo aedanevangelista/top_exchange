@@ -109,9 +109,6 @@ $rejectedOrdersCount = getRejectedOrdersCount($conn);
 $activeOrdersCount = getActiveOrdersCount($conn);
 $deliverableOrdersCount = getDeliverableOrdersCount($conn);
 
-// For debugging - verify counts
-// echo "Pending: $pendingOrdersCount, Rejected: $rejectedOrdersCount, Active: $activeOrdersCount, Deliverable: $deliverableOrdersCount";
-
 ?>
 
 <!DOCTYPE html>
@@ -130,7 +127,6 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 20px;
         }
         
         .notification-badges {
@@ -166,6 +162,10 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
             background-color: #d4edda;
         }
         
+        .notification-badge.deliverable {
+            background-color: #fff3cd;
+        }
+        
         .notification-icon {
             font-size: 16px;
         }
@@ -191,93 +191,8 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
             color: #155724;
         }
         
-        /* Dashboard sections */
-        .dashboard-section {
-            margin-bottom: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 15px;
-        }
-        
-        /* Top section layout */
-        .top-section {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .top-section > div {
-            flex: 1;
-        }
-        
-        /* Deliverable container - important to make it stand out */
-        .deliverable-container {
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-            padding: 20px;
-            margin: 20px 0;
-            border-left: 4px solid #fd7e14;
-        }
-        
-        .deliverable-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #fd7e14;
-        }
-        
-        .deliverable-header h3 {
-            margin: 0;
-            color: #333;
-            font-size: 18px;
-        }
-        
-        .view-all {
-            padding: 6px 12px;
-            background-color: #fd7e14;
-            color: white;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        }
-        
-        .view-all:hover {
-            background-color: #e67211;
-        }
-        
-        .deliverable-content {
-            display: flex;
-            gap: 15px;
-        }
-        
-        .deliverable-stats {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            border: 1px solid #e9ecef;
-            text-align: center;
-        }
-        
-        .stats-label {
-            font-size: 14px;
-            color: #6c757d;
-            margin-bottom: 10px;
-        }
-        
-        .stats-count {
-            font-size: 28px;
-            font-weight: bold;
-            color: #fd7e14;
+        .deliverable .notification-icon, .deliverable .notification-count, .deliverable .notification-label {
+            color: #856404;
         }
     </style>
 </head>
@@ -321,42 +236,22 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                         </div>
                     </a>
                     <?php endif; ?>
-                </div>
-            </div>
-
-            <!-- New Deliverable Orders Container - Important: Placed at the top for visibility -->
-            <div class="deliverable-container">
-                <div class="deliverable-header">
-                    <h3><i class="fas fa-truck"></i> DELIVERABLES</h3>
-                    <a href="/admin/public/pages/deliverable_orders.php" class="view-all">View All <i class="fas fa-arrow-right"></i></a>
-                </div>
-                <div class="deliverable-content">
-                    <div class="deliverable-stats">
-                        <span class="stats-label">For Delivery & In Transit</span>
-                        <span class="stats-count"><?php echo $deliverableOrdersCount; ?></span>
-                    </div>
-                    <div class="deliverable-stats">
-                        <span class="stats-label">Total Shipments Today</span>
-                        <span class="stats-count">
-                            <?php 
-                            // Count shipments scheduled for today
-                            $today = date('Y-m-d');
-                            $todayQuery = "SELECT COUNT(*) as today_count FROM orders WHERE status IN ('For Delivery', 'In Transit') AND DATE(delivery_date) = '$today'";
-                            $todayResult = $conn->query($todayQuery);
-                            if ($todayResult && $todayResult->num_rows > 0) {
-                                $row = $todayResult->fetch_assoc();
-                                echo $row['today_count'];
-                            } else {
-                                echo "0";
-                            }
-                            ?>
-                        </span>
-                    </div>
+                    
+                    <!-- Added Deliverable Orders Badge -->
+                    <?php if ($deliverableOrdersCount > 0): ?>
+                    <a href="/admin/public/pages/deliverable_orders.php" style="text-decoration: none;">
+                        <div class="notification-badge deliverable">
+                            <i class="fas fa-truck notification-icon"></i>
+                            <span class="notification-count"><?php echo $deliverableOrdersCount; ?></span>
+                            <span class="notification-label">Deliverable</span>
+                        </div>
+                    </a>
+                    <?php endif; ?>
                 </div>
             </div>
 
             <div class="top-section">
-                <div class="client-orders-container dashboard-section">
+                <div class="client-orders-container">
                     <div class="chart-header">
                         <h3>CLIENT ORDERS</h3>
                         <select id="year-select" class="year-select">
@@ -367,7 +262,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                     </div>
                 </div>
 
-                <div class="packs-sold-container dashboard-section">
+                <div class="packs-sold-container">
                     <div class="packs-sold-header">
                         <span>Orders sold in</span>
                         <select id="packs-sold-year" class="packs-sold-dropdown">
@@ -386,7 +281,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                 </div>
             </div>
 
-            <div class="sales-department-container dashboard-section">
+            <div class="sales-department-container">
                 <div class="chart-header">
                     <h3>SALES PER DEPARTMENT</h3>
                 </div>
