@@ -1687,41 +1687,49 @@ function assignDriver() {
         driver_id: driverId
     });
     
-    // Use the XMLHttpRequest API for better debugging
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/backend/assign_driver.php', true);
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4) {
-            console.log("Status:", xhr.status);
-            console.log("Response:", xhr.responseText);
-            
-            saveBtn.innerHTML = originalBtnText;
-            saveBtn.disabled = false;
-            
-            if (xhr.status === 200) {
-                try {
-                    const response = JSON.parse(xhr.responseText);
-                    if (response.success) {
-                        showToast('Driver assigned successfully', 'success');
-                        setTimeout(() => { window.location.reload(); }, 1000);
-                    } else {
-                        showToast('Error: ' + response.message, 'error');
-                    }
-                } catch (e) {
-                    console.error("Error parsing JSON:", e);
-                    showToast('Error parsing server response', 'error');
-                }
-            } else {
-                showToast('Network error: ' + xhr.status, 'error');
-            }
-            
-            closeDriverModal();
-        }
-    };
+    // Create FormData object
+    const formData = new FormData();
+    formData.append('po_number', currentPoNumber);
+    formData.append('driver_id', driverId);
     
-    // Send as form data
-    xhr.send('po_number=' + encodeURIComponent(currentPoNumber) + '&driver_id=' + encodeURIComponent(driverId));
+    // Use fetch API for cleaner code
+    fetch('/backend/assign_driver.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log("Response status:", response.status);
+        return response.text().then(text => {
+            console.log("Raw response:", text);
+            try {
+                return JSON.parse(text);
+            } catch(e) {
+                console.error("Failed to parse response as JSON:", e);
+                return {success: false, message: "Invalid server response"};
+            }
+        });
+    })
+    .then(data => {
+        console.log("Parsed response:", data);
+        saveBtn.innerHTML = originalBtnText;
+        saveBtn.disabled = false;
+        
+        if (data.success) {
+            showToast('Driver assigned successfully', 'success');
+            setTimeout(() => { window.location.reload(); }, 1000);
+        } else {
+            showToast('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error("Fetch error:", error);
+        saveBtn.innerHTML = originalBtnText;
+        saveBtn.disabled = false;
+        showToast('Network error occurred', 'error');
+    })
+    .finally(() => {
+        closeDriverModal();
+    });
 }
 
 // PDF Functions
