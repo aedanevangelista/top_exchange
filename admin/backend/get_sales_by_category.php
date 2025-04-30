@@ -6,29 +6,49 @@ ini_set('display_errors', 0);
 try {
     include "db_connection.php";
 
-    // Function to get sales data for a specific year
-    function getSalesByCategory($year) {
+    // Get the requested time period (default to 'weekly')
+    $timePeriod = isset($_GET['period']) ? $_GET['period'] : 'weekly';
+    
+    // Function to get sales data for a specific year with time period filtering
+    function getSalesByCategory($year, $timePeriod = 'weekly') {
         global $conn;
         
         if (!$conn) {
             throw new Exception("Database connection failed");
         }
         
-        // Query to get orders and their items from the JSON data
+        // Base SQL query
         $sql = "SELECT 
                     o.id,
                     o.orders,
-                    o.status
+                    o.status,
+                    o.order_date
                 FROM orders o
                 WHERE YEAR(o.order_date) = ?
                 AND o.status = 'Completed'";
-
-        $stmt = $conn->prepare($sql);
+        
+        // If monthly, we don't need additional filtering
+        // For weekly, we'll use data from the current week
+        if ($timePeriod === 'weekly') {
+            // Get data for current week
+            $currentDate = date('Y-m-d');
+            $weekStart = date('Y-m-d', strtotime('monday this week', strtotime($currentDate)));
+            $weekEnd = date('Y-m-d', strtotime('sunday this week', strtotime($currentDate)));
+            
+            $sql .= " AND o.order_date BETWEEN ? AND ?";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("iss", $year, $weekStart, $weekEnd);
+        } else {
+            // For monthly, just use the year filter
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("i", $year);
+        }
+        
         if (!$stmt) {
             throw new Exception("Prepare failed: " . $conn->error);
         }
 
-        $stmt->bind_param("i", $year);
         if (!$stmt->execute()) {
             throw new Exception("Execute failed: " . $stmt->error);
         }
@@ -57,8 +77,8 @@ try {
     $currentYear = 2025;
     $lastYear = 2024;
 
-    $currentYearData = getSalesByCategory($currentYear);
-    $lastYearData = getSalesByCategory($lastYear);
+    $currentYearData = getSalesByCategory($currentYear, $timePeriod);
+    $lastYearData = getSalesByCategory($lastYear, $timePeriod);
 
     // Get all unique categories from products table
     $sql = "SELECT DISTINCT category FROM products ORDER BY category";
@@ -75,6 +95,7 @@ try {
     // Prepare the response data
     $response = [
         'categories' => $allCategories,
+        'timePeriod' => $timePeriod,
         'currentYear' => [
             'year' => $currentYear,
             'data' => array_map(function($category) use ($currentYearData) {

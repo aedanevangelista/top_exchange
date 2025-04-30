@@ -272,6 +272,318 @@ document.addEventListener("DOMContentLoaded", function () {
     *  =========================== ***/
     const ctxSalesPerDepartment = document.getElementById("salesPerDepartmentChart")?.getContext("2d");
     let salesPerDepartmentChart = null; // Define the chart variable globally
+    let currentTimePeriod = 'weekly'; // Default time period
+
+    // Function to load sales data by category with specified time period
+    function loadSalesByCategory(timePeriod) {
+        const url = `/admin/backend/get_sales_by_category.php?period=${timePeriod}`;
+        console.log(`Fetching ${timePeriod} sales data from:`, url);
+        
+        fetch(url)
+            .then(response => {
+                console.log(`${timePeriod} sales data response status:`, response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(text => {
+                console.log(`Raw ${timePeriod} sales data response:`, text);
+                try {
+                    const data = JSON.parse(text);
+                    if (data.error) {
+                        console.error('Server Error:', data.message);
+                        return;
+                    }
+
+                    // Destroy existing chart if it exists
+                    if (salesPerDepartmentChart) {
+                        salesPerDepartmentChart.destroy();
+                    }
+
+                    // Create Sales per Department Chart (Bar)
+                    salesPerDepartmentChart = new Chart(ctxSalesPerDepartment, {
+                        type: "bar",
+                        data: {
+                            labels: data.categories,
+                            datasets: [
+                                {
+                                    label: `${data.currentYear.year} Sales`,
+                                    data: data.currentYear.data,
+                                    backgroundColor: "#28a745", // Green
+                                    borderWidth: 1,
+                                    borderRadius: 5
+                                },
+                                {
+                                    label: `${data.lastYear.year} Sales`,
+                                    data: data.lastYear.data,
+                                    backgroundColor: "#999999", // Gray
+                                    borderWidth: 1,
+                                    borderRadius: 5
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                title: {
+                                    display: true,
+                                    text: `Sales by Department - ${timePeriod.charAt(0).toUpperCase() + timePeriod.slice(1)}`,
+                                    font: {
+                                        size: 16
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Number of Orders',
+                                        font: {
+                                            size: 14,
+                                            weight: 'bold'
+                                        }
+                                    },
+                                    ticks: {
+                                        callback: function(value) {
+                                            const values = this.chart.data.datasets.flatMap(d => d.data);
+                                            const max = Math.max(...values);
+                                            // Only return values for 0 and max
+                                            return value === 0 || value === max ? value : '';
+                                        },
+                                        font: {
+                                            size: 12
+                                        }
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        autoSkip: false,
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error('Error parsing response:', text);
+                    console.error('Parse error:', e);
+                }
+            })
+            .catch(error => console.error(`Error loading ${timePeriod} sales data:`, error));
+    }
+
+    // Set up event listeners for the time period tabs
+    document.querySelectorAll('.time-period-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            // Remove active class from all tabs
+            document.querySelectorAll('.time-period-tab').forEach(t => {
+                t.classList.remove('active');
+            });
+            
+            // Add active class to the clicked tab
+            this.classList.add('active');
+            
+            // Get the time period from the data attribute
+            const timePeriod = this.getAttribute('data-period');
+            currentTimePeriod = timePeriod;
+            
+            // Load the data for this time period
+            loadSalesByCategory(timePeriod);
+        });
+    });
+
+    // Call the function when the document loads
+    if (ctxSalesPerDepartment) {
+        // Initial load with the default time period
+        loadSalesByCategory(currentTimePeriod);
+    }
+});
+    }
+
+    // Function to load years and populate dropdown
+    function loadYears() {
+        // Let's debug what's happening with our fetch paths
+        const url = '/admin/backend/get_available_years_dashboard.php';
+        console.log("Fetching years from:", url);
+        
+        fetch(url)
+            .then(response => {
+                console.log("Years response status:", response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(years => {
+                console.log("Years data received:", years);
+                
+                const yearSelect = document.getElementById('year-select');
+                if (!yearSelect) {
+                    console.log("Year select element not found");
+                    return;
+                }
+
+                yearSelect.innerHTML = years.map(year => 
+                    `<option value="${year}">${year}</option>`
+                ).join('');
+                
+                if (years.length > 0) {
+                    loadClientOrders(years[0]);
+                }
+            })
+            .catch(error => console.error('Error loading years:', error));
+    }
+
+    // Function to load client orders for a specific year
+    function loadClientOrders(year) {
+        const url = `/admin/backend/get_client_orders.php?year=${year}`;
+        console.log("Fetching client orders from:", url);
+        
+        fetch(url)
+            .then(response => {
+                console.log("Client orders response status:", response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Client orders data received:", data);
+                initializeClientOrdersChart(data);
+            })
+            .catch(error => console.error('Error loading client orders:', error));
+    }
+
+    // Initialize the year select event listener
+    const yearSelect = document.getElementById('year-select');
+    if (yearSelect) {
+        yearSelect.addEventListener('change', function() {
+            loadClientOrders(this.value);
+        });
+    }
+
+    // Load the years when the page loads
+    loadYears();
+
+    /*** ===========================
+     *  ORDERS SOLD SECTION
+     *  =========================== ***/
+    const ordersSoldYear = document.getElementById("packs-sold-year");
+    const ordersSoldCompareYear = document.getElementById("packs-sold-compare-year");
+    const ordersSoldCount = document.getElementById("packs-sold-count");
+    const ordersSoldPercentage = document.getElementById("packs-sold-percentage");
+
+    // Function to get order counts from database
+    function getOrderCounts(year) {
+        const url = `/admin/backend/get_order_counts.php?year=${year}`;
+        console.log("Fetching order counts from:", url);
+        
+        return fetch(url)
+            .then(response => {
+                console.log("Order counts response status:", response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .catch(error => {
+                console.error('Error fetching order counts:', error);
+                return 0;
+            });
+    }
+
+    // Function to Update Orders Sold Display
+    async function updateOrdersSold() {
+        const selectedYear = ordersSoldYear?.value;
+        const compareYear = ordersSoldCompareYear?.value;
+        
+        // Get order counts for both years
+        const currentOrders = await getOrderCounts(selectedYear);
+        const previousOrders = await getOrderCounts(compareYear);
+
+        // Update Orders Count
+        if (ordersSoldCount) {
+            ordersSoldCount.textContent = `${currentOrders} Orders`;
+        }
+
+        // Update Percentage Change
+        if (previousOrders > 0) {
+            const percentageChange = (((currentOrders - previousOrders) / previousOrders) * 100).toFixed(2);
+            if (ordersSoldPercentage) {
+                ordersSoldPercentage.textContent = `${percentageChange > 0 ? "+" : ""}${percentageChange}% since`;
+                ordersSoldPercentage.style.color = percentageChange >= 0 ? "#45A049" : "#FF4444";
+            }
+        } else {
+            if (ordersSoldPercentage) {
+                ordersSoldPercentage.textContent = "N/A since";
+                ordersSoldPercentage.style.color = "#666";
+            }
+        }
+    }
+
+    // Function to populate year dropdowns
+    function populateYearDropdowns() {
+        const url = '/admin/backend/get_available_years_dashboard.php';
+        console.log("Fetching years for dropdowns from:", url);
+        
+        fetch(url)
+            .then(response => {
+                console.log("Years dropdown response status:", response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(years => {
+                console.log("Years dropdown data received:", years);
+                if (years.length > 0) {
+                    // Sort years in descending order
+                    years.sort((a, b) => b - a);
+                    
+                    // Populate main year dropdown
+                    if (ordersSoldYear) {
+                        ordersSoldYear.innerHTML = years.map(year => 
+                            `<option value="${year}">${year}</option>`
+                        ).join('');
+                    }
+
+                    // Populate comparison year dropdown
+                    if (ordersSoldCompareYear) {
+                        ordersSoldCompareYear.innerHTML = years.map(year => 
+                            `<option value="${year}">${year}</option>`
+                        ).join('');
+                        
+                        // Select the second year by default for comparison
+                        if (years.length > 1) {
+                            ordersSoldCompareYear.selectedIndex = 1;
+                        }
+                    }
+
+                    // Initial update
+                    updateOrdersSold();
+                }
+            })
+            .catch(error => console.error('Error loading years for dropdowns:', error));
+    }
+
+    // Add Event Listeners to Dropdowns
+    ordersSoldYear?.addEventListener("change", updateOrdersSold);
+    ordersSoldCompareYear?.addEventListener("change", updateOrdersSold);
+
+    // Initialize when page loads
+    populateYearDropdowns();
+
+
+    /*** ===========================
+    *  SALES PER DEPARTMENT BAR CHART
+    *  =========================== ***/
+    const ctxSalesPerDepartment = document.getElementById("salesPerDepartmentChart")?.getContext("2d");
+    let salesPerDepartmentChart = null; // Define the chart variable globally
 
     // Function to load sales data by category
     function loadSalesByCategory() {

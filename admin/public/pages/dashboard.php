@@ -215,6 +215,38 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
         .top-section > div {
             flex: 1;
         }
+
+         .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .time-period-tabs {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .time-period-tab {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .time-period-tab.active {
+            background-color: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+        
+        .time-period-tab:hover:not(.active) {
+            background-color: #e2e6ea;
+        }
     </style>
 </head>
 <body>
@@ -304,6 +336,10 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
             <div class="sales-department-container dashboard-section">
                 <div class="chart-header">
                     <h3>SALES PER DEPARTMENT</h3>
+                    <div class="time-period-tabs">
+                        <button class="time-period-tab active" data-period="weekly">Weekly</button>
+                        <button class="time-period-tab" data-period="monthly">Monthly</button>
+                    </div>
                 </div>
                 <div class="sales-department-chart">
                     <canvas id="salesPerDepartmentChart"></canvas>
