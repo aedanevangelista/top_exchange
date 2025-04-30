@@ -92,7 +92,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to load years and populate dropdown
     function loadYears() {
-        fetch('/backend/get_available_years_dashboard.php')
+        // Updated path to include /admin prefix
+        fetch('/admin/backend/get_available_years_dashboard.php')
             .then(response => response.json())
             .then(years => {
                 const yearSelect = document.getElementById('year-select');
@@ -111,7 +112,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to load client orders for a specific year
     function loadClientOrders(year) {
-        fetch(`/backend/get_client_orders.php?year=${year}`)
+        // Updated path to include /admin prefix
+        fetch(`/admin/backend/get_client_orders.php?year=${year}`)
             .then(response => response.json())
             .then(data => {
                 initializeClientOrdersChart(data);
@@ -140,7 +142,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to get order counts from database
     function getOrderCounts(year) {
-        return fetch(`/backend/get_order_counts.php?year=${year}`)
+        // Updated path to include /admin prefix
+        return fetch(`/admin/backend/get_order_counts.php?year=${year}`)
             .then(response => response.json())
             .catch(error => {
                 console.error('Error fetching order counts:', error);
@@ -179,7 +182,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to populate year dropdowns
     function populateYearDropdowns() {
-        fetch('/backend/get_available_years_dashboard.php')
+        // Updated path to include /admin prefix
+        fetch('/admin/backend/get_available_years_dashboard.php')
             .then(response => response.json())
             .then(years => {
                 if (years.length > 0) {
@@ -228,7 +232,8 @@ let salesPerDepartmentChart = null; // Define the chart variable globally
 
 // Function to load sales data by category
 function loadSalesByCategory() {
-    fetch('/backend/get_sales_by_category.php')
+    // Updated path to include /admin prefix
+    fetch('/admin/backend/get_sales_by_category.php')
         .then(response => response.text())
         .then(text => {
             try {
