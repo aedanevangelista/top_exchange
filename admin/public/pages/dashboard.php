@@ -109,6 +109,9 @@ $rejectedOrdersCount = getRejectedOrdersCount($conn);
 $activeOrdersCount = getActiveOrdersCount($conn);
 $deliverableOrdersCount = getDeliverableOrdersCount($conn);
 
+// For debugging - verify counts
+// echo "Pending: $pendingOrdersCount, Rejected: $rejectedOrdersCount, Active: $activeOrdersCount, Deliverable: $deliverableOrdersCount";
+
 ?>
 
 <!DOCTYPE html>
@@ -127,6 +130,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
             display: flex;
             align-items: center;
             justify-content: space-between;
+            margin-bottom: 20px;
         }
         
         .notification-badges {
@@ -162,10 +166,6 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
             background-color: #d4edda;
         }
         
-        .notification-badge.deliverable {
-            background-color: #fff3cd;
-        }
-        
         .notification-icon {
             font-size: 16px;
         }
@@ -191,11 +191,16 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
             color: #155724;
         }
         
-        .deliverable .notification-icon, .deliverable .notification-count, .deliverable .notification-label {
-            color: #856404;
+        /* Dashboard sections */
+        .dashboard-section {
+            margin-bottom: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px;
         }
         
-        /* Dashboard container styles */
+        /* Top section layout */
         .top-section {
             display: flex;
             gap: 20px;
@@ -206,19 +211,21 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
             flex: 1;
         }
         
+        /* Deliverable container - important to make it stand out */
         .deliverable-container {
             background-color: #fff;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 15px;
-            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #fd7e14;
         }
         
         .deliverable-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             padding-bottom: 10px;
             border-bottom: 2px solid #fd7e14;
         }
@@ -226,10 +233,11 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
         .deliverable-header h3 {
             margin: 0;
             color: #333;
+            font-size: 18px;
         }
         
         .view-all {
-            padding: 5px 12px;
+            padding: 6px 12px;
             background-color: #fd7e14;
             color: white;
             border-radius: 4px;
@@ -244,28 +252,30 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
         
         .deliverable-content {
             display: flex;
-            gap: 10px;
-            justify-content: space-between;
+            gap: 15px;
         }
         
         .deliverable-stats {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 10px;
-            flex: 1;
+            justify-content: center;
+            padding: 15px;
             background-color: #f8f9fa;
-            border-radius: 4px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            text-align: center;
         }
         
         .stats-label {
             font-size: 14px;
             color: #6c757d;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
         }
         
         .stats-count {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
             color: #fd7e14;
         }
@@ -314,42 +324,11 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                 </div>
             </div>
 
-            <div class="top-section">
-                <div class="client-orders-container">
-                    <div class="chart-header">
-                        <h3>CLIENT ORDERS</h3>
-                        <select id="year-select" class="year-select">
-                        </select>
-                    </div>
-                    <div class="client-orders" style="height: 300px; position: relative;">
-                        <canvas id="clientOrdersChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="packs-sold-container">
-                    <div class="packs-sold-header">
-                        <span>Orders sold in</span>
-                        <select id="packs-sold-year" class="packs-sold-dropdown">
-                    
-                        </select>
-                    </div>
-
-                    <div class="packs-sold-count" id="packs-sold-count">0 Orders</div>
-
-                    <div class="packs-comparison-row">
-                        <span id="packs-sold-percentage" class="packs-comparison">0% since</span>
-                        <select id="packs-sold-compare-year" class="packs-sold-dropdown">
-
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- New Deliverable Orders Container -->
+            <!-- New Deliverable Orders Container - Important: Placed at the top for visibility -->
             <div class="deliverable-container">
                 <div class="deliverable-header">
-                    <h3>DELIVERABLES</h3>
-                    <a href="/admin/public/pages/deliverable_orders.php" class="view-all">View All</a>
+                    <h3><i class="fas fa-truck"></i> DELIVERABLES</h3>
+                    <a href="/admin/public/pages/deliverable_orders.php" class="view-all">View All <i class="fas fa-arrow-right"></i></a>
                 </div>
                 <div class="deliverable-content">
                     <div class="deliverable-stats">
@@ -376,7 +355,38 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                 </div>
             </div>
 
-            <div class="sales-department-container">
+            <div class="top-section">
+                <div class="client-orders-container dashboard-section">
+                    <div class="chart-header">
+                        <h3>CLIENT ORDERS</h3>
+                        <select id="year-select" class="year-select">
+                        </select>
+                    </div>
+                    <div class="client-orders" style="height: 300px; position: relative;">
+                        <canvas id="clientOrdersChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="packs-sold-container dashboard-section">
+                    <div class="packs-sold-header">
+                        <span>Orders sold in</span>
+                        <select id="packs-sold-year" class="packs-sold-dropdown">
+                    
+                        </select>
+                    </div>
+
+                    <div class="packs-sold-count" id="packs-sold-count">0 Orders</div>
+
+                    <div class="packs-comparison-row">
+                        <span id="packs-sold-percentage" class="packs-comparison">0% since</span>
+                        <select id="packs-sold-compare-year" class="packs-sold-dropdown">
+
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sales-department-container dashboard-section">
                 <div class="chart-header">
                     <h3>SALES PER DEPARTMENT</h3>
                 </div>
