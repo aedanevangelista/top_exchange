@@ -1,7 +1,7 @@
 <?php
 session_start();
-include "../../backend/db_connection.php";
-include "../../backend/check_role.php";
+include "../../admin/backend/db_connection.php";
+include "../../admin/backend/check_role.php";
 checkRole('manage_clients.php'); // Check access for current page
 
 $sql = "SELECT * FROM clients WHERE status = 'pending' ORDER BY created_at ASC";
@@ -46,12 +46,12 @@ $result = $conn->query($sql);
                                 <td><?= htmlspecialchars($row['region']) ?></td>
                                 <td><?= htmlspecialchars($row['city']) ?></td>
                                 <td class="action-buttons">
-                                    <form action="../../backend/manage_client_action.php" method="POST" style="display:inline;">
+                                    <form action="../../admin/backend/manage_client_action.php" method="POST" style="display:inline;">
                                         <input type="hidden" name="id" value="<?= $row['id'] ?>">
                                         <input type="hidden" name="action" value="accept">
                                         <button type="submit" class="approve-btn"><i class="fas fa-check"></i> Accept</button>
                                     </form>
-                                    <form action="../../backend/manage_client_action.php" method="POST" style="display:inline;">
+                                    <form action="../../admin/backend/manage_client_action.php" method="POST" style="display:inline;">
                                         <input type="hidden" name="id" value="<?= $row['id'] ?>">
                                         <input type="hidden" name="action" value="decline">
                                         <button type="submit" class="decline-btn"><i class="fas fa-times"></i> Decline</button>

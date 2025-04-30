@@ -1,5 +1,5 @@
 <?php
-// /backend/check_raw_materials.php
+// /admin/backend/check_raw_materials.php
 session_start();
 include "db_connection.php";
 

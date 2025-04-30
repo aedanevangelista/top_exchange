@@ -13,7 +13,7 @@ session_start();
 
 // Adjust the path as needed - this is a common issue
 $base_path = realpath($_SERVER['DOCUMENT_ROOT']);
-include_once $base_path . "/backend/db_connection.php";
+include_once $base_path . "/admin/backend/db_connection.php";
 
 // Log the start of the request for debugging
 error_log("get_order_items.php started. Looking for PO: " . ($_GET['po_number'] ?? 'none provided'));

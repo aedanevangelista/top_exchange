@@ -1,7 +1,7 @@
 <?php
 session_start();
-include "../../backend/db_connection.php";
-include "../../backend/check_role.php";
+include "../../admin/backend/db_connection.php";
+include "../../admin/backend/check_role.php";
 checkRole('Department Forecast');
 
 $month = isset($_GET['month']) ? intval($_GET['month']) : intval(date('m'));
@@ -1135,7 +1135,7 @@ $currentDateTime = date('Y-m-d H:i:s');
         modalDate.textContent = 'Department Orders for ' + formattedDate;
         departmentOrdersContainer.innerHTML = '<div style="text-align: center; margin: 20px;"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading orders...</p></div>';
         
-        fetch(`/backend/get_orders_by_date_and_category.php?date=${date}`)
+        fetch(`/admin/backend/get_orders_by_date_and_category.php?date=${date}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);

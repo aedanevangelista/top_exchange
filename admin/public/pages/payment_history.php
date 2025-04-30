@@ -1,7 +1,7 @@
 <?php
 session_start();
-include "../../backend/db_connection.php";
-include "../../backend/check_role.php";
+include "../../admin/backend/db_connection.php";
+include "../../admin/backend/check_role.php";
 checkRole('Payment History');
 
 // Fetch active and inactive users with their balance
@@ -952,7 +952,7 @@ if ($result && $row = $result->fetch_assoc()) {
     // Function to fetch yearly total amount for a specific user
     function fetchYearlyTotalAmount(username) {
         $.ajax({
-            url: `../../backend/get_yearly_total.php?username=${username}&year=${currentYearValue}`,
+            url: `../../admin/backend/get_yearly_total.php?username=${username}&year=${currentYearValue}`,
             method: 'GET',
             dataType: 'json',
             success: function(response) {
@@ -1024,7 +1024,7 @@ if ($result && $row = $result->fetch_assoc()) {
         }
         
         $.ajax({
-            url: '../../backend/update_client_balance.php',
+            url: '../../admin/backend/update_client_balance.php',
             method: 'POST',
             data: {
                 username: currentUsername,
@@ -1113,7 +1113,7 @@ if ($result && $row = $result->fetch_assoc()) {
 
         // Use the existing monthly_payments table data first
         $.ajax({
-            url: '../../backend/get_monthly_payments.php',
+            url: '../../admin/backend/get_monthly_payments.php',
             method: 'GET',
             data: {
                 username: currentUsername,
@@ -1301,7 +1301,7 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
     
     // First, fetch the orders for this month
     $.ajax({
-        url: '../../backend/get_monthly_orders.php',
+        url: '../../admin/backend/get_monthly_orders.php',
         method: 'GET',
         data: {
             username: username,
@@ -1314,7 +1314,7 @@ function downloadMonthlyOrdersPDF(username, month, monthName, year) {
                 try {
                     // Get client account details for the first page
                     $.ajax({
-                        url: '../../backend/get_client_details.php',
+                        url: '../../admin/backend/get_client_details.php',
                         method: 'GET',
                         data: { username: username },
                         dataType: 'json',
@@ -1813,7 +1813,7 @@ function showToast(message, type = 'info') {
         $('#paymentModal .submit-btn').prop('disabled', true).text('Processing...');
         
         $.ajax({
-            url: '../../backend/process_payment.php',
+            url: '../../admin/backend/process_payment.php',
             method: 'POST',
             data: formData,
             dataType: 'json',
@@ -1912,7 +1912,7 @@ function showToast(message, type = 'info') {
         $('#changeStatusModal .submit-btn').prop('disabled', true).text('Updating...');
         
         $.ajax({
-            url: '../../backend/update_payment_status.php',
+            url: '../../admin/backend/update_payment_status.php',
             method: 'POST',
             data: {
                 username: username,
@@ -1977,7 +1977,7 @@ function showToast(message, type = 'info') {
         
         // Make the AJAX call to get orders
         $.ajax({
-            url: '../../backend/get_monthly_orders.php',
+            url: '../../admin/backend/get_monthly_orders.php',
             method: 'GET',
             data: {
                 username: username,
@@ -2094,7 +2094,7 @@ function showToast(message, type = 'info') {
         const cacheBuster = `&_=${new Date().getTime()}`;
         
         $.ajax({
-            url: `../../backend/get_payment_history.php?username=${username}${cacheBuster}`,
+            url: `../../admin/backend/get_payment_history.php?username=${username}${cacheBuster}`,
             method: 'GET',
             dataType: 'json',
             cache: false,
