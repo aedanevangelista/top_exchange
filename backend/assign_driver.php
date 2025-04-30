@@ -10,22 +10,6 @@ if (!isset($_SESSION['admin_user_id'])) {
     exit;
 }
 
-$statusCheck = $conn->prepare("SELECT status FROM orders WHERE po_number = ?");
-$statusCheck->bind_param("s", $po_number);
-$statusCheck->execute();
-$statusResult = $statusCheck->get_result();
-
-if ($statusResult->num_rows === 0) {
-    echo json_encode(['success' => false, 'message' => 'Order not found']);
-    exit;
-}
-
-$statusRow = $statusResult->fetch_assoc();
-if ($statusRow['status'] !== 'Active') {
-    echo json_encode(['success' => false, 'message' => 'Driver assignment is only allowed for Active orders']);
-    exit;
-}
-
 // Set content type to JSON
 header('Content-Type: application/json');
 
@@ -59,6 +43,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Now check the order status
+    $statusCheck = $conn->prepare("SELECT status FROM orders WHERE po_number = ?");
+    $statusCheck->bind_param("s", $po_number);
+    $statusCheck->execute();
+    $statusResult = $statusCheck->get_result();
+
+    if ($statusResult->num_rows === 0) {
+        echo json_encode(['success' => false, 'message' => 'Order not found']);
+        exit;
+    }
+
+    $statusRow = $statusResult->fetch_assoc();
+    if ($statusRow['status'] !== 'Active') {
+        echo json_encode(['success' => false, 'message' => 'Driver assignment is only allowed for Active orders']);
+        exit;
+    }
+    $statusCheck->close();
+
     // Begin transaction
     $conn->begin_transaction();
 
@@ -88,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $oldDriverId = $assignmentRow['driver_id'];
             
             // Update existing assignment
-            $updateAssignmentStmt = $conn->prepare("UPDATE driver_assignments SET driver_id = ?, status = 'Assigned' WHERE po_number = ?");
+            $updateAssignmentStmt = $conn->prepare("UPDATE driver_assignments SET driver_id = ?, assigned_at = NOW(), status = 'Assigned' WHERE po_number = ?");
             $updateAssignmentStmt->bind_param("is", $driver_id, $po_number);
             $updateAssignmentStmt->execute();
             $updateAssignmentStmt->close();
