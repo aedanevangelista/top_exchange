@@ -1,7 +1,7 @@
 <?php
 session_start();
-include "../../admin/backend/db_connection.php";
-include "../../admin/backend/check_role.php";
+include "../../backend/db_connection.php";
+include "../../backend/check_role.php";
 
 checkRole('User Roles'); // Ensure the user has access to the User Roles page
 
@@ -372,7 +372,7 @@ if (isset($_GET['success'])) {
                                         onclick="showRoleForm('<?= $role['role_id'] ?>', '<?= htmlspecialchars($role['role_name']) ?>', '<?= htmlspecialchars($role['pages']) ?>')">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <form method="POST" action="../../admin/backend/roles/manage_roles.php" style="display:inline;" class="status-toggle-form">
+                                    <form method="POST" action="../../backend/roles/manage_roles.php" style="display:inline;" class="status-toggle-form">
                                         <input type="hidden" name="role_id" value="<?= $role['role_id'] ?>">
                                         <input type="hidden" name="role_name" value="<?= htmlspecialchars($role['role_name']) ?>">
                                         <input type="hidden" name="action" value="<?= $role['status'] == 'active' ? 'archive' : 'activate' ?>">
@@ -392,7 +392,7 @@ if (isset($_GET['success'])) {
         <div class="overlay-content">
             <h2 id="roleFormTitle"><i class="fas fa-user-plus"></i> Add Role</h2>
             <p id="roleError" style="color: red; display: <?= $errorMessage ? 'block' : 'none' ?>;"><?= $errorMessage ?></p>
-            <form id="roleForm" method="POST" action="../../admin/backend/roles/manage_roles.php" class="account-form">
+            <form id="roleForm" method="POST" action="../../backend/roles/manage_roles.php" class="account-form">
                 <input type="hidden" id="actionType" name="action" value="add">
                 <input type="hidden" id="roleId" name="role_id">
                 <label for="roleName">Role Name:</label>
@@ -608,7 +608,7 @@ if (isset($_GET['success'])) {
             const roleId = formData.get('role_id');
             const roleName = formData.get('role_name');
             
-            fetch('../../admin/backend/roles/manage_roles.php', {
+            fetch('../../backend/roles/manage_roles.php', {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -669,7 +669,7 @@ if (isset($_GET['success'])) {
                 const action = formData.get('action');
                 const roleName = formData.get('role_name');
                 
-                fetch('../../admin/backend/roles/manage_roles.php', {
+                fetch('../../backend/roles/manage_roles.php', {
                     method: 'POST',
                     body: formData,
                     headers: {

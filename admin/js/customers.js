@@ -197,7 +197,7 @@ document.addEventListener("DOMContentLoaded", function() {
         formData.append("ajax", true);
         formData.append("formType", "delete");
 
-        fetch("/admin/backend/delete_customer.php", {
+        fetch("/backend/delete_customer.php", {
             method: "POST",
             body: formData
         })

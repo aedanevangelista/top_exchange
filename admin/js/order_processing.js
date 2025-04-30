@@ -9,7 +9,7 @@ window.openStatusModal = function(poNumber, username, ordersJson) {
     // Parse the orders JSON and check materials
     try {
         $.ajax({
-            url: '/admin/backend/check_raw_materials.php',
+            url: '/backend/check_raw_materials.php',
             type: 'POST',
             data: { 
                 orders: ordersJson,
@@ -243,7 +243,7 @@ window.changeStatus = function(status) {
     
     $.ajax({
         type: 'POST',
-        url: '/admin/backend/update_order_status.php',
+        url: '/backend/update_order_status.php',
         data: { 
             po_number: poNumber, 
             status: status,

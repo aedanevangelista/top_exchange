@@ -1,7 +1,7 @@
 <?php
 session_start();
-include "../../admin/backend/db_connection.php";
-include "../../admin/backend/check_role.php";
+include "../../backend/db_connection.php";
+include "../../backend/check_role.php";
 checkRole('Inventory');
 
 if (!isset($_SESSION['admin_user_id'])) {
@@ -481,7 +481,7 @@ $result = $conn->query($sql);
             
             document.getElementById('addMaterialError').textContent = '';
             
-            fetch("../../admin/backend/add_material.php", {
+            fetch("../../backend/add_material.php", {
                 method: "POST",
                 body: formData
             })
@@ -541,7 +541,7 @@ $result = $conn->query($sql);
             
             document.getElementById('editMaterialError').textContent = '';
             
-            fetch("../../admin/backend/edit_material.php", {
+            fetch("../../backend/edit_material.php", {
                 method: "POST",
                 body: formData
             })

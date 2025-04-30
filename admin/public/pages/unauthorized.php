@@ -1,6 +1,6 @@
 <?php
 session_start(); // Start the session to check for logged-in status
-include "../../admin/backend/db_connection.php"; // Include database connection
+include "../../backend/db_connection.php"; // Include database connection
 
 // Function to check if user has access to dashboard
 function hasAccessToDashboard() {

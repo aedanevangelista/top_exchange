@@ -1,7 +1,7 @@
 <?php
 session_start();
-include "../admin/backend/db_connection.php";
-include "../admin/backend/check_role.php";
+include "../backend/db_connection.php";
+include "../backend/check_role.php";
 checkApiRole('Orders');
 
 header('Content-Type: application/json');

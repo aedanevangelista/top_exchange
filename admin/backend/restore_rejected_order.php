@@ -1,5 +1,5 @@
 <?php
-// /admin/backend/restore_rejected_order.php
+// /backend/restore_rejected_order.php
 session_start();
 include "db_connection.php";
 

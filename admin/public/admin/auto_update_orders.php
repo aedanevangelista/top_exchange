@@ -1,7 +1,7 @@
 <?php
 session_start();
-include "../../admin/backend/db_connection.php";
-include "../../admin/backend/check_role.php";
+include "../../backend/db_connection.php";
+include "../../backend/check_role.php";
 
 // Ensure only admins can access this page
 if (!isset($_SESSION['admin_user_id']) || !isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
