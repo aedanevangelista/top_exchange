@@ -8,7 +8,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <form id="client-registration-form" action="../admin/backend/register_client.php" method="POST" enctype="multipart/form-data">
+    <form id="client-registration-form" action="../backend/register_client.php" method="POST" enctype="multipart/form-data">
         <h2>Client Registration</h2>
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required>

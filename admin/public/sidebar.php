@@ -4,8 +4,8 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-include_once "../../admin/backend/db_connection.php";
-include_once "../../admin/backend/check_role.php";
+include_once "../../backend/db_connection.php";
+include_once "../../backend/check_role.php";
 
 // Determine which session context we're in and get appropriate user info
 if (isset($_SESSION['admin_user_id'])) {
@@ -238,7 +238,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                 <?php echo htmlspecialchars($username); ?>
             </strong> (<?= htmlspecialchars(ucfirst($role)) ?>)
         </div>
-        <a href="/admin/admin/backend/logout.php" class="logout-btn">
+        <a href="/admin/backend/logout.php" class="logout-btn">
             <i class="fas fa-sign-out-alt"></i> Logout
         </a>
     </div>
