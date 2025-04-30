@@ -60,39 +60,6 @@ $completedPercentage = calculatePercentage($completedOrdersCount, $totalOrders);
             align-items: center;
             justify-content: space-between;
         }
-        
-        .notification-badge {
-            background-color: #f8d7da;
-            border-radius: 6px;
-            padding: 5px 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .notification-badge:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
-        
-        .notification-icon {
-            color: #721c24;
-            font-size: 16px;
-        }
-        
-        .notification-count {
-            font-size: 16px;
-            font-weight: bold;
-            color: #721c24;
-        }
-        
-        .notification-label {
-            font-size: 12px;
-            color: #721c24;
-        }
     </style>
 </head>
 <body>
@@ -103,17 +70,6 @@ $completedPercentage = calculatePercentage($completedOrdersCount, $totalOrders);
         <div class="main-content">
             <div class="overview-container">
                 <h2>Dashboard</h2>
-                
-                <!-- New Compact Pending Orders Notification Badge -->
-                <?php if ($pendingOrdersCount > 0): ?>
-                <a href="/public/pages/orders.php?status=Pending" style="text-decoration: none;">
-                    <div class="notification-badge">
-                        <i class="fas fa-bell notification-icon"></i>
-                        <span class="notification-count"><?php echo $pendingOrdersCount; ?></span>
-                        <span class="notification-label">Pending Orders</span>
-                    </div>
-                </a>
-                <?php endif; ?>
             </div>
 
             <div class="top-section">
