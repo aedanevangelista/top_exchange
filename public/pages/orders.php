@@ -44,7 +44,7 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Modified query to only show Active orders with sorting
+// Modified query to show Active, Pending, and Rejected orders with sorting
 $orders = []; // Initialize $orders as an empty array
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress, o.driver_assigned, 
         o.company, o.special_instructions, 
@@ -52,7 +52,7 @@ $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.deliver
         FROM orders o 
         LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
         LEFT JOIN drivers d ON da.driver_id = d.id 
-        WHERE o.status = 'Active'";
+        WHERE o.status IN ('Active', 'Pending', 'Rejected')";
 
 // Add sorting
 $sql .= " ORDER BY {$sort_column} {$sort_direction}";
@@ -246,7 +246,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             margin-top: 20px;
         }
         
-        .download-pdf-btn {
+        .pdf-actions button {
             padding: 10px 20px;
             background-color: #17a2b8;
             color: white;
@@ -391,6 +391,142 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         #contentToDownload .po-total {
             font-size: 12px;
         }
+
+        /* Status badge styles */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .status-active {
+            background-color: #d1e7ff;
+            color: #084298;
+        }
+
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+
+        .status-delivery {
+            background-color: #e2e3e5;
+            color: #383d41;
+        }
+
+        .status-completed {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+
+        /* Driver badge for not allowed status */
+        .driver-badge.driver-not-allowed {
+            background-color: #f8d7da;
+            color: #842029;
+            border: 1px solid #f5c2c7;
+        }
+
+        .btn-info {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-top: 3px;
+        }
+
+        /* Materials table styling */
+        .raw-materials-container {
+            overflow: visible;
+        }
+
+        .raw-materials-container h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .materials-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        .materials-table tbody {
+            display: block;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+
+        .materials-table thead, 
+        .materials-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .materials-table th,
+        .materials-table td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        .materials-table thead {
+            background-color: #f2f2f2;
+            display: table;
+            width: calc(100% - 17px); /* Adjust for scrollbar width */
+            table-layout: fixed;
+        }   
+
+        .materials-table th {
+            background-color: #f2f2f2;
+        }
+
+        .material-sufficient {
+            color: #28a745;
+        }
+
+        .material-insufficient {
+            color: #dc3545;
+        }
+
+        .materials-status {
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .status-sufficient {
+            background-color: #d4edda;
+            color: #155724;
+            font-size: 16px;
+        }
+
+        .status-insufficient {
+            background-color: #f8d7da;
+            color: #721c24;
+            font-size: 16px;
+        }
+        
+        /* Status badges for progress column */
+        .active-progress {
+            background-color: #d1e7ff;
+            color: #084298;
+        }
+        
+        .pending-progress, .rejected-progress {
+            background-color: #f8d7da;
+            color: #842029;
+        }
     </style>
 </head>
 <body>
@@ -454,13 +590,19 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td>
+                                    <?php if ($order['status'] === 'Active'): ?>
                                     <div class="progress-bar-container">
                                         <div class="progress-bar" style="width: <?= $order['progress'] ?? 0 ?>%"></div>
                                         <div class="progress-text"><?= $order['progress'] ?? 0 ?>%</div>
                                     </div>
+                                    <?php else: ?>
+                                        <span class="status-badge <?= strtolower($order['status']) ?>-progress">
+                                            <?= $order['status'] === 'Pending' ? 'Pending' : 'Not Available' ?>
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
-                                    <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
+                                    <button class="view-orders-btn" onclick="viewOrderInfo('<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['status']) ?>')">
                                         <i class="fas fa-clipboard-list"></i>    
                                         View
                                     </button>
@@ -476,29 +618,61 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if ($order['driver_assigned'] && !empty($order['driver_name'])): ?>
-                                        <div class="driver-badge">
-                                            <i class="fas fa-user"></i> <?= htmlspecialchars($order['driver_name']) ?>
-                                        </div>
-                                        <button class="driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', <?= $order['driver_id'] ?>, '<?= htmlspecialchars($order['driver_name']) ?>')">
-                                            <i class="fas fa-exchange-alt"></i> Change
-                                        </button>
+                                    <?php if ($order['status'] === 'Active'): ?>
+                                        <?php if ($order['driver_assigned'] && !empty($order['driver_name'])): ?>
+                                            <div class="driver-badge">
+                                                <i class="fas fa-user"></i> <?= htmlspecialchars($order['driver_name']) ?>
+                                            </div>
+                                            <button class="driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', <?= $order['driver_id'] ?>, '<?= htmlspecialchars($order['driver_name']) ?>')">
+                                                <i class="fas fa-exchange-alt"></i> Change
+                                            </button>
+                                        <?php else: ?>
+                                            <div class="driver-badge driver-not-assigned">
+                                                <i class="fas fa-user-slash"></i> Not Assigned
+                                            </div>
+                                            <button class="driver-btn assign-driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', 0, '')">
+                                                <i class="fas fa-user-plus"></i> Assign
+                                            </button>
+                                        <?php endif; ?>
                                     <?php else: ?>
-                                        <div class="driver-badge driver-not-assigned">
-                                            <i class="fas fa-user-slash"></i> Not Assigned
+                                        <div class="driver-badge driver-not-allowed">
+                                            <i class="fas fa-ban"></i> Not Available
                                         </div>
-                                        <button class="driver-btn assign-driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', 0, '')">
-                                            <i class="fas fa-user-plus"></i> Assign
-                                        </button>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="status-badge status-active"><?= htmlspecialchars($order['status']) ?></span>
+                                    <?php
+                                    $statusClass = '';
+                                    switch ($order['status']) {
+                                        case 'Active': 
+                                            $statusClass = 'status-active';
+                                            break;
+                                        case 'Pending': 
+                                            $statusClass = 'status-pending';
+                                            break;
+                                        case 'Rejected': 
+                                            $statusClass = 'status-rejected';
+                                            break;
+                                        case 'For Delivery': 
+                                            $statusClass = 'status-delivery';
+                                            break;
+                                        case 'Completed': 
+                                            $statusClass = 'status-completed';
+                                            break;
+                                    }
+                                    ?>
+                                    <span class="status-badge <?= $statusClass ?>"><?= htmlspecialchars($order['status']) ?></span>
                                 </td>
                                 <td class="action-buttons">
-                                    <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
-                                        <i class="fas fa-exchange-alt"></i> Status
-                                    </button>
+                                    <?php if ($order['status'] === 'Pending'): ?>
+                                        <button class="status-btn" onclick="openPendingStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
+                                            <i class="fas fa-exchange-alt"></i> Status
+                                        </button>
+                                    <?php elseif ($order['status'] === 'Active' || $order['status'] === 'Rejected'): ?>
+                                        <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
+                                            <i class="fas fa-exchange-alt"></i> Status
+                                        </button>
+                                    <?php endif; ?>
                                     <button class="download-btn" onclick="downloadPODirectly(
                                         '<?= htmlspecialchars($order['po_number']) ?>', 
                                         '<?= htmlspecialchars($order['username']) ?>', 
@@ -628,7 +802,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             <th>Packaging</th>
                             <th>Price</th>
                             <th>Quantity</th>
-                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="orderDetailsBody">
@@ -663,16 +836,47 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <div class="status-buttons">
                 <button onclick="changeStatus('For Delivery')" class="modal-status-btn delivery">
                     <i class="fas fa-truck"></i> For Delivery
+                    <div class="btn-info">(Requires: 100% Progress and Driver)</div>
                 </button>
                 <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
                     <i class="fas fa-clock"></i> Pending
+                    <div class="btn-info">(Will disable driver & progress)</div>
                 </button>
                 <button onclick="changeStatus('Rejected')" class="modal-status-btn rejected">
                     <i class="fas fa-times-circle"></i> Reject
+                    <div class="btn-info">(Will disable driver & progress)</div>
                 </button>
             </div>
             <div class="modal-footer">
                 <button onclick="closeStatusModal()" class="modal-cancel-btn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Status Modal -->
+    <div id="pendingStatusModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Change Status</h2>
+            <p id="pendingStatusMessage"></p>
+            
+            <!-- Enhanced Raw Materials Section -->
+            <div id="rawMaterialsContainer" class="raw-materials-container">
+                <h3>Loading inventory status...</h3>
+                <!-- Content will be populated dynamically -->
+            </div>
+            
+            <div class="status-buttons">
+                <button id="activeStatusBtn" onclick="changeStatusWithCheck('Active')" class="modal-status-btn active">
+                    <i class="fas fa-check"></i> Active
+                </button>
+                <button onclick="changeStatusWithCheck('Rejected')" class="modal-status-btn reject">
+                    <i class="fas fa-ban"></i> Reject
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closePendingStatusModal()" class="modal-cancel-btn">
                     <i class="fas fa-times"></i> Cancel
                 </button>
             </div>
@@ -1413,7 +1617,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         orderItems.forEach(item => {
             const row = document.createElement('tr');
             
-            // Calculate item total
+                        // Calculate item total
             const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
             
             row.innerHTML = `
@@ -1594,6 +1798,391 @@ function closeSpecialInstructions() {
     document.getElementById('specialInstructionsModal').style.display = 'none';
 }
 
+// Function to view order info for all order statuses (Active, Pending, and Rejected)
+function viewOrderInfo(ordersJson, orderStatus) {
+    try {
+        const orderDetails = JSON.parse(ordersJson);
+        let content = `<h3>Order Details (${orderStatus})</h3>`;
+        
+        content += `<table class="order-details-table">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Product</th>
+                    <th>Packaging</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        
+        let totalAmount = 0;
+        orderDetails.forEach(product => {
+            const itemTotal = parseFloat(product.price) * parseInt(product.quantity);
+            totalAmount += itemTotal;
+            
+            content += `<tr>
+                <td>${product.category || ''}</td>
+                <td>${product.item_description}</td>
+                <td>${product.packaging || ''}</td>
+                <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
+                <td>${product.quantity}</td>
+            </tr>`;
+        });
+        
+        content += `</tbody></table>`;
+        content += `<div class="summary-total">Total Amount: PHP ${totalAmount.toFixed(2)}</div>`;
+        
+        // Display read-only order details
+        const orderDetailsBody = document.getElementById('orderDetailsBody');
+        orderDetailsBody.innerHTML = content;
+        
+        // Hide progress bar elements if they exist
+        const overallProgressInfo = document.getElementById('overall-progress-info');
+        if (overallProgressInfo) {
+            overallProgressInfo.style.display = 'none';
+        }
+        
+        // Hide save button for pending/rejected orders
+        const saveButton = document.querySelector('.save-progress-btn');
+        if (saveButton) {
+            saveButton.style.display = 'none';
+        }
+        
+        // Show modal
+        document.getElementById('orderDetailsModal').style.display = 'flex';
+    } catch (e) {
+        console.error('Error parsing order details:', e);
+        alert('Error displaying order details');
+    }
+}
+
+// Functions for handling pending orders status changes
+function openPendingStatusModal(poNumber, username, ordersJson) {
+    $('#pendingStatusMessage').text('Change order status for ' + poNumber);
+    $('#pendingStatusModal').data('po_number', poNumber).show();
+    
+    // Clear previous data and show loading state
+    $('#rawMaterialsContainer').html('<h3>Loading inventory status...</h3>');
+    
+    // Parse the orders JSON and check materials
+    try {
+        $.ajax({
+            url: '/backend/check_raw_materials.php',
+            type: 'POST',
+            data: { 
+                orders: ordersJson,
+                po_number: poNumber
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Display finished products status first
+                    if (response.finishedProducts) {
+                        displayFinishedProducts(response.finishedProducts);
+                    }
+                    
+                    // If manufacturing is needed, display raw materials
+                    if (response.needsManufacturing && response.materials) {
+                        displayRawMaterials(response.materials);
+                    } else {
+                        // Hide the raw materials section if no manufacturing needed
+                        $('#rawMaterialsContainer').append('<p>All products are in stock - no manufacturing needed</p>');
+                    }
+                    
+                    // Enable or disable the Active button based on overall status
+                    updateOrderActionStatus(response);
+                } else {
+                    $('#rawMaterialsContainer').html(`
+                        <h3>Error Checking Inventory</h3>
+                        <p style="color:red;">${response.message || 'Unknown error'}</p>
+                        <p>Order status can still be changed.</p>
+                    `);
+                    $('#activeStatusBtn').prop('disabled', false);
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#rawMaterialsContainer').html(`
+                    <h3>Server Error</h3>
+                    <p style="color:red;">Could not connect to server: ${error}</p>
+                    <p>Order status can still be changed.</p>
+                `);
+                $('#activeStatusBtn').prop('disabled', false);
+                console.error("AJAX Error:", status, error);
+            }
+        });
+    } catch (e) {
+        $('#rawMaterialsContainer').html(`
+            <h3>Error Processing Data</h3>
+            <p style="color:red;">${e.message}</p>
+            <p>Order status can still be changed.</p>
+        `);
+        $('#activeStatusBtn').prop('disabled', false);
+        console.error("Error:", e);
+    }
+}
+
+function closePendingStatusModal() {
+    document.getElementById('pendingStatusModal').style.display = 'none';
+}
+
+// Helper function to format weight values
+function formatWeight(weightInGrams) {
+    if (weightInGrams >= 1000) {
+        return (weightInGrams / 1000).toFixed(2) + ' kg';
+    } else {
+        return weightInGrams.toFixed(2) + ' g';
+    }
+}
+
+// Function to display finished products status
+function displayFinishedProducts(productsData) {
+    const productsTableHTML = `
+        <h3>Finished Products Status</h3>
+        <table class="materials-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>In Stock</th>
+                    <th>Required</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${Object.keys(productsData).map(product => {
+                    const data = productsData[product];
+                    const available = parseInt(data.available);
+                    const required = parseInt(data.required);
+                    const isSufficient = data.sufficient;
+                    
+                    return `
+                        <tr>
+                            <td>${product}</td>
+                            <td>${available}</td>
+                            <td>${required}</td>
+                            <td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">
+                                ${isSufficient ? 'In Stock' : 'Need to manufacture ' + data.shortfall + ' more'}
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    // Update the HTML container
+    $('#rawMaterialsContainer').html(productsTableHTML);
+    
+    // Check if any products need manufacturing
+    const needsManufacturing = Object.values(productsData).some(product => !product.sufficient);
+    
+    if (needsManufacturing) {
+        $('#rawMaterialsContainer').append(`
+            <h3>Raw Materials Required for Manufacturing</h3>
+            <div id="raw-materials-section">
+                <p>Loading raw materials information...</p>
+            </div>
+        `);
+    }
+}
+
+// Function to display raw materials data
+function displayRawMaterials(materialsData) {
+    if (!materialsData || Object.keys(materialsData).length === 0) {
+        $('#raw-materials-section').html('<p>No raw materials information available.</p>');
+        return;
+    }
+    
+    // Count sufficient vs insufficient materials
+    let allSufficient = true;
+    let insufficientMaterials = [];
+    
+    const materialsTableHTML = `
+        <table class="materials-table">
+            <thead>
+                <tr>
+                    <th>Material</th>
+                    <th>Available</th>
+                    <th>Required</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${Object.keys(materialsData).map(material => {
+                    const data = materialsData[material];
+                    const available = parseFloat(data.available);
+                    const required = parseFloat(data.required);
+                    const isSufficient = data.sufficient;
+                    
+                    if (!isSufficient) {
+                        allSufficient = false;
+                        insufficientMaterials.push(material);
+                    }
+                    
+                    return `
+                        <tr>
+                            <td>${material}</td>
+                            <td>${formatWeight(available)}</td>
+                            <td>${formatWeight(required)}</td>
+                            <td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">
+                                ${isSufficient ? 'Sufficient' : 'Insufficient'}
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    // Add status message
+    const statusMessage = allSufficient 
+        ? 'All raw materials are sufficient for manufacturing.' 
+        : `Insufficient raw materials: ${insufficientMaterials.join(', ')}. The order cannot proceed.`;
+    
+    const statusClass = allSufficient ? 'status-sufficient' : 'status-insufficient';
+    
+    const fullHTML = `
+        ${materialsTableHTML}
+        <p class="materials-status ${statusClass}">${statusMessage}</p>
+    `;
+    
+    $('#raw-materials-section').html(fullHTML);
+    
+    // Enable or disable the Active button
+    $('#activeStatusBtn').prop('disabled', !allSufficient);
+    
+    return allSufficient;
+}
+
+// Function to update order action status
+function updateOrderActionStatus(response) {
+    let canProceed = true;
+    let statusMessage = 'All inventory requirements are met. The order can proceed.';
+    
+    // Check if all finished products are in stock
+    const finishedProducts = response.finishedProducts || {};
+    const allProductsInStock = Object.values(finishedProducts).every(product => product.sufficient);
+    
+    // If manufacturing is needed, check raw materials
+    if (!allProductsInStock && response.needsManufacturing) {
+        // Check if all products can be manufactured
+        const canManufactureAll = Object.values(finishedProducts).every(product => 
+            product.sufficient || product.canManufacture !== false);
+            
+        if (!canManufactureAll) {
+            canProceed = false;
+            statusMessage = 'Some products cannot be manufactured due to missing ingredients.';
+        } else {
+            // Check if all raw materials are sufficient
+            const materials = response.materials || {};
+            const allMaterialsSufficient = Object.values(materials).every(material => material.sufficient);
+            
+            if (!allMaterialsSufficient) {
+                canProceed = false;
+                statusMessage = 'Insufficient raw materials for manufacturing required products.';
+            } else {
+                statusMessage = 'Products will be manufactured using raw materials. The order can proceed.';
+            }
+        }
+    }
+    
+    // Update UI based on status
+    $('#activeStatusBtn').prop('disabled', !canProceed);
+    
+    // Add a summary at the end of the container
+    const statusClass = canProceed ? 'status-sufficient' : 'status-insufficient';
+    $('#rawMaterialsContainer').append(`
+        <p class="materials-status ${statusClass}">${statusMessage}</p>
+    `);
+}
+
+function changeStatusWithCheck(status) {
+    var poNumber = $('#pendingStatusModal').data('po_number');
+    
+    // Only deduct materials if changing to Active
+    const deductMaterials = (status === 'Active');
+    
+    // Show loading indicator
+    const originalBtnText = $('#activeStatusBtn').html();
+    $('#activeStatusBtn').html('<i class="fas fa-spinner fa-spin"></i> Updating...');
+    $('#activeStatusBtn').prop('disabled', true);
+    
+    // Log the request for debugging
+    console.log("Sending status change request:", {
+        po_number: poNumber,
+        status: status,
+        deduct_materials: deductMaterials
+    });
+    
+    $.ajax({
+        type: 'POST',
+        url: '/backend/update_order_status.php',
+        data: { 
+            po_number: poNumber, 
+            status: status,
+            deduct_materials: deductMaterials
+        },
+        dataType: 'json',
+        success: function(response) {
+            console.log("Status change response:", response);
+            
+            if (response.success) {
+                // Format status type for toast
+                let toastType = status.toLowerCase();
+                if (toastType === 'completed') toastType = 'complete';
+                if (toastType === 'rejected') toastType = 'reject';
+                
+                // Create message
+                let message = `Changed status for ${poNumber} to ${status}.`;
+                if (status === 'Active' && deductMaterials) {
+                    message = `Changed status for ${poNumber} to ${status}. Inventory has been updated.`;
+                }
+                
+                // Show toast and reload
+                showToast(message, toastType);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                // Reset button state
+                $('#activeStatusBtn').html(originalBtnText);
+                $('#activeStatusBtn').prop('disabled', false);
+                
+                // Show error message
+                showToast('Failed to change status: ' + (response.message || 'Unknown error'), 'error');
+            }
+            closePendingStatusModal();
+        },
+        error: function(xhr, status, error) {
+            console.error('Error details:', {
+                status: xhr.status,
+                responseText: xhr.responseText,
+                error: error
+            });
+            
+            // Reset button state
+            $('#activeStatusBtn').html(originalBtnText);
+            $('#activeStatusBtn').prop('disabled', false);
+            
+            // Show a more helpful error message
+            let errorMessage = "Server error: ";
+            try {
+                const response = JSON.parse(xhr.responseText);
+                errorMessage += response.message || "Unknown error";
+            } catch(e) {
+                // If we can't parse the response as JSON
+                if (xhr.responseText && xhr.responseText.trim()) {
+                    errorMessage += xhr.responseText.substring(0, 100) + (xhr.responseText.length > 100 ? '...' : '');
+                } else {
+                    errorMessage += error || "Could not communicate with server";
+                }
+            }
+            
+            showToast(errorMessage, 'error');
+            closePendingStatusModal();
+        },
+        timeout: 10000 // 10 second timeout
+    });
+}
+
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
@@ -1646,7 +2235,7 @@ $(document).ready(function() {
             }
         });
     });
-
+    
     // Handle clicks outside modals to close them
     $(document).on('click', '.overlay', function(event) {
         if (event.target === this) {
