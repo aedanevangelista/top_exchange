@@ -100,7 +100,7 @@ if (isset($_GET['success'])) {
     <title>User Roles</title>
     <link rel="stylesheet" href="/admin/css/user_roles.css">
     <link rel="stylesheet" href="/admin/css/sidebar.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/admin/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Toast notifications */
         #toast-container {

@@ -77,7 +77,7 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
     <title>Dashboard</title>
     <link rel="stylesheet" href="/admin/css/dashboard.css">
     <link rel="stylesheet" href="/admin/css/sidebar.css"> 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/admin/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         /* Header container with notification badge */

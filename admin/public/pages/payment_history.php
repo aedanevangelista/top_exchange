@@ -37,7 +37,7 @@ if ($result && $row = $result->fetch_assoc()) {
     <link rel="stylesheet" href="/admin/css/orders.css">
     <link rel="stylesheet" href="/admin/css/sidebar.css">
     <link rel="stylesheet" href="/admin/css/payment_history.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/admin/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>

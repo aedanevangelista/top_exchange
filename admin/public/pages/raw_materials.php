@@ -22,7 +22,7 @@ $result = $conn->query($sql);
     <title>Raw Materials</title>
     <link rel="stylesheet" href="/admin/css/inventory.css">
     <link rel="stylesheet" href="/admin/css/sidebar.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/admin/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
         .overlay {

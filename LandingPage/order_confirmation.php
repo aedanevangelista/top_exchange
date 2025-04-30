@@ -38,7 +38,7 @@ $orderItems = json_decode($order['orders'], true);
     <link rel="stylesheet" href="/LandingPage/admin/css/responsive.css">
     <link rel="icon" href="/LandingPage/images/fevicon.png" type="image/gif" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/admin/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .confirmation-container {
             max-width: 800px;
