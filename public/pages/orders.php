@@ -579,23 +579,22 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td>
+                                    <?php if ($order['status'] === 'Pending'): ?>
                                     <div class="progress-bar-container">
                                         <div class="progress-bar" style="width: <?= $order['progress'] ?? 0 ?>%"></div>
                                         <div class="progress-text"><?= $order['progress'] ?? 0 ?>%</div>
                                     </div>
+                                    <?php else: ?>
+                                        <span class="status-badge <?= strtolower($order['status']) ?>-progress">
+                                            <?= $order['status'] === 'Active' ? 'In Progress' : 'Not Available' ?>
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if ($order['status'] === 'Active'): ?>
-                                        <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
-                                            <i class="fas fa-clipboard-list"></i>    
-                                            View
-                                        </button>
-                                    <?php else: ?>
-                                        <button class="view-orders-btn" onclick="viewOrderInfo('<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['status']) ?>')">
-                                            <i class="fas fa-clipboard-list"></i>    
-                                            View
-                                        </button>
-                                    <?php endif; ?>
+                                    <button class="view-orders-btn" onclick="viewOrderInfo('<?= htmlspecialchars($order['orders']) ?>', '<?= htmlspecialchars($order['status']) ?>')">
+                                        <i class="fas fa-clipboard-list"></i>    
+                                        View
+                                    </button>
                                 </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
@@ -658,12 +657,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                         <button class="status-btn" onclick="openPendingStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
                                             <i class="fas fa-exchange-alt"></i> Status
                                         </button>
-                                    <?php elseif ($order['status'] === 'Active'): ?>
+                                    <?php elseif ($order['status'] === 'Active' || $order['status'] === 'Rejected'): ?>
                                         <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
                                             <i class="fas fa-exchange-alt"></i> Status
                                         </button>
-                                    <?php else: ?>
-                                        <!-- No status change button for Rejected orders -->
                                     <?php endif; ?>
                                     <button class="download-btn" onclick="downloadPODirectly(
                                         '<?= htmlspecialchars($order['po_number']) ?>', 
@@ -1614,11 +1611,11 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
             const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
             
             row.innerHTML = `
-                <td>${item.category || ''}</td>
+                                <td>${item.category || ''}</td>
                 <td>${item.item_description}</td>
                 <td>${item.packaging || ''}</td>
                 <td>${item.quantity}</td>
-                                <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
+                <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 })}</td>
@@ -1791,7 +1788,7 @@ function closeSpecialInstructions() {
     document.getElementById('specialInstructionsModal').style.display = 'none';
 }
 
-// Function to view order info for Pending and Rejected orders without progress tracking
+// Function to view order info for all order statuses
 function viewOrderInfo(ordersJson, orderStatus) {
     try {
         const orderDetails = JSON.parse(ordersJson);
@@ -2244,6 +2241,21 @@ $(document).ready(function() {
             closeSpecialInstructions();
         }
     });
+    
+    // Add styles for progress badges
+    $("<style>")
+        .prop("type", "text/css")
+        .html(`
+            .active-progress {
+                background-color: #fff3cd;
+                color: #856404;
+            }
+            .rejected-progress {
+                background-color: #f8d7da;
+                color: #842029;
+            }
+        `)
+        .appendTo("head");
 });
     </script>
 </body>
