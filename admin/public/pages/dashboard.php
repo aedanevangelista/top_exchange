@@ -26,6 +26,45 @@ function getPendingOrdersCount($conn) {
     return $count;
 }
 
+// Count rejected orders
+function getRejectedOrdersCount($conn) {
+    $count = 0;
+    $sql = "SELECT COUNT(*) as rejected_count FROM orders WHERE status = 'Rejected'";
+    $result = $conn->query($sql);
+    
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $count = $row['rejected_count'];
+    }
+    return $count;
+}
+
+// Count active orders
+function getActiveOrdersCount($conn) {
+    $count = 0;
+    $sql = "SELECT COUNT(*) as active_count FROM orders WHERE status = 'Active'";
+    $result = $conn->query($sql);
+    
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $count = $row['active_count'];
+    }
+    return $count;
+}
+
+// Count deliverable orders
+function getDeliverableOrdersCount($conn) {
+    $count = 0;
+    $sql = "SELECT COUNT(*) as deliverable_count FROM orders WHERE status IN ('For Delivery', 'In Transit')";
+    $result = $conn->query($sql);
+    
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $count = $row['deliverable_count'];
+    }
+    return $count;
+}
+
 function getAvailableYears($conn) {
     $years = array();
     $sql = "SELECT DISTINCT YEAR(order_date) as year FROM orders ORDER BY year DESC";
@@ -66,6 +105,9 @@ $selectedYear = $_GET['year'] ?? date('Y');
 $availableYears = getAvailableYears($conn);
 $clientOrders = getClientOrdersCount($conn, $selectedYear);
 $pendingOrdersCount = getPendingOrdersCount($conn);
+$rejectedOrdersCount = getRejectedOrdersCount($conn);
+$activeOrdersCount = getActiveOrdersCount($conn);
+$deliverableOrdersCount = getDeliverableOrdersCount($conn);
 
 ?>
 
@@ -87,8 +129,12 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
             justify-content: space-between;
         }
         
+        .notification-badges {
+            display: flex;
+            gap: 10px;
+        }
+        
         .notification-badge {
-            background-color: #f8d7da;
             border-radius: 6px;
             padding: 5px 10px;
             display: flex;
@@ -104,20 +150,124 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
         
+        .notification-badge.pending {
+            background-color: #f8d7da;
+        }
+        
+        .notification-badge.rejected {
+            background-color: #f8d7da;
+        }
+        
+        .notification-badge.active {
+            background-color: #d4edda;
+        }
+        
+        .notification-badge.deliverable {
+            background-color: #fff3cd;
+        }
+        
         .notification-icon {
-            color: #721c24;
             font-size: 16px;
         }
         
         .notification-count {
             font-size: 16px;
             font-weight: bold;
-            color: #721c24;
         }
         
         .notification-label {
             font-size: 12px;
+        }
+        
+        .pending .notification-icon, .pending .notification-count, .pending .notification-label {
             color: #721c24;
+        }
+        
+        .rejected .notification-icon, .rejected .notification-count, .rejected .notification-label {
+            color: #721c24;
+        }
+        
+        .active .notification-icon, .active .notification-count, .active .notification-label {
+            color: #155724;
+        }
+        
+        .deliverable .notification-icon, .deliverable .notification-count, .deliverable .notification-label {
+            color: #856404;
+        }
+        
+        /* Dashboard container styles */
+        .top-section {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .top-section > div {
+            flex: 1;
+        }
+        
+        .deliverable-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .deliverable-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #fd7e14;
+        }
+        
+        .deliverable-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .view-all {
+            padding: 5px 12px;
+            background-color: #fd7e14;
+            color: white;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .view-all:hover {
+            background-color: #e67211;
+        }
+        
+        .deliverable-content {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+        }
+        
+        .deliverable-stats {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            flex: 1;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .stats-label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+        
+        .stats-count {
+            font-size: 24px;
+            font-weight: bold;
+            color: #fd7e14;
         }
     </style>
 </head>
@@ -130,16 +280,38 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
             <div class="overview-container">
                 <h2>Dashboard</h2>
                 
-                <!-- New Compact Pending Orders Notification Badge -->
-                <?php if ($pendingOrdersCount > 0): ?>
-                <a href="/admin/public/pages/orders.php" style="text-decoration: none;">
-                    <div class="notification-badge">
-                        <i class="fas fa-bell notification-icon"></i>
-                        <span class="notification-count"><?php echo $pendingOrdersCount; ?></span>
-                        <span class="notification-label">Pending Orders</span>
-                    </div>
-                </a>
-                <?php endif; ?>
+                <!-- Order Status Notification Badges -->
+                <div class="notification-badges">
+                    <?php if ($pendingOrdersCount > 0): ?>
+                    <a href="/admin/public/pages/orders.php?status=Pending" style="text-decoration: none;">
+                        <div class="notification-badge pending">
+                            <i class="fas fa-clock notification-icon"></i>
+                            <span class="notification-count"><?php echo $pendingOrdersCount; ?></span>
+                            <span class="notification-label">Pending</span>
+                        </div>
+                    </a>
+                    <?php endif; ?>
+                    
+                    <?php if ($rejectedOrdersCount > 0): ?>
+                    <a href="/admin/public/pages/orders.php?status=Rejected" style="text-decoration: none;">
+                        <div class="notification-badge rejected">
+                            <i class="fas fa-times-circle notification-icon"></i>
+                            <span class="notification-count"><?php echo $rejectedOrdersCount; ?></span>
+                            <span class="notification-label">Rejected</span>
+                        </div>
+                    </a>
+                    <?php endif; ?>
+                    
+                    <?php if ($activeOrdersCount > 0): ?>
+                    <a href="/admin/public/pages/orders.php?status=Active" style="text-decoration: none;">
+                        <div class="notification-badge active">
+                            <i class="fas fa-check-circle notification-icon"></i>
+                            <span class="notification-count"><?php echo $activeOrdersCount; ?></span>
+                            <span class="notification-label">Active</span>
+                        </div>
+                    </a>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <div class="top-section">
@@ -171,9 +343,38 @@ $pendingOrdersCount = getPendingOrdersCount($conn);
                         </select>
                     </div>
                 </div>
-
             </div>
 
+            <!-- New Deliverable Orders Container -->
+            <div class="deliverable-container">
+                <div class="deliverable-header">
+                    <h3>DELIVERABLES</h3>
+                    <a href="/admin/public/pages/deliverable_orders.php" class="view-all">View All</a>
+                </div>
+                <div class="deliverable-content">
+                    <div class="deliverable-stats">
+                        <span class="stats-label">For Delivery & In Transit</span>
+                        <span class="stats-count"><?php echo $deliverableOrdersCount; ?></span>
+                    </div>
+                    <div class="deliverable-stats">
+                        <span class="stats-label">Total Shipments Today</span>
+                        <span class="stats-count">
+                            <?php 
+                            // Count shipments scheduled for today
+                            $today = date('Y-m-d');
+                            $todayQuery = "SELECT COUNT(*) as today_count FROM orders WHERE status IN ('For Delivery', 'In Transit') AND DATE(delivery_date) = '$today'";
+                            $todayResult = $conn->query($todayQuery);
+                            if ($todayResult && $todayResult->num_rows > 0) {
+                                $row = $todayResult->fetch_assoc();
+                                echo $row['today_count'];
+                            } else {
+                                echo "0";
+                            }
+                            ?>
+                        </span>
+                    </div>
+                </div>
+            </div>
 
             <div class="sales-department-container">
                 <div class="chart-header">
