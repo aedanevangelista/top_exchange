@@ -3,7 +3,7 @@ function saveRolePermissions(event) {
     const formData = new FormData(event.target);
     const roleName = formData.get('role_name').trim().toLowerCase();
 
-    fetch('/backend/get_roles_and_pages.php')
+    fetch('/admin/backend/get_roles_and_pages.php')
         .then(response => response.json())
         .then(data => {
             const existingRoles = data.roles.map(role => role.role_name.toLowerCase());
@@ -16,7 +16,7 @@ function saveRolePermissions(event) {
 }
 
 function submitRoleForm(formData) {
-    fetch('/backend/save_role_permissions.php', {
+    fetch('/admin/backend/save_role_permissions.php', {
         method: 'POST',
         body: formData
     })
