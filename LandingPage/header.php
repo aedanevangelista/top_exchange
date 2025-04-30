@@ -29,11 +29,11 @@ if (!isset($_SESSION['cart'])) {
     <meta name="description" content="<?php echo isset($pageDescription) ? $pageDescription : 'Premium Filipino food products since 1998. Our products, services, and company information.'; ?>">
     <meta name="author" content="Top Food Exchange Corp.">
     <!-- bootstrap css -->
-    <link rel="stylesheet" type="text/css" href="/LandingPage/admin/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/LandingPage/css/bootstrap.min.css">
     <!-- style css -->
-    <link rel="stylesheet" type="text/css" href="/LandingPage/admin/css/style.css">
+    <link rel="stylesheet" type="text/css" href="/LandingPage/css/style.css">
     <!-- Responsive-->
-    <link rel="stylesheet" href="/LandingPage/admin/css/responsive.css">
+    <link rel="stylesheet" href="/LandingPage/css/responsive.css">
     <!-- fevicon -->
     <link rel="icon" href="/LandingPage/images/fevicon.png" type="image/gif" />
     <!-- font css -->

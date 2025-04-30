@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Verify Your Email | Top Exchange Food Corp</title>
-    <link rel="stylesheet" href="/LandingPage/admin/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/LandingPage/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -238,7 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
-    <script src="/LandingPage/admin/js/jquery.min.js"></script>
+    <script src="/LandingPage/js/jquery.min.js"></script>
     <script>
         $(document).ready(function() {
             // Auto focus on code input

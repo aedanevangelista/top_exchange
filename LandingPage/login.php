@@ -230,11 +230,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <meta name="description" content="Login to your Top Exchange Food Corp account">
     <meta name="author" content="Top Food Exchange Corp.">
     <!-- bootstrap css -->
-    <link rel="stylesheet" type="text/css" href="/LandingPage/admin/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/LandingPage/css/bootstrap.min.css">
     <!-- style css -->
-    <link rel="stylesheet" type="text/css" href="/LandingPage/admin/css/style.css">
+    <link rel="stylesheet" type="text/css" href="/LandingPage/css/style.css">
     <!-- Responsive-->
-    <link rel="stylesheet" href="/LandingPage/admin/css/responsive.css">
+    <link rel="stylesheet" href="/LandingPage/css/responsive.css">
     <!-- fevicon -->
     <link rel="icon" href="/LandingPage/images/fevicon.png" type="image/gif" />
     <!-- font css -->
@@ -522,16 +522,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <?php include('footer.php'); ?>
     
     <!-- Javascript files-->
-    <script src="/LandingPage/admin/js/jquery.min.js"></script>
-    <script src="/LandingPage/admin/js/popper.min.js"></script>
-    <script src="/LandingPage/admin/js/bootstrap.bundle.min.js"></script>
-    <script src="/LandingPage/admin/js/jquery-3.0.0.min.js"></script>
-    <script src="/LandingPage/admin/js/plugin.js"></script>
+    <script src="/LandingPage/js/jquery.min.js"></script>
+    <script src="/LandingPage/js/popper.min.js"></script>
+    <script src="/LandingPage/js/bootstrap.bundle.min.js"></script>
+    <script src="/LandingPage/js/jquery-3.0.0.min.js"></script>
+    <script src="/LandingPage/js/plugin.js"></script>
     <!-- AOS Animation -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <!-- sidebar -->
-    <script src="/LandingPage/admin/js/jquery.mCustomScrollbar.concat.min.js"></script>
-    <script src="/LandingPage/admin/js/custom.js"></script>
+    <script src="/LandingPage/js/jquery.mCustomScrollbar.concat.min.js"></script>
+    <script src="/LandingPage/js/custom.js"></script>
     
     <script>
         // Initialize AOS animation

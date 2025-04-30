@@ -33,9 +33,9 @@ $orderItems = json_decode($order['orders'], true);
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Order Confirmation | Top Exchange Food Corp</title>
-    <link rel="stylesheet" type="text/css" href="/LandingPage/admin/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="/LandingPage/admin/css/style.css">
-    <link rel="stylesheet" href="/LandingPage/admin/css/responsive.css">
+    <link rel="stylesheet" type="text/css" href="/LandingPage/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/LandingPage/css/style.css">
+    <link rel="stylesheet" href="/LandingPage/css/responsive.css">
     <link rel="icon" href="/LandingPage/images/fevicon.png" type="image/gif" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -186,12 +186,12 @@ $orderItems = json_decode($order['orders'], true);
     </div>
 
     <!-- Javascript files-->
-    <script src="/LandingPage/admin/js/jquery.min.js"></script>
-    <script src="/LandingPage/admin/js/popper.min.js"></script>
-    <script src="/LandingPage/admin/js/bootstrap.bundle.min.js"></script>
-    <script src="/LandingPage/admin/js/jquery-3.0.0.min.js"></script>
-    <script src="/LandingPage/admin/js/plugin.js"></script>
-    <script src="/LandingPage/admin/js/jquery.mCustomScrollbar.concat.min.js"></script>
-    <script src="/LandingPage/admin/js/custom.js"></script>
+    <script src="/LandingPage/js/jquery.min.js"></script>
+    <script src="/LandingPage/js/popper.min.js"></script>
+    <script src="/LandingPage/js/bootstrap.bundle.min.js"></script>
+    <script src="/LandingPage/js/jquery-3.0.0.min.js"></script>
+    <script src="/LandingPage/js/plugin.js"></script>
+    <script src="/LandingPage/js/jquery.mCustomScrollbar.concat.min.js"></script>
+    <script src="/LandingPage/js/custom.js"></script>
 </body>
 </html>

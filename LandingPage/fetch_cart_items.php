@@ -1,20 +1,40 @@
 <?php
 session_start();
-header('Content-Type: application/json');
 
-$cartItems = [];
-if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
-    foreach ($_SESSION['cart'] as $productId => $item) {
-        $cartItems[] = [
-            'product_id' => $productId,
-            'name' => $item['name'],
-            'price' => $item['price'],
-            'quantity' => $item['quantity'],
-            'image_path' => $item['image_path'],
-            'packaging' => $item['packaging']
-        ];
-    }
+// Check if user is logged in
+if (!isset($_SESSION['username'])) {
+    echo json_encode(['success' => false, 'message' => 'Please login to view cart']);
+    exit;
 }
 
-echo json_encode(['cart_items' => $cartItems]);
+// Get cart items
+$cartItems = isset($_SESSION['cart']) ? $_SESSION['cart'] : [];
+
+// Prepare response data
+$response = [
+    'success' => true,
+    'cart_items' => [],
+    'total_items' => 0,
+    'subtotal' => 0
+];
+
+// Format cart items for response
+foreach ($cartItems as $productId => $item) {
+    $response['cart_items'][] = [
+        'product_id' => $productId,
+        'name' => $item['name'],
+        'price' => $item['price'],
+        'quantity' => $item['quantity'],
+        'image_path' => $item['image_path'],
+        'packaging' => $item['packaging']
+    ];
+    
+    $response['subtotal'] += $item['price'] * $item['quantity'];
+}
+
+$response['total_items'] = array_sum(array_column($cartItems, 'quantity'));
+
+// Return JSON response
+header('Content-Type: application/json');
+echo json_encode($response);
 ?>

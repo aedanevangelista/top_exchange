@@ -28,7 +28,6 @@ $max_price = isset($_GET['max_price']) ? $_GET['max_price'] : '';
 
 // Function to get the base product name (remove variant identifiers)
 function getBaseProductName($productName) {
-    // Remove variant identifiers like (A), (B), etc.
     return preg_replace('/\s*\([A-Z][^)]*\)$/', '', $productName);
 }
 
@@ -39,7 +38,6 @@ $sql = "SELECT p.product_id, p.product_name, p.item_description, p.price, p.prod
 $params = [];
 $types = '';
 
-// Add filters to the query
 if (!empty($category)) {
     $sql .= " AND p.category = ?";
     $params[] = $category;
@@ -81,11 +79,9 @@ $result = $stmt->get_result();
 $groupedProducts = [];
 while ($product = $result->fetch_assoc()) {
     if (empty($product['product_name'])) {
-        // Use item_description as product_name if product_name is empty
         $product['product_name'] = getBaseProductName($product['item_description']);
     }
     
-    // Use product_name as the grouping key
     $productName = $product['product_name'];
     
     if (!isset($groupedProducts[$productName])) {
@@ -94,7 +90,6 @@ while ($product = $result->fetch_assoc()) {
             'variants' => []
         ];
     } else {
-        // Add as a variant
         $groupedProducts[$productName]['variants'][] = $product;
     }
 }
@@ -115,11 +110,8 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="icon" href="images/fevicon.png" type="image/gif" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
-    <!-- fontawesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -136,7 +128,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             --transition: all 0.3s ease;
         }
 
-        /* Custom Popup Styles */
         .custom-popup {
             position: fixed;
             top: 20px;
@@ -167,7 +158,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             to { opacity: 0; }
         }
         
-        /* Cart badge styling */
         .badge-danger {
             background-color: var(--secondary-color);
             color: var(--white);
@@ -179,7 +169,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             left: -5px;
         }
         
-        /* Filter section styling */
         .filter-section {
             background-color: var(--white);
             padding: 25px;
@@ -281,7 +270,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             border-radius: var(--border-radius);
         }
         
-        /* Product cards */
         .cream_box {
             background: var(--white);
             border-radius: var(--border-radius);
@@ -359,6 +347,10 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             border-radius: var(--border-radius);
             font-weight: 500;
             transition: var(--transition);
+            width: 100%;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
         }
         
         .add-to-cart {
@@ -383,7 +375,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             color: var(--dark-text);
         }
         
-        /* No results styling */
         .no-results {
             text-align: center;
             padding: 50px 20px;
@@ -408,7 +399,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             color: var(--light-text);
         }
         
-        /* Loading spinner */
         .loading-spinner {
             display: none;
             text-align: center;
@@ -421,7 +411,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             color: var(--primary-color);
         }
         
-        /* Accessibility improvements */
         a:focus, button:focus, input:focus, select:focus {
             outline: 3px solid var(--accent-color);
             outline-offset: 2px;
@@ -439,7 +428,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             border-width: 0;
         }
         
-        /* Responsive adjustments */
         @media (max-width: 768px) {
             .price-range-inputs {
                 flex-direction: column;
@@ -456,7 +444,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             }
         }
         
-        /* Variant selector styling */
         .variant-selector {
             margin-bottom: 15px;
         }
@@ -477,7 +464,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
             box-shadow: 0 0 0 0.25rem rgba(243, 156, 18, 0.25);
         }
         
-        /* Price range slider */
         .price-slider-container {
             margin-top: 10px;
         }
@@ -765,7 +751,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                     
                                     <div class="cart_bt">
                                         <?php if (isset($_SESSION['username'])): ?>
-                                            <a href="#" class="add-to-cart" 
+                                            <button class="add-to-cart" 
                                                 data-product-id="<?php echo $mainProduct['product_id']; ?>" 
                                                 data-product-name="<?php echo htmlspecialchars($mainProduct['item_description']); ?>" 
                                                 data-product-price="<?php echo $mainProduct['price']; ?>" 
@@ -773,7 +759,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                                 data-packaging="<?php echo htmlspecialchars($mainProduct['packaging']); ?>"
                                                 id="add-to-cart-<?php echo $mainProduct['product_id']; ?>">
                                                 <i class="fas fa-cart-plus me-2"></i>Add To Cart
-                                            </a>
+                                            </button>
                                         <?php else: ?>
                                             <a href="login.php" class="login-to-order">
                                                 <i class="fas fa-sign-in-alt me-2"></i>Login to Order
@@ -951,6 +937,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         // Add to cart handler
         $(document).on('click', '.add-to-cart', function(e) {
             e.preventDefault();
+            e.stopPropagation();
 
             const productId = $(this).data('product-id');
             const productName = $(this).data('product-name');
@@ -1019,81 +1006,6 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                 .data('packaging', variantPackaging)
                 .data('image-path', variantImage);
         });
-
-        // Quantity adjustment handlers
-        $(document).on('click', '.increase-quantity', function() {
-            const productId = $(this).data('product-id');
-            updateCartItemQuantity(productId, 1);
-        });
-
-        $(document).on('click', '.decrease-quantity', function() {
-            const productId = $(this).data('product-id');
-            updateCartItemQuantity(productId, -1);
-        });
-
-        // Remove item handler
-        $(document).on('click', '.remove-from-cart', function() {
-            const productId = $(this).data('product-id');
-            removeCartItem(productId);
-        });
-
-        // Checkout button handler
-        $(document).on('click', '#checkout-button', function() {
-            const specialInstructions = $('#special-instructions').val();
-            sessionStorage.setItem('specialInstructions', specialInstructions);
-            $('#cartModal').modal('hide');
-            window.location.href = 'checkout.php';
-        });
-
-        // Function to update cart item quantity
-        function updateCartItemQuantity(productId, change) {
-            $.ajax({
-                url: 'update_cart_item.php',
-                type: 'POST',
-                dataType: 'json',
-                data: {
-                    product_id: productId,
-                    quantity_change: change
-                },
-                success: function(response) {
-                    if(response.success) {
-                        $('#cart-count').text(response.cart_count);
-                        updateCartModal();
-                    } else {
-                        showPopup(response.message || "Error updating quantity", true);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error updating cart item:", error);
-                    showPopup("Error updating cart item.", true);
-                }
-            });
-        }
-
-        // Function to remove cart item
-        function removeCartItem(productId) {
-            $.ajax({
-                url: 'remove_cart_item.php',
-                type: 'POST',
-                dataType: 'json',
-                data: {
-                    product_id: productId
-                },
-                success: function(response) {
-                    if(response.success) {
-                        $('#cart-count').text(response.cart_count);
-                        updateCartModal();
-                        showPopup("Item removed from cart");
-                    } else {
-                        showPopup(response.message || "Error removing item", true);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error removing cart item:", error);
-                    showPopup("Error removing cart item.", true);
-                }
-            });
-        }
 
         // Function to update the cart modal
         function updateCartModal() {
@@ -1190,6 +1102,81 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         $('#cartModal').on('show.bs.modal', function() {
             updateCartModal();
         });
+
+        // Quantity adjustment handlers
+        $(document).on('click', '.increase-quantity', function() {
+            const productId = $(this).data('product-id');
+            updateCartItemQuantity(productId, 1);
+        });
+
+        $(document).on('click', '.decrease-quantity', function() {
+            const productId = $(this).data('product-id');
+            updateCartItemQuantity(productId, -1);
+        });
+
+        // Remove item handler
+        $(document).on('click', '.remove-from-cart', function() {
+            const productId = $(this).data('product-id');
+            removeCartItem(productId);
+        });
+
+        // Checkout button handler
+        $(document).on('click', '#checkout-button', function() {
+            const specialInstructions = $('#special-instructions').val();
+            sessionStorage.setItem('specialInstructions', specialInstructions);
+            $('#cartModal').modal('hide');
+            window.location.href = 'checkout.php';
+        });
+
+        // Function to update cart item quantity
+        function updateCartItemQuantity(productId, change) {
+            $.ajax({
+                url: 'update_cart_item.php',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    product_id: productId,
+                    quantity_change: change
+                },
+                success: function(response) {
+                    if(response.success) {
+                        $('#cart-count').text(response.cart_count);
+                        updateCartModal();
+                    } else {
+                        showPopup(response.message || "Error updating quantity", true);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error updating cart item:", error);
+                    showPopup("Error updating cart item.", true);
+                }
+            });
+        }
+
+        // Function to remove cart item
+        function removeCartItem(productId) {
+            $.ajax({
+                url: 'remove_cart_item.php',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    product_id: productId
+                },
+                success: function(response) {
+                    if(response.success) {
+                        $('#cart-count').text(response.cart_count);
+                        updateCartModal();
+                        showPopup("Item removed from cart");
+                    } else {
+                        showPopup(response.message || "Error removing item", true);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error removing cart item:", error);
+                    showPopup("Error removing cart item.", true);
+                }
+            });
+        }
     });
 </script>
 </body>

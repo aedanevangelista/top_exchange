@@ -12,7 +12,7 @@
 		} else {
 			revapi486 = tpj("#rev_slider_486_1").show().revolution({
 				sliderType: "standard",
-				jsFileLocation: "revolution/admin/js/",
+				jsFileLocation: "revolution/js/",
 				sliderLayout: "fullscreen",
 				dottedOverlay: "none",
 				delay: 5000,
