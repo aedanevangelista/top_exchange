@@ -1,7 +1,7 @@
 <?php
 session_start();
-include "../../backend/db_connection.php";
-include "../../backend/check_role.php";
+include "../../admin/backend/db_connection.php";
+include "../../admin/backend/check_role.php";
 checkRole('Orders'); // Ensure user has access to Orders
 
 // Get current date for auto-transit
@@ -1129,7 +1129,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             // Show loading toast
             showToast(`Updating order status...`, 'info');
             
-            fetch('/backend/toggle_transit_status.php', {
+            fetch('/admin/backend/toggle_transit_status.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -1169,7 +1169,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
     console.log("Fetching order details for PO: " + poNumber);
     
     // Fetch the order items
-    fetch(`/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
+    fetch(`/admin/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
     .then(response => {
         console.log("Response status:", response.status);
         return response.json().catch(err => {
@@ -1293,7 +1293,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             saveBtn.disabled = true;
 
             // Send request to assign driver
-            fetch('/backend/assign_driver.php', {
+            fetch('/admin/backend/assign_driver.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1329,7 +1329,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             // Show loading toast
             showToast('Processing completion...', 'info');
             
-            fetch('/backend/complete_delivery.php', {
+            fetch('/admin/backend/complete_delivery.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ po_number: poNumber })
