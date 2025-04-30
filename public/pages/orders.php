@@ -692,8 +692,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                         <button class="status-btn" onclick="openPendingStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>')">
                                             <i class="fas fa-exchange-alt"></i> Status
                                         </button>
-                                    <?php elseif ($order['status'] === 'Active' || $order['status'] === 'Rejected'): ?>
+                                    <?php elseif ($order['status'] === 'Active'): ?>
                                         <button class="status-btn" onclick="openStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
+                                            <i class="fas fa-exchange-alt"></i> Status
+                                        </button>
+                                    <?php elseif ($order['status'] === 'Rejected'): ?>
+                                        <button class="status-btn" onclick="openRejectedStatusModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
                                             <i class="fas fa-exchange-alt"></i> Status
                                         </button>
                                     <?php endif; ?>
@@ -884,6 +888,25 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
+    <!-- Rejected Status Modal -->
+    <div id="rejectedStatusModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Change Status</h2>
+            <p id="rejectedStatusMessage"></p>
+            <div class="status-buttons">
+                <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
+                    <i class="fas fa-clock"></i> Pending
+                    <div class="btn-info">(Return to pending status)</div>
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeRejectedStatusModal()" class="modal-cancel-btn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Pending Status Modal -->
     <div id="pendingStatusModal" class="modal" style="display: none;">
         <div class="modal-content">
@@ -959,6 +982,16 @@ function closeStatusModal() {
     document.getElementById('statusModal').style.display = 'none';
 }
 
+function openRejectedStatusModal(poNumber, username) {
+    currentPoNumber = poNumber;
+    document.getElementById('rejectedStatusMessage').textContent = `Change status for rejected order ${poNumber} (${username})`;
+    document.getElementById('rejectedStatusModal').style.display = 'flex';
+}
+
+function closeRejectedStatusModal() {
+    document.getElementById('rejectedStatusModal').style.display = 'none';
+}
+
 function changeStatus(status) {
     // For 'For Delivery' status, check if a driver has been assigned and progress is 100%
     if (status === 'For Delivery') {
@@ -1028,15 +1061,30 @@ function changeStatus(status) {
 }
 
 function updateOrderStatus(status, returnMaterials) {
+    // Create form data
+    const formData = new FormData();
+    formData.append('po_number', currentPoNumber);
+    formData.append('status', status);
+    formData.append('return_materials', returnMaterials ? '1' : '0');
+    
     // Send AJAX request to update status
     fetch('/backend/update_order_status.php', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `po_number=${currentPoNumber}&status=${status}&return_materials=${returnMaterials ? 1 : 0}`
+        body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.status);
+        }
+        return response.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Invalid JSON response:', text);
+                throw new Error('Invalid JSON response: ' + text.substring(0, 100));
+            }
+        });
+    })
     .then(data => {
         if (data.success) {
             let message = 'Status updated successfully';
@@ -1056,10 +1104,12 @@ function updateOrderStatus(status, returnMaterials) {
             showToast('Error updating status: ' + data.message, 'error');
         }
         closeStatusModal();
+        closeRejectedStatusModal();
     })
     .catch(error => {
         showToast('Error updating status: ' + error, 'error');
         closeStatusModal();
+        closeRejectedStatusModal();
     });
 }
 
@@ -1935,72 +1985,69 @@ function changeStatusWithCheck(status) {
         deduct_materials: deductMaterials
     });
     
-    $.ajax({
-        type: 'POST',
-        url: '/backend/update_order_status.php',
-        data: { 
-            po_number: poNumber, 
-            status: status,
-            deduct_materials: deductMaterials
-        },
-        dataType: 'json',
-        success: function(response) {
-            console.log("Status change response:", response);
-            
-            if (response.success) {
-                // Format status type for toast
-                let toastType = status.toLowerCase();
-                if (toastType === 'completed') toastType = 'complete';
-                if (toastType === 'rejected') toastType = 'reject';
-                
-                // Create message
-                let message = `Changed status for ${poNumber} to ${status}.`;
-                if (status === 'Active' && deductMaterials) {
-                    message = `Changed status for ${poNumber} to ${status}. Inventory has been updated.`;
-                }
-                
-                // Show toast and reload
-                showToast(message, toastType);
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                // Reset button state
-                $('#activeStatusBtn').html(originalBtnText);
-                $('#activeStatusBtn').prop('disabled', false);
-                
-                // Show error message
-                showToast('Failed to change status: ' + (response.message || 'Unknown error'), 'error');
+    // Create form data
+    const formData = new FormData();
+    formData.append('po_number', poNumber);
+    formData.append('status', status);
+    formData.append('deduct_materials', deductMaterials ? '1' : '0');
+    
+    // Use fetch instead of jQuery AJAX
+    fetch('/backend/update_order_status.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.status);
+        }
+        return response.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                // Log the raw response for debugging
+                console.error('Invalid JSON response:', text);
+                throw new Error('Invalid JSON response: ' + text.substring(0, 100));
             }
-            closePendingStatusModal();
-        },
-        error: function(xhr, status, error) {
-            console.error('Error details:', {
-                status: xhr.status,
-                responseText: xhr.responseText,
-                error: error
-            });
+        });
+    })
+    .then(data => {
+        console.log("Status change response:", data);
+        
+        if (data.success) {
+            // Format status type for toast
+            let toastType = status.toLowerCase();
+            if (toastType === 'completed') toastType = 'complete';
+            if (toastType === 'rejected') toastType = 'reject';
             
+            // Create message
+            let message = `Changed status for ${poNumber} to ${status}.`;
+            if (status === 'Active' && deductMaterials) {
+                message = `Changed status for ${poNumber} to ${status}. Inventory has been updated.`;
+            }
+            
+            // Show toast and reload
+            showToast(message, toastType);
+            setTimeout(() => location.reload(), 1500);
+        } else {
             // Reset button state
             $('#activeStatusBtn').html(originalBtnText);
             $('#activeStatusBtn').prop('disabled', false);
             
-            // Show a more helpful error message
-            let errorMessage = "Server error: ";
-            try {
-                const response = JSON.parse(xhr.responseText);
-                errorMessage += response.message || "Unknown error";
-            } catch(e) {
-                // If we can't parse the response as JSON
-                if (xhr.responseText && xhr.responseText.trim()) {
-                    errorMessage += xhr.responseText.substring(0, 100) + (xhr.responseText.length > 100 ? '...' : '');
-                } else {
-                    errorMessage += error || "Could not communicate with server";
-                }
-            }
-            
-            showToast(errorMessage, 'error');
-            closePendingStatusModal();
-        },
-        timeout: 10000 // 10 second timeout
+            // Show error message
+            showToast('Failed to change status: ' + (data.message || 'Unknown error'), 'error');
+        }
+        closePendingStatusModal();
+    })
+    .catch(error => {
+        console.error('Error details:', error);
+        
+        // Reset button state
+        $('#activeStatusBtn').html(originalBtnText);
+        $('#activeStatusBtn').prop('disabled', false);
+        
+        // Show a more helpful error message
+        showToast('Server error: ' + error.message, 'error');
+        closePendingStatusModal();
     });
 }
 
@@ -2311,6 +2358,3 @@ $(document).ready(function() {
         }
     });
 });
-    </script>
-</body>
-</html>
