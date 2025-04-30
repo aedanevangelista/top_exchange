@@ -44,15 +44,14 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Modified query to only show Active orders with sorting
-$orders = []; // Initialize $orders as an empty array
+// Modified query to show Active, Pending, and Rejected orders with sorting
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress, o.driver_assigned, 
         o.company, o.special_instructions, 
         IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
         FROM orders o 
         LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
         LEFT JOIN drivers d ON da.driver_id = d.id 
-        WHERE o.status = 'Active'";
+        WHERE o.status IN ('Active', 'Pending', 'Rejected')";
 
 // Add sorting
 $sql .= " ORDER BY {$sort_column} {$sort_direction}";
@@ -391,6 +390,55 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         #contentToDownload .po-total {
             font-size: 12px;
         }
+
+        /* Status badge styles */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .status-active {
+            background-color: #d1e7ff;
+            color: #084298;
+        }
+
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+
+        .status-delivery {
+            background-color: #e2e3e5;
+            color: #383d41;
+        }
+
+        .status-completed {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+
+        /* Driver badge for not allowed status */
+        .driver-badge.driver-not-allowed {
+            background-color: #f8d7da;
+            color: #842029;
+            border: 1px solid #f5c2c7;
+        }
+
+        .btn-info {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-top: 3px;
+        }
     </style>
 </head>
 <body>
@@ -476,19 +524,15 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if ($order['driver_assigned'] && !empty($order['driver_name'])): ?>
-                                        <div class="driver-badge">
-                                            <i class="fas fa-user"></i> <?= htmlspecialchars($order['driver_name']) ?>
-                                        </div>
-                                        <button class="driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', <?= $order['driver_id'] ?>, '<?= htmlspecialchars($order['driver_name']) ?>')">
-                                            <i class="fas fa-exchange-alt"></i> Change
+                                    <?php if ($order['status'] === 'Active'): ?>
+                                        <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
+                                            <i class="fas fa-clipboard-list"></i>    
+                                            View
                                         </button>
                                     <?php else: ?>
-                                        <div class="driver-badge driver-not-assigned">
-                                            <i class="fas fa-user-slash"></i> Not Assigned
-                                        </div>
-                                        <button class="driver-btn assign-driver-btn" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', 0, '')">
-                                            <i class="fas fa-user-plus"></i> Assign
+                                        <button class="view-orders-btn" onclick="viewOrderInfo('<?= htmlspecialchars($order['po_number']) ?>')">
+                                            <i class="fas fa-clipboard-list"></i>    
+                                            View
                                         </button>
                                     <?php endif; ?>
                                 </td>
@@ -656,28 +700,31 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     </div>
     
     <!-- Status Modal -->
-    <div id="statusModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h2>Change Status</h2>
-            <p id="statusMessage"></p>
-            <div class="status-buttons">
-                <button onclick="changeStatus('For Delivery')" class="modal-status-btn delivery">
-                    <i class="fas fa-truck"></i> For Delivery
-                </button>
-                <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
-                    <i class="fas fa-clock"></i> Pending
-                </button>
-                <button onclick="changeStatus('Rejected')" class="modal-status-btn rejected">
-                    <i class="fas fa-times-circle"></i> Reject
-                </button>
-            </div>
-            <div class="modal-footer">
-                <button onclick="closeStatusModal()" class="modal-cancel-btn">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
+        <div id="statusModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h2>Change Status</h2>
+                <p id="statusMessage"></p>
+                <div class="status-buttons">
+                    <button onclick="changeStatus('For Delivery')" class="modal-status-btn delivery">
+                        <i class="fas fa-truck"></i> For Delivery
+                        <div class="btn-info">(Requires: 100% Progress and Driver)</div>
+                    </button>
+                    <button onclick="changeStatus('Pending')" class="modal-status-btn pending">
+                        <i class="fas fa-clock"></i> Pending
+                        <div class="btn-info">(Disables: Driver and Progress)</div>
+                    </button>
+                    <button onclick="changeStatus('Rejected')" class="modal-status-btn rejected">
+                        <i class="fas fa-times-circle"></i> Reject
+                        <div class="btn-info">(Disables: Driver and Progress)</div>
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="closeStatusModal()" class="modal-cancel-btn">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
 
     <!-- Driver Assignment Modal -->
     <div id="driverModal" class="overlay" style="display: none;">
@@ -1663,6 +1710,45 @@ $(document).ready(function() {
         }
     });
 });
+
+function viewOrderInfo(poNumber) {
+    // Fetch the order data without progress tracking
+    fetch(`/backend/get_order_info.php?po_number=${poNumber}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Display order details in a modal without progress tracking
+            const orderItems = JSON.parse(data.order.orders);
+            let orderDetails = `
+                <h3>Order #${data.order.po_number}</h3>
+                <p><strong>Status:</strong> ${data.order.status}</p>
+                <p><strong>Order Date:</strong> ${data.order.order_date}</p>
+                <p><strong>Delivery Date:</strong> ${data.order.delivery_date}</p>
+                <p><strong>Total Amount:</strong> PHP ${parseFloat(data.order.total_amount).toFixed(2)}</p>
+                <h4>Items:</h4>
+                <ul>
+            `;
+            
+            orderItems.forEach(item => {
+                orderDetails += `
+                    <li>${item.item_description} - ${item.quantity} x PHP ${parseFloat(item.price).toFixed(2)}</li>
+                `;
+            });
+            
+            orderDetails += `</ul>`;
+            
+            // Use a simple alert or create a custom modal to display this information
+            alert(orderDetails);
+            // Or use a more sophisticated modal display
+        } else {
+            showToast('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Error: ' + error, 'error');
+        console.error('Error fetching order details:', error);
+    });
+}
     </script>
 </body>
 </html>
