@@ -197,12 +197,12 @@ if (isset($_SESSION['error'])) {
     <meta name="keywords" content="checkout, order, food delivery, Filipino food">
     <meta name="description" content="Complete your order with Top Food Exchange Corp. - Premium Filipino food products since 1998.">
     <meta name="author" content="Top Food Exchange Corp.">
-    <link rel="stylesheet" type="text/css" href="/LandingPage/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="/LandingPage/css/style.css">
-    <link rel="stylesheet" href="/LandingPage/css/responsive.css">
+    <link rel="stylesheet" type="text/css" href="/LandingPage/admin/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/LandingPage/admin/css/style.css">
+    <link rel="stylesheet" href="/LandingPage/admin/css/responsive.css">
     <link rel="icon" href="/LandingPage/images/fevicon.png" type="image/gif" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/admin/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     

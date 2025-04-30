@@ -189,12 +189,12 @@ if (!empty($status_filter) && !empty($area_filter)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drivers List</title>
-    <link rel="stylesheet" href="/css/accounts.css">
-    <link rel="stylesheet" href="/css/drivers.css">
-    <link rel="stylesheet" href="/css/sidebar.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/admin/css/accounts.css">
+    <link rel="stylesheet" href="/admin/css/drivers.css">
+    <link rel="stylesheet" href="/admin/css/sidebar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/admin/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-    <link rel="stylesheet" href="/css/toast.css">
+    <link rel="stylesheet" href="/admin/css/toast.css">
     <style>
         .required-asterisk {
             color: red;

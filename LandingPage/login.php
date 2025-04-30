@@ -230,17 +230,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <meta name="description" content="Login to your Top Exchange Food Corp account">
     <meta name="author" content="Top Food Exchange Corp.">
     <!-- bootstrap css -->
-    <link rel="stylesheet" type="text/css" href="/LandingPage/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/LandingPage/admin/css/bootstrap.min.css">
     <!-- style css -->
-    <link rel="stylesheet" type="text/css" href="/LandingPage/css/style.css">
+    <link rel="stylesheet" type="text/css" href="/LandingPage/admin/css/style.css">
     <!-- Responsive-->
-    <link rel="stylesheet" href="/LandingPage/css/responsive.css">
+    <link rel="stylesheet" href="/LandingPage/admin/css/responsive.css">
     <!-- fevicon -->
     <link rel="icon" href="/LandingPage/images/fevicon.png" type="image/gif" />
     <!-- font css -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
     <!-- fontawesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/admin/css/all.min.css">
     <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <!-- AOS Animation -->

@@ -56,7 +56,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
       <!-- Scrollbar Custom CSS -->
       <link rel="stylesheet" href="css/jquery.mCustomScrollbar.min.css">
       <!-- Tweaks for older IEs-->
-      <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css">
+      <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/font-awesome/4.0.3/admin/css/font-awesome.css">
        <!-- site metas -->
        <title>About</title>
       <meta name="keywords" content="">
