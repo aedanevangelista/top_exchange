@@ -1000,7 +1000,7 @@ function changeStatus(status) {
                     }
                     
                     // Both requirements are met, proceed with status change
-                    updateOrderStatus(status);
+                    updateOrderStatus(status, false);
                 } else {
                     showToast('Error checking order requirements: ' + data.message, 'error');
                     closeStatusModal();
@@ -1019,19 +1019,22 @@ function changeStatus(status) {
                 closeStatusModal();
             });
     } else {
+        // For going back to Pending or Rejected from Active, we need to return materials to inventory
+        const isRestoringInventory = (status === 'Pending' || status === 'Rejected');
+        
         // For other statuses, proceed directly
-        updateOrderStatus(status);
+        updateOrderStatus(status, isRestoringInventory);
     }
 }
 
-function updateOrderStatus(status) {
+function updateOrderStatus(status, returnMaterials) {
     // Send AJAX request to update status
     fetch('/backend/update_order_status.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `po_number=${currentPoNumber}&status=${status}`
+        body: `po_number=${currentPoNumber}&status=${status}&return_materials=${returnMaterials ? 1 : 0}`
     })
     .then(response => response.json())
     .then(data => {
@@ -1040,7 +1043,9 @@ function updateOrderStatus(status) {
             if (status === 'For Delivery') {
                 message = 'Order marked for delivery successfully';
             } else if (status === 'Rejected') {
-                message = 'Order rejected successfully';
+                message = returnMaterials ? 'Order rejected and materials returned to inventory' : 'Order rejected successfully';
+            } else if (status === 'Pending' && returnMaterials) {
+                message = 'Order set to pending and materials returned to inventory';
             }
             showToast(message, 'success');
             // Reload the page after a short delay
@@ -1615,7 +1620,7 @@ function assignDriver() {
         return;
     }
     
-        // Show a loading state
+    // Show a loading state
     const saveBtn = document.querySelector('#driverModal .save-btn');
     const originalBtnText = saveBtn.innerHTML;
     saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assigning...';
@@ -1912,6 +1917,93 @@ function closeSpecialInstructions() {
 }
 
 // Functions for handling pending orders status changes
+function changeStatusWithCheck(status) {
+    var poNumber = $('#pendingStatusModal').data('po_number');
+    
+    // Only deduct materials if changing to Active
+    const deductMaterials = (status === 'Active');
+    
+    // Show loading indicator
+    const originalBtnText = $('#activeStatusBtn').html();
+    $('#activeStatusBtn').html('<i class="fas fa-spinner fa-spin"></i> Updating...');
+    $('#activeStatusBtn').prop('disabled', true);
+    
+    // Log the request for debugging
+    console.log("Sending status change request:", {
+        po_number: poNumber,
+        status: status,
+        deduct_materials: deductMaterials
+    });
+    
+    $.ajax({
+        type: 'POST',
+        url: '/backend/update_order_status.php',
+        data: { 
+            po_number: poNumber, 
+            status: status,
+            deduct_materials: deductMaterials // This flag needs to be processed in the backend
+        },
+        dataType: 'json',
+        success: function(response) {
+            console.log("Status change response:", response);
+            
+            if (response.success) {
+                // Format status type for toast
+                let toastType = status.toLowerCase();
+                if (toastType === 'completed') toastType = 'complete';
+                if (toastType === 'rejected') toastType = 'reject';
+                
+                // Create message
+                let message = `Changed status for ${poNumber} to ${status}.`;
+                if (status === 'Active' && deductMaterials) {
+                    message = `Changed status for ${poNumber} to ${status}. Inventory has been updated.`;
+                }
+                
+                // Show toast and reload
+                showToast(message, toastType);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                // Reset button state
+                $('#activeStatusBtn').html(originalBtnText);
+                $('#activeStatusBtn').prop('disabled', false);
+                
+                // Show error message
+                showToast('Failed to change status: ' + (response.message || 'Unknown error'), 'error');
+            }
+            closePendingStatusModal();
+        },
+        error: function(xhr, status, error) {
+            console.error('Error details:', {
+                status: xhr.status,
+                responseText: xhr.responseText,
+                error: error
+            });
+            
+            // Reset button state
+            $('#activeStatusBtn').html(originalBtnText);
+            $('#activeStatusBtn').prop('disabled', false);
+            
+            // Show a more helpful error message
+            let errorMessage = "Server error: ";
+            try {
+                const response = JSON.parse(xhr.responseText);
+                errorMessage += response.message || "Unknown error";
+            } catch(e) {
+                // If we can't parse the response as JSON
+                if (xhr.responseText && xhr.responseText.trim()) {
+                    errorMessage += xhr.responseText.substring(0, 100) + (xhr.responseText.length > 100 ? '...' : '');
+                } else {
+                    errorMessage += error || "Could not communicate with server";
+                }
+            }
+            
+            showToast(errorMessage, 'error');
+            closePendingStatusModal();
+        },
+        timeout: 10000 // 10 second timeout
+    });
+}
+
 function openPendingStatusModal(poNumber, username, ordersJson) {
     $('#pendingStatusMessage').text('Change order status for ' + poNumber);
     $('#pendingStatusModal').data('po_number', poNumber).show();
@@ -2148,93 +2240,6 @@ function updateOrderActionStatus(response) {
     $('#rawMaterialsContainer').append(`
         <p class="materials-status ${statusClass}">${statusMessage}</p>
     `);
-}
-
-function changeStatusWithCheck(status) {
-    var poNumber = $('#pendingStatusModal').data('po_number');
-    
-    // Only deduct materials if changing to Active
-    const deductMaterials = (status === 'Active');
-    
-    // Show loading indicator
-    const originalBtnText = $('#activeStatusBtn').html();
-    $('#activeStatusBtn').html('<i class="fas fa-spinner fa-spin"></i> Updating...');
-    $('#activeStatusBtn').prop('disabled', true);
-    
-    // Log the request for debugging
-    console.log("Sending status change request:", {
-        po_number: poNumber,
-        status: status,
-        deduct_materials: deductMaterials
-    });
-    
-    $.ajax({
-        type: 'POST',
-        url: '/backend/update_order_status.php',
-        data: { 
-            po_number: poNumber, 
-            status: status,
-            deduct_materials: deductMaterials
-        },
-        dataType: 'json',
-        success: function(response) {
-            console.log("Status change response:", response);
-            
-            if (response.success) {
-                // Format status type for toast
-                let toastType = status.toLowerCase();
-                if (toastType === 'completed') toastType = 'complete';
-                if (toastType === 'rejected') toastType = 'reject';
-                
-                // Create message
-                let message = `Changed status for ${poNumber} to ${status}.`;
-                if (status === 'Active' && deductMaterials) {
-                    message = `Changed status for ${poNumber} to ${status}. Inventory has been updated.`;
-                }
-                
-                // Show toast and reload
-                showToast(message, toastType);
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                // Reset button state
-                $('#activeStatusBtn').html(originalBtnText);
-                $('#activeStatusBtn').prop('disabled', false);
-                
-                // Show error message
-                showToast('Failed to change status: ' + (response.message || 'Unknown error'), 'error');
-            }
-            closePendingStatusModal();
-        },
-        error: function(xhr, status, error) {
-            console.error('Error details:', {
-                status: xhr.status,
-                responseText: xhr.responseText,
-                error: error
-            });
-            
-            // Reset button state
-            $('#activeStatusBtn').html(originalBtnText);
-            $('#activeStatusBtn').prop('disabled', false);
-            
-            // Show a more helpful error message
-            let errorMessage = "Server error: ";
-            try {
-                const response = JSON.parse(xhr.responseText);
-                errorMessage += response.message || "Unknown error";
-            } catch(e) {
-                // If we can't parse the response as JSON
-                if (xhr.responseText && xhr.responseText.trim()) {
-                    errorMessage += xhr.responseText.substring(0, 100) + (xhr.responseText.length > 100 ? '...' : '');
-                } else {
-                    errorMessage += error || "Could not communicate with server";
-                }
-            }
-            
-            showToast(errorMessage, 'error');
-            closePendingStatusModal();
-        },
-        timeout: 10000 // 10 second timeout
-    });
 }
 
 function showToast(message, type = 'info') {
