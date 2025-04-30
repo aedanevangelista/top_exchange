@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    include $_SERVER['DOCUMENT_ROOT'] . "/backend/db_connection.php";
+    include $_SERVER['DOCUMENT_ROOT'] . "/admin/backend/db_connection.php";
 
     // Check database connection
     if ($conn->connect_error) {

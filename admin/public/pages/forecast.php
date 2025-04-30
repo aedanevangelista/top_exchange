@@ -1,7 +1,7 @@
 <?php
 session_start();
-include "../../backend/db_connection.php";
-include "../../backend/check_role.php";
+include "../../admin/backend/db_connection.php";
+include "../../admin/backend/check_role.php";
 checkRole('Forecast');
 
 $month = isset($_GET['month']) ? intval($_GET['month']) : intval(date('m'));
@@ -506,7 +506,7 @@ $navigation = getMonthNavigation($month, $year);
         
         modalDate.textContent = 'Orders for ' + formattedDate;
         
-        fetch(`/backend/get_orders_by_date.php?date=${date}`)
+        fetch(`/admin/backend/get_orders_by_date.php?date=${date}`)
     .then(response => {
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);

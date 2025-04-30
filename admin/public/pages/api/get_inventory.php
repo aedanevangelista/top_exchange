@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
 
-include($_SERVER['DOCUMENT_ROOT'].'/backend/db_connection.php');
+include($_SERVER['DOCUMENT_ROOT'].'/admin/backend/db_connection.php');
 
 if ($conn->connect_error) {
     echo json_encode(['error' => 'Database connection failed: ' . $conn->connect_error]);

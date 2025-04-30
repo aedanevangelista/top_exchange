@@ -1,7 +1,7 @@
 <?php
 session_start();
-include "../../backend/db_connection.php";
-include "../../backend/check_role.php";
+include "../../admin/backend/db_connection.php";
+include "../../admin/backend/check_role.php";
 checkRole('Inventory');
 
 if (!isset($_SESSION['admin_user_id'])) {
@@ -969,7 +969,7 @@ $result = $conn->query($sql);
             // Clear previous error messages
             document.getElementById('addProductError').textContent = '';
             
-            fetch("../../backend/add_product.php", {
+            fetch("../../admin/backend/add_product.php", {
                 method: "POST",
                 body: formData
             })
