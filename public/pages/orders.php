@@ -527,6 +527,23 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             background-color: #f8d7da;
             color: #842029;
         }
+
+        /* Order details footer styling */
+        .order-details-footer {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .total-amount {
+            font-weight: bold;
+            font-size: 16px;
+            padding: 5px 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -789,10 +806,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
-    <!-- Order Details Modal with Progress Tracking -->
+    <!-- Fixed Order Details Modal with Progress Tracking -->
     <div id="orderDetailsModal" class="overlay" style="display: none;">
         <div class="overlay-content">
-            <h2><i class="fas fa-box-open"></i> Order Details</h2>
+            <h2><i class="fas fa-box-open"></i> Order Details (<span id="orderStatus"></span>)</h2>
             <div class="order-details-container">
                 <table class="order-details-table">
                     <thead>
@@ -808,8 +825,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         <!-- Order details will be populated here -->
                     </tbody>
                 </table>
-                <!-- Overall progress info -->
-                <div class="item-progress-info" id="overall-progress-info" style="margin-top: 10px;">
+                <div class="order-details-footer">
+                    <div class="total-amount" id="orderTotalAmount">PHP 0.00</div>
+                </div>
+                
+                <!-- Overall progress info (only shown for Active orders with progress tracking) -->
+                <div class="item-progress-info" id="overall-progress-info" style="margin-top: 10px; display: none;">
                     <div class="progress-info-label">Overall Order Progress:</div>
                     <div class="progress-bar-container" style="margin-top: 5px;">
                         <div class="progress-bar" id="overall-progress-bar" style="width: 0%"></div>
@@ -1416,7 +1437,58 @@ function updateRowStyle(checkbox) {
     updateOverallProgress();
 }
 
-// Add missing functions that were causing errors
+// Function to view order info for all order statuses (Active, Pending, and Rejected)
+function viewOrderInfo(ordersJson, orderStatus) {
+    try {
+        const orderDetails = JSON.parse(ordersJson);
+        const orderDetailsBody = document.getElementById('orderDetailsBody');
+        
+        // Clear previous content
+        orderDetailsBody.innerHTML = '';
+        
+        // Calculate total amount
+        let totalAmount = 0;
+        
+        // Populate order details
+        orderDetails.forEach(product => {
+            const itemTotal = parseFloat(product.price) * parseInt(product.quantity);
+            totalAmount += itemTotal;
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${product.category || ''}</td>
+                <td>${product.item_description}</td>
+                <td>${product.packaging || ''}</td>
+                <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
+                <td>${product.quantity}</td>
+            `;
+            orderDetailsBody.appendChild(row);
+        });
+        
+        // Update order status and total amount in the modal
+        document.getElementById('orderStatus').textContent = orderStatus;
+        document.getElementById('orderTotalAmount').textContent = `PHP ${totalAmount.toFixed(2)}`;
+        
+        // Hide progress bar elements if they exist
+        const overallProgressInfo = document.getElementById('overall-progress-info');
+        if (overallProgressInfo) {
+            overallProgressInfo.style.display = 'none';
+        }
+        
+        // Hide save button for pending/rejected orders
+        const saveButton = document.querySelector('.save-progress-btn');
+        if (saveButton) {
+            saveButton.style.display = 'none';
+        }
+        
+        // Show modal
+        document.getElementById('orderDetailsModal').style.display = 'flex';
+    } catch (e) {
+        console.error('Error parsing order details:', e);
+        alert('Error displaying order details');
+    }
+}
+
 function closeOrderDetailsModal() {
     document.getElementById('orderDetailsModal').style.display = 'none';
 }
@@ -1548,7 +1620,7 @@ function assignDriver() {
     .then(data => {
         if (data === null) return; // Skip if first attempt succeeded
         
-        if (data.success) {
+                if (data.success) {
             showToast('Driver assigned successfully', 'success');
             setTimeout(() => { window.location.reload(); }, 1000);
         } else {
@@ -1617,7 +1689,7 @@ function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate
         orderItems.forEach(item => {
             const row = document.createElement('tr');
             
-                        // Calculate item total
+            // Calculate item total
             const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
             
             row.innerHTML = `
@@ -1796,65 +1868,6 @@ function viewSpecialInstructions(poNumber, instructions) {
 
 function closeSpecialInstructions() {
     document.getElementById('specialInstructionsModal').style.display = 'none';
-}
-
-// Function to view order info for all order statuses (Active, Pending, and Rejected)
-function viewOrderInfo(ordersJson, orderStatus) {
-    try {
-        const orderDetails = JSON.parse(ordersJson);
-        let content = `<h3>Order Details (${orderStatus})</h3>`;
-        
-        content += `<table class="order-details-table">
-            <thead>
-                <tr>
-                    <th>Category</th>
-                    <th>Product</th>
-                    <th>Packaging</th>
-                    <th>Price</th>
-                    <th>Quantity</th>
-                </tr>
-            </thead>
-            <tbody>`;
-        
-        let totalAmount = 0;
-        orderDetails.forEach(product => {
-            const itemTotal = parseFloat(product.price) * parseInt(product.quantity);
-            totalAmount += itemTotal;
-            
-            content += `<tr>
-                <td>${product.category || ''}</td>
-                <td>${product.item_description}</td>
-                <td>${product.packaging || ''}</td>
-                <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
-                <td>${product.quantity}</td>
-            </tr>`;
-        });
-        
-        content += `</tbody></table>`;
-        content += `<div class="summary-total">Total Amount: PHP ${totalAmount.toFixed(2)}</div>`;
-        
-        // Display read-only order details
-        const orderDetailsBody = document.getElementById('orderDetailsBody');
-        orderDetailsBody.innerHTML = content;
-        
-        // Hide progress bar elements if they exist
-        const overallProgressInfo = document.getElementById('overall-progress-info');
-        if (overallProgressInfo) {
-            overallProgressInfo.style.display = 'none';
-        }
-        
-        // Hide save button for pending/rejected orders
-        const saveButton = document.querySelector('.save-progress-btn');
-        if (saveButton) {
-            saveButton.style.display = 'none';
-        }
-        
-        // Show modal
-        document.getElementById('orderDetailsModal').style.display = 'flex';
-    } catch (e) {
-        console.error('Error parsing order details:', e);
-        alert('Error displaying order details');
-    }
 }
 
 // Functions for handling pending orders status changes
