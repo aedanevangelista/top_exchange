@@ -376,7 +376,7 @@ try {
          }
     }
     $sql .= " ORDER BY CASE status WHEN 'Pending' THEN 1 WHEN 'Active' THEN 2 WHEN 'Rejected' THEN 3 WHEN 'Inactive' THEN 4 ELSE 5 END, created_at DESC";
-        
+
     $stmt = $conn->prepare($sql);
     if (!empty($types)) {
         $stmt->bind_param($types, ...$params);
@@ -391,7 +391,6 @@ try {
      error_log("Error fetching accounts data: " . $e->getMessage());
      $error_message = "Error fetching account data from database.";
 }
-$conn->close(); // Close DB connection after fetching data
 
 // --- Helper function for display ---
 function truncate($text, $max = 15) {
