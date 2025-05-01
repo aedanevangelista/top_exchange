@@ -158,8 +158,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             exit;
         }
         
-        // Generate new password only if phone is provided
-        if (!empty($_POST['phone'])) {
+        // Check if manual password is provided
+        if (!empty($_POST['manual_password'])) {
+            $password = password_hash($_POST['manual_password'], PASSWORD_DEFAULT);
+        } 
+        // Otherwise, auto-generate password if phone is provided
+        else if (!empty($_POST['phone'])) {
             $last4digits = (strlen($phone) >= 4) ? substr($phone, -4) : str_pad($phone, 4, '0');
             $autoPassword = $username . $last4digits;
             $password = password_hash($autoPassword, PASSWORD_DEFAULT);
@@ -802,6 +806,161 @@ function truncate($text, $max = 15) {
             color: #888;
             cursor: not-allowed;
         }
+        
+        /* Password toggle button */
+        .password-container {
+            position: relative;
+            width: 100%;
+        }
+        
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #666;
+        }
+        
+        /* Toggle switch for password mode */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            margin-top: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .switch-label {
+            font-size: 13px;
+            margin-left: 8px;
+            color: #555;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #4a90e2;
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #4a90e2;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        /* Confirmation modal styles */
+        .confirmation-modal {
+            display: none;
+            position: fixed;
+            z-index: 1100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            overflow: hidden;
+        }
+        
+        .confirmation-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 350px;
+            max-width: 90%;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: modalPopIn 0.3s;
+        }
+        
+        @keyframes modalPopIn {
+            from {transform: scale(0.8); opacity: 0;}
+            to {transform: scale(1); opacity: 1;}
+        }
+        
+        .confirmation-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .confirmation-message {
+            margin-bottom: 20px;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .confirmation-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .confirm-yes {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        .confirm-yes:hover {
+            background-color: #357abf;
+        }
+        
+        .confirm-no {
+            background-color: #f1f1f1;
+            color: #333;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .confirm-no:hover {
+            background-color: #e1e1e1;
+        }
     </style>
 </head>
 <body>
@@ -1045,13 +1204,27 @@ function truncate($text, $max = 15) {
                     <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
-                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                    <button type="button" class="save-btn" onclick="confirmAddAccount()">
+                        <i class="fas fa-save"></i> Save
+                    </button>
                 </div>
             </form>
         </div>
     </div>
+    
+    <!-- Confirmation modal for adding account -->
+    <div id="addConfirmationModal" class="confirmation-modal">
+        <div class="confirmation-content">
+            <div class="confirmation-title">Confirm Add Account</div>
+            <div class="confirmation-message">Are you sure you want to add this new account?</div>
+            <div class="confirmation-buttons">
+                <button class="confirm-no" onclick="closeAddConfirmation()">No</button>
+                <button class="confirm-yes" onclick="submitAddAccount()">Yes</button>
+            </div>
+        </div>
+    </div>
 
-    <!-- Updated Edit Account Modal with Bill To Address Field -->
+    <!-- Updated Edit Account Modal with Bill To Address Field and Manual Password -->
     <div id="editAccountOverlay" class="overlay" style="display: none;">
         <div class="form-modal-content">
             <div class="modal-header">
@@ -1075,9 +1248,32 @@ function truncate($text, $max = 15) {
                             <label for="edit-phone">Phone/Telephone Number: <span class="required">*</span></label>
                             <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                             
-                            <label for="edit-password">Password: (Auto-generated)</label>
-                            <input type="text" id="edit-password" name="password" readonly class="auto-generated">
-                            <div class="password-note">Password will be auto-generated as username + last 4 digits of phone</div>
+                            <!-- Manual Password Toggle Switch -->
+                            <div class="switch-container">
+                                <label class="switch">
+                                    <input type="checkbox" id="edit-password-toggle">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="switch-label">Manual Password</span>
+                            </div>
+                            
+                            <!-- Password Field (Auto or Manual) -->
+                            <div id="auto-password-container">
+                                <label for="edit-auto-password">Password: (Auto-generated)</label>
+                                <input type="text" id="edit-auto-password" readonly class="auto-generated" placeholder="Auto-generated from username + last 4 digits of phone">
+                                <div class="password-note">Password will be auto-generated as username + last 4 digits of phone</div>
+                            </div>
+                            
+                            <div id="manual-password-container" style="display: none;">
+                                <label for="edit-manual-password">Password: <span class="required">*</span></label>
+                                <div class="password-container">
+                                    <input type="password" id="edit-manual-password" name="manual_password" placeholder="Enter new password" minlength="6">
+                                    <span class="toggle-password" onclick="togglePasswordVisibility()">
+                                        <i class="fas fa-eye"></i>
+                                    </span>
+                                </div>
+                                <div class="password-note">Enter a new password for this account</div>
+                            </div>
                             
                             <label for="edit-email">Email: <span class="required">*</span></label>
                             <input type="email" id="edit-email" name="email" required maxlength="40" placeholder="e.g., johndoe@example.com">
@@ -1119,9 +1315,23 @@ function truncate($text, $max = 15) {
                     <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
-                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Save</button>
+                    <button type="button" class="save-btn" onclick="confirmEditAccount()">
+                        <i class="fas fa-save"></i> Save
+                    </button>
                 </div>
             </form>
+        </div>
+    </div>
+    
+    <!-- Confirmation modal for editing account -->
+    <div id="editConfirmationModal" class="confirmation-modal">
+        <div class="confirmation-content">
+            <div class="confirmation-title">Confirm Edit Account</div>
+            <div class="confirmation-message">Are you sure you want to save these changes?</div>
+            <div class="confirmation-buttons">
+                <button class="confirm-no" onclick="closeEditConfirmation()">No</button>
+                <button class="confirm-yes" onclick="submitEditAccount()">Yes</button>
+            </div>
         </div>
     </div>
 
@@ -1199,6 +1409,22 @@ function truncate($text, $max = 15) {
     function closeAddressInfoModal() {
         document.getElementById("addressInfoModal").style.display = "none";
     }
+    
+    // Toggle password visibility
+    function togglePasswordVisibility() {
+        const passwordField = document.getElementById('edit-manual-password');
+        const icon = document.querySelector('.toggle-password i');
+        
+        if (passwordField.type === "password") {
+            passwordField.type = "text";
+            icon.classList.remove("fa-eye");
+            icon.classList.add("fa-eye-slash");
+        } else {
+            passwordField.type = "password";
+            icon.classList.remove("fa-eye-slash");
+            icon.classList.add("fa-eye");
+        }
+    }
 
     async function loadPhilippinesRegions() {
         try {
@@ -1271,6 +1497,17 @@ function truncate($text, $max = 15) {
             });
         }
 
+        // Setup password toggle in edit form
+        const passwordToggle = document.getElementById('edit-password-toggle');
+        if (passwordToggle) {
+            passwordToggle.addEventListener('change', function() {
+                document.getElementById('auto-password-container').style.display = 
+                    this.checked ? 'none' : 'block';
+                document.getElementById('manual-password-container').style.display = 
+                    this.checked ? 'block' : 'none';
+            });
+        }
+
         // When the user clicks anywhere outside of the modals, close them
         window.onclick = function(event) {
             const addressModal = document.getElementById('addressInfoModal');
@@ -1302,92 +1539,119 @@ function truncate($text, $max = 15) {
         document.getElementById('editAccountError').style.display = 'none';
     }
 
-    // Handle form submissions with AJAX
-    $(document).ready(function() {
-        // Add Account Form Submission
-        $('#addAccountForm').submit(function(e) {
-            e.preventDefault();
-            resetErrors();
-            
-            var formData = new FormData(this);
-            formData.append('ajax', true);
-            
-            $.ajax({
-                url: window.location.href,
-                type: 'POST',
-                data: formData,
-                contentType: false,
-                processData: false,
-                success: function(response) {
-                    try {
-                        if (typeof response === 'string') {
-                            response = JSON.parse(response);
-                        }
-                        
-                        if(response.success) {
-                            showToast('Account added successfully!', 'success');
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 1500);
-                        } else {
-                            showError('addAccountError', response.message || 'An error occurred.');
-                            showToast(response.message || 'An error occurred.', 'error');
-                        }
-                    } catch (e) {
-                        console.error('Error parsing response:', e);
-                        showError('addAccountError', 'Invalid server response.');
-                    }
-                },
-                error: function(xhr) {
-                    console.error('AJAX error:', xhr.responseText);
-                    showError('addAccountError', 'A server error occurred.');
-                    showToast('A server error occurred.', 'error');
-                }
-            });
-        });
+    // Confirmation functions for adding account
+    function confirmAddAccount() {
+        // Perform basic validation first
+        const form = document.getElementById('addAccountForm');
+        if (!form.checkValidity()) {
+            // If form is invalid, trigger browser's native validation
+            form.reportValidity();
+            return;
+        }
         
-        // Edit Account Form Submission
-        $('#editAccountForm').submit(function(e) {
-            e.preventDefault();
-            resetErrors();
-            
-            var formData = new FormData(this);
-            formData.append('ajax', true);
-            
-            $.ajax({
-                url: window.location.href,
-                type: 'POST',
-                data: formData,
-                contentType: false,
-                processData: false,
-                success: function(response) {
-                    try {
-                        if (typeof response === 'string') {
-                            response = JSON.parse(response);
-                        }
-                        
-                        if(response.success) {
-                            showToast('Account updated successfully!', 'success');
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 1500);
-                        } else {
-                            showError('editAccountError', response.message || 'An error occurred.');
-                            showToast(response.message || 'An error occurred.', 'error');
-                        }
-                    } catch (e) {
-                        console.error('Error parsing response:', e);
-                        showError('editAccountError', 'Invalid server response.');
+        document.getElementById('addConfirmationModal').style.display = 'block';
+    }
+    
+    function closeAddConfirmation() {
+        document.getElementById('addConfirmationModal').style.display = 'none';
+    }
+    
+    function submitAddAccount() {
+        document.getElementById('addConfirmationModal').style.display = 'none';
+        
+        var formData = new FormData(document.getElementById('addAccountForm'));
+        formData.append('ajax', true);
+        
+        $.ajax({
+            url: window.location.href,
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                try {
+                    if (typeof response === 'string') {
+                        response = JSON.parse(response);
                     }
-                },
-                error: function(xhr) {
-                    console.error('AJAX error:', xhr.responseText);
-                    showError('editAccountError', 'A server error occurred.');
-                    showToast('A server error occurred.', 'error');
+                    
+                    if(response.success) {
+                        showToast('Account added successfully!', 'success');
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showError('addAccountError', response.message || 'An error occurred.');
+                        showToast(response.message || 'An error occurred.', 'error');
+                    }
+                } catch (e) {
+                    console.error('Error parsing response:', e);
+                    showError('addAccountError', 'Invalid server response.');
                 }
-            });
+            },
+            error: function(xhr) {
+                console.error('AJAX error:', xhr.responseText);
+                showError('addAccountError', 'A server error occurred.');
+                showToast('A server error occurred.', 'error');
+            }
         });
-    });
+    }
+    
+    // Confirmation functions for editing account
+    function confirmEditAccount() {
+        // Perform basic validation first
+        const form = document.getElementById('editAccountForm');
+        if (!form.checkValidity()) {
+            // If form is invalid, trigger browser's native validation
+            form.reportValidity();
+            return;
+        }
+        
+        document.getElementById('editConfirmationModal').style.display = 'block';
+    }
+    
+    function closeEditConfirmation() {
+        document.getElementById('editConfirmationModal').style.display = 'none';
+    }
+    
+    function submitEditAccount() {
+        document.getElementById('editConfirmationModal').style.display = 'none';
+        
+        var formData = new FormData(document.getElementById('editAccountForm'));
+        formData.append('ajax', true);
+        
+        $.ajax({
+            url: window.location.href,
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                try {
+                    if (typeof response === 'string') {
+                        response = JSON.parse(response);
+                    }
+                    
+                    if(response.success) {
+                        showToast('Account updated successfully!', 'success');
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showError('editAccountError', response.message || 'An error occurred.');
+                        showToast(response.message || 'An error occurred.', 'error');
+                    }
+                } catch (e) {
+                    console.error('Error parsing response:', e);
+                    showError('editAccountError', 'Invalid server response.');
+                }
+            },
+            error: function(xhr) {
+                console.error('AJAX error:', xhr.responseText);
+                showError('editAccountError', 'A server error occurred.');
+                showToast('A server error occurred.', 'error');
+            }
+        });
+    }
 
     // Function to open the add account form
     function openAddAccountForm() {
@@ -1412,6 +1676,12 @@ function truncate($text, $max = 15) {
         document.getElementById('edit-company').value = company;
         document.getElementById('edit-company_address').value = company_address;
         document.getElementById('edit-bill_to_address').value = bill_to_address;
+        
+        // Reset password toggle
+        document.getElementById('edit-password-toggle').checked = false;
+        document.getElementById('auto-password-container').style.display = 'block';
+        document.getElementById('manual-password-container').style.display = 'none';
+        document.getElementById('edit-manual-password').value = '';
         
         // Get the select fields
         const regionSelect = document.getElementById('edit-region');
