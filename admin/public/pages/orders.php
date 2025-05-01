@@ -1,5 +1,5 @@
 <?php
-// Current Date: 2025-05-01 19:18:19
+// Current Date: 2025-05-01 19:22:46
 // Author: aedanevangelista
 
 session_start();
@@ -1562,7 +1562,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 const today = new Date(); const datePart = `${today.getFullYear().toString().substr(-2)}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`; const timePart = `${String(today.getHours()).padStart(2,'0')}${String(today.getMinutes()).padStart(2,'0')}${String(today.getSeconds()).padStart(2,'0')}`; $('#po_number').val(`${datePart}-${timePart}`);
             } else { $('#company_address').val(''); companyHidden.val(''); $('#po_number').val(''); if ($('#delivery_address_type').val() === 'company') $('#delivery_address').val(''); }
         }
-        // --- MODIFIED prepareOrderData ---
+        // --- RE-CONFIRMED prepareOrderData ---
         function prepareOrderData() {
             toggleDeliveryAddress(); // Ensure correct address is set
             const addr = $('#delivery_address').val();
@@ -1579,10 +1579,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
             let total = 0;
             // Map cart items to the required format, INCLUDING product_id
-            const orders = cartItems.map(item => {
+            const orders = cartItems.map(item => { // Iterates through items added to the cart
                 total += item.price * item.quantity;
                 return {
-                    product_id: item.id, // <<< FIX: Include product_id from cartItem.id
+                    // This line reads the 'id' property from the 'item' object in the cartItems array
+                    // and assigns it to the 'product_id' key in the new object being created.
+                    product_id: item.id, // <<< THIS IS THE FIX
                     category: item.category,
                     item_description: item.item_description,
                     packaging: item.packaging,
@@ -1591,11 +1593,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 };
             });
 
+            // The 'orders' array (now containing objects with 'product_id') is stringified here
             $('#orders').val(JSON.stringify(orders));
             $('#total_amount').val(total.toFixed(2));
             return true; // Data is prepared and valid
         }
-        // --- END MODIFIED prepareOrderData ---
+        // --- END RE-CONFIRMED prepareOrderData ---
         function confirmAddOrder() { if (prepareOrderData()) $('#addConfirmationModal').show(); }
         function closeAddConfirmation() { $('#addConfirmationModal').hide(); }
         function submitAddOrder() {
