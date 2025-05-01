@@ -29,14 +29,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     header('Content-Type: application/json');
 
     $username = trim($_POST['username']);
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $phone = $_POST['phone'] ?? '';
+    
+    // Auto-generate password: username + last 4 digits of phone
+    $last4digits = (strlen($phone) >= 4) ? substr($phone, -4) : str_pad($phone, 4, '0');
+    $autoPassword = $username . $last4digits;
+    $password = password_hash($autoPassword, PASSWORD_DEFAULT);
+    
     $email = $_POST['email'];
-    $phone = $_POST['phone'] ?? null;
     $region = $_POST['region'];
     $city = $_POST['city'];
-    $company = $_POST['company'] ?? null; 
+    $company = $_POST['company'] ?? ''; 
     $company_address = $_POST['company_address'];
-    $bill_to_address = $_POST['bill_to_address'] ?? null; // Added bill_to_address field
+    $bill_to_address = $_POST['bill_to_address'] ?? ''; 
     $business_proof = [];
 
     if (validateUnique($conn, $username, $email)) {
@@ -98,14 +103,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $id = $_POST['id'];
     $username = trim($_POST['username']);
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    
+    // Get phone number from form
+    $phone = $_POST['phone'] ?? '';
+    
+    // Auto-generate password: username + last 4 digits of phone
+    $last4digits = (strlen($phone) >= 4) ? substr($phone, -4) : str_pad($phone, 4, '0');
+    $autoPassword = $username . $last4digits;
+    $password = password_hash($autoPassword, PASSWORD_DEFAULT);
+    
     $email = $_POST['email'];
-    $phone = $_POST['phone'] ?? null;
     $region = $_POST['region'];
     $city = $_POST['city'];
-    $company = $_POST['company'] ?? null; 
+    $company = $_POST['company'] ?? ''; 
     $company_address = $_POST['company_address'];
-    $bill_to_address = $_POST['bill_to_address'] ?? null; // Added bill_to_address field
+    $bill_to_address = $_POST['bill_to_address'] ?? ''; 
     $business_proof = [];
 
     if (validateUnique($conn, $username, $email, $id)) {
@@ -767,6 +779,20 @@ function truncate($text, $max = 15) {
             border-radius: 4px;
         }
 
+        /* Style for password field */
+        .password-note {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            font-style: italic;
+        }
+        
+        .auto-generated {
+            background-color: #f8f8f8;
+            color: #888;
+            cursor: not-allowed;
+        }
+
     </style>
 </head>
 <body>
@@ -963,14 +989,15 @@ function truncate($text, $max = 15) {
                                 placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" 
                                 title="Username can only contain letters, numbers, and underscores. Maximum 15 characters.">
                             
+                            <label for="phone">Phone/Telephone Number: <span class="required">*</span></label>
+                            <input type="tel" id="phone" name="phone" required placeholder="e.g., 1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
+                            
                             <label for="password">Password: <span class="required">*</span></label>
-                            <input type="password" id="password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
+                            <input type="text" id="password" name="password" readonly class="auto-generated" placeholder="Auto-generated password">
+                            <div class="password-note">Password will be auto-generated as username + last 4 digits of phone</div>
                             
                             <label for="email">Email: <span class="required">*</span></label>
                             <input type="email" id="email" name="email" required placeholder="e.g., johndoe@example.com">
-                            
-                            <label for="phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
-                            <input type="tel" id="phone" name="phone" placeholder="e.g., +1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
                         </div>
                         
                         <div class="form-column">
@@ -980,8 +1007,8 @@ function truncate($text, $max = 15) {
                             <label for="city">City: <span class="required">*</span></label>
                             <input type="text" id="city" name="city" required placeholder="e.g., Quezon City">
                             
-                            <label for="company">Company Name: <span class="optional">(optional)</span></label>
-                            <input type="text" id="company" name="company" placeholder="e.g., Top Exchange Food Corp">
+                            <label for="company">Company Name: <span class="required">*</span></label>
+                            <input type="text" id="company" name="company" required placeholder="e.g., Top Exchange Food Corp">
                         </div>
                         
                         <div class="form-full-width">
@@ -990,8 +1017,8 @@ function truncate($text, $max = 15) {
                                 <label for="company_address">Company Address: <span class="required">*</span></label>
                                 <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
                                 
-                                <label for="bill_to_address">Bill To Address: <span class="optional">(optional)</span></label>
-                                <textarea id="bill_to_address" name="bill_to_address" placeholder="e.g., 456 Billing St, Metro Manila, Quezon City"></textarea>
+                                <label for="bill_to_address">Bill To Address: <span class="required">*</span></label>
+                                <textarea id="bill_to_address" name="bill_to_address" required placeholder="e.g., 456 Billing St, Metro Manila, Quezon City"></textarea>
                             </div>
                             
                             <label for="business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
@@ -1031,14 +1058,15 @@ function truncate($text, $max = 15) {
                                 placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" 
                                 title="Username can only contain letters, numbers, and underscores. Maximum 15 characters.">
                             
+                            <label for="edit-phone">Phone/Telephone Number: <span class="required">*</span></label>
+                            <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
+                            
                             <label for="edit-password">Password: <span class="required">*</span></label>
-                            <input type="password" id="edit-password" name="password" autocomplete="new-password" required placeholder="e.g., ********">
+                            <input type="text" id="edit-password" name="password" readonly class="auto-generated" placeholder="Auto-generated password">
+                            <div class="password-note">Password will be auto-generated as username + last 4 digits of phone</div>
                             
                             <label for="edit-email">Email: <span class="required">*</span></label>
                             <input type="email" id="edit-email" name="email" required placeholder="e.g., johndoe@example.com">
-                            
-                            <label for="edit-phone">Phone/Telephone Number: <span class="optional">(optional)</span></label>
-                            <input type="tel" id="edit-phone" name="phone" placeholder="e.g., +1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
                         </div>
                         
                         <div class="form-column">
@@ -1048,8 +1076,8 @@ function truncate($text, $max = 15) {
                             <label for="edit-city">City: <span class="required">*</span></label>
                             <input type="text" id="edit-city" name="city" required placeholder="e.g., New York">
                             
-                            <label for="edit-company">Company Name: <span class="optional">(optional)</span></label>
-                            <input type="text" id="edit-company" name="company" placeholder="e.g., ABC Corp">
+                            <label for="edit-company">Company Name: <span class="required">*</span></label>
+                            <input type="text" id="edit-company" name="company" required placeholder="e.g., ABC Corp">
                         </div>
                         
                         <div class="form-full-width">
@@ -1058,12 +1086,12 @@ function truncate($text, $max = 15) {
                                 <label for="edit-company_address">Company Address: <span class="required">*</span></label>
                                 <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
                                 
-                                <label for="edit-bill_to_address">Bill To Address: <span class="optional">(optional)</span></label>
-                                <textarea id="edit-bill_to_address" name="bill_to_address" placeholder="e.g., 456 Billing St, New York, NY 10001"></textarea>
+                                <label for="edit-bill_to_address">Bill To Address: <span class="required">*</span></label>
+                                <textarea id="edit-bill_to_address" name="bill_to_address" required placeholder="e.g., 456 Billing St, New York, NY 10001"></textarea>
                             </div>
                             
                             <div id="edit-business-proof-container"></div>
-                            <label for="edit-business_proof">Business Proof: <span class="optional">(optional)</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
+                            <label for="edit-business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
                             <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple title="Maximum file size: 20MB per image">
                         </div>
                     </div>
@@ -1156,12 +1184,26 @@ function truncate($text, $max = 15) {
     function closeAddressInfoModal() {
         document.getElementById("addressInfoModal").style.display = "none";
     }
+
+    // Function to generate and update auto password
+    function updateAutoPassword(usernameInput, phoneInput, passwordInput) {
+        const username = usernameInput.value;
+        const phone = phoneInput.value;
+        if (username && phone) {
+            const last4digits = phone.length >= 4 ? phone.slice(-4) : phone.padStart(4, '0');
+            passwordInput.value = username + last4digits;
+        } else {
+            passwordInput.value = '';
+        }
+    }
     
     // Client-side validation for username (prevent special characters)
     document.addEventListener('DOMContentLoaded', function() {
         const usernameInputs = document.querySelectorAll('#username, #edit-username');
+        const phoneInputs = document.querySelectorAll('#phone, #edit-phone');
+        const passwordInputs = document.querySelectorAll('#password, #edit-password');
         
-        usernameInputs.forEach(input => {
+        usernameInputs.forEach((input, index) => {
             input.addEventListener('input', function() {
                 // Replace any characters that aren't alphanumeric or underscore
                 this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '');
@@ -1170,13 +1212,14 @@ function truncate($text, $max = 15) {
                 if (this.value.length > 15) {
                     this.value = this.value.slice(0, 15);
                 }
+                
+                // Update auto-generated password
+                updateAutoPassword(this, phoneInputs[index], passwordInputs[index]);
             });
         });
         
         // Phone number validation (digits only)
-        const phoneInputs = document.querySelectorAll('#phone, #edit-phone');
-        
-        phoneInputs.forEach(input => {
+        phoneInputs.forEach((input, index) => {
             input.addEventListener('input', function() {
                 // Replace any non-digit characters
                 this.value = this.value.replace(/\D/g, '');
@@ -1185,6 +1228,9 @@ function truncate($text, $max = 15) {
                 if (this.value.length > 12) {
                     this.value = this.value.slice(0, 12);
                 }
+                
+                // Update auto-generated password
+                updateAutoPassword(usernameInputs[index], this, passwordInputs[index]);
             });
         });
 
@@ -1335,6 +1381,11 @@ function truncate($text, $max = 15) {
         document.getElementById("edit-company").value = company || '';
         document.getElementById("edit-company_address").value = company_address;
         document.getElementById("edit-bill_to_address").value = bill_to_address || '';
+        
+        // Auto-generate password
+        const phoneValue = phone || '';
+        const last4digits = phoneValue.length >= 4 ? phoneValue.slice(-4) : phoneValue.padStart(4, '0');
+        document.getElementById("edit-password").value = username + last4digits;
         
         // Parse business_proof if it's a string
         let proofs = business_proof;
