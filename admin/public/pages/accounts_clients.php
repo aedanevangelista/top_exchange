@@ -961,6 +961,11 @@ function truncate($text, $max = 15) {
         .confirm-no:hover {
             background-color: #e1e1e1;
         }
+        
+        /* Customize toastr to remove X button */
+        #toast-container .toast-close-button {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -1236,6 +1241,9 @@ function truncate($text, $max = 15) {
                 <input type="hidden" name="formType" value="edit">
                 <input type="hidden" id="edit-id" name="id">
                 <input type="hidden" id="existing-business-proof" name="existing_business_proof">
+                <!-- Hidden inputs to store original region and city values -->
+                <input type="hidden" id="edit-original-region" name="original_region">
+                <input type="hidden" id="edit-original-city" name="original_city">
                 
                 <div class="modal-body">
                     <div class="two-column-form">
@@ -1286,7 +1294,7 @@ function truncate($text, $max = 15) {
                             </select>
 
                             <label for="edit-city">City: <span class="required">*</span></label>
-                            <select id="edit-city" name="city" required disabled>
+                            <select id="edit-city" name="city" required>
                                 <option value="">Select City</option>
                             </select>
                             
@@ -1373,6 +1381,9 @@ function truncate($text, $max = 15) {
     <script>
     // Variable to store the current account ID for status changes
     let currentAccountId = 0;
+    
+    // Map to store region-city data for quick lookup
+    let regionCityMap = new Map();
 
     function openModal(imgElement) {
         var modal = document.getElementById("myModal");
@@ -1448,29 +1459,58 @@ function truncate($text, $max = 15) {
         }
     }
 
-    async function loadCities(regionCode, targetId) {
+    async function loadCities(regionCode, targetId, selectedCity = null) {
         if (!regionCode) return;
         
         try {
+            // Check if we already have this region's cities in our cache
+            if (regionCityMap.has(regionCode)) {
+                populateCitySelect(regionCityMap.get(regionCode), targetId, selectedCity);
+                return;
+            }
+            
             const response = await fetch(`https://psgc.gitlab.io/api/regions/${regionCode}/cities-municipalities`);
             const cities = await response.json();
-            const citySelect = document.getElementById(targetId);
             
-            if (citySelect) {
-                citySelect.innerHTML = '<option value="">Select City</option>';
-                cities
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .forEach(city => {
-                        citySelect.innerHTML += `<option value="${city.name}">${city.name}</option>`;
-                    });
-                citySelect.disabled = false;
-            }
+            // Save to cache
+            regionCityMap.set(regionCode, cities);
+            
+            populateCitySelect(cities, targetId, selectedCity);
         } catch (error) {
             console.error('Error loading cities:', error);
         }
     }
+    
+    function populateCitySelect(cities, targetId, selectedCity = null) {
+        const citySelect = document.getElementById(targetId);
+        
+        if (citySelect) {
+            citySelect.innerHTML = '<option value="">Select City</option>';
+            cities
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .forEach(city => {
+                    const selected = selectedCity && city.name === selectedCity ? 'selected' : '';
+                    citySelect.innerHTML += `<option value="${city.name}" ${selected}>${city.name}</option>`;
+                });
+            citySelect.disabled = false;
+            
+            // If we have a selected city, trigger a change event to update any dependent fields
+            if (selectedCity) {
+                let event = new Event('change');
+                citySelect.dispatchEvent(event);
+            }
+        }
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize toastr options to remove the close button
+        toastr.options = {
+            closeButton: false,
+            progressBar: true,
+            positionClass: "toast-top-right",
+            timeOut: 3000
+        };
+        
         loadPhilippinesRegions();
 
         // Region change handlers
@@ -1479,9 +1519,8 @@ function truncate($text, $max = 15) {
         const citySelect = document.getElementById('city');
         const editCitySelect = document.getElementById('edit-city');
 
-        // Disable city selects initially
+        // Disable city select initially for add form
         citySelect.disabled = true;
-        editCitySelect.disabled = true;
 
         if (regionSelect) {
             regionSelect.addEventListener('change', function() {
@@ -1574,7 +1613,7 @@ function truncate($text, $max = 15) {
                         response = JSON.parse(response);
                     }
                     
-                    if(response.success) {
+                                        if(response.success) {
                         showToast('Account added successfully!', 'success');
                         setTimeout(function() {
                             window.location.reload();
@@ -1677,27 +1716,35 @@ function truncate($text, $max = 15) {
         document.getElementById('edit-company_address').value = company_address;
         document.getElementById('edit-bill_to_address').value = bill_to_address;
         
+        // Store original region and city values
+        document.getElementById('edit-original-region').value = region;
+        document.getElementById('edit-original-city').value = city;
+        
         // Reset password toggle
         document.getElementById('edit-password-toggle').checked = false;
         document.getElementById('auto-password-container').style.display = 'block';
         document.getElementById('manual-password-container').style.display = 'none';
         document.getElementById('edit-manual-password').value = '';
         
-        // Get the select fields
+        // Set region and preload cities
         const regionSelect = document.getElementById('edit-region');
         const citySelect = document.getElementById('edit-city');
         
-        // Set region
-        if (regionSelect && region) {
-            regionSelect.value = region;
-            // Load cities for this region
-            loadCities(region, 'edit-city').then(() => {
-                // Set city after cities are loaded
-                if (citySelect && city) {
-                    citySelect.value = city;
+        // Make sure the region dropdown has values loaded
+        if (regionSelect) {
+            // Find the correct region name from the region code
+            if (region) {
+                regionSelect.value = region;
+                
+                // Load cities and pre-select the correct one
+                if (city) {
+                    // Immediately enable the city dropdown
                     citySelect.disabled = false;
+                    
+                    // Load cities and pre-select the city
+                    loadCities(region, 'edit-city', city);
                 }
-            });
+            }
         }
 
         // Handle business proof (images)
@@ -1804,7 +1851,7 @@ function truncate($text, $max = 15) {
         // Check if toastr is available
         if (typeof toastr !== 'undefined') {
             toastr.options = {
-                closeButton: true,
+                closeButton: false, // Remove X button
                 progressBar: true,
                 positionClass: "toast-top-right",
                 timeOut: 3000
