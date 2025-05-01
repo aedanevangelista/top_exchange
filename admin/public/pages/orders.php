@@ -2,48 +2,53 @@
 // Establish database connection
 include "../../backend/db_connection.php";
 
-// SQL query to get products with their categories
-$query = "SELECT p.product_id, p.item_description, p.packaging, p.price, c.category_name 
-          FROM products p 
-          LEFT JOIN categories c ON p.category_id = c.category_id 
-          WHERE p.status = 'active'
-          ORDER BY c.category_name, p.item_description";
-
-$result = $conn->query($query);
-
-$inventory = [];
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $inventory[] = [
-            'product_id' => $row['product_id'],
-            'item_description' => $row['item_description'],
-            'packaging' => $row['packaging'],
-            'price' => $row['price'],
-            'category' => $row['category_name'] ? $row['category_name'] : 'Uncategorized'
-        ];
+try {
+    // SQL query to get products with their category (from the category column in products)
+    $query = "SELECT product_id, item_description, packaging, price, category FROM products WHERE status = 'active' ORDER BY category, item_description";
+    
+    $result = $conn->query($query);
+    
+    $inventory = [];
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $inventory[] = [
+                'product_id' => $row['product_id'],
+                'item_description' => $row['item_description'],
+                'packaging' => $row['packaging'],
+                'price' => $row['price'],
+                'category' => $row['category'] ? $row['category'] : 'Uncategorized'
+            ];
+        }
     }
-}
-
-// Get distinct categories
-$categories_query = "SELECT DISTINCT category_name FROM categories WHERE status = 'active' ORDER BY category_name";
-$categories_result = $conn->query($categories_query);
-
-$categories = [];
-if ($categories_result && $categories_result->num_rows > 0) {
-    while ($row = $categories_result->fetch_assoc()) {
-        $categories[] = $row['category_name'];
+    
+    // Get distinct categories from the products table
+    $categories_query = "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' AND status = 'active' ORDER BY category";
+    $categories_result = $conn->query($categories_query);
+    
+    $categories = [];
+    if ($categories_result && $categories_result->num_rows > 0) {
+        while ($row = $categories_result->fetch_assoc()) {
+            $categories[] = $row['category'];
+        }
     }
+    
+    // Return data in structured format
+    $response = [
+        'success' => true,
+        'inventory' => $inventory,
+        'categories' => $categories
+    ];
+    
+    header('Content-Type: application/json');
+    echo json_encode($response);
+} catch (Exception $e) {
+    // Return error response
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => false,
+        'message' => 'Error: ' . $e->getMessage()
+    ]);
 }
-
-// Return data in structured format
-$response = [
-    'success' => true,
-    'inventory' => $inventory,
-    'categories' => $categories
-];
-
-header('Content-Type: application/json');
-echo json_encode($response);
 ?>
 
 <!DOCTYPE html>
@@ -2941,52 +2946,30 @@ echo json_encode($response);
     
     // Fetch inventory data
     fetch('/backend/get_inventory.php')
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return response.text().then(text => {
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                console.error("Invalid JSON response:", text);
-                throw new Error("Invalid JSON response");
-            }
-        });
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log("Raw inventory data:", data); // Debug log
+        console.log("Raw inventory data:", data);
         
-        // Check if we got the structured response with success, inventory, and categories
-        if (data && data.success && Array.isArray(data.inventory)) {
-            populateInventory(data.inventory);
-            populateCategories(data.categories || []);
-            return;
-        }
-        
-        // Fallback for the current format (direct array)
         if (Array.isArray(data)) {
-            // If the backend is returning just an array without categories,
-            // We need to check if each item has a category field
-            let hasCategories = data.length > 0 && data[0].hasOwnProperty('category');
+            // Check if the data includes category field
+            const hasCategory = data.length > 0 && data[0].hasOwnProperty('category');
             
-            if (!hasCategories) {
-                // Add a temporary uncategorized field if needed
-                const processedData = data.map(item => ({
-                    ...item,
-                    category: "Uncategorized"
-                }));
-                populateInventory(processedData);
-                populateCategories(["Uncategorized"]);
-            } else {
-                // Data already has categories
-                populateInventory(data);
-                const categories = [...new Set(data.map(item => item.category || "Uncategorized"))];
-                populateCategories(categories);
-            }
+            // Process the data
+            const processedData = hasCategory ? data : data.map(item => {
+                // Default to "Uncategorized" if no category exists
+                return {...item, category: "Uncategorized"};
+            });
+            
+            // Extract unique categories
+            const categories = [...new Set(processedData
+                .map(item => item.category || "Uncategorized")
+                .filter(cat => cat !== null && cat !== ""))];
+            
+            // Call populate functions
+            populateInventory(processedData);
+            populateCategories(categories);
         } else {
-            showToast('Failed to load inventory: Unknown data format', 'error');
-            inventoryBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Failed to load inventory data</td></tr>';
+            throw new Error("Invalid data format received");
         }
     })
     .catch(error => {
@@ -2997,6 +2980,8 @@ echo json_encode($response);
         inventoryBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${error.message}</td></tr>`;
     });
 }
+
+// The rest of the functions (populateInventory, populateCategories) remain the same
 
 // Keep the rest of your functions mostly the same, but ensure they handle the data format properly
 function populateInventory(inventory) {
