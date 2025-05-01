@@ -2938,8 +2938,6 @@ $conn->close();
         }
         return response.text().then(text => {
             try {
-                // Debug log the raw response
-                console.log("Raw response:", text);
                 return JSON.parse(text);
             } catch (e) {
                 console.error("Invalid JSON response:", text);
@@ -2948,29 +2946,33 @@ $conn->close();
         });
     })
     .then(data => {
-        // Debug log to verify data structure
-        console.log("Parsed inventory data:", data);
+        console.log("Raw inventory data:", data); // Debug log
         
         if (Array.isArray(data)) {
-            // Debug log categories
-            const categories = [...new Set(data.map(item => {
-                console.log("Item category:", item.category);
-                return item.category;
-            }))];
-            console.log("Unique categories:", categories);
+            // Get unique categories directly from the data's category field
+            const categories = [...new Set(data.map(item => item.category))];
             
-            // Populate inventory and categories
+            // Use the data directly since it already has categories
             populateInventory(data);
             populateCategories(categories);
             
+            return;
+        }
+        
+        // Fallback for other formats
+        if (data && data.success) {
+            populateInventory(data.inventory || []);
+            populateCategories(data.categories || []);
         } else {
-            throw new Error('Invalid data format received');
+            showToast('Failed to load inventory: ' + (data && data.message ? data.message : 'Unknown data format'), 'error');
+            inventoryBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Failed to load inventory data</td></tr>';
         }
     })
     .catch(error => {
         console.error('Error fetching inventory:', error);
         showToast('Error fetching inventory: ' + error.message, 'error');
         
+        const inventoryBody = document.querySelector('.inventory');
         inventoryBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${error.message}</td></tr>`;
     });
 }
