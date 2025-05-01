@@ -1,122 +1,149 @@
 <?php
 header('Content-Type: application/json');
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
+include "db_connection.php"; // Adjust path as needed
+
+// --- Get Parameters ---
+$period = $_GET['period'] ?? 'weekly'; // Default to weekly
+
+// --- Get Distinct Categories ---
+$categories = [];
+$sql_cats = "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category ASC";
+$result_cats = $conn->query($sql_cats);
+if ($result_cats && $result_cats->num_rows > 0) {
+    while ($row = $result_cats->fetch_assoc()) {
+        $categories[] = $row['category'];
+    }
+} else {
+    // No categories found, return empty data
+    echo json_encode([
+        'categories' => [],
+        'currentYear' => ['year' => date('Y'), 'data' => []],
+        'lastYear' => ['year' => date('Y') - 1, 'data' => []]
+    ]);
+    $conn->close();
+    exit;
+}
+
+// --- Calculate Date Ranges and Years ---
+$currentYear = date('Y');
+$lastYear = $currentYear - 1;
+$currentYearWeek = null;
+$lastYearWeek = null;
+$currentMonth = null;
+$lastYearMonth = null; // Not actually needed for month comparison, just the year
+
+$sql_date_filter = "";
+
+if ($period === 'weekly') {
+    // Using ISO 8601 week definition (Monday as first day)
+    $currentYearWeek = date('o-W'); // e.g., 2023-45
+    $lastYearWeek = date('o-W', strtotime('-1 year')); // e.g., 2022-45
+    // Filter condition for SQL using YEARWEEK (mode 1: Monday, week contains Jan 4th)
+    $sql_date_filter = " (YEARWEEK(o.order_date, 1) = YEARWEEK(CURDATE(), 1) OR YEARWEEK(o.order_date, 1) = YEARWEEK(DATE_SUB(CURDATE(), INTERVAL 1 YEAR), 1)) ";
+
+} elseif ($period === 'monthly') {
+    $currentMonth = date('m');
+    // Filter condition for SQL using YEAR and MONTH
+    $sql_date_filter = " ( (YEAR(o.order_date) = ? AND MONTH(o.order_date) = ?) OR (YEAR(o.order_date) = ? AND MONTH(o.order_date) = ?) ) ";
+    // Parameters for monthly: currentYear, currentMonth, lastYear, currentMonth
+} else {
+    // Invalid period, return error or default
+    echo json_encode(['error' => true, 'message' => 'Invalid period specified']);
+    $conn->close();
+    exit;
+}
+
+
+// --- Prepare Sales Data Structure ---
+// Initialize sales data arrays with 0 for all categories
+$currentYearSales = array_fill_keys($categories, 0);
+$lastYearSales = array_fill_keys($categories, 0);
+
+// --- Build and Execute the Main SQL Query ---
+$sql = "SELECT
+            p.category,
+            YEAR(o.order_date) as order_year,
+            COUNT(DISTINCT o.order_id) as order_count
+        FROM orders o
+        JOIN order_items oi ON o.order_id = oi.order_id
+        JOIN products p ON oi.product_id = p.product_id
+        WHERE
+            o.status = 'Completed'  -- Only count completed orders for sales
+            AND p.category IS NOT NULL AND p.category != '' -- Ensure product has category
+            AND " . $sql_date_filter . "
+        GROUP BY
+            p.category,
+            order_year
+        ORDER BY
+            p.category";
 
 try {
-    include "db_connection.php";
+    $stmt = $conn->prepare($sql);
 
-    // Get the requested time period (default to 'weekly')
-    $timePeriod = isset($_GET['period']) ? $_GET['period'] : 'weekly';
-    
-    // Function to get sales data for a specific year with time period filtering
-    function getSalesByCategory($year, $timePeriod = 'weekly') {
-        global $conn;
-        
-        if (!$conn) {
-            throw new Exception("Database connection failed");
-        }
-        
-        // Base SQL query
-        $sql = "SELECT 
-                    o.id,
-                    o.orders,
-                    o.status,
-                    o.order_date
-                FROM orders o
-                WHERE YEAR(o.order_date) = ?
-                AND o.status = 'Completed'";
-        
-        // If monthly, we don't need additional filtering
-        // For weekly, we'll use data from the current week
-        if ($timePeriod === 'weekly') {
-            // Get data for current week
-            $currentDate = date('Y-m-d');
-            $weekStart = date('Y-m-d', strtotime('monday this week', strtotime($currentDate)));
-            $weekEnd = date('Y-m-d', strtotime('sunday this week', strtotime($currentDate)));
-            
-            $sql .= " AND o.order_date BETWEEN ? AND ?";
-            
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("iss", $year, $weekStart, $weekEnd);
-        } else {
-            // For monthly, just use the year filter
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("i", $year);
-        }
-        
-        if (!$stmt) {
-            throw new Exception("Prepare failed: " . $conn->error);
-        }
+    if ($stmt === false) {
+        throw new Exception("Prepare failed: " . $conn->error);
+    }
 
-        if (!$stmt->execute()) {
-            throw new Exception("Execute failed: " . $stmt->error);
-        }
+    // Bind parameters only if needed (for monthly)
+    if ($period === 'monthly') {
+        $stmt->bind_param("iiii", $currentYear, $currentMonth, $lastYear, $currentMonth);
+    }
 
-        $result = $stmt->get_result();
-        
-        $salesData = [];
+    if (!$stmt->execute()) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
+
+    $result = $stmt->get_result();
+
+    // --- Process SQL Results ---
+    if ($result) {
         while ($row = $result->fetch_assoc()) {
-            // Decode the JSON orders data
-            $orderItems = json_decode($row['orders'], true);
-            
-            // Count items by category
-            foreach ($orderItems as $item) {
-                $category = $item['category'];
-                if (!isset($salesData[$category])) {
-                    $salesData[$category] = 0;
+            $category = $row['category'];
+            $year = (int)$row['order_year'];
+            $count = (int)$row['order_count'];
+
+            // Ensure category exists in our initial list (safety check)
+            if (array_key_exists($category, $currentYearSales)) {
+                if ($year == $currentYear) {
+                    $currentYearSales[$category] = $count;
+                } elseif ($year == $lastYear) {
+                    $lastYearSales[$category] = $count;
                 }
-                $salesData[$category] += $item['quantity'];
             }
         }
-        
-        return $salesData;
     }
 
-    // Get data for both years
-    $currentYear = 2025;
-    $lastYear = 2024;
+    $stmt->close();
 
-    $currentYearData = getSalesByCategory($currentYear, $timePeriod);
-    $lastYearData = getSalesByCategory($lastYear, $timePeriod);
-
-    // Get all unique categories from products table
-    $sql = "SELECT DISTINCT category FROM products ORDER BY category";
-    $result = $conn->query($sql);
-    if (!$result) {
-        throw new Exception("Error getting categories: " . $conn->error);
+    // --- Prepare Final JSON Output ---
+    // Ensure the data arrays are in the same order as the $categories array
+    $finalCurrentData = [];
+    $finalLastData = [];
+    foreach ($categories as $cat) {
+        $finalCurrentData[] = $currentYearSales[$cat];
+        $finalLastData[] = $lastYearSales[$cat];
     }
 
-    $allCategories = [];
-    while ($row = $result->fetch_assoc()) {
-        $allCategories[] = $row['category'];
-    }
-
-    // Prepare the response data
-    $response = [
-        'categories' => $allCategories,
-        'timePeriod' => $timePeriod,
+    $output = [
+        'categories' => $categories, // The dynamic list of category labels
         'currentYear' => [
             'year' => $currentYear,
-            'data' => array_map(function($category) use ($currentYearData) {
-                return $currentYearData[$category] ?? 0;
-            }, $allCategories)
+            'data' => $finalCurrentData // Sales data for current year period
         ],
         'lastYear' => [
             'year' => $lastYear,
-            'data' => array_map(function($category) use ($lastYearData) {
-                return $lastYearData[$category] ?? 0;
-            }, $allCategories)
+            'data' => $finalLastData // Sales data for last year period
         ]
     ];
 
-    echo json_encode($response);
+    echo json_encode($output);
 
 } catch (Exception $e) {
-    echo json_encode([
-        'error' => true,
-        'message' => $e->getMessage(),
-        'trace' => $e->getTraceAsString()
-    ]);
+    error_log("Error in get_sales_by_category.php: " . $e->getMessage());
+    echo json_encode(['error' => true, 'message' => 'An error occurred while fetching sales data. SQL: ' . $sql]); // Include SQL in error for debugging
+} finally {
+    if ($conn && $conn instanceof mysqli) {
+        $conn->close();
+    }
 }
 ?>
