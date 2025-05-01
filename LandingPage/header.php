@@ -174,6 +174,57 @@ if (!isset($_SESSION['cart'])) {
             background-color: var(--accent-color);
         }
 
+        /* Cart Modal Styles */
+        #cartModal .modal-header {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        #cartModal .modal-title {
+            font-weight: 600;
+        }
+
+        #cartModal .table th {
+            border-top: none;
+        }
+
+        #cartModal .order-summary {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        #cartModal .input-group {
+            width: 120px;
+        }
+
+        #cartModal .quantity-input {
+            text-align: center;
+            -moz-appearance: textfield; /* Firefox */
+        }
+
+        /* Remove spinner arrows for Chrome, Safari, Edge, Opera */
+        #cartModal .quantity-input::-webkit-outer-spin-button,
+        #cartModal .quantity-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        #cartModal .quantity-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(154, 116, 50, 0.25);
+        }
+
+        #cartModal .btn-outline-secondary {
+            border-color: #ced4da;
+        }
+
+        #cartModal .btn-outline-secondary:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
         @keyframes slideIn {
             from { right: -100%; opacity: 0; }
             to { right: 20px; opacity: 1; }
@@ -523,10 +574,12 @@ if (!isset($_SESSION['cart'])) {
                                                                     <i class="fa fa-minus"></i>
                                                                 </button>
                                                             </div>
-                                                            <input type="text"
+                                                            <input type="number"
                                                                    class="form-control text-center quantity-input"
                                                                    value="<?php echo $item['quantity']; ?>"
-                                                                   readonly>
+                                                                   min="1"
+                                                                   data-product-id="<?php echo $productId; ?>"
+                                                                   onchange="updateQuantityManually(this)">
                                                             <div class="input-group-append">
                                                                 <button class="btn btn-outline-secondary increase-quantity"
                                                                         type="button"

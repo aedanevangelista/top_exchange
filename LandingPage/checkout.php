@@ -81,6 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nextOrderNum = getNextOrderNumber($conn, $username) + 1;
     $poNumber = sprintf("PO-%s-%03d", $username, $nextOrderNum);
 
+    // Log the generated PO number for debugging
+    error_log("Generated PO number: " . $poNumber);
+
     try {
         // Insert order into database - removed payment_method
         $stmt = $conn->prepare("INSERT INTO orders (
@@ -183,8 +186,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Helper function to get the next order number for a user
 function getNextOrderNumber($conn, $username) {
     // Look for PO numbers in the format PO-username-00X
-    $stmt = $conn->prepare("SELECT po_number FROM orders WHERE username = ? AND po_number LIKE 'PO-%' ORDER BY id DESC LIMIT 1");
-    $stmt->bind_param("s", $username);
+    $stmt = $conn->prepare("SELECT po_number FROM orders WHERE username = ? AND po_number LIKE CONCAT('PO-', ?, '-%') ORDER BY id DESC LIMIT 1");
+    $stmt->bind_param("ss", $username, $username);
     $stmt->execute();
     $result = $stmt->get_result();
 

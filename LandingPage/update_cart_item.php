@@ -8,13 +8,12 @@ if (!isset($_SESSION['username'])) {
 }
 
 // Validate input
-if (!isset($_POST['product_id']) || !isset($_POST['quantity_change'])) {
-    echo json_encode(['success' => false, 'message' => 'Invalid request']);
+if (!isset($_POST['product_id'])) {
+    echo json_encode(['success' => false, 'message' => 'Invalid request: Missing product ID']);
     exit;
 }
 
 $productId = $_POST['product_id'];
-$quantityChange = intval($_POST['quantity_change']);
 
 // Check if product exists in cart
 if (!isset($_SESSION['cart'][$productId])) {
@@ -22,8 +21,29 @@ if (!isset($_SESSION['cart'][$productId])) {
     exit;
 }
 
-// Update quantity
-$_SESSION['cart'][$productId]['quantity'] += $quantityChange;
+// Handle manual quantity update
+if (isset($_POST['quantity']) && isset($_POST['manual_update'])) {
+    $newQuantity = intval($_POST['quantity']);
+
+    // Validate quantity
+    if ($newQuantity < 1) {
+        echo json_encode(['success' => false, 'message' => 'Quantity must be at least 1']);
+        exit;
+    }
+
+    // Set the new quantity directly
+    $_SESSION['cart'][$productId]['quantity'] = $newQuantity;
+}
+// Handle increment/decrement
+else if (isset($_POST['quantity_change'])) {
+    $quantityChange = intval($_POST['quantity_change']);
+    // Update quantity
+    $_SESSION['cart'][$productId]['quantity'] += $quantityChange;
+}
+else {
+    echo json_encode(['success' => false, 'message' => 'Invalid request: Missing quantity parameters']);
+    exit;
+}
 
 // Remove item if quantity reaches zero
 if ($_SESSION['cart'][$productId]['quantity'] <= 0) {

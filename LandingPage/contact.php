@@ -81,7 +81,7 @@ include_once('db_connection.php');
             from { opacity: 1; }
             to { opacity: 0; }
         }
-        
+
         /* Cart count badge (unchanged) */
         .badge-danger {
             background-color: #dc3545;
@@ -367,15 +367,15 @@ include_once('db_connection.php');
             .contact-hero {
                 padding: 60px 0;
             }
-            
+
             .contact-hero h1 {
                 font-size: 32px;
             }
-            
+
             .contact-section {
                 flex-direction: column;
             }
-            
+
             .section-title {
                 font-size: 24px;
             }
@@ -385,11 +385,11 @@ include_once('db_connection.php');
             .contact-hero {
                 padding: 40px 0;
             }
-            
+
             .contact-hero h1 {
                 font-size: 28px;
             }
-            
+
             .contact-form, .contact-info {
                 padding: 20px;
             }
@@ -571,17 +571,17 @@ include_once('db_connection.php');
         function showPopup(message, isError = false) {
             const popup = $('#customPopup');
             const popupMessage = $('#popupMessage');
-            
+
             popupMessage.text(message);
             popup.removeClass('error');
-            
+
             if (isError) {
                 popup.addClass('error');
             }
-            
+
             // Reset animation by briefly showing/hiding
             popup.hide().show();
-            
+
             // Automatically hide after 3 seconds
             setTimeout(() => {
                 popup.hide();
@@ -638,6 +638,43 @@ include_once('db_connection.php');
             });
         }
 
+        // Function to handle manual quantity input
+        function updateQuantityManually(input) {
+            const productId = $(input).data('product-id');
+            const newQuantity = parseInt($(input).val());
+
+            // Validate quantity
+            if (isNaN(newQuantity) || newQuantity < 1) {
+                $(input).val(1);
+                showPopup("Quantity must be at least 1", true);
+                return;
+            }
+
+            $.ajax({
+                url: 'update_cart_item.php',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    product_id: productId,
+                    quantity: newQuantity,
+                    manual_update: true
+                },
+                success: function(response) {
+                    if(response.success) {
+                        $('#cart-count').text(response.cart_count);
+                        updateCartModal();
+                        showPopup("Quantity updated successfully");
+                    } else {
+                        showPopup(response.message || "Error updating quantity", true);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error updating quantity:", error);
+                    showPopup("Error updating quantity", true);
+                }
+            });
+        }
+
         // Function to update the cart modal
         function updateCartModal() {
             $.ajax({
@@ -652,20 +689,20 @@ include_once('db_connection.php');
                         } else {
                             $('#empty-cart-message').hide();
                             $('#cart-items-container').show();
-                            
+
                             let cartItemsHtml = '';
                             let subtotal = 0;
-                            
+
                             response.cart_items.forEach(item => {
                                 const price = parseFloat(item.price);
                                 const itemSubtotal = price * item.quantity;
                                 subtotal += itemSubtotal;
-                                
+
                                 cartItemsHtml += `
                                     <tr>
                                         <td>
-                                            <img src="${item.image_path || 'images/default-product.jpg'}" 
-                                                 alt="${item.name}" 
+                                            <img src="${item.image_path || 'images/default-product.jpg'}"
+                                                 alt="${item.name}"
                                                  style="width: 80px; height: 80px; object-fit: cover;">
                                         </td>
                                         <td>
@@ -676,19 +713,21 @@ include_once('db_connection.php');
                                         <td>
                                             <div class="input-group">
                                                 <div class="input-group-prepend">
-                                                    <button class="btn btn-outline-secondary decrease-quantity" 
-                                                            type="button" 
+                                                    <button class="btn btn-outline-secondary decrease-quantity"
+                                                            type="button"
                                                             data-product-id="${item.product_id}">
                                                         <i class="fa fa-minus"></i>
                                                     </button>
                                                 </div>
-                                                <input type="text" 
-                                                       class="form-control text-center quantity-input" 
-                                                       value="${item.quantity}" 
-                                                       readonly>
+                                                <input type="number"
+                                                       class="form-control text-center quantity-input"
+                                                       value="${item.quantity}"
+                                                       min="1"
+                                                       data-product-id="${item.product_id}"
+                                                       onchange="updateQuantityManually(this)">
                                                 <div class="input-group-append">
-                                                    <button class="btn btn-outline-secondary increase-quantity" 
-                                                            type="button" 
+                                                    <button class="btn btn-outline-secondary increase-quantity"
+                                                            type="button"
                                                             data-product-id="${item.product_id}">
                                                         <i class="fa fa-plus"></i>
                                                     </button>
@@ -697,7 +736,7 @@ include_once('db_connection.php');
                                         </td>
                                         <td>₱${itemSubtotal.toFixed(2)}</td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-danger remove-from-cart" 
+                                            <button class="btn btn-sm btn-outline-danger remove-from-cart"
                                                     data-product-id="${item.product_id}">
                                                 <i class="fa fa-trash"></i>
                                             </button>
@@ -708,11 +747,11 @@ include_once('db_connection.php');
 
                             $('#cart-items-list').html(cartItemsHtml);
                             $('#subtotal-amount').text('₱' + subtotal.toFixed(2));
-                            
+
                             // Calculate delivery fee
                             const deliveryFee = subtotal > 500 ? 0 : 50;
                             $('#delivery-fee').text('₱' + deliveryFee.toFixed(2));
-                            
+
                             const totalAmount = subtotal + deliveryFee;
                             $('#total-amount').text('₱' + totalAmount.toFixed(2));
                         }

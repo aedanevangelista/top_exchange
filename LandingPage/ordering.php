@@ -879,6 +879,46 @@ $(document).ready(function() {
             });
         }
 
+        // Function to handle manual quantity input
+        function updateQuantityManually(input) {
+            const productId = $(input).data('product-id');
+            const newQuantity = parseInt($(input).val());
+
+            console.log('Manual quantity update:', productId, newQuantity);
+
+            // Validate quantity
+            if (isNaN(newQuantity) || newQuantity < 1) {
+                $(input).val(1);
+                showPopup("Quantity must be at least 1", true);
+                return;
+            }
+
+            $.ajax({
+                url: '/LandingPage/update_cart_item.php',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    product_id: productId,
+                    quantity: newQuantity,
+                    manual_update: true
+                },
+                success: function(response) {
+                    console.log('Manual update response:', response);
+                    if(response.success) {
+                        $('#cart-count').text(response.cart_count);
+                        updateCartModal();
+                        showPopup("Quantity updated successfully");
+                    } else {
+                        showPopup(response.message || "Error updating quantity", true);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error updating quantity:", error);
+                    showPopup("Error updating quantity", true);
+                }
+            });
+        }
+
         // Function to update the cart modal
         function updateCartModal() {
             console.log('Updating cart modal');
@@ -926,10 +966,12 @@ $(document).ready(function() {
                                                         <i class="fa fa-minus"></i>
                                                     </button>
                                                 </div>
-                                                <input type="text"
+                                                <input type="number"
                                                        class="form-control text-center quantity-input"
                                                        value="${item.quantity}"
-                                                       readonly>
+                                                       min="1"
+                                                       data-product-id="${item.product_id}"
+                                                       onchange="updateQuantityManually(this)">
                                                 <div class="input-group-append">
                                                     <button class="btn btn-outline-secondary increase-quantity"
                                                             type="button"
