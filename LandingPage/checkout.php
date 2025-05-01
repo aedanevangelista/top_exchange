@@ -76,9 +76,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $deliveryFee = 0;
     $total = $subtotal;
 
-    // Generate PO number (username + incrementing number)
+    // Generate PO number in format PO-[username]-00[x]
     $username = $_SESSION['username'];
-    $poNumber = $username . '-' . (getNextOrderNumber($conn, $username) + 1);
+    $nextOrderNum = getNextOrderNumber($conn, $username) + 1;
+    $poNumber = sprintf("PO-%s-%03d", $username, $nextOrderNum);
 
     try {
         // Insert order into database - removed payment_method
@@ -181,10 +182,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Helper function to get the next order number for a user
 function getNextOrderNumber($conn, $username) {
-    $result = $conn->query("SELECT MAX(SUBSTRING_INDEX(po_number, '-', -1)) as max_num FROM orders WHERE username = '$username'");
-    if ($result && $row = $result->fetch_assoc()) {
-        return (int)$row['max_num'];
+    // Look for PO numbers in the format PO-username-00X
+    $stmt = $conn->prepare("SELECT po_number FROM orders WHERE username = ? AND po_number LIKE 'PO-%' ORDER BY id DESC LIMIT 1");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result && $result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $lastPO = $row['po_number'];
+
+        // Extract the numeric part
+        if (preg_match('/PO-' . preg_quote($username, '/') . '-(\d+)$/', $lastPO, $matches)) {
+            return (int)$matches[1];
+        }
     }
+
+    // If no previous order or format doesn't match, start with 0
     return 0;
 }
 

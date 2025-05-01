@@ -152,6 +152,7 @@ $conn->close();
             background: linear-gradient(135deg, #9a7432 0%, #c9a158 100%);
             color: white;
             padding: 2.5rem 0;
+            margin-top: auto;
             margin-bottom: 2.5rem;
             box-shadow: var(--box-shadow);
         }
