@@ -390,7 +390,8 @@ if ($debug_mode) {
                                         data-product-name="<?php echo htmlspecialchars($product['item_description']); ?>"
                                         data-product-price="<?php echo $product['price']; ?>"
                                         data-product-image="<?php echo htmlspecialchars($product['product_image'] ?: '/LandingPage/images/default-product.jpg'); ?>"
-                                        data-product-packaging="<?php echo htmlspecialchars($product['packaging']); ?>">
+                                        data-product-packaging="<?php echo htmlspecialchars($product['packaging']); ?>"
+                                        data-product-category="<?php echo htmlspecialchars($category); ?>">
                                     <?php echo isset($_SESSION['username']) ? 'Add to Cart' : 'Login to Add to Cart'; ?>
                                 </button>
                             </div>
@@ -674,6 +675,7 @@ $(document).ready(function() {
         const productPrice = button.data('product-price');
         const productImage = button.data('product-image');
         const productPackaging = button.data('product-packaging');
+        const productCategory = button.data('product-category');
 
         // Find the quantity input - need to look in parent container first
         const productCard = button.closest('.product-info');
@@ -703,6 +705,21 @@ $(document).ready(function() {
         // Show a temporary message
         showPopup('Adding to cart...');
 
+        // Log the data being sent
+        console.log('AJAX request data:', {
+            url: '/LandingPage/add_to_cart.php',
+            type: 'POST',
+            data: {
+                product_id: productId,
+                product_name: productName,
+                price: productPrice,
+                image_path: productImage,
+                packaging: productPackaging,
+                category: productCategory,
+                quantity: quantity
+            }
+        });
+
         $.ajax({
             url: '/LandingPage/add_to_cart.php',
             type: 'POST',
@@ -712,6 +729,7 @@ $(document).ready(function() {
                 price: productPrice,
                 image_path: productImage,
                 packaging: productPackaging,
+                category: productCategory,
                 quantity: quantity
             },
             success: function(response) {

@@ -5,11 +5,13 @@
         </div>
     </div>
     <!-- copyright section end -->
-    
+
     <!-- Javascript files-->
     <script src="/LandingPage/js/jquery.min.js"></script>
     <script src="/LandingPage/js/popper.min.js"></script>
     <script src="/LandingPage/js/bootstrap.bundle.min.js"></script>
+    <!-- Make sure Bootstrap JS is loaded for modals -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js"></script>
     <script src="/LandingPage/js/jquery-3.0.0.min.js"></script>
     <script src="/LandingPage/js/plugin.js"></script>
     <!-- AOS Animation -->
@@ -17,7 +19,7 @@
     <!-- sidebar -->
     <script src="/LandingPage/js/jquery.mCustomScrollbar.concat.min.js"></script>
     <script src="/LandingPage/js/custom.js"></script>
-    
+
     <script>
         // Initialize AOS animation
         AOS.init({
@@ -25,7 +27,7 @@
             easing: 'ease-in-out',
             once: true
         });
-        
+
         // Back to top button
         $(window).scroll(function() {
             if ($(this).scrollTop() > 300) {
@@ -34,33 +36,33 @@
                 $('.back-to-top').removeClass('active');
             }
         });
-        
+
         // Function to show custom popup message
         function showPopup(message, isError = false) {
             const popup = $('#customPopup');
             const popupMessage = $('#popupMessage');
-            
+
             popupMessage.text(message);
             popup.removeClass('error');
-            
+
             if (isError) {
                 popup.addClass('error');
             }
-            
+
             // Reset animation by briefly showing/hiding
             popup.hide().show();
-            
+
             // Automatically hide after 3 seconds
             setTimeout(() => {
                 popup.hide();
             }, 3000);
         }
-        
+
         // Close profile dropdown when clicking outside
         document.addEventListener('click', function(event) {
             const profileDropdown = document.getElementById('profileDropdown');
             const isClickInside = profileDropdown.contains(event.target);
-            
+
             if (!isClickInside) {
                 profileDropdown.classList.remove('active');
             }
@@ -134,20 +136,20 @@
                         } else {
                             $('#empty-cart-message').hide();
                             $('#cart-items-container').show();
-                            
+
                             let cartItemsHtml = '';
                             let subtotal = 0;
-                            
+
                             response.cart_items.forEach(item => {
                                 const price = parseFloat(item.price);
                                 const itemSubtotal = price * item.quantity;
                                 subtotal += itemSubtotal;
-                                
+
                                 cartItemsHtml += `
                                     <tr>
                                         <td>
-                                            <img src="${item.image_path || '/LandingPage/images/default-product.jpg'}" 
-                                                 alt="${item.name}" 
+                                            <img src="${item.image_path || '/LandingPage/images/default-product.jpg'}"
+                                                 alt="${item.name}"
                                                  style="width: 80px; height: 80px; object-fit: contain;">
                                         </td>
                                         <td>
@@ -158,19 +160,19 @@
                                         <td>
                                             <div class="input-group">
                                                 <div class="input-group-prepend">
-                                                    <button class="btn btn-outline-secondary decrease-quantity" 
-                                                            type="button" 
+                                                    <button class="btn btn-outline-secondary decrease-quantity"
+                                                            type="button"
                                                             data-product-id="${item.product_id}">
                                                         <i class="fa fa-minus"></i>
                                                     </button>
                                                 </div>
-                                                <input type="text" 
-                                                       class="form-control text-center quantity-input" 
-                                                       value="${item.quantity}" 
+                                                <input type="text"
+                                                       class="form-control text-center quantity-input"
+                                                       value="${item.quantity}"
                                                        readonly>
                                                 <div class="input-group-append">
-                                                    <button class="btn btn-outline-secondary increase-quantity" 
-                                                            type="button" 
+                                                    <button class="btn btn-outline-secondary increase-quantity"
+                                                            type="button"
                                                             data-product-id="${item.product_id}">
                                                         <i class="fa fa-plus"></i>
                                                     </button>
@@ -179,7 +181,7 @@
                                         </td>
                                         <td>₱${itemSubtotal.toFixed(2)}</td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-danger remove-from-cart" 
+                                            <button class="btn btn-sm btn-outline-danger remove-from-cart"
                                                     data-product-id="${item.product_id}">
                                                 <i class="fa fa-trash"></i>
                                             </button>
@@ -190,12 +192,9 @@
 
                             $('#cart-items-list').html(cartItemsHtml);
                             $('#subtotal-amount').text('₱' + subtotal.toFixed(2));
-                            
-                            // Calculate delivery fee
-                            const deliveryFee = subtotal > 500 ? 0 : 50;
-                            $('#delivery-fee').text('₱' + deliveryFee.toFixed(2));
-                            
-                            const totalAmount = subtotal + deliveryFee;
+
+                            // No delivery fee
+                            const totalAmount = subtotal;
                             $('#total-amount').text('₱' + totalAmount.toFixed(2));
                         }
                     }
@@ -208,6 +207,13 @@
         }
 
         $(document).ready(function() {
+            // Cart button click handler
+            $(document).on('click', '.cart-button', function(e) {
+                e.preventDefault();
+                console.log('Cart button clicked');
+                $('#cartModal').modal('show');
+            });
+
             // Quantity adjustment handlers
             $(document).on('click', '.increase-quantity', function() {
                 const productId = $(this).data('product-id');

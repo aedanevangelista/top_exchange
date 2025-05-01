@@ -563,14 +563,10 @@ if (!isset($_SESSION['cart'])) {
                                             <span>Subtotal:</span>
                                             <span id="subtotal-amount">₱<?php echo number_format($subtotal ?? 0, 2); ?></span>
                                         </div>
-                                        <div class="d-flex justify-content-between">
-                                            <span>Delivery Fee:</span>
-                                            <span id="delivery-fee">₱<?php echo number_format(($subtotal ?? 0) > 500 ? 0 : 50, 2); ?></span>
-                                        </div>
                                         <hr>
                                         <div class="d-flex justify-content-between">
                                             <strong>Total:</strong>
-                                            <strong id="total-amount">₱<?php echo number_format(($subtotal ?? 0) + (($subtotal ?? 0) > 500 ? 0 : 50), 2); ?></strong>
+                                            <strong id="total-amount">₱<?php echo number_format(($subtotal ?? 0), 2); ?></strong>
                                         </div>
                                     </div>
                                 </div>

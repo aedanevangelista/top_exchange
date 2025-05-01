@@ -7,22 +7,43 @@ if (!isset($_SESSION['username'])) {
     exit;
 }
 
-// Validate input
-if (!isset($_POST['product_id']) || !isset($_POST['product_name']) || !isset($_POST['product_price'])) {
-    echo json_encode(['success' => false, 'message' => 'Invalid product data']);
-    exit;
-}
-
 // Initialize cart if not exists
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
+// Debug received data
+$debug_data = [
+    'post' => $_POST,
+    'get' => $_GET,
+    'session' => isset($_SESSION) ? array_keys($_SESSION) : 'No session'
+];
+
+// Validate input - with more detailed error message
+$required_fields = ['product_id', 'product_name', 'price'];
+$missing_fields = [];
+
+foreach ($required_fields as $field) {
+    if (!isset($_POST[$field]) || $_POST[$field] === '') {
+        $missing_fields[] = $field;
+    }
+}
+
+if (!empty($missing_fields)) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Invalid product data: Missing ' . implode(', ', $missing_fields),
+        'debug' => $debug_data
+    ]);
+    exit;
+}
+
 $productId = $_POST['product_id'];
 $productName = $_POST['product_name'];
-$productPrice = floatval($_POST['product_price']);
+$productPrice = floatval($_POST['price']); // Changed from product_price to price to match the form data
 $imagePath = $_POST['image_path'] ?? 'images/default-product.jpg';
 $packaging = $_POST['packaging'] ?? '';
+$category = $_POST['category'] ?? '';
 $quantity = isset($_POST['quantity']) ? intval($_POST['quantity']) : 1;
 
 // Validate quantity
@@ -48,7 +69,8 @@ if (isset($_SESSION['cart'][$productId])) {
         'price' => $productPrice,
         'quantity' => $quantity,
         'image_path' => $imagePath,
-        'packaging' => $packaging
+        'packaging' => $packaging,
+        'category' => $category
     ];
 }
 
