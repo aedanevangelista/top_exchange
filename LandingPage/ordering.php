@@ -1,1019 +1,876 @@
 <?php
-// Start the session
-session_start();
+// Include the header
+require_once 'header.php';
 
-// Prevent caching of the page
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Cache-Control: post-check=0, pre-check=0", false);
-header("Pragma: no-cache");
+// Database connection - we need to reconnect because header.php might have closed the connection
+require_once 'db_connection.php';
 
-// Initialize the cart in the session if it doesn't exist
-if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = [];
-}
+// Fetch all products from the database
+$products = [];
+$query = "SELECT * FROM products ORDER BY category, item_description";
 
-// Include database connection file
-include_once('db_connection.php');
+// Add error handling for the query
+try {
+    $result = $conn->query($query);
 
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Get filter parameters
-$category = isset($_GET['category']) ? $_GET['category'] : '';
-$search = isset($_GET['search']) ? $_GET['search'] : '';
-$min_price = isset($_GET['min_price']) ? $_GET['min_price'] : '';
-$max_price = isset($_GET['max_price']) ? $_GET['max_price'] : '';
-
-// Function to get the base product name (remove variant identifiers)
-function getBaseProductName($productName) {
-    return preg_replace('/\s*\([A-Z][^)]*\)$/', '', $productName);
-}
-
-// Build the SQL query to get products
-$sql = "SELECT p.product_id, p.product_name, p.item_description, p.price, p.product_image AS image_path, p.packaging, p.category 
-        FROM products p 
-        WHERE 1=1";
-$params = [];
-$types = '';
-
-if (!empty($category)) {
-    $sql .= " AND p.category = ?";
-    $params[] = $category;
-    $types .= 's';
-}
-
-if (!empty($search)) {
-    $sql .= " AND (p.item_description LIKE ? OR p.category LIKE ? OR p.product_name LIKE ?)";
-    $search_term = "%$search%";
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $params[] = $search_term;
-    $types .= 'sss';
-}
-
-if (!empty($min_price) && is_numeric($min_price)) {
-    $sql .= " AND p.price >= ?";
-    $params[] = $min_price;
-    $types .= 'd';
-}
-
-if (!empty($max_price) && is_numeric($max_price)) {
-    $sql .= " AND p.price <= ?";
-    $params[] = $max_price;
-    $types .= 'd';
-}
-
-// Prepare and execute the query
-$stmt = $conn->prepare($sql);
-
-if (!empty($params)) {
-    $stmt->bind_param($types, ...$params);
-}
-
-$stmt->execute();
-$result = $stmt->get_result();
-
-// Group products by their base name to handle variants
-$groupedProducts = [];
-while ($product = $result->fetch_assoc()) {
-    if (empty($product['product_name'])) {
-        $product['product_name'] = getBaseProductName($product['item_description']);
-    }
-    
-    $productName = $product['product_name'];
-    
-    if (!isset($groupedProducts[$productName])) {
-        $groupedProducts[$productName] = [
-            'main_product' => $product,
-            'variants' => []
-        ];
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $products[$row['category']][] = $row;
+        }
     } else {
-        $groupedProducts[$productName]['variants'][] = $product;
+        // Log the error or display a message for debugging
+        error_log("No products found or query failed: " . $conn->error);
     }
+} catch (Exception $e) {
+    // Log the exception
+    error_log("Exception in ordering.php: " . $e->getMessage());
 }
 
-// Fetch available categories
-$category_result = $conn->query("SELECT DISTINCT category FROM products");
+// Close the connection after we're done with it
+$conn->close();
+
+// Make sure we have at least an empty array to avoid errors
+if (empty($products)) {
+    $products = [];
+}
+
+// Debug information - set to true to enable debugging
+$debug_mode = false;
+if ($debug_mode) {
+    echo '<div class="alert alert-warning" style="margin-top: 20px;">';
+    echo '<h4>Debug Information</h4>';
+    echo '<p>This is only visible when debug mode is enabled.</p>';
+    echo '<hr>';
+    echo '<h5>Session Data:</h5>';
+    echo '<pre>'; print_r($_SESSION); echo '</pre>';
+    echo '<h5>Products Data:</h5>';
+    echo '<pre>'; print_r($products); echo '</pre>';
+    echo '<h5>Database Connection:</h5>';
+    echo 'Connection Status: ' . ($conn->connect_errno ? 'Error: ' . $conn->connect_error : 'Connected');
+    echo '</div>';
+}
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Products | Top Exchange Food Corp</title>
-    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="css/style.css">
-    <link rel="stylesheet" href="css/responsive.css">
-    <link rel="icon" href="images/fevicon.png" type="image/gif" />
-    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        :root {
-            --primary-color:#9a7432;
-            --secondary-color: #e74c3c;
-            --accent-color: #f39c12;
-            --light-bg: #f8f9fa;
-            --dark-text: #2c3e50;
-            --light-text: #7f8c8d;
-            --white: #ffffff;
-            --border-radius: 8px;
-            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            --transition: all 0.3s ease;
+<!-- Add jQuery and Bootstrap JS at the top -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js"></script>
+
+<style>
+    /* Reset some styles that might conflict with the header */
+    body {
+        padding-top: 0;
+    }
+
+    /* Main content styling */
+    .ordering-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #fff;
+    }
+
+    .page-title {
+        color: #9a7432;
+        margin-bottom: 30px;
+        font-weight: 700;
+        text-align: center;
+        font-size: 2.5rem;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    /* Category sections */
+    .category-section {
+        margin-bottom: 40px;
+    }
+
+    .category-title {
+        background-color: #9a7432;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    /* Product cards */
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    .product-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    }
+
+    .product-image-container {
+        height: 200px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f9f9f9;
+    }
+
+    .product-image {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        padding: 10px;
+    }
+
+    .product-info {
+        padding: 15px;
+    }
+
+    .product-name {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+        font-size: 1.1rem;
+    }
+
+    .product-packaging {
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+    }
+
+    .product-price {
+        font-weight: 700;
+        color: #9a7432;
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+    }
+
+    .add-to-cart-btn {
+        background-color: #9a7432;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 100%;
+        transition: background-color 0.3s;
+        font-weight: 500;
+    }
+
+    .add-to-cart-btn:hover {
+        background-color: #b08a3e;
+    }
+
+    /* Login indicator for add to cart button */
+    .add-to-cart-btn.login-required {
+        background-color: #6c757d;
+    }
+
+    .add-to-cart-btn.login-required:hover {
+        background-color: #5a6268;
+    }
+
+    /* Quantity controls */
+    .quantity-controls {
+        display: flex;
+        margin-bottom: 15px;
+        align-items: center;
+    }
+
+    .quantity-btn {
+        width: 30px;
+        height: 30px;
+        background-color: #f0f0f0;
+        border: none;
+        font-size: 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .quantity-input {
+        width: 50px;
+        height: 30px;
+        text-align: center;
+        border: 1px solid #ddd;
+        margin: 0 5px;
+        -moz-appearance: textfield;
+    }
+
+    .quantity-input::-webkit-outer-spin-button,
+    .quantity-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    /* Search and filter section */
+    .search-filter-section {
+        margin-bottom: 30px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: center;
+    }
+
+    .search-box {
+        flex: 1;
+        min-width: 250px;
+        position: relative;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 10px 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding-left: 40px;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #777;
+    }
+
+    .clear-search {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #aaa;
+        cursor: pointer;
+        padding: 0;
+        font-size: 14px;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    .clear-search:hover {
+        color: #9a7432;
+        background-color: rgba(154, 116, 50, 0.1);
+    }
+
+    .category-filter {
+        min-width: 200px;
+    }
+
+    .category-filter select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .product-grid {
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         }
 
-        .custom-popup {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background-color: var(--accent-color);
-            color: var(--white);
-            padding: 15px 25px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            z-index: 9999;
-            display: none;
-            animation: slideIn 0.5s forwards, fadeOut 0.5s forwards 2.5s;
-            max-width: 300px;
-            font-size: 14px;
+        .page-title {
+            font-size: 2rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .product-grid {
+            grid-template-columns: 1fr;
         }
 
-        .custom-popup.error {
-            background-color: var(--secondary-color);
-        }
-
-        @keyframes slideIn {
-            from { right: -100%; opacity: 0; }
-            to { right: 20px; opacity: 1; }
-        }
-
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-        
-        .badge-danger {
-            background-color: var(--secondary-color);
-            color: var(--white);
-            border-radius: 50%;
-            padding: 3px 6px;
-            font-size: 12px;
-            position: relative;
-            top: -10px;
-            left: -5px;
-        }
-        
-        .filter-section {
-            background-color: var(--white);
-            padding: 25px;
-            border-radius: var(--border-radius);
-            margin-bottom: 30px;
-            box-shadow: var(--box-shadow);
-        }
-        
-        .filter-section h2 {
-            color: var(--primary-color);
-            margin-bottom: 20px;
-            font-weight: 600;
-            font-size: 1.5rem;
-        }
-        
-        .filter-group {
-            margin-bottom: 20px;
-        }
-        
-        .filter-group label {
-            font-weight: 500;
-            margin-bottom: 8px;
-            display: block;
-            color: var(--dark-text);
-            font-size: 0.9rem;
-        }
-        
-        .form-control, .form-select {
-            border-radius: var(--border-radius);
-            border: 1px solid #ddd;
-            padding: 10px 15px;
-            font-size: 0.9rem;
-            transition: var(--transition);
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 0.25rem rgba(243, 156, 18, 0.25);
-        }
-        
-        .price-range-inputs {
-            display: flex;
-            gap: 15px;
-        }
-        
-        .price-range-inputs input {
-            flex: 1;
-        }
-        
-        .filter-actions {
-            margin-top: 25px;
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            border-radius: var(--border-radius);
-            padding: 10px 20px;
-            font-weight: 500;
-            transition: var(--transition);
-        }
-        
-        .btn-primary {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-        
-        .btn-primary:hover {
-            background-color: #1a252f;
-            border-color: #1a252f;
-        }
-        
-        .btn-outline-secondary {
-            color: var(--primary-color);
-            border-color: #ddd;
-        }
-        
-        .btn-outline-secondary:hover {
-            background-color: var(--light-bg);
-            border-color: #ccc;
-        }
-        
-        .search-box {
-            position: relative;
-            margin-bottom: 25px;
-        }
-        
-        .search-box .fas {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--light-text);
-        }
-        
-        .search-box input {
-            padding-left: 45px;
-            border-radius: var(--border-radius);
-        }
-        
-        .cream_box {
-            background: var(--white);
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: var(--box-shadow);
-            transition: var(--transition);
-            margin-bottom: 25px;
-            height: 100%;
-            display: flex;
+        .search-filter-section {
             flex-direction: column;
         }
-        
-        .cream_box:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-        }
-        
-        .cream_img {
-            height: 200px;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        .cream_img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: var(--transition);
-        }
-        
-        .cream_box:hover .cream_img img {
-            transform: scale(1.05);
-        }
-        
-        .price_text {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background-color: var(--accent-color);
-            color: var(--white);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        
-        .cream_box_content {
-            padding: 20px;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .strawberry_text {
-            color: var(--primary-color);
-            font-weight: 600;
-            margin-bottom: 10px;
-            font-size: 1.1rem;
-        }
-        
-        .cream_text {
-            color: var(--light-text);
-            font-size: 0.9rem;
-            margin-bottom: 15px;
-        }
-        
-        .cart_bt {
-            margin-top: auto;
-        }
-        
-        .add-to-cart, .login-to-order {
-            display: block;
-            text-align: center;
-            padding: 10px;
-            border-radius: var(--border-radius);
-            font-weight: 500;
-            transition: var(--transition);
-            width: 100%;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        
-        .add-to-cart {
-            background-color: var(--primary-color);
-            color: var(--white);
-            border: 1px solid var(--primary-color);
-        }
-        
-        .add-to-cart:hover {
-            background-color: #1a252f;
-            color: var(--white);
-        }
-        
-        .login-to-order {
-            background-color: var(--light-bg);
-            color: var(--dark-text);
-            border: 1px solid #ddd;
-        }
-        
-        .login-to-order:hover {
-            background-color: #e9ecef;
-            color: var(--dark-text);
-        }
-        
-        .no-results {
-            text-align: center;
-            padding: 50px 20px;
-            background-color: var(--white);
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            margin-bottom: 30px;
-        }
-        
-        .no-results i {
-            font-size: 3rem;
-            color: #ddd;
-            margin-bottom: 20px;
-        }
-        
-        .no-results h4 {
-            color: var(--primary-color);
-            margin-bottom: 10px;
-        }
-        
-        .no-results p {
-            color: var(--light-text);
-        }
-        
-        .loading-spinner {
-            display: none;
-            text-align: center;
-            padding: 20px;
-        }
-        
-        .spinner-border {
-            width: 3rem;
-            height: 3rem;
-            color: var(--primary-color);
-        }
-        
-        a:focus, button:focus, input:focus, select:focus {
-            outline: 3px solid var(--accent-color);
-            outline-offset: 2px;
-        }
-        
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border-width: 0;
-        }
-        
-        @media (max-width: 768px) {
-            .price-range-inputs {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .filter-actions {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .cream_img {
-                height: 160px;
-            }
-        }
-        
-        .variant-selector {
-            margin-bottom: 15px;
-        }
-        
-        .variant-selector select {
-            width: 100%;
-            padding: 8px 12px;
-            border-radius: var(--border-radius);
-            border: 1px solid #ddd;
-            background-color: var(--white);
-            color: var(--dark-text);
-            font-size: 0.9rem;
-            transition: var(--transition);
-        }
-        
-        .variant-selector select:focus {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 0.25rem rgba(243, 156, 18, 0.25);
-        }
-        
-        .price-slider-container {
-            margin-top: 10px;
-        }
-        
-        .price-slider {
-            width: 100%;
-            height: 5px;
-            border-radius: 5px;
-            background: #ddd;
-            outline: none;
-            -webkit-appearance: none;
-        }
-        
-        .price-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--primary-color);
-            cursor: pointer;
-        }
-        
-        .price-slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: var(--primary-color);
-            cursor: pointer;
-        }
-        
-        .price-slider-values {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 5px;
-            font-size: 0.8rem;
-            color: var(--light-text);
-        }
-    </style>
-</head>
-<body>
 
-<!-- Include external header -->
-<?php include('header.php'); ?>
+        .search-box, .category-filter {
+            width: 100%;
+        }
+    }
+</style>
 
-<?php if (isset($_SESSION['username'])): ?>
-<!-- Cart Modal -->
-<div class="modal fade" id="cartModal" tabindex="-1" role="dialog" aria-labelledby="cartModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="cartModalLabel">Your Shopping Cart</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="empty-cart-message" class="text-center py-4" style="display: <?php echo empty($_SESSION['cart']) ? 'block' : 'none'; ?>;">
-                    <i class="fas fa-shopping-cart fa-4x mb-3" style="color: #ddd;"></i>
-                    <h4>Your cart is empty</h4>
-                    <p>Start shopping to add items to your cart</p>
-                </div>
-                <div id="cart-items-container" style="display: <?php echo empty($_SESSION['cart']) ? 'none' : 'block'; ?>;">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 120px;">Product</th>
-                                    <th>Description</th>
-                                    <th style="width: 100px;">Price</th>
-                                    <th style="width: 150px;">Quantity</th>
-                                    <th style="width: 100px;">Subtotal</th>
-                                    <th style="width: 40px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="cart-items-list">
-                                <?php if (!empty($_SESSION['cart'])): ?>
-                                    <?php 
-                                    $subtotal = 0;
-                                    foreach ($_SESSION['cart'] as $productId => $item): 
-                                        $itemSubtotal = $item['price'] * $item['quantity'];
-                                        $subtotal += $itemSubtotal;
-                                    ?>
-                                        <tr>
-                                            <td>
-                                                <img src="<?php echo htmlspecialchars($item['image_path'] ?? 'images/default-product.jpg'); ?>" 
-                                                     alt="<?php echo htmlspecialchars($item['name']); ?>" 
-                                                     style="width: 80px; height: 80px; object-fit: cover;">
-                                            </td>
-                                            <td>
-                                                <h6><?php echo htmlspecialchars($item['name']); ?></h6>
-                                                <small class="text-muted"><?php echo htmlspecialchars($item['packaging'] ?? ''); ?></small>
-                                            </td>
-                                            <td>₱<?php echo number_format($item['price'], 2); ?></td>
-                                            <td>
-                                                <div class="input-group">
-                                                    <div class="input-group-prepend">
-                                                        <button class="btn btn-outline-secondary decrease-quantity" 
-                                                                type="button" 
-                                                                data-product-id="<?php echo $productId; ?>"
-                                                                aria-label="Decrease quantity">
-                                                            <i class="fas fa-minus"></i>
-                                                        </button>
-                                                    </div>
-                                                    <input type="text" 
-                                                           class="form-control text-center quantity-input" 
-                                                           value="<?php echo $item['quantity']; ?>" 
-                                                           readonly
-                                                           aria-label="Quantity">
-                                                    <div class="input-group-append">
-                                                        <button class="btn btn-outline-secondary increase-quantity" 
-                                                                type="button" 
-                                                                data-product-id="<?php echo $productId; ?>"
-                                                                aria-label="Increase quantity">
-                                                            <i class="fas fa-plus"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>₱<?php echo number_format($itemSubtotal, 2); ?></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-danger remove-from-cart" 
-                                                        data-product-id="<?php echo $productId; ?>"
-                                                        aria-label="Remove item">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="special-instructions">Special Instructions</label>
-                                <textarea class="form-control" id="special-instructions" rows="3" placeholder="Any special requests or notes for your order..."></textarea>
+<div class="ordering-container">
+    <h1 class="page-title">Our Products</h1>
+
+    <?php if (!isset($_SESSION['username'])): ?>
+    <div class="alert alert-info" role="alert" style="margin-bottom: 20px;">
+        <i class="fas fa-info-circle"></i> Please <a href="/LandingPage/login.php" class="alert-link">login</a> to add products to your cart.
+    </div>
+    <?php endif; ?>
+
+    <div class="search-filter-section">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search products...">
+            <button type="button" id="clearSearch" class="clear-search" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="category-filter">
+            <select id="categoryFilter">
+                <option value="">All Categories</option>
+                <?php foreach (array_keys($products) as $category): ?>
+                    <option value="<?php echo htmlspecialchars($category); ?>"><?php echo htmlspecialchars($category); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <button type="button" id="clearFilters" class="btn btn-sm btn-outline-secondary ml-2" style="display: none;">
+            <i class="fas fa-times-circle"></i> Clear Filters
+        </button>
+    </div>
+
+    <div id="active-filters" class="mb-3" style="display: none;">
+        <span class="badge badge-pill badge-light mr-2" id="search-filter-badge" style="display: none;">
+            <i class="fas fa-search"></i> <span id="search-term-display"></span>
+            <button type="button" class="close ml-1" aria-label="Close" onclick="$('#searchInput').val('').trigger('input');">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </span>
+        <span class="badge badge-pill badge-light" id="category-filter-badge" style="display: none;">
+            <i class="fas fa-tag"></i> <span id="category-display"></span>
+            <button type="button" class="close ml-1" aria-label="Close" onclick="$('#categoryFilter').val('').trigger('change');">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </span>
+    </div>
+
+    <?php if (empty($products)): ?>
+        <div class="alert alert-info text-center my-5">
+            <i class="fas fa-info-circle fa-2x mb-3"></i>
+            <h4>No products available</h4>
+            <p>We're currently updating our product catalog. Please check back later.</p>
+            <p class="mt-3">
+                <a href="/LandingPage/index.php" class="btn btn-primary">Return to Home Page</a>
+                <button onclick="window.location.reload();" class="btn btn-outline-secondary ml-2">Refresh Page</button>
+            </p>
+        </div>
+    <?php else: ?>
+        <?php foreach ($products as $category => $categoryProducts): ?>
+            <div class="category-section" data-category="<?php echo htmlspecialchars($category); ?>">
+                <h2 class="category-title"><?php echo htmlspecialchars($category); ?></h2>
+                <div class="product-grid">
+                    <?php foreach ($categoryProducts as $product): ?>
+                        <div class="product-card" data-name="<?php echo htmlspecialchars(strtolower($product['item_description'])); ?>" data-category="<?php echo htmlspecialchars(strtolower($category)); ?>">
+                            <div class="product-image-container">
+                                <img src="<?php echo htmlspecialchars($product['product_image'] ?: '/LandingPage/images/default-product.jpg'); ?>"
+                                     alt="<?php echo htmlspecialchars($product['item_description']); ?>"
+                                     class="product-image">
+                            </div>
+                            <div class="product-info">
+                                <h3 class="product-name"><?php echo htmlspecialchars($product['item_description']); ?></h3>
+                                <p class="product-packaging"><?php echo htmlspecialchars($product['packaging']); ?></p>
+                                <p class="product-price">₱<?php echo number_format($product['price'], 2); ?></p>
+
+                                <div class="quantity-controls">
+                                    <button class="quantity-btn decrease" data-product-id="<?php echo $product['product_id']; ?>">-</button>
+                                    <input type="number" class="quantity-input" value="1" min="1" max="100"
+                                           data-product-id="<?php echo $product['product_id']; ?>">
+                                    <button class="quantity-btn increase" data-product-id="<?php echo $product['product_id']; ?>">+</button>
+                                </div>
+
+                                <button class="add-to-cart-btn"
+                                        data-product-id="<?php echo $product['product_id']; ?>"
+                                        data-product-name="<?php echo htmlspecialchars($product['item_description']); ?>"
+                                        data-product-price="<?php echo $product['price']; ?>"
+                                        data-product-image="<?php echo htmlspecialchars($product['product_image'] ?: '/LandingPage/images/default-product.jpg'); ?>"
+                                        data-product-packaging="<?php echo htmlspecialchars($product['packaging']); ?>">
+                                    <?php echo isset($_SESSION['username']) ? 'Add to Cart' : 'Login to Add to Cart'; ?>
+                                </button>
                             </div>
                         </div>
-                        <div class="col-md-6 text-right">
-                            <div class="order-summary">
-                                <h5>Order Summary</h5>
-                                <div class="d-flex justify-content-between">
-                                    <span>Subtotal:</span>
-                                    <span id="subtotal-amount">₱<?php echo number_format($subtotal ?? 0, 2); ?></span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span>Delivery Fee:</span>
-                                    <span id="delivery-fee">₱<?php echo number_format(($subtotal ?? 0) > 500 ? 0 : 50, 2); ?></span>
-                                </div>
-                                <hr>
-                                <div class="d-flex justify-content-between">
-                                    <strong>Total:</strong>
-                                    <strong id="total-amount">₱<?php echo number_format(($subtotal ?? 0) + (($subtotal ?? 0) > 500 ? 0 : 50), 2); ?></strong>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Continue Shopping</button>
-                <button type="button" class="btn btn-primary" id="checkout-button">Proceed to Checkout</button>
-            </div>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
-
-<div class="cream_section layout_padding">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-12">
-                <h1 class="cream_taital">Our Products</h1>
-                <p class="cream_text">Discover our high-quality selection</p>
-            </div>
-        </div>
-        
-        <!-- Filter and Search Section -->
-        <div class="filter-section">
-            <h2><i class="fas fa-sliders-h me-2"></i>Filter Products</h2>
-            <div class="row">
-                <div class="col-md-12 search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="search-input" class="form-control" placeholder="Search products by name or category..." 
-                           value="<?php echo htmlspecialchars($search); ?>" aria-label="Search products">
-                </div>
-                
-                <div class="col-md-4 col-lg-3 filter-group">
-                    <label for="category-filter"><i class="fas fa-tags me-2"></i>Category</label>
-                    <select id="category-filter" class="form-select">
-                        <option value="">All Categories</option>
-                        <?php while ($row = $category_result->fetch_assoc()): ?>
-                            <option value="<?= htmlspecialchars($row['category']) ?>" <?= $category == $row['category'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($row['category']) ?>
-                            </option>
-                        <?php endwhile; ?>
-                    </select>
-                </div>
-                
-                <div class="col-md-8 col-lg-6 filter-group">
-                    <label><span class="me-2">₱</span>Price Range</label>
-                    <div class="price-slider-container">
-                        <input type="range" class="price-slider" id="price-range" min="0" max="1000" step="10" 
-                               value="<?php echo !empty($max_price) ? $max_price : 1000; ?>">
-                        <div class="price-slider-values">
-                            <span id="min-price-value">₱0</span>
-                            <span id="max-price-value">₱<?php echo !empty($max_price) ? $max_price : '1000'; ?></span>
-                        </div>
-                    </div>
-                    <div class="price-range-inputs mt-2">
-                        <input type="number" id="min-price-input" class="form-control" placeholder="Min price" 
-                               value="<?php echo htmlspecialchars($min_price); ?>" aria-label="Minimum price" min="0">
-                        <input type="number" id="max-price-input" class="form-control" placeholder="Max price" 
-                               value="<?php echo htmlspecialchars($max_price); ?>" aria-label="Maximum price" min="0">
-                    </div>
-                </div>
-                
-                <div class="col-md-12 filter-actions">
-                    <button type="button" id="reset-filters" class="btn btn-outline-secondary">
-                        <i class="fas fa-times me-2"></i>Reset Filters
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Loading Spinner -->
-        <div class="loading-spinner" id="loading-spinner">
-            <div class="spinner-border" role="status">
-                <span class="sr-only">Loading...</span>
-            </div>
-            <p class="mt-2">Loading products...</p>
-        </div>
-
-        <!-- Products Container -->
-        <div class="cream_section_2" id="products-container">
-            <div class="row">
-                <?php if (!empty($groupedProducts)): ?>
-                    <?php foreach ($groupedProducts as $productName => $productGroup) { 
-                        $mainProduct = $productGroup['main_product'];
-                        $variants = $productGroup['variants'];
-                        $hasVariants = !empty($variants);
-                    ?>
-                        <div class="col-md-6 col-lg-4 mb-4">
-                            <div class="cream_box">
-                                <div class="cream_img">
-                                    <img src="<?php echo htmlspecialchars($mainProduct['image_path'] ?? 'images/default-product.jpg'); ?>" alt="<?php echo htmlspecialchars($productName); ?>" id="product-image-<?php echo $mainProduct['product_id']; ?>">
-                                    <div class="price_text" id="product-price-<?php echo $mainProduct['product_id']; ?>">
-                                        ₱<?php echo isset($mainProduct['price']) ? number_format($mainProduct['price'], 2) : '0.00'; ?>
-                                    </div>
-                                </div>
-                                <div class="cream_box_content">
-                                    <h6 class="strawberry_text">
-                                        <?php echo htmlspecialchars($productName); ?>
-                                    </h6>
-                                    <p class="cream_text" id="product-packaging-<?php echo $mainProduct['product_id']; ?>">
-                                        <i class="fas fa-box me-2"></i>Packaging: <?php echo isset($mainProduct['packaging']) ? htmlspecialchars($mainProduct['packaging']) : 'N/A'; ?>
-                                    </p>
-                                    
-                                    <?php if ($hasVariants): ?>
-                                    <div class="variant-selector">
-                                        <label for="variant-select-<?php echo $mainProduct['product_id']; ?>">Select Variant:</label>
-                                        <select id="variant-select-<?php echo $mainProduct['product_id']; ?>" class="form-select variant-dropdown" 
-                                                data-product-container="product-container-<?php echo $mainProduct['product_id']; ?>">
-                                            <option value="<?php echo $mainProduct['product_id']; ?>" 
-                                                    data-price="<?php echo $mainProduct['price']; ?>"
-                                                    data-packaging="<?php echo htmlspecialchars($mainProduct['packaging']); ?>"
-                                                    data-image="<?php echo htmlspecialchars($mainProduct['image_path'] ?? 'images/default-product.jpg'); ?>"
-                                                    data-name="<?php echo htmlspecialchars($mainProduct['item_description']); ?>" selected>
-                                                <?php echo htmlspecialchars($mainProduct['item_description']); ?> - ₱<?php echo number_format($mainProduct['price'], 2); ?>
-                                            </option>
-                                            <?php foreach ($variants as $variant): ?>
-                                            <option value="<?php echo $variant['product_id']; ?>" 
-                                                    data-price="<?php echo $variant['price']; ?>"
-                                                    data-packaging="<?php echo htmlspecialchars($variant['packaging']); ?>"
-                                                    data-image="<?php echo htmlspecialchars($variant['image_path'] ?? 'images/default-product.jpg'); ?>"
-                                                    data-name="<?php echo htmlspecialchars($variant['item_description']); ?>">
-                                                <?php echo htmlspecialchars($variant['item_description']); ?> - ₱<?php echo number_format($variant['price'], 2); ?>
-                                            </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                    <?php endif; ?>
-                                    
-                                    <div class="cart_bt">
-                                        <?php if (isset($_SESSION['username'])): ?>
-                                            <button class="add-to-cart" 
-                                                data-product-id="<?php echo $mainProduct['product_id']; ?>" 
-                                                data-product-name="<?php echo htmlspecialchars($mainProduct['item_description']); ?>" 
-                                                data-product-price="<?php echo $mainProduct['price']; ?>" 
-                                                data-image-path="<?php echo htmlspecialchars($mainProduct['image_path'] ?? 'images/default-product.jpg'); ?>" 
-                                                data-packaging="<?php echo htmlspecialchars($mainProduct['packaging']); ?>"
-                                                id="add-to-cart-<?php echo $mainProduct['product_id']; ?>">
-                                                <i class="fas fa-cart-plus me-2"></i>Add To Cart
-                                            </button>
-                                        <?php else: ?>
-                                            <a href="login.php" class="login-to-order">
-                                                <i class="fas fa-sign-in-alt me-2"></i>Login to Order
-                                            </a>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    <?php } ?>
-                <?php else: ?>
-                    <div class="col-md-12">
-                        <div class="no-results">
-                            <i class="fas fa-search fa-4x"></i>
-                            <h4>No products found</h4>
-                            <p>We couldn't find any products matching your criteria. Try adjusting your filters.</p>
-                        </div>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
 </div>
 
-<!-- Custom Popup Message -->
-<div id="customPopup" class="custom-popup" role="alert" aria-live="assertive">
-    <div class="popup-content">
-        <span id="popupMessage"></span>
-    </div>
-</div>
-
-<!-- Include external footer -->
-<?php include('footer.php'); ?>
-
-<?php $conn->close(); ?>
-
-<script src="js/jquery.min.js"></script>
-<script src="js/bootstrap.bundle.min.js"></script>
 <script>
-    // Function to show custom popup message
-    function showPopup(message, isError = false) {
-        const popup = $('#customPopup');
-        const popupMessage = $('#popupMessage');
-        
-        popupMessage.text(message);
-        popup.removeClass('error');
-        
-        if (isError) {
-            popup.addClass('error');
-        }
-        
-        // Reset animation by briefly showing/hiding
-        popup.hide().show();
-        
-        // Automatically hide after 3 seconds
-        setTimeout(() => {
-            popup.hide();
-        }, 3000);
+$(document).ready(function() {
+    // Check if user is logged in
+    const isLoggedIn = <?php echo isset($_SESSION['username']) ? 'true' : 'false'; ?>;
+
+    // Apply login-required class to buttons if user is not logged in
+    if (!isLoggedIn) {
+        $('.add-to-cart-btn').addClass('login-required');
     }
 
-    // Function to update URL parameters without reloading
-    function updateUrlParams(params) {
-        const url = new URL(window.location.href);
-        Object.keys(params).forEach(key => {
-            if (params[key]) {
-                url.searchParams.set(key, params[key]);
+    // Initialize search and filter state
+    let currentSearchTerm = '';
+    let currentCategory = '';
+
+    // Function to update the clear search button visibility
+    function updateClearSearchButton() {
+        if ($('#searchInput').val().trim() !== '') {
+            $('#clearSearch').show();
+        } else {
+            $('#clearSearch').hide();
+        }
+    }
+
+    // Clear search button functionality
+    $('#clearSearch').on('click', function() {
+        $('#searchInput').val('');
+        $('#searchInput').trigger('input');
+        $(this).hide();
+    });
+
+    // Update clear button on input
+    $('#searchInput').on('input', function() {
+        updateClearSearchButton();
+    });
+
+    // Function to update filter badges and clear filters button
+    function updateFilterDisplay() {
+        const searchTerm = $('#searchInput').val().trim();
+        const selectedCategory = $('#categoryFilter').val();
+
+        // Update search filter badge
+        if (searchTerm !== '') {
+            $('#search-term-display').text(searchTerm);
+            $('#search-filter-badge').show();
+        } else {
+            $('#search-filter-badge').hide();
+        }
+
+        // Update category filter badge
+        if (selectedCategory !== '') {
+            $('#category-display').text(selectedCategory);
+            $('#category-filter-badge').show();
+        } else {
+            $('#category-filter-badge').hide();
+        }
+
+        // Show/hide active filters container and clear filters button
+        if (searchTerm !== '' || selectedCategory !== '') {
+            $('#active-filters').show();
+            $('#clearFilters').show();
+        } else {
+            $('#active-filters').hide();
+            $('#clearFilters').hide();
+        }
+    }
+
+    // Clear all filters button
+    $('#clearFilters').on('click', function() {
+        $('#searchInput').val('');
+        $('#categoryFilter').val('');
+
+        // Trigger events to update the UI
+        $('#searchInput').trigger('input');
+        $('#categoryFilter').trigger('change');
+
+        // Hide filter badges and clear button
+        $('#active-filters').hide();
+        $(this).hide();
+
+        showPopup('All filters cleared');
+    });
+
+    // Search functionality
+    $('#searchInput').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase().trim();
+        currentSearchTerm = searchTerm;
+
+        // Update filter display
+        updateFilterDisplay();
+
+        // If search is empty, show all products (or respect category filter)
+        if (searchTerm === '') {
+            // Get the current category filter value
+            const selectedCategory = $('#categoryFilter').val();
+
+            if (selectedCategory === '') {
+                // If no category is selected, show all products
+                $('.product-card').show();
+                $('.category-section').show();
             } else {
-                url.searchParams.delete(key);
+                // If a category is selected, only show products from that category
+                $('.category-section').hide();
+                $(`.category-section[data-category="${selectedCategory}"]`).show();
+
+                $('.product-card').hide();
+                $(`.product-card[data-category="${selectedCategory.toLowerCase()}"]`).show();
+            }
+            return;
+        }
+
+        // Filter products based on search term
+        $('.product-card').each(function() {
+            const productName = $(this).data('name') || '';
+            const productCategory = $(this).data('category') || '';
+            const productInfo = $(this).find('.product-name').text().toLowerCase() + ' ' +
+                               $(this).find('.product-packaging').text().toLowerCase();
+
+            // Check if product name, category, or any product info contains the search term
+            if (productName.includes(searchTerm) ||
+                productCategory.includes(searchTerm) ||
+                productInfo.includes(searchTerm)) {
+                $(this).show();
+            } else {
+                $(this).hide();
             }
         });
-        window.history.pushState({}, '', url);
-    }
 
-    // Function to fetch filtered products
-    function fetchFilteredProducts() {
-        const search = $('#search-input').val();
-        const category = $('#category-filter').val();
-        const minPrice = $('#min-price-input').val();
-        const maxPrice = $('#max-price-input').val();
-        
-        // Show loading spinner
-        $('#loading-spinner').show();
-        $('#products-container').hide();
-        
-        // Update URL parameters
-        updateUrlParams({
-            search: search,
-            category: category,
-            min_price: minPrice,
-            max_price: maxPrice
+        // Show/hide category sections based on visible products
+        $('.category-section').each(function() {
+            const category = $(this);
+            const visibleProducts = category.find('.product-card:visible').length;
+
+            if (visibleProducts > 0) {
+                category.show();
+            } else {
+                category.hide();
+            }
         });
-        
+
+        // Show a message if no products match the search
+        if ($('.product-card:visible').length === 0) {
+            if ($('#no-results-message').length === 0) {
+                $('.ordering-container').append(
+                    '<div id="no-results-message" class="alert alert-info text-center my-4">' +
+                    '<i class="fas fa-search mr-2"></i> No products found matching "' + searchTerm + '"</div>'
+                );
+            } else {
+                $('#no-results-message').html(
+                    '<i class="fas fa-search mr-2"></i> No products found matching "' + searchTerm + '"'
+                ).show();
+            }
+        } else {
+            $('#no-results-message').hide();
+        }
+    });
+
+    // Category filter functionality
+    $('#categoryFilter').on('change', function() {
+        const selectedCategory = $(this).val();
+        currentCategory = selectedCategory;
+
+        // Clear any existing search
+        $('#searchInput').val('');
+        $('#no-results-message').hide();
+
+        // Update filter display
+        updateFilterDisplay();
+
+        if (selectedCategory === '') {
+            // Show all categories and products
+            $('.category-section').show();
+            $('.product-card').show();
+        } else {
+            // Hide all categories first
+            $('.category-section').hide();
+            // Show only the selected category
+            $(`.category-section[data-category="${selectedCategory}"]`).show();
+
+            // Hide all products first
+            $('.product-card').hide();
+            // Show only products in the selected category
+            $(`.product-card[data-category="${selectedCategory.toLowerCase()}"]`).show();
+        }
+
+        // Show a message if the category is empty
+        if (selectedCategory !== '' && $(`.product-card[data-category="${selectedCategory.toLowerCase()}"]:visible`).length === 0) {
+            if ($('#no-results-message').length === 0) {
+                $('.ordering-container').append(
+                    '<div id="no-results-message" class="alert alert-info text-center my-4">' +
+                    '<i class="fas fa-info-circle mr-2"></i> No products found in the "' + selectedCategory + '" category</div>'
+                );
+            } else {
+                $('#no-results-message').html(
+                    '<i class="fas fa-info-circle mr-2"></i> No products found in the "' + selectedCategory + '" category'
+                ).show();
+            }
+        }
+
+        // Show a success message when filter is applied
+        if (selectedCategory !== '') {
+            showPopup(`Showing products in "${selectedCategory}" category`);
+        } else {
+            showPopup('Showing all products');
+        }
+
+        // Update clear search button visibility
+        updateClearSearchButton();
+    });
+
+    // Quantity controls - using event delegation for better reliability
+    $(document).on('click', '.quantity-btn', function() {
+        console.log('Quantity button clicked:', this);
+
+        // Find the quantity input within the same quantity-controls div
+        const quantityControls = $(this).closest('.quantity-controls');
+        const input = quantityControls.find('.quantity-input');
+
+        console.log('Found input:', input);
+
+        let quantity = parseInt(input.val()) || 1;
+
+        if ($(this).hasClass('decrease')) {
+            if (quantity > 1) {
+                quantity--;
+                input.val(quantity);
+                console.log('Decreased quantity to: ' + quantity);
+            }
+        } else if ($(this).hasClass('increase')) {
+            if (quantity < 100) {
+                quantity++;
+                input.val(quantity);
+                console.log('Increased quantity to: ' + quantity);
+            }
+        }
+    });
+
+    // Quantity input validation - using event delegation
+    $(document).on('change', '.quantity-input', function() {
+        let quantity = parseInt($(this).val());
+
+        if (isNaN(quantity) || quantity < 1) {
+            $(this).val(1);
+        } else if (quantity > 100) {
+            $(this).val(100);
+        }
+
+        console.log('Quantity changed to: ' + $(this).val());
+    });
+
+    // Add to cart functionality - using event delegation for better reliability
+    $(document).on('click', '.add-to-cart-btn', function() {
+        console.log('Add to cart button clicked');
+
+        // Check if user is logged in
+        if (!isLoggedIn) {
+            // Show login prompt
+            showPopup('Please login to add items to cart', true);
+
+            // Redirect to login page after a short delay
+            setTimeout(function() {
+                window.location.href = '/LandingPage/login.php';
+            }, 2000);
+
+            return;
+        }
+
+        const button = $(this);
+        const productId = button.data('product-id');
+        const productName = button.data('product-name');
+        const productPrice = button.data('product-price');
+        const productImage = button.data('product-image');
+        const productPackaging = button.data('product-packaging');
+
+        // Find the quantity input - need to look in parent container first
+        const productCard = button.closest('.product-info');
+        const quantityControls = productCard.find('.quantity-controls');
+        const quantityInput = quantityControls.find('.quantity-input');
+
+        console.log('Product card:', productCard);
+        console.log('Quantity controls:', quantityControls);
+        console.log('Quantity input:', quantityInput);
+
+        // Default to 1 if we can't find the input or parse the value
+        let quantity = 1;
+        if (quantityInput.length > 0) {
+            quantity = parseInt(quantityInput.val()) || 1;
+        }
+
+        console.log('Adding to cart:', {
+            product_id: productId,
+            product_name: productName,
+            price: productPrice,
+            quantity: quantity
+        });
+
+        // Disable the button to prevent multiple clicks
+        button.prop('disabled', true).text('Adding...');
+
+        // Show a temporary message
+        showPopup('Adding to cart...');
+
         $.ajax({
-            url: 'fetch_products.php',
-            type: 'GET',
+            url: '/LandingPage/add_to_cart.php',
+            type: 'POST',
             data: {
-                search: search,
-                category: category,
-                min_price: minPrice,
-                max_price: maxPrice
+                product_id: productId,
+                product_name: productName,
+                price: productPrice,
+                image_path: productImage,
+                packaging: productPackaging,
+                quantity: quantity
             },
             success: function(response) {
-                $('#products-container').html(response);
-                $('#loading-spinner').hide();
-                $('#products-container').fadeIn();
+                console.log('Response received:', response);
+
+                try {
+                    const result = JSON.parse(response);
+                    if (result.success) {
+                        // Update cart count
+                        $('#cart-count').text(result.cart_count);
+
+                        // Show success message
+                        showPopup('Item added to cart');
+
+                        // Reset quantity to 1
+                        quantityInput.val(1);
+                    } else {
+                        showPopup(result.message || 'Error adding to cart', true);
+                    }
+                } catch (e) {
+                    console.error('Error parsing response:', e);
+                    console.error('Raw response:', response);
+                    showPopup('Error processing response from server', true);
+                }
             },
             error: function(xhr, status, error) {
-                console.error("Error fetching products:", error);
-                $('#loading-spinner').hide();
-                $('#products-container').html(`
-                    <div class="col-md-12">
-                        <div class="no-results">
-                            <i class="fas fa-exclamation-triangle fa-4x"></i>
-                            <h4>Error loading products</h4>
-                            <p>There was an error loading the products. Please try again.</p>
-                        </div>
-                    </div>
-                `).fadeIn();
+                console.error('AJAX error:', status, error);
+                console.error('Response text:', xhr.responseText);
+                showPopup('Error adding to cart: ' + error, true);
+            },
+            complete: function() {
+                // Re-enable the button
+                button.prop('disabled', false).text(isLoggedIn ? 'Add to Cart' : 'Login to Add to Cart');
             }
         });
-    }
+    });
 
-    // Price range slider functionality
-    function updatePriceSlider() {
-        const minPrice = $('#min-price-input').val() || 0;
-        const maxPrice = $('#max-price-input').val() || 1000;
-        
-        // Update slider values
-        $('#price-range').attr('min', minPrice);
-        $('#price-range').attr('max', maxPrice > 1000 ? maxPrice : 1000);
-        $('#price-range').val(maxPrice);
-        $('#max-price-value').text('₱' + maxPrice);
-        $('#min-price-value').text('₱' + minPrice);
-    }
+    // Use the global showPopup function defined at the bottom of the page
+});
+</script>
 
+<?php
+// Include the footer if you have one
+// require_once 'footer.php';
+?>
+
+<!-- jQuery and Bootstrap scripts are now loaded in the head section -->
+
+<!-- Initialize Bootstrap components -->
+<script>
+    // Initialize Bootstrap components when the page is fully loaded
     $(document).ready(function() {
-        // Initialize price slider
-        updatePriceSlider();
-        
-        // Set up event listeners for real-time filtering
-        let searchTimer;
-        $('#search-input').on('input', function() {
-            clearTimeout(searchTimer);
-            searchTimer = setTimeout(fetchFilteredProducts, 500);
-        });
-        
-        $('#category-filter').on('change', fetchFilteredProducts);
-        
-        // Price range inputs
-        $('#min-price-input, #max-price-input').on('input', function() {
-            updatePriceSlider();
-            fetchFilteredProducts();
-        });
-        
-        // Price slider
-        $('#price-range').on('input', function() {
-            $('#max-price-input').val($(this).val());
-            $('#max-price-value').text('₱' + $(this).val());
-        });
-        
-        $('#price-range').on('change', function() {
-            fetchFilteredProducts();
-        });
-        
-        // Reset filters
-        $('#reset-filters').on('click', function() {
-            $('#search-input').val('');
-            $('#category-filter').val('');
-            $('#min-price-input').val('');
-            $('#max-price-input').val('');
-            updatePriceSlider();
-            fetchFilteredProducts();
-        });
-        
-        // Add to cart handler
-        $(document).on('click', '.add-to-cart', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
+        // Initialize tooltips
+        $('[data-toggle="tooltip"]').tooltip();
 
+        // Initialize popovers
+        $('[data-toggle="popover"]').popover();
+
+        // Initialize modals
+        $('.modal').modal({
+            show: false
+        });
+
+        // Fix for cart modal
+        $(document).on('click', '.cart-button', function(e) {
+            e.preventDefault();
+            console.log('Cart button clicked');
+            $('#cartModal').modal('show');
+        });
+
+        // Cart functionality for the modal
+        $(document).on('click', '.increase-quantity', function() {
             const productId = $(this).data('product-id');
-            const productName = $(this).data('product-name');
-            const productPrice = $(this).data('product-price');
-            const imagePath = $(this).data('image-path');
-            const packaging = $(this).data('packaging');
+            updateCartItemQuantity(productId, 1);
+        });
+
+        $(document).on('click', '.decrease-quantity', function() {
+            const productId = $(this).data('product-id');
+            updateCartItemQuantity(productId, -1);
+        });
+
+        $(document).on('click', '.remove-from-cart', function() {
+            const productId = $(this).data('product-id');
+            removeCartItem(productId);
+        });
+
+        $(document).on('click', '#checkout-button', function() {
+            const specialInstructions = $('#special-instructions').val();
+            sessionStorage.setItem('specialInstructions', specialInstructions);
+            window.location.href = '/LandingPage/checkout.php';
+        });
+
+        // Function to update cart item quantity
+        function updateCartItemQuantity(productId, change) {
+            console.log('Updating cart item quantity:', productId, change);
 
             $.ajax({
-                url: 'add_to_cart.php',
+                url: '/LandingPage/update_cart_item.php',
                 type: 'POST',
                 dataType: 'json',
                 data: {
                     product_id: productId,
-                    product_name: productName,
-                    product_price: productPrice,
-                    image_path: imagePath,
-                    packaging: packaging
+                    quantity_change: change
                 },
                 success: function(response) {
+                    console.log('Update response:', response);
                     if(response.success) {
                         $('#cart-count').text(response.cart_count);
-                        showPopup(productName + " added to cart!");
-                        
-                        // Update cart modal if it's open
-                        if ($('#cartModal').hasClass('show')) {
-                            updateCartModal();
-                        }
+                        updateCartModal();
+                        showPopup("Cart updated successfully");
                     } else {
-                        showPopup(response.message || "Error adding to cart", true);
+                        showPopup(response.message || "Error updating quantity", true);
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error("Error adding product to cart:", error);
-                    showPopup("Error adding product to cart.", true);
+                    console.error("Error updating cart item:", error);
+                    showPopup("Error updating cart item.", true);
                 }
             });
-        });
+        }
 
-        // Variant selection handler
-        $(document).on('change', '.variant-dropdown', function() {
-            const selectedOption = $(this).find('option:selected');
-            const mainProductId = $(this).attr('id').replace('variant-select-', '');
-            
-            const variantId = selectedOption.val();
-            const variantName = selectedOption.data('name');
-            const variantPrice = selectedOption.data('price');
-            const variantPackaging = selectedOption.data('packaging');
-            const variantImage = selectedOption.data('image');
-            
-            // Update price text
-            $('#product-price-' + mainProductId).text('₱' + parseFloat(variantPrice).toFixed(2));
-            
-            // Update packaging display
-            $('#product-packaging-' + mainProductId).html('<i class="fas fa-box me-2"></i>Packaging: ' + variantPackaging);
-            
-            // Update image if exists
-            if (variantImage) {
-                $('#product-image-' + mainProductId).attr('src', variantImage);
-            }
-            
-            // Update add to cart button with variant data
-            $('#add-to-cart-' + mainProductId)
-                .data('product-id', variantId)
-                .data('product-name', variantName)
-                .data('product-price', variantPrice)
-                .data('packaging', variantPackaging)
-                .data('image-path', variantImage);
-        });
+        // Function to remove cart item
+        function removeCartItem(productId) {
+            console.log('Removing cart item:', productId);
+
+            $.ajax({
+                url: '/LandingPage/remove_cart_item.php',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    product_id: productId
+                },
+                success: function(response) {
+                    console.log('Remove response:', response);
+                    if(response.success) {
+                        $('#cart-count').text(response.cart_count);
+                        updateCartModal();
+                        showPopup("Item removed from cart");
+                    } else {
+                        showPopup(response.message || "Error removing item", true);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error removing cart item:", error);
+                    showPopup("Error removing cart item.", true);
+                }
+            });
+        }
 
         // Function to update the cart modal
         function updateCartModal() {
+            console.log('Updating cart modal');
+
             $.ajax({
-                url: 'fetch_cart_items.php',
+                url: '/LandingPage/fetch_cart_items.php',
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
+                    console.log('Cart items response:', response);
                     if(response && response.cart_items !== undefined) {
                         if(response.cart_items.length === 0) {
                             $('#empty-cart-message').show();
@@ -1021,21 +878,21 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                         } else {
                             $('#empty-cart-message').hide();
                             $('#cart-items-container').show();
-                            
+
                             let cartItemsHtml = '';
                             let subtotal = 0;
-                            
+
                             response.cart_items.forEach(item => {
                                 const price = parseFloat(item.price);
                                 const itemSubtotal = price * item.quantity;
                                 subtotal += itemSubtotal;
-                                
+
                                 cartItemsHtml += `
                                     <tr>
                                         <td>
-                                            <img src="${item.image_path || 'images/default-product.jpg'}" 
-                                                 alt="${item.name}" 
-                                                 style="width: 80px; height: 80px; object-fit: cover;">
+                                            <img src="${item.image_path || '/LandingPage/images/default-product.jpg'}"
+                                                 alt="${item.name}"
+                                                 style="width: 80px; height: 80px; object-fit: contain;">
                                         </td>
                                         <td>
                                             <h6>${item.name}</h6>
@@ -1045,34 +902,30 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
                                         <td>
                                             <div class="input-group">
                                                 <div class="input-group-prepend">
-                                                    <button class="btn btn-outline-secondary decrease-quantity" 
-                                                            type="button" 
-                                                            data-product-id="${item.product_id}"
-                                                            aria-label="Decrease quantity">
-                                                        <i class="fas fa-minus"></i>
+                                                    <button class="btn btn-outline-secondary decrease-quantity"
+                                                            type="button"
+                                                            data-product-id="${item.product_id}">
+                                                        <i class="fa fa-minus"></i>
                                                     </button>
                                                 </div>
-                                                <input type="text" 
-                                                       class="form-control text-center quantity-input" 
-                                                       value="${item.quantity}" 
-                                                       readonly
-                                                       aria-label="Quantity">
+                                                <input type="text"
+                                                       class="form-control text-center quantity-input"
+                                                       value="${item.quantity}"
+                                                       readonly>
                                                 <div class="input-group-append">
-                                                    <button class="btn btn-outline-secondary increase-quantity" 
-                                                            type="button" 
-                                                            data-product-id="${item.product_id}"
-                                                            aria-label="Increase quantity">
-                                                        <i class="fas fa-plus"></i>
+                                                    <button class="btn btn-outline-secondary increase-quantity"
+                                                            type="button"
+                                                            data-product-id="${item.product_id}">
+                                                        <i class="fa fa-plus"></i>
                                                     </button>
                                                 </div>
                                             </div>
                                         </td>
                                         <td>₱${itemSubtotal.toFixed(2)}</td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-danger remove-from-cart" 
-                                                    data-product-id="${item.product_id}"
-                                                    aria-label="Remove item">
-                                                <i class="fas fa-trash"></i>
+                                            <button class="btn btn-sm btn-outline-danger remove-from-cart"
+                                                    data-product-id="${item.product_id}">
+                                                <i class="fa fa-trash"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -1081,11 +934,11 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
 
                             $('#cart-items-list').html(cartItemsHtml);
                             $('#subtotal-amount').text('₱' + subtotal.toFixed(2));
-                            
+
                             // Calculate delivery fee
                             const deliveryFee = subtotal > 500 ? 0 : 50;
                             $('#delivery-fee').text('₱' + deliveryFee.toFixed(2));
-                            
+
                             const totalAmount = subtotal + deliveryFee;
                             $('#total-amount').text('₱' + totalAmount.toFixed(2));
                         }
@@ -1102,82 +955,25 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
         $('#cartModal').on('show.bs.modal', function() {
             updateCartModal();
         });
-
-        // Quantity adjustment handlers
-        $(document).on('click', '.increase-quantity', function() {
-            const productId = $(this).data('product-id');
-            updateCartItemQuantity(productId, 1);
-        });
-
-        $(document).on('click', '.decrease-quantity', function() {
-            const productId = $(this).data('product-id');
-            updateCartItemQuantity(productId, -1);
-        });
-
-        // Remove item handler
-        $(document).on('click', '.remove-from-cart', function() {
-            const productId = $(this).data('product-id');
-            removeCartItem(productId);
-        });
-
-        // Checkout button handler
-        $(document).on('click', '#checkout-button', function() {
-            const specialInstructions = $('#special-instructions').val();
-            sessionStorage.setItem('specialInstructions', specialInstructions);
-            $('#cartModal').modal('hide');
-            window.location.href = 'checkout.php';
-        });
-
-        // Function to update cart item quantity
-        function updateCartItemQuantity(productId, change) {
-            $.ajax({
-                url: 'update_cart_item.php',
-                type: 'POST',
-                dataType: 'json',
-                data: {
-                    product_id: productId,
-                    quantity_change: change
-                },
-                success: function(response) {
-                    if(response.success) {
-                        $('#cart-count').text(response.cart_count);
-                        updateCartModal();
-                    } else {
-                        showPopup(response.message || "Error updating quantity", true);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error updating cart item:", error);
-                    showPopup("Error updating cart item.", true);
-                }
-            });
-        }
-
-        // Function to remove cart item
-        function removeCartItem(productId) {
-            $.ajax({
-                url: 'remove_cart_item.php',
-                type: 'POST',
-                dataType: 'json',
-                data: {
-                    product_id: productId
-                },
-                success: function(response) {
-                    if(response.success) {
-                        $('#cart-count').text(response.cart_count);
-                        updateCartModal();
-                        showPopup("Item removed from cart");
-                    } else {
-                        showPopup(response.message || "Error removing item", true);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error removing cart item:", error);
-                    showPopup("Error removing cart item.", true);
-                }
-            });
-        }
     });
-</script>
-</body>
-</html>
+
+    // Function to show popup messages (global scope)
+    function showPopup(message, isError = false) {
+        const popup = $('#customPopup');
+        const popupMessage = $('#popupMessage');
+
+        popupMessage.text(message);
+        popup.removeClass('error');
+
+        if (isError) {
+            popup.addClass('error');
+        }
+
+        popup.css('display', 'block');
+
+        // Hide after 3 seconds
+        setTimeout(function() {
+            popup.css('display', 'none');
+        }, 3000);
+    }
+</script>"

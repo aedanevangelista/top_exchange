@@ -24,7 +24,7 @@ if (!isset($_SESSION['cart'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1">
     <!-- site metas -->
-    <title><?php echo isset($pageTitle) ? $pageTitle : 'Top Exchange Food Corp'; ?></title> 
+    <title><?php echo isset($pageTitle) ? $pageTitle : 'Top Exchange Food Corp'; ?></title>
     <meta name="keywords" content="Filipino food, siopao, siomai, noodles, sauces, food supplier, Philippines">
     <meta name="description" content="<?php echo isset($pageDescription) ? $pageDescription : 'Premium Filipino food products since 1998. Our products, services, and company information.'; ?>">
     <meta name="author" content="Top Food Exchange Corp.">
@@ -44,7 +44,7 @@ if (!isset($_SESSION['cart'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    
+
     <style>
         /* Primary brand colors and variables */
         :root {
@@ -67,17 +67,17 @@ if (!isset($_SESSION['cart'])) {
             transition: var(--transition);
             padding: 5px 0;
         }
-        
+
         .navbar-brand:hover {
             transform: translateY(-2px);
         }
-        
+
         .navbar-brand img {
             height: 50px;
             width: auto;
             transition: var(--transition);
         }
-        
+
         .company-name {
             display: flex;
             flex-direction: column;
@@ -85,7 +85,7 @@ if (!isset($_SESSION['cart'])) {
             line-height: 1.1;
             font-family: 'Roboto', sans-serif;
         }
-        
+
         .company-name-main {
             font-size: 1.6rem;
             font-weight: 700;
@@ -99,7 +99,7 @@ if (!isset($_SESSION['cart'])) {
             position: relative;
             padding-bottom: 3px;
         }
-        
+
         .company-name-main::after {
             content: '';
             position: absolute;
@@ -112,12 +112,12 @@ if (!isset($_SESSION['cart'])) {
             transform-origin: right;
             transition: transform 0.3s ease;
         }
-        
+
         .navbar-brand:hover .company-name-main::after {
             transform: scaleX(1);
             transform-origin: left;
         }
-        
+
         .company-name-sub {
             font-size: 0.75rem;
             color: var(--secondary-color);
@@ -127,22 +127,22 @@ if (!isset($_SESSION['cart'])) {
             font-weight: 500;
             opacity: 0.8;
         }
-        
+
         @media (max-width: 992px) {
             .company-name-main {
                 font-size: 1.4rem;
             }
-            
+
             .company-name-sub {
                 font-size: 0.7rem;
                 letter-spacing: 1px;
             }
-            
+
             .navbar-brand img {
                 height: 45px;
             }
         }
-        
+
         @media (max-width: 768px) {
             .company-name {
                 display: none;
@@ -183,14 +183,14 @@ if (!isset($_SESSION['cart'])) {
             from { opacity: 1; }
             to { opacity: 0; }
         }
-        
+
         /* Enhanced Profile Dropdown Styles */
         .profile-dropdown {
             position: relative;
             display: inline-block;
             margin-left: 10px;
         }
-        
+
         .profile-dropdown-toggle {
             display: flex;
             align-items: center;
@@ -202,12 +202,12 @@ if (!isset($_SESSION['cart'])) {
             background-color: rgba(154, 116, 50, 0.1);
             border: 1px solid rgba(154, 116, 50, 0.2);
         }
-        
+
         .profile-dropdown-toggle:hover {
             background-color: rgba(154, 116, 50, 0.2);
             color: var(--primary-color);
         }
-        
+
         .profile-dropdown-toggle img {
             width: 32px;
             height: 32px;
@@ -216,7 +216,7 @@ if (!isset($_SESSION['cart'])) {
             object-fit: cover;
             border: 2px solid var(--primary-color);
         }
-        
+
         .profile-dropdown-toggle .username {
             font-weight: 500;
             max-width: 120px;
@@ -224,16 +224,16 @@ if (!isset($_SESSION['cart'])) {
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        
+
         .profile-dropdown-toggle .caret {
             margin-left: 8px;
             transition: transform 0.2s ease;
         }
-        
+
         .profile-dropdown.active .profile-dropdown-toggle .caret {
             transform: rotate(180deg);
         }
-        
+
         .profile-dropdown-menu {
             position: absolute;
             right: 0;
@@ -249,23 +249,23 @@ if (!isset($_SESSION['cart'])) {
             transform-origin: top right;
             animation: fadeIn 0.2s ease-out;
         }
-        
+
         @keyframes fadeIn {
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
-        
+
         .profile-dropdown.active .profile-dropdown-menu {
             display: block;
         }
-        
+
         .profile-dropdown-header {
             padding: 10px 15px;
             border-bottom: 1px solid rgba(0,0,0,0.05);
             display: flex;
             align-items: center;
         }
-        
+
         .profile-dropdown-header img {
             width: 40px;
             height: 40px;
@@ -274,22 +274,22 @@ if (!isset($_SESSION['cart'])) {
             object-fit: cover;
             border: 2px solid var(--primary-color);
         }
-        
+
         .profile-dropdown-header .user-info {
             line-height: 1.3;
         }
-        
+
         .profile-dropdown-header .user-name {
             font-weight: 600;
             color: var(--secondary-color);
             margin-bottom: 2px;
         }
-        
+
         .profile-dropdown-header .user-email {
             font-size: 0.8rem;
             color: #777;
         }
-        
+
         .profile-dropdown-item {
             display: flex;
             align-items: center;
@@ -299,7 +299,7 @@ if (!isset($_SESSION['cart'])) {
             transition: var(--transition);
             font-size: 0.9rem;
         }
-        
+
         .profile-dropdown-item i {
             width: 24px;
             text-align: center;
@@ -307,23 +307,23 @@ if (!isset($_SESSION['cart'])) {
             color: var(--primary-color);
             font-size: 0.9rem;
         }
-        
+
         .profile-dropdown-item:hover {
             background-color: rgba(154, 116, 50, 0.05);
             color: var(--primary-hover);
         }
-        
+
         .profile-dropdown-item.active {
             background-color: rgba(154, 116, 50, 0.1);
             color: var(--primary-color);
         }
-        
+
         .profile-dropdown-divider {
             height: 1px;
             margin: 8px 0;
             background-color: rgba(0,0,0,0.05);
         }
-        
+
         /* Responsive styles */
         @media (max-width: 768px) {
             .profile-dropdown-menu {
@@ -333,12 +333,12 @@ if (!isset($_SESSION['cart'])) {
                 margin-top: 8px;
                 width: 100%;
             }
-            
+
             .profile-dropdown-toggle {
                 padding: 6px 10px;
                 border-radius: 4px;
             }
-            
+
             .profile-dropdown-toggle .username {
                 max-width: 80px;
             }
@@ -369,7 +369,7 @@ if (!isset($_SESSION['cart'])) {
                         </li>
                         <li class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'ordering.php' ? 'active' : ''; ?>">
                             <a class="nav-link" href="/LandingPage/ordering.php">Products</a>
-                        </li>        
+                        </li>
                         <li class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'contact.php' ? 'active' : ''; ?>">
                             <a class="nav-link" href="/LandingPage/contact.php">Contact Us</a>
                         </li>
@@ -377,11 +377,11 @@ if (!isset($_SESSION['cart'])) {
                     <form class="form-inline my-2 my-lg-0">
                         <div class="login_bt">
                             <?php if (isset($_SESSION['username'])): ?>
-                                <a href="#" class="cart-button" data-toggle="modal" data-target="#cartModal">
-                                    <span style="color: #222222;"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
-                                    <span id="cart-count" class="badge badge-danger"><?php echo array_sum(array_column($_SESSION['cart'], 'quantity')); ?></span>
+                                <a href="#" class="cart-button" style="margin-right: 15px; position: relative; display: inline-block; text-decoration: none;">
+                                    <span style="color: #222222; font-size: 1.2rem;"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
+                                    <span id="cart-count" class="badge badge-danger" style="position: absolute; top: -8px; right: -8px; font-size: 0.7rem; padding: 0.25em 0.4em; border-radius: 50%;"><?php echo array_sum(array_column($_SESSION['cart'], 'quantity')); ?></span>
                                 </a>
-                                
+
                                 <!-- Enhanced Profile Dropdown -->
                                 <div class="profile-dropdown" id="profileDropdown">
                                     <a href="#" class="profile-dropdown-toggle" onclick="event.preventDefault(); document.getElementById('profileDropdown').classList.toggle('active');">
@@ -395,18 +395,18 @@ if (!isset($_SESSION['cart'])) {
                                             <div class="user-info">
                                                 <div class="user-name"><?php echo htmlspecialchars($_SESSION['username']); ?></div>
                                                 <div class="user-email">
-                                                    <?php 
+                                                    <?php
                                                     // Fetch the user's email from the database
                                                     if (isset($_SESSION['username'])) {
                                                         require_once 'db_connection.php'; // Include your database connection file
-                                                        
+
                                                         $username = $_SESSION['username'];
                                                         $query = "SELECT email FROM clients_accounts WHERE username = ?";
                                                         $stmt = $conn->prepare($query);
                                                         $stmt->bind_param("s", $username);
                                                         $stmt->execute();
                                                         $result = $stmt->get_result();
-                                                        
+
                                                         if ($result->num_rows > 0) {
                                                             $user = $result->fetch_assoc();
                                                             echo htmlspecialchars($user['email']);
@@ -417,7 +417,7 @@ if (!isset($_SESSION['cart'])) {
                                                             $stmt->bind_param("s", $username);
                                                             $stmt->execute();
                                                             $result = $stmt->get_result();
-                                                            
+
                                                             if ($result->num_rows > 0) {
                                                                 $user = $result->fetch_assoc();
                                                                 echo htmlspecialchars($user['email'] . "@topexchange.com"); // Default domain for admin accounts
@@ -426,7 +426,8 @@ if (!isset($_SESSION['cart'])) {
                                                             }
                                                         }
                                                         $stmt->close();
-                                                        $conn->close();
+                                                        // Don't close the connection here as it might be needed by the including page
+                                                        // $conn->close();
                                                     } else {
                                                         echo "Not logged in";
                                                     }
@@ -455,7 +456,7 @@ if (!isset($_SESSION['cart'])) {
                                     </div>
                                 </div>
                             <?php else: ?>
-                                <a href="/LandingPage/login.php">Login 
+                                <a href="/LandingPage/login.php">Login
                                     <span style="color: #222222;"><i class="fa fa-user" aria-hidden="true"></i></span>
                                 </a>
                             <?php endif; ?>
@@ -464,7 +465,7 @@ if (!isset($_SESSION['cart'])) {
                 </div>
             </nav>
         </div>
-        
+
         <?php if (isset($_SESSION['username'])): ?>
         <!-- Cart Modal -->
         <div class="modal fade" id="cartModal" tabindex="-1" role="dialog" aria-labelledby="cartModalLabel" aria-hidden="true">
@@ -497,15 +498,15 @@ if (!isset($_SESSION['cart'])) {
                                     </thead>
                                     <tbody id="cart-items-list">
                                         <?php if (!empty($_SESSION['cart'])): ?>
-                                            <?php 
+                                            <?php
                                             $subtotal = 0;
-                                            foreach ($_SESSION['cart'] as $productId => $item): 
+                                            foreach ($_SESSION['cart'] as $productId => $item):
                                                 $itemSubtotal = $item['price'] * $item['quantity'];
                                                 $subtotal += $itemSubtotal;
                                             ?>
                                                 <tr>
                                                     <td>
-                                                        <img src="<?php echo htmlspecialchars($item['image_path'] ?? '/LandingPage/images/default-product.jpg'); ?>" 
+                                                        <img src="<?php echo htmlspecialchars($item['image_path'] ?? '/LandingPage/images/default-product.jpg'); ?>"
                                                              style="width: 80px; height: 80px; object-fit: contain;">
                                                     </td>
                                                     <td>
@@ -516,19 +517,19 @@ if (!isset($_SESSION['cart'])) {
                                                     <td>
                                                         <div class="input-group">
                                                             <div class="input-group-prepend">
-                                                                <button class="btn btn-outline-secondary decrease-quantity" 
-                                                                        type="button" 
+                                                                <button class="btn btn-outline-secondary decrease-quantity"
+                                                                        type="button"
                                                                         data-product-id="<?php echo $productId; ?>">
                                                                     <i class="fa fa-minus"></i>
                                                                 </button>
                                                             </div>
-                                                            <input type="text" 
-                                                                   class="form-control text-center quantity-input" 
-                                                                   value="<?php echo $item['quantity']; ?>" 
+                                                            <input type="text"
+                                                                   class="form-control text-center quantity-input"
+                                                                   value="<?php echo $item['quantity']; ?>"
                                                                    readonly>
                                                             <div class="input-group-append">
-                                                                <button class="btn btn-outline-secondary increase-quantity" 
-                                                                        type="button" 
+                                                                <button class="btn btn-outline-secondary increase-quantity"
+                                                                        type="button"
                                                                         data-product-id="<?php echo $productId; ?>">
                                                                     <i class="fa fa-plus"></i>
                                                                 </button>
@@ -537,7 +538,7 @@ if (!isset($_SESSION['cart'])) {
                                                     </td>
                                                     <td>₱<?php echo number_format($itemSubtotal, 2); ?></td>
                                                     <td>
-                                                        <button class="btn btn-sm btn-outline-danger remove-from-cart" 
+                                                        <button class="btn btn-sm btn-outline-danger remove-from-cart"
                                                                 data-product-id="<?php echo $productId; ?>">
                                                             <i class="fa fa-trash"></i>
                                                         </button>
@@ -584,7 +585,7 @@ if (!isset($_SESSION['cart'])) {
             </div>
         </div>
         <?php endif; ?>
-        
+
         <!-- Custom Popup Message -->
         <div id="customPopup" class="custom-popup">
             <div class="popup-content">
