@@ -48,7 +48,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
     $product_image = $old_product_image;
 
     // *** FIX 1: Update upload directory path ***
-    $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/products/';
+    $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/admin/uploads/products/';
     if (!file_exists($upload_dir)) {
         // Note: Use 0755 for directories for better security practice
         mkdir($upload_dir, 0755, true);
@@ -133,7 +133,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
             $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
             $filename = 'product_image.' . $file_extension;
             // *** FIX 2: Update product image path for database ***
-            $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
+            $product_image_path = '/admin/uploads/products/' . $item_folder . '/' . $filename;
             $target_file_path = $item_dir . $filename;
 
             // Add a small delay to ensure file system operations are complete
