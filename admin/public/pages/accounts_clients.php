@@ -434,7 +434,17 @@ function truncate($text, $max = 15) {
         input::placeholder, textarea::placeholder { color: #aaa; padding: 4px; font-style: italic; }
         .view-address-btn, .view-contact-btn { background-color: #4a90e2; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 12px; transition: all 0.3s; }
         .view-address-btn:hover, .view-contact-btn:hover { background-color: #357abf; }
-        #addressInfoModal, #contactInfoModal { display: none; /* Hidden */ position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(0,0,0,0.7); display: flex; /* Use flex for centering */ align-items: center; justify-content: center; }
+        #addressInfoModal, #contactInfoModal {
+            display: none !important; /* Explicitly hide, using !important for override */
+            position: fixed;
+            z-index: 9999; /* Keep higher z-index if needed */
+            left: 0; top: 0; width: 100%; height: 100%;
+            overflow: hidden; /* Keep */
+            background-color: rgba(0,0,0,0.7); /* Keep */
+            /* display: flex; */ /* MAKE SURE THIS IS GONE */
+            align-items: center;     /* Keep these for when JS shows modal */
+            justify-content: center; /* Keep these for when JS shows modal */
+        }      
         .info-modal-content { background-color: #ffffff; margin: 0; padding: 0; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); width: 90%; max-width: 700px; max-height: 80vh; animation: modalFadeIn 0.3s; display: flex; flex-direction: column; /* Removed absolute positioning */ }
         @keyframes modalFadeIn { from {opacity: 0; transform: scale(0.95);} to {opacity: 1; transform: scale(1);} }
         .info-modal-header { background-color: #4a90e2; color: #fff; padding: 15px 25px; position: relative; display: flex; align-items: center; border-radius: 10px 10px 0 0; }
@@ -517,7 +527,8 @@ function truncate($text, $max = 15) {
             /* display: flex; */ /* REMOVE or COMMENT OUT this line if present */
             align-items: center;     /* Keep these */
             justify-content: center; /* Keep these */
-        }        .confirmation-content { background-color: #fefefe; padding: 25px 30px; border-radius: 8px; width: 380px; max-width: 90%; text-align: center; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); animation: modalPopIn 0.3s ease-out; }
+        }        
+        .confirmation-content { background-color: #fefefe; padding: 25px 30px; border-radius: 8px; width: 380px; max-width: 90%; text-align: center; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); animation: modalPopIn 0.3s ease-out; }
         @keyframes modalPopIn { from {transform: scale(0.8) translateY(20px); opacity: 0;} to {transform: scale(1) translateY(0); opacity: 1;} }
         .confirmation-title { font-size: 20px; margin-bottom: 15px; color: #333; font-weight: 600; }
         .confirmation-message { margin-bottom: 25px; color: #555; font-size: 14px; line-height: 1.5; }
