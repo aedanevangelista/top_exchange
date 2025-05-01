@@ -2958,49 +2958,81 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         
         // Inventory Management for Order Creation
-        function openInventoryOverlay() {
-            document.getElementById('inventoryOverlay').style.display = 'flex';
-            
-            // Fetch inventory data
-            fetch('/backend/get_inventory.php')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    populateInventory(data.inventory);
-                    populateCategories(data.categories);
-                } else {
-                    showToast('Failed to load inventory: ' + data.message, 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching inventory:', error);
-                showToast('Error fetching inventory data', 'error');
-            });
-        }
-        
         function populateInventory(inventory) {
-            const inventoryBody = document.querySelector('.inventory');
-            inventoryBody.innerHTML = '';
-            
-            inventory.forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.category || 'N/A'}</td>
-                    <td>${item.item_description}</td>
-                    <td>${item.packaging || 'N/A'}</td>
-                    <td>PHP ${parseFloat(item.price).toFixed(2)}</td>
-                    <td>
-                        <input type="number" class="inventory-quantity" min="1" max="100" value="1">
-                    </td>
-                    <td>
-                        <button class="add-to-cart-btn" onclick="addToCart(this, ${item.id}, '${item.category}', '${item.item_description}', '${item.packaging}', ${item.price})">
-                            <i class="fas fa-cart-plus"></i> Add
-                        </button>
-                    </td>
-                `;
-                inventoryBody.appendChild(row);
-            });
+    const inventoryBody = document.querySelector('.inventory');
+    inventoryBody.innerHTML = '';
+    
+    if (!inventory || inventory.length === 0) {
+        inventoryBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">No inventory items found</td></tr>';
+        return;
+    }
+    
+    inventory.forEach(item => {
+        const row = document.createElement('tr');
+        const price = parseFloat(item.price) || 0;
+        
+        row.innerHTML = `
+            <td>${item.category}</td>
+            <td>${item.item_description}</td>
+            <td>${item.packaging || ''}</td>
+            <td>PHP ${price.toFixed(2)}</td>
+            <td>
+                <input type="number" class="inventory-quantity" min="1" max="100" value="1">
+            </td>
+            <td>
+                <button class="add-to-cart-btn" onclick="addToCart(this, ${item.product_id}, '${item.category}', '${item.item_description.replace(/'/g, "\\'")}', '${(item.packaging || '').replace(/'/g, "\\'")}', ${price})">
+                    <i class="fas fa-cart-plus"></i> Add
+                </button>
+            </td>
+        `;
+        inventoryBody.appendChild(row);
+    });
+}
+
+function openInventoryOverlay() {
+    document.getElementById('inventoryOverlay').style.display = 'flex';
+    
+    const inventoryBody = document.querySelector('.inventory');
+    inventoryBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading inventory...</td></tr>';
+    
+    fetch('/backend/get_inventory.php')
+        .then(response => response.json())
+        .then(data => {
+            if (Array.isArray(data)) {
+                // Get categories directly from the data
+                const categories = [...new Set(data.map(item => item.category))].filter(Boolean);
+                
+                // Populate the inventory and categories
+                populateInventory(data);
+                populateCategories(categories);
+            } else {
+                throw new Error('Invalid data format received');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            inventoryBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error loading inventory</td></tr>`;
+        });
+}
+
+function populateCategories(categories) {
+    const filterSelect = document.getElementById('inventoryFilter');
+    
+    // Clear existing options except "All Categories"
+    while (filterSelect.options.length > 1) {
+        filterSelect.remove(1);
+    }
+    
+    // Add new categories
+    categories.forEach(category => {
+        if (category) {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            filterSelect.appendChild(option);
         }
+    });
+}
         
         function populateCategories(categories) {
             const filterSelect = document.getElementById('inventoryFilter');
