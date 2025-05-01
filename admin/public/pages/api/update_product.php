@@ -49,7 +49,7 @@ if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
     
     if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
         // Create upload directory if it doesn't exist
-        $upload_dir = __DIR__ . '/admin/uploads/products/';
+        $upload_dir = __DIR__ . '/uploads/products/';
         if (!file_exists($upload_dir)) {
             mkdir($upload_dir, 0777, true);
         }
@@ -79,7 +79,7 @@ if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
         // Save the new image
         $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
         $filename = 'product_image.' . $file_extension;
-        $product_image_path = '/admin/uploads/products/' . $item_folder . '/' . $filename;
+        $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
         
         if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
             $product_image = $product_image_path;
