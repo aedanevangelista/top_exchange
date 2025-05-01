@@ -1,93 +1,42 @@
 <?php
-// Current Date: 2025-05-01 15:13:55
-// Author: aedanevangelista
+include 'db_connection.php';
 
-session_start();
-include "../../backend/db_connection.php";
-include "../../backend/check_role.php";
-checkRole('Orders'); // Ensure the user has access to the Orders page
+header('Content-Type: application/json');
 
-// Handle sorting parameters
-$sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'order_date';
-$sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'DESC';
+try {
+    // Get products with their categories
+    $query = "SELECT product_id, category, item_description, packaging, price, stock_quantity FROM products WHERE stock_quantity > 0";
+    $result = $conn->query($query);
 
-// Validate sort column to prevent SQL injection
-$allowed_columns = ['po_number', 'username', 'order_date', 'delivery_date', 'progress', 'total_amount'];
-if (!in_array($sort_column, $allowed_columns)) {
-    $sort_column = 'order_date'; // Default sort column
-}
+    if ($result === false) {
+        throw new Exception("Error executing query: " . $conn->error);
+    }
 
-// Validate sort direction
-if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
-    $sort_direction = 'DESC'; // Default to descending
-}
-
-// Fetch active clients for the dropdown
-$clients = [];
-$clients_with_company_address = []; // Array to store clients with their company addresses
-$clients_with_company = []; // Array to store clients with their company names
-$stmt = $conn->prepare("SELECT username, company_address, company FROM clients_accounts WHERE status = 'active'");
-if ($stmt === false) {
-    die('Prepare failed: ' . htmlspecialchars($conn->error));
-}
-$stmt->execute();
-$result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $clients[] = $row['username'];
-    $clients_with_company_address[$row['username']] = $row['company_address'];
-    $clients_with_company[$row['username']] = $row['company'];
-}
-$stmt->close();
-
-// Fetch all drivers for the driver assignment dropdown
-$drivers = [];
-$stmt = $conn->prepare("SELECT id, name FROM drivers WHERE availability = 'Available' AND current_deliveries < 20 ORDER BY name");
-$stmt->execute();
-$result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $drivers[] = $row;
-}
-$stmt->close();
-
-// Modified query to show Active, Pending, and Rejected orders with sorting
-$orders = []; // Initialize $orders as an empty array
-$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress, o.driver_assigned, 
-        o.company, o.special_instructions, 
-        IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
-        FROM orders o 
-        LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
-        LEFT JOIN drivers d ON da.driver_id = d.id 
-        WHERE o.status IN ('Active', 'Pending', 'Rejected')";
-
-// Add sorting
-$sql .= " ORDER BY {$sort_column} {$sort_direction}";
-
-$stmt = $conn->prepare($sql);
-$stmt->execute();
-$result = $stmt->get_result();
-if ($result && $result->num_rows > 0) {
+    $inventory = [];
     while ($row = $result->fetch_assoc()) {
-        $orders[] = $row;
+        $inventory[] = [
+            'product_id' => $row['product_id'],
+            'category' => $row['category'],
+            'item_description' => $row['item_description'],
+            'packaging' => $row['packaging'],
+            'price' => $row['price'],
+            'stock_quantity' => $row['stock_quantity']
+        ];
     }
+
+    echo json_encode($inventory);
+
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => $e->getMessage()
+    ]);
 }
 
-// Helper function to generate sort URL
-function getSortUrl($column, $currentColumn, $currentDirection) {
-    $newDirection = ($column === $currentColumn && $currentDirection === 'ASC') ? 'DESC' : 'ASC';
-    return "?sort=" . urlencode($column) . "&direction=" . urlencode($newDirection);
-}
-
-// Helper function to display sort icon
-function getSortIcon($column, $currentColumn, $currentDirection) {
-    if ($column !== $currentColumn) {
-        return '<i class="fas fa-sort"></i>';
-    } else if ($currentDirection === 'ASC') {
-        return '<i class="fas fa-sort-up"></i>';
-    } else {
-        return '<i class="fas fa-sort-down"></i>';
-    }
-}
+$conn->close();
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2989,6 +2938,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         return response.text().then(text => {
             try {
+                // Debug log the raw response
+                console.log("Raw response:", text);
                 return JSON.parse(text);
             } catch (e) {
                 console.error("Invalid JSON response:", text);
@@ -2997,33 +2948,29 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         });
     })
     .then(data => {
-        console.log("Raw inventory data:", data); // Debug log
+        // Debug log to verify data structure
+        console.log("Parsed inventory data:", data);
         
         if (Array.isArray(data)) {
-            // Get unique categories directly from the data's category field
-            const categories = [...new Set(data.map(item => item.category))];
+            // Debug log categories
+            const categories = [...new Set(data.map(item => {
+                console.log("Item category:", item.category);
+                return item.category;
+            }))];
+            console.log("Unique categories:", categories);
             
-            // Use the data directly since it already has categories
+            // Populate inventory and categories
             populateInventory(data);
             populateCategories(categories);
             
-            return;
-        }
-        
-        // Fallback for other formats
-        if (data && data.success) {
-            populateInventory(data.inventory || []);
-            populateCategories(data.categories || []);
         } else {
-            showToast('Failed to load inventory: ' + (data && data.message ? data.message : 'Unknown data format'), 'error');
-            inventoryBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Failed to load inventory data</td></tr>';
+            throw new Error('Invalid data format received');
         }
     })
     .catch(error => {
         console.error('Error fetching inventory:', error);
         showToast('Error fetching inventory: ' + error.message, 'error');
         
-        const inventoryBody = document.querySelector('.inventory');
         inventoryBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${error.message}</td></tr>`;
     });
 }
@@ -3038,19 +2985,28 @@ function populateInventory(inventory) {
     }
     
     inventory.forEach(item => {
+        // Debug log to see what data we're receiving
+        console.log("Processing item:", item);
+        
         const row = document.createElement('tr');
         
-        // Use the category directly from the item data
+        // Safely handle the category and escape any special characters
+        const category = item.category ? item.category.replace(/'/g, "\\'") : 'Uncategorized';
+        const itemDescription = item.item_description ? item.item_description.replace(/'/g, "\\'") : '';
+        const packaging = item.packaging ? item.packaging.replace(/'/g, "\\'") : '';
+        const price = parseFloat(item.price) || 0;
+        const productId = item.product_id || '';
+        
         row.innerHTML = `
-            <td>${item.category || 'Uncategorized'}</td>
+            <td>${item.category}</td>
             <td>${item.item_description}</td>
             <td>${item.packaging || ''}</td>
-            <td>PHP ${parseFloat(item.price).toFixed(2)}</td>
+            <td>PHP ${price.toFixed(2)}</td>
             <td>
                 <input type="number" class="inventory-quantity" min="1" max="100" value="1">
             </td>
             <td>
-                <button class="add-to-cart-btn" onclick="addToCart(this, '${item.product_id}', '${item.category}', '${item.item_description.replace(/'/g, "\\'")}', '${item.packaging}', ${item.price})">
+                <button class="add-to-cart-btn" onclick="addToCart(this, '${productId}', '${category}', '${itemDescription}', '${packaging}', ${price})">
                     <i class="fas fa-cart-plus"></i> Add
                 </button>
             </td>
