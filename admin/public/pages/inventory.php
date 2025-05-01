@@ -47,7 +47,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
     
     $product_image = $old_product_image;
     
-    $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/admin/uploads/products/';
+    $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/products/';
     if (!file_exists($upload_dir)) {
         mkdir($upload_dir, 0777, true);
     }
@@ -129,7 +129,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
             // Step 3: Now that cleanup is done, proceed with the upload
             $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
             $filename = 'product_image.' . $file_extension;
-            $product_image_path = '/admin/uploads/products/' . $item_folder . '/' . $filename;
+            $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
             $target_file_path = $item_dir . $filename;
             
             // Add a small delay to ensure file system operations are complete
