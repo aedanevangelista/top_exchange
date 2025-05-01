@@ -612,7 +612,7 @@ $conn->close();
     </style>
 </head>
 <body>
-    <?php include '/admin/public/sidebar.php'; // Assuming sidebar is one level up ?>
+    <?php include '../sidebar.php'; // Assuming sidebar is one level up ?>
     <div class="main-content">
         <div class="orders-header">
             <div class="header-content">
