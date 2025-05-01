@@ -25,10 +25,12 @@ $delivery_address = $_POST['delivery_address'] ?? null;
 $special_instructions = $_POST['special_instructions'] ?? ''; // Default to empty string
 $orders_json = $_POST['orders'] ?? null; // JSON string from hidden input
 $total_amount = $_POST['total_amount'] ?? null;
-$company = $_POST['company'] ?? ''; // Get company name
+
+// *** THIS IS THE CORRECTED LINE ***
+$company = $_POST['company_hidden'] ?? ''; // Read from the hidden input name
 
 // *** MORE DEBUG LOGGING ***
-// Log the specific value assigned to $company
+// Log the specific value assigned to $company variable
 error_log("add_order.php - Value assigned to \$company variable: '" . $company . "'");
 // *** END DEBUG LOGGING ***
 
@@ -103,7 +105,7 @@ $new_po_number = sprintf('PO-%s-%03d', $username, $next_sequence);
 
 // --- 3. Insert the Order into Database ---
 $status = 'Pending';
-$progress = 0;
+$progress = 0; // Ensure progress is integer 0
 
 $sql_insert = "INSERT INTO orders
                (po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status, progress, company, special_instructions, driver_assigned)
@@ -117,9 +119,9 @@ if ($stmt_insert === false) {
     exit;
 }
 
-$driver_assigned_default = 0;
+$driver_assigned_default = 0; // Default value for driver_assigned
 
-// Use the corrected bind_param string
+// Use the corrected bind_param string from the previous fix
 $stmt_insert->bind_param(
     "ssssssdsissi",
     $new_po_number,
@@ -127,13 +129,13 @@ $stmt_insert->bind_param(
     $order_date,
     $delivery_date,
     $delivery_address,
-    $orders_json,
+    $orders_json, // Store the original JSON string
     $total_amount,
     $status,
-    $progress,
-    $company, // Check the logged value for this variable
-    $special_instructions,
-    $driver_assigned_default
+    $progress, // Matches 'i'
+    $company, // Matches 's' - This should now have the correct value
+    $special_instructions, // Matches 's'
+    $driver_assigned_default // Matches 'i'
 );
 
 // *** Log BEFORE execute ***
@@ -147,6 +149,7 @@ if ($stmt_insert->execute()) {
 } else {
     // Failure
     error_log("Execute failed (insert order): (" . $stmt_insert->errno . ") " . $stmt_insert->error);
+     // Check for duplicate entry specifically (Error code 1062 for MySQL)
      if ($conn->errno == 1062) {
           echo json_encode(['success' => false, 'message' => 'Error: Duplicate PO Number generated. Please try again.']);
      } else {
