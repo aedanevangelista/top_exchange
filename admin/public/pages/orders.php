@@ -1,50 +1,93 @@
 <?php
-// Establish database connection
+// Current Date: 2025-05-01 15:13:55
+// Author: aedanevangelista
+
+session_start();
 include "../../backend/db_connection.php";
+include "../../backend/check_role.php";
+checkRole('Orders'); // Ensure the user has access to the Orders page
 
-// SQL query to get products with their categories
-$query = "SELECT p.product_id, p.item_description, p.packaging, p.price, c.category_name 
-          FROM products p 
-          LEFT JOIN categories c ON p.category_id = c.category_id 
-          WHERE p.status = 'active'
-          ORDER BY c.category_name, p.item_description";
+// Handle sorting parameters
+$sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'order_date';
+$sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'DESC';
 
-$result = $conn->query($query);
+// Validate sort column to prevent SQL injection
+$allowed_columns = ['po_number', 'username', 'order_date', 'delivery_date', 'progress', 'total_amount'];
+if (!in_array($sort_column, $allowed_columns)) {
+    $sort_column = 'order_date'; // Default sort column
+}
 
-$inventory = [];
+// Validate sort direction
+if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
+    $sort_direction = 'DESC'; // Default to descending
+}
+
+// Fetch active clients for the dropdown
+$clients = [];
+$clients_with_company_address = []; // Array to store clients with their company addresses
+$clients_with_company = []; // Array to store clients with their company names
+$stmt = $conn->prepare("SELECT username, company_address, company FROM clients_accounts WHERE status = 'active'");
+if ($stmt === false) {
+    die('Prepare failed: ' . htmlspecialchars($conn->error));
+}
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $clients[] = $row['username'];
+    $clients_with_company_address[$row['username']] = $row['company_address'];
+    $clients_with_company[$row['username']] = $row['company'];
+}
+$stmt->close();
+
+// Fetch all drivers for the driver assignment dropdown
+$drivers = [];
+$stmt = $conn->prepare("SELECT id, name FROM drivers WHERE availability = 'Available' AND current_deliveries < 20 ORDER BY name");
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $drivers[] = $row;
+}
+$stmt->close();
+
+// Modified query to show Active, Pending, and Rejected orders with sorting
+$orders = []; // Initialize $orders as an empty array
+$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress, o.driver_assigned, 
+        o.company, o.special_instructions, 
+        IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
+        FROM orders o 
+        LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
+        LEFT JOIN drivers d ON da.driver_id = d.id 
+        WHERE o.status IN ('Active', 'Pending', 'Rejected')";
+
+// Add sorting
+$sql .= " ORDER BY {$sort_column} {$sort_direction}";
+
+$stmt = $conn->prepare($sql);
+$stmt->execute();
+$result = $stmt->get_result();
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
-        $inventory[] = [
-            'product_id' => $row['product_id'],
-            'item_description' => $row['item_description'],
-            'packaging' => $row['packaging'],
-            'price' => $row['price'],
-            'category' => $row['category_name'] ? $row['category_name'] : 'Uncategorized'
-        ];
+        $orders[] = $row;
     }
 }
 
-$categories_query = "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category";
-$categories_result = $conn->query($categories_query);
-
-$categories = [];
-if ($categories_result && $categories_result->num_rows > 0) {
-    while ($row = $categories_result->fetch_assoc()) {
-        $categories[] = $row['category'];
-    }
+// Helper function to generate sort URL
+function getSortUrl($column, $currentColumn, $currentDirection) {
+    $newDirection = ($column === $currentColumn && $currentDirection === 'ASC') ? 'DESC' : 'ASC';
+    return "?sort=" . urlencode($column) . "&direction=" . urlencode($newDirection);
 }
 
-// Return data in structured format
-$response = [
-    'success' => true,
-    'inventory' => $inventory,
-    'categories' => $categories
-];
-
-header('Content-Type: application/json');
-echo json_encode($response);
+// Helper function to display sort icon
+function getSortIcon($column, $currentColumn, $currentDirection) {
+    if ($column !== $currentColumn) {
+        return '<i class="fas fa-sort"></i>';
+    } else if ($currentDirection === 'ASC') {
+        return '<i class="fas fa-sort-up"></i>';
+    } else {
+        return '<i class="fas fa-sort-down"></i>';
+    }
+}
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2956,35 +2999,40 @@ echo json_encode($response);
     .then(data => {
         console.log("Raw inventory data:", data); // Debug log
         
-        // Check if we got the structured response with success, inventory, and categories
-        if (data && data.success && Array.isArray(data.inventory)) {
-            populateInventory(data.inventory);
-            populateCategories(data.categories || []);
-            return;
+        // Check if data is directly an array
+        if (Array.isArray(data)) {
+            // Create categories based on item names since we don't have categories
+            // This uses the first word of the item description as a basic category
+            const categories = [...new Set(data
+                .map(item => {
+                    // Extract first word before space or ( as category
+                    const firstWord = item.item_description.split(/[\s(]/)[0];
+                    return firstWord || "Uncategorized";
+                })
+                .filter(category => category))];
+                
+            // Add the category field to each item for display purposes
+            const processedData = data.map(item => {
+                const firstWord = item.item_description.split(/[\s(]/)[0];
+                return {
+                    ...item,
+                    category: firstWord || "Uncategorized"
+                };
+            });
+            
+            // Call populate functions with transformed data
+            populateInventory(processedData);
+            populateCategories(categories);
+            
+            return; // Exit early since we've handled the data
         }
         
-        // Fallback for the current format (direct array)
-        if (Array.isArray(data)) {
-            // If the backend is returning just an array without categories,
-            // We need to check if each item has a category field
-            let hasCategories = data.length > 0 && data[0].hasOwnProperty('category');
-            
-            if (!hasCategories) {
-                // Add a temporary uncategorized field if needed
-                const processedData = data.map(item => ({
-                    ...item,
-                    category: "Uncategorized"
-                }));
-                populateInventory(processedData);
-                populateCategories(["Uncategorized"]);
-            } else {
-                // Data already has categories
-                populateInventory(data);
-                const categories = [...new Set(data.map(item => item.category || "Uncategorized"))];
-                populateCategories(categories);
-            }
+        // Fallback for other formats
+        if (data && data.success) {
+            populateInventory(data.inventory || []);
+            populateCategories(data.categories || []);
         } else {
-            showToast('Failed to load inventory: Unknown data format', 'error');
+            showToast('Failed to load inventory: ' + (data && data.message ? data.message : 'Unknown data format'), 'error');
             inventoryBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Failed to load inventory data</td></tr>';
         }
     })
@@ -2997,7 +3045,6 @@ echo json_encode($response);
     });
 }
 
-// Keep the rest of your functions mostly the same, but ensure they handle the data format properly
 function populateInventory(inventory) {
     const inventoryBody = document.querySelector('.inventory');
     inventoryBody.innerHTML = '';
@@ -3069,14 +3116,10 @@ function populateInventory(inventory) {
             const rows = document.querySelectorAll('.inventory tr');
             
             rows.forEach(row => {
-                const categoryCell = row.querySelector('td:first-child');
-                
-                if (!categoryCell) return; // Skip if row doesn't have cells (like headers)
-                
-                const rowCategory = categoryCell.textContent;
+                const categoryCell = row.querySelector('td:first-child').textContent;
                 const rowText = row.textContent.toLowerCase();
                 
-                const categoryMatch = category === 'all' || rowCategory === category;
+                const categoryMatch = category === 'all' || categoryCell === category;
                 const searchMatch = !searchText || rowText.includes(searchText);
                 
                 row.style.display = categoryMatch && searchMatch ? '' : 'none';
