@@ -306,7 +306,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                 <!-- Order Status Notification Badges -->
                 <div class="notification-badges">
                     <?php if ($pendingOrdersCount > 0): ?>
-                    <a href="/admin/public/pages/orders.php?status=Pending" style="text-decoration: none;">
+                    <a href="/public/pages/orders.php?status=Pending" style="text-decoration: none;">
                         <div class="notification-badge pending">
                             <i class="fas fa-clock notification-icon"></i>
                             <span class="notification-count"><?php echo $pendingOrdersCount; ?></span>
@@ -316,7 +316,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                     <?php endif; ?>
                     
                     <?php if ($rejectedOrdersCount > 0): ?>
-                    <a href="/admin/public/pages/orders.php?status=Rejected" style="text-decoration: none;">
+                    <a href="/public/pages/orders.php?status=Rejected" style="text-decoration: none;">
                         <div class="notification-badge rejected">
                             <i class="fas fa-times-circle notification-icon"></i>
                             <span class="notification-count"><?php echo $rejectedOrdersCount; ?></span>
@@ -326,7 +326,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                     <?php endif; ?>
                     
                     <?php if ($activeOrdersCount > 0): ?>
-                    <a href="/admin/public/pages/orders.php?status=Active" style="text-decoration: none;">
+                    <a href="/public/pages/orders.php?status=Active" style="text-decoration: none;">
                         <div class="notification-badge active">
                             <i class="fas fa-check-circle notification-icon"></i>
                             <span class="notification-count"><?php echo $activeOrdersCount; ?></span>
@@ -336,7 +336,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                     <?php endif; ?>
                     
                     <?php if ($deliverableOrdersCount > 0): ?>
-                    <a href="/admin/public/pages/deliverable_orders.php" style="text-decoration: none;">
+                    <a href="/public/pages/deliverable_orders.php" style="text-decoration: none;">
                         <div class="notification-badge deliverable">
                             <i class="fas fa-truck notification-icon"></i>
                             <span class="notification-count"><?php echo $deliverableOrdersCount; ?></span>
@@ -501,7 +501,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
 
         // Function to load client orders for a specific year
         function loadClientOrders(year) {
-            const url = `/admin/backend/get_client_orders.php?year=${year}`;
+            const url = `/backend/get_client_orders.php?year=${year}`;
             console.log("Fetching client orders from:", url);
             
             fetch(url)
@@ -544,7 +544,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
         function getOrderCounts(year) {
             if (!year) return 0;
             
-            const url = `/admin/backend/get_order_counts.php?year=${year}`;
+            const url = `/backend/get_order_counts.php?year=${year}`;
             console.log("Fetching order counts from:", url);
             
             return fetch(url)
@@ -615,7 +615,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
         function loadSalesByCategory(timePeriod) {
             if (!ctxSalesPerDepartment) return;
             
-            const url = `/admin/backend/get_sales_by_category.php?period=${timePeriod}`;
+            const url = `/backend/get_sales_by_category.php?period=${timePeriod}`;
             console.log(`Fetching ${timePeriod} sales data from:`, url);
             
             fetch(url)
