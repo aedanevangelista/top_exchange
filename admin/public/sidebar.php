@@ -76,7 +76,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <span class="menu-title"><b>MAIN MENU</b></span>
             <hr>
             <?php if (in_array('Dashboard', $allowedPages)): ?>
-                <a href="/admin/public/pages/dashboard.php" class="menu-item">
+                <a href="/public/pages/dashboard.php" class="menu-item">
                     <div>
                         <i class="fas fa-home"></i> Dashboard
                     </div>
@@ -93,10 +93,10 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
-                        <a href="/admin/public/pages/forecast.php" class="submenu-item">
+                        <a href="/public/pages/forecast.php" class="submenu-item">
                             <i class="fas fa-arrow-right"></i> Delivery Calendar
                         </a>
-                        <a href="/admin/public/pages/department_forecast.php" class="submenu-item">
+                        <a href="/public/pages/department_forecast.php" class="submenu-item">
                             <i class="fas fa-arrow-right"></i> Department Forecast
                         </a>
                     </div>
@@ -114,17 +114,17 @@ $allowedPages = array_map('trim', explode(',', $pages));
                     </span>
                     <div class="submenu-items">
                         <?php if (in_array('Orders', $allowedPages)): ?>
-                            <a href="/admin/public/pages/orders.php" class="submenu-item">
+                            <a href="/public/pages/orders.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Orders
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Deliverable Orders', $allowedPages)): ?>
-                            <a href="/admin/public/pages/deliverable_orders.php" class="submenu-item">
+                            <a href="/public/pages/deliverable_orders.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Deliverable Orders
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Order History', $allowedPages)): ?>
-                            <a href="/admin/public/pages/order_history.php" class="submenu-item">
+                            <a href="/public/pages/order_history.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Order History
                             </a>
                         <?php endif; ?>
@@ -142,7 +142,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
-                        <a href="/admin/public/pages/payment_history.php" class="submenu-item">
+                        <a href="/public/pages/payment_history.php" class="submenu-item">
                             <i class="fas fa-arrow-right"></i> Payment History
                         </a>
                     </div>
@@ -150,7 +150,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
             <?php endif; ?>
 
             <?php if (in_array('Sales Data', $allowedPages)): ?>
-                <a href="/admin/public/pages/sales.php" class="menu-item">
+                <a href="/public/pages/sales.php" class="menu-item">
                     <div>
                         <i class="fas fa-chart-bar"></i> Sales Data
                     </div>
@@ -172,7 +172,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                     </span>
                     <div class="submenu-items">
                         <?php if (in_array('Drivers', $allowedPages)): ?>
-                            <a href="/admin/public/pages/drivers.php" class="submenu-item">
+                            <a href="/public/pages/drivers.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Drivers
                             </a>
                         <?php endif; ?>
@@ -190,17 +190,17 @@ $allowedPages = array_map('trim', explode(',', $pages));
                     </span>
                     <div class="submenu-items">
                         <?php if (in_array('Accounts - Admin', $allowedPages)): ?>
-                            <a href="/admin/public/pages/accounts.php" class="submenu-item">
+                            <a href="/public/pages/accounts.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Staff
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('Accounts - Clients', $allowedPages)): ?>
-                            <a href="/admin/public/pages/accounts_clients.php" class="submenu-item">
+                            <a href="/public/pages/accounts_clients.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Clients
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('User Roles', $allowedPages)): ?>
-                            <a href="/admin/public/pages/user_roles.php" class="submenu-item">
+                            <a href="/public/pages/user_roles.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> User Roles
                             </a>
                         <?php endif; ?>
@@ -218,10 +218,10 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
-                        <a href="/admin/public/pages/inventory.php" class="submenu-item">
+                        <a href="/public/pages/inventory.php" class="submenu-item">
                             <i class="fas fa-arrow-right"></i> Finished Products
                         </a>
-                        <a href="/admin/public/pages/raw_materials.php" class="submenu-item">
+                        <a href="/public/pages/raw_materials.php" class="submenu-item">
                             <i class="fas fa-arrow-right"></i> Raw Materials
                         </a>
                     </div>
@@ -238,7 +238,7 @@ $allowedPages = array_map('trim', explode(',', $pages));
                 <?php echo htmlspecialchars($username); ?>
             </strong> (<?= htmlspecialchars(ucfirst($role)) ?>)
         </div>
-        <a href="/admin/backend/logout.php" class="logout-btn">
+        <a href="/backend/logout.php" class="logout-btn">
             <i class="fas fa-sign-out-alt"></i> Logout
         </a>
     </div>

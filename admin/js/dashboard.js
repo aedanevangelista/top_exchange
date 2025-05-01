@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Function to load years and populate dropdown
     function loadYears() {
         // Let's debug what's happening with our fetch paths
-        const url = '/admin/backend/get_available_years_dashboard.php';
+        const url = '/backend/get_available_years_dashboard.php';
         console.log("Fetching years from:", url);
         
         fetch(url)
@@ -129,7 +129,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to load client orders for a specific year
     function loadClientOrders(year) {
-        const url = `/admin/backend/get_client_orders.php?year=${year}`;
+        const url = `/backend/get_client_orders.php?year=${year}`;
         console.log("Fetching client orders from:", url);
         
         fetch(url)
@@ -168,7 +168,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to get order counts from database
     function getOrderCounts(year) {
-        const url = `/admin/backend/get_order_counts.php?year=${year}`;
+        const url = `/backend/get_order_counts.php?year=${year}`;
         console.log("Fetching order counts from:", url);
         
         return fetch(url)
@@ -216,7 +216,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to populate year dropdowns
     function populateYearDropdowns() {
-        const url = '/admin/backend/get_available_years_dashboard.php';
+        const url = '/backend/get_available_years_dashboard.php';
         console.log("Fetching years for dropdowns from:", url);
         
         fetch(url)
@@ -276,7 +276,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to load sales data by category with specified time period
     function loadSalesByCategory(timePeriod) {
-        const url = `/admin/backend/get_sales_by_category.php?period=${timePeriod}`;
+        const url = `/backend/get_sales_by_category.php?period=${timePeriod}`;
         console.log(`Fetching ${timePeriod} sales data from:`, url);
         
         fetch(url)
@@ -408,7 +408,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Function to load years and populate dropdown
     function loadYears() {
         // Let's debug what's happening with our fetch paths
-        const url = '/admin/backend/get_available_years_dashboard.php';
+        const url = '/backend/get_available_years_dashboard.php';
         console.log("Fetching years from:", url);
         
         fetch(url)
@@ -441,7 +441,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to load client orders for a specific year
     function loadClientOrders(year) {
-        const url = `/admin/backend/get_client_orders.php?year=${year}`;
+        const url = `/backend/get_client_orders.php?year=${year}`;
         console.log("Fetching client orders from:", url);
         
         fetch(url)
@@ -480,7 +480,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to get order counts from database
     function getOrderCounts(year) {
-        const url = `/admin/backend/get_order_counts.php?year=${year}`;
+        const url = `/backend/get_order_counts.php?year=${year}`;
         console.log("Fetching order counts from:", url);
         
         return fetch(url)
@@ -528,7 +528,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to populate year dropdowns
     function populateYearDropdowns() {
-        const url = '/admin/backend/get_available_years_dashboard.php';
+        const url = '/backend/get_available_years_dashboard.php';
         console.log("Fetching years for dropdowns from:", url);
         
         fetch(url)
@@ -587,7 +587,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Function to load sales data by category
     function loadSalesByCategory() {
-        const url = '/admin/backend/get_sales_by_category.php';
+        const url = '/backend/get_sales_by_category.php';
         console.log("Fetching sales data from:", url);
         
         fetch(url)

@@ -19,16 +19,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($password == $user['password']) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
-            header("Location: /admin/public/pages/dashboard.php");
+            header("Location: /public/pages/dashboard.php");
             exit();
         } else {
             $_SESSION['error'] = "Incorrect password. Please try again.";
-            header("Location: /admin/public/login.php");
+            header("Location: /public/login.php");
             exit();
         }
     } else {
         $_SESSION['error'] = "User not found.";
-        header("Location: /admin/public/login.php");
+        header("Location: /public/login.php");
         exit();
     }
 

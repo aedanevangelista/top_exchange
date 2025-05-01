@@ -89,9 +89,9 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orders</title>
-    <link rel="stylesheet" href="/admin/css/orders.css">
-    <link rel="stylesheet" href="/admin/css/sidebar.css">
-    <link rel="stylesheet" href="/admin/css/toast.css">
+    <link rel="stylesheet" href="/css/orders.css">
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <link rel="stylesheet" href="/css/toast.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -1009,7 +1009,7 @@ function changeStatus(status) {
         buttons.forEach(btn => btn.disabled = true);
         
         // Fetch the order details to check driver_assigned flag and progress
-        fetch(`/admin/backend/check_order_driver.php?po_number=${currentPoNumber}`)
+        fetch(`/backend/check_order_driver.php?po_number=${currentPoNumber}`)
             .then(response => response.json())
             .then(data => {
                 // Remove loading indicator
@@ -1068,7 +1068,7 @@ function updateOrderStatus(status, returnMaterials) {
     formData.append('return_materials', returnMaterials ? '1' : '0');
     
     // Send AJAX request to update status
-    fetch('/admin/backend/update_order_status.php', {
+    fetch('/backend/update_order_status.php', {
         method: 'POST',
         body: formData
     })
@@ -1117,7 +1117,7 @@ function viewOrderDetails(poNumber) {
     currentPoNumber = poNumber;
     
     // Fetch the order data and completion status
-    fetch(`/admin/backend/get_order_details.php?po_number=${poNumber}`)
+    fetch(`/backend/get_order_details.php?po_number=${poNumber}`)
     .then(response => response.json())
     .then(data => {
         if (data.success) {
@@ -1597,7 +1597,7 @@ function saveProgressChanges() {
     const shouldMarkForDelivery = progressPercentage === 100;
     
     // Send AJAX request to update progress
-    fetch('/admin/backend/update_order_progress.php', {
+    fetch('/backend/update_order_progress.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -1693,7 +1693,7 @@ function assignDriver() {
     formData.append('driver_id', driverId);
     
     // Use fetch API for cleaner code
-    fetch('/admin/backend/assign_driver.php', {
+    fetch('/backend/assign_driver.php', {
         method: 'POST',
         body: formData
     })
@@ -1992,7 +1992,7 @@ function changeStatusWithCheck(status) {
     
     // Use basic XMLHttpRequest for better debugging
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/admin/backend/update_order_status.php', true);
+    xhr.open('POST', '/backend/update_order_status.php', true);
     xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
             console.log("Status: " + xhr.status);
@@ -2060,7 +2060,7 @@ function openPendingStatusModal(poNumber, username, ordersJson) {
     // Parse the orders JSON and check materials
     try {
         $.ajax({
-            url: '/admin/backend/check_raw_materials.php',
+            url: '/backend/check_raw_materials.php',
             type: 'POST',
             data: { 
                 orders: ordersJson,

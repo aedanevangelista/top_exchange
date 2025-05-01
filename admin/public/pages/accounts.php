@@ -123,11 +123,11 @@ if (!empty($status_filter)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Accounts</title>
-    <link rel="stylesheet" href="/admin/css/accounts.css">
-    <link rel="stylesheet" href="/admin/css/sidebar.css">
+    <link rel="stylesheet" href="/css/accounts.css">
+    <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-    <link rel="stylesheet" href="/admin/css/toast.css">
+    <link rel="stylesheet" href="/css/toast.css">
 </head>
 <body>
     <div id="toast-container"></div>
@@ -287,7 +287,7 @@ if (!empty($status_filter)) {
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src="/admin/js/toast.js"></script>
-    <script src="/admin/js/accounts.js"></script>
+    <script src="/js/toast.js"></script>
+    <script src="/js/accounts.js"></script>
 </body>
 </html>

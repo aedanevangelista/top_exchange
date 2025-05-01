@@ -117,8 +117,8 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-    <link rel="stylesheet" href="/admin/css/dashboard.css">
-    <link rel="stylesheet" href="/admin/css/sidebar.css"> 
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/sidebar.css"> 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -261,7 +261,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                 <!-- Order Status Notification Badges -->
                 <div class="notification-badges">
                     <?php if ($pendingOrdersCount > 0): ?>
-                    <a href="/admin/public/pages/orders.php?status=Pending" style="text-decoration: none;">
+                    <a href="/public/pages/orders.php?status=Pending" style="text-decoration: none;">
                         <div class="notification-badge pending">
                             <i class="fas fa-clock notification-icon"></i>
                             <span class="notification-count"><?php echo $pendingOrdersCount; ?></span>
@@ -271,7 +271,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                     <?php endif; ?>
                     
                     <?php if ($rejectedOrdersCount > 0): ?>
-                    <a href="/admin/public/pages/orders.php?status=Rejected" style="text-decoration: none;">
+                    <a href="/public/pages/orders.php?status=Rejected" style="text-decoration: none;">
                         <div class="notification-badge rejected">
                             <i class="fas fa-times-circle notification-icon"></i>
                             <span class="notification-count"><?php echo $rejectedOrdersCount; ?></span>
@@ -281,7 +281,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                     <?php endif; ?>
                     
                     <?php if ($activeOrdersCount > 0): ?>
-                    <a href="/admin/public/pages/orders.php?status=Active" style="text-decoration: none;">
+                    <a href="/public/pages/orders.php?status=Active" style="text-decoration: none;">
                         <div class="notification-badge active">
                             <i class="fas fa-check-circle notification-icon"></i>
                             <span class="notification-count"><?php echo $activeOrdersCount; ?></span>
@@ -291,7 +291,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
                     <?php endif; ?>
                     
                     <?php if ($deliverableOrdersCount > 0): ?>
-                    <a href="/admin/public/pages/deliverable_orders.php" style="text-decoration: none;">
+                    <a href="/public/pages/deliverable_orders.php" style="text-decoration: none;">
                         <div class="notification-badge deliverable">
                             <i class="fas fa-truck notification-icon"></i>
                             <span class="notification-count"><?php echo $deliverableOrdersCount; ?></span>
@@ -351,7 +351,7 @@ $deliverableOrdersCount = getDeliverableOrdersCount($conn);
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
     <!-- Use relative path for JavaScript -->
-    <script src="/admin/js/dashboard.js"></script>
+    <script src="/js/dashboard.js"></script>
 
 </body>
 </html>

@@ -8,7 +8,7 @@ if (isset($_SESSION['admin_user_id'])) {
     unset($_SESSION['admin_role']);
     
     // Redirect to admin login
-    header("Location: /admin/public/login.php");
+    header("Location: /public/login.php");
     exit();
 }
 
@@ -31,7 +31,7 @@ unset($_SESSION['role']);
 // Determine where to redirect based on referrer
 $referer = $_SERVER['HTTP_REFERER'] ?? '';
 if (strpos($referer, 'public') !== false) {
-    header("Location: /admin/public/login.php");
+    header("Location: /public/login.php");
 } else {
     header("Location: /LandingPage/index.php");
 }

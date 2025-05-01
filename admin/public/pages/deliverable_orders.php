@@ -91,9 +91,9 @@ $statusOptions = ['For Delivery', 'In Transit'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deliverable Orders</title>
-    <link rel="stylesheet" href="/admin/css/orders.css">
-    <link rel="stylesheet" href="/admin/css/sidebar.css">
-    <link rel="stylesheet" href="/admin/css/toast.css">
+    <link rel="stylesheet" href="/css/orders.css">
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <link rel="stylesheet" href="/css/toast.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -1129,7 +1129,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             // Show loading toast
             showToast(`Updating order status...`, 'info');
             
-            fetch('/admin/backend/toggle_transit_status.php', {
+            fetch('/backend/toggle_transit_status.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -1169,7 +1169,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
     console.log("Fetching order details for PO: " + poNumber);
     
     // Fetch the order items
-    fetch(`/admin/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
+    fetch(`/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
     .then(response => {
         console.log("Response status:", response.status);
         return response.json().catch(err => {
@@ -1293,7 +1293,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             saveBtn.disabled = true;
 
             // Send request to assign driver
-            fetch('/admin/backend/assign_driver.php', {
+            fetch('/backend/assign_driver.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1329,7 +1329,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             // Show loading toast
             showToast('Processing completion...', 'info');
             
-            fetch('/admin/backend/complete_delivery.php', {
+            fetch('/backend/complete_delivery.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ po_number: poNumber })

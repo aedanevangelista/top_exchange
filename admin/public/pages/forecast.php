@@ -66,10 +66,10 @@ $navigation = getMonthNavigation($month, $year);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Delivery Forecast</title>
-    <link rel="stylesheet" href="/admin/css/sidebar.css">
-    <link rel="stylesheet" href="/admin/css/orders.css">
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="/admin/css/toast.css">
+    <link rel="stylesheet" href="/css/toast.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
@@ -490,7 +490,7 @@ $navigation = getMonthNavigation($month, $year);
         </div>
     </div>
     
-    <script src="/admin/js/orders.js"></script>
+    <script src="/js/orders.js"></script>
     <script>
     function showOrders(date) {
         const modal = document.getElementById('ordersModal');
