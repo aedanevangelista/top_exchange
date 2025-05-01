@@ -211,9 +211,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     }
 }
 
-// *** DO NOT CLOSE CONNECTION HERE ***
-// $conn->close(); // <-- REMOVED FROM HERE
-
 ?>
 
 <!DOCTYPE html>
@@ -286,6 +283,23 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
          .accounts-table th.sortable.active i {
              color: #333; /* Darker color for active sort icon */
          }
+        /* Default role label style */
+        .role-label {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+            /* Add default background/color if needed, or rely on specific role styles */
+            background-color: #e9ecef; /* Example default background */
+            color: #495057;      /* Example default text color */
+            border: 1px solid #ced4da; /* Example default border */
+        }
+         /* Add specific styles ONLY for roles you WANT styled */
+         .role-label.role-admin { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb;}
+         .role-label.role-orders { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb;}
+         /* Add other specific role styles here */
+         /* NO styles needed for role-accountant, role-secretary etc. */
+
 
     </style>
 </head>
@@ -377,14 +391,32 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         ?>
                             <tr>
                                 <td><?= htmlspecialchars($account['username']) ?></td>
+                                <!-- *** MODIFIED ROLE DISPLAY LOGIC *** -->
                                 <td>
                                     <?php
-                                    $role = ucfirst($account['role']);
-                                    // Ensure role is not empty before creating class name
-                                    $roleClass = !empty($account['role']) ? strtolower($account['role']) : 'unknown';
-                                    echo "<span class='role-label role-" . $roleClass . "'>$role</span>";
+                                    $roleName = $account['role'] ?? ''; // Get the role name safely
+                                    $roleDisplay = !empty($roleName) ? ucfirst($roleName) : 'Unknown'; // Text to display
+
+                                    // Define roles that should NOT get specific styling
+                                    $rolesWithoutSpecificStyle = ['accountant', 'secretary'];
+
+                                    // Determine the CSS class(es)
+                                    $roleClasses = 'role-label'; // Base class for all roles
+                                    if (!empty($roleName)) {
+                                        $lowerRole = strtolower($roleName);
+                                        // Add the specific class ONLY if it's NOT in the exclusion list
+                                        if (!in_array($lowerRole, $rolesWithoutSpecificStyle)) {
+                                            $roleClasses .= ' role-' . $lowerRole; // e.g., role-admin, role-orders
+                                        }
+                                        // else: For Accountant/Secretary, only 'role-label' is used
+                                    } else {
+                                        $roleClasses .= ' role-unknown'; // Class for empty/unknown roles
+                                    }
+
+                                    echo "<span class='$roleClasses'>$roleDisplay</span>";
                                     ?>
                                 </td>
+                                <!-- *** END MODIFIED ROLE DISPLAY LOGIC *** -->
                                 <td><?= $account_age ?></td>
                                 <td class="<?= 'status-' . strtolower($account['status'] ?? 'active') ?>">
                                     <?= htmlspecialchars($account['status'] ?? 'Active') ?>
