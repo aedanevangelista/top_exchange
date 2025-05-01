@@ -1,5 +1,5 @@
 <?php
-// Current Date: 2025-05-01 17:27:42
+// Current Date: 2025-05-01 19:10:20
 // Author: aedanevangelista
 
 session_start();
@@ -969,7 +969,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
                                     <?php if (!empty($order['special_instructions'])): ?>
-                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>')">View</button>
+                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>')"><i class="fas fa-info-circle"></i> View</button>
                                     <?php else: ?>
                                         <span class="no-instructions">None</span>
                                     <?php endif; ?>
@@ -1002,13 +1002,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 </td>
                                 <td class="action-buttons">
                                     <?php if ($order['status'] === 'Pending'): ?>
-                                        <button class="status-btn" onclick="confirmPendingStatusChange('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 'Pending')"><i class="fas fa-exchange-alt"></i> Status</button>
+                                        <button class="status-btn" onclick="confirmPendingStatusChange('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 'Pending')"><i class="fas fa-edit"></i> Status</button>
                                     <?php elseif ($order['status'] === 'Active'): ?>
-                                        <button class="status-btn" onclick="confirmStatusChange('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', 'Active')"><i class="fas fa-exchange-alt"></i> Status</button>
+                                        <button class="status-btn" onclick="confirmStatusChange('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', 'Active')"><i class="fas fa-edit"></i> Status</button>
                                     <?php elseif ($order['status'] === 'Rejected'): ?>
-                                        <button class="status-btn" onclick="confirmRejectedStatusChange('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', 'Rejected')"><i class="fas fa-exchange-alt"></i> Status</button>
+                                        <button class="status-btn" onclick="confirmRejectedStatusChange('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', 'Rejected')"><i class="fas fa-edit"></i> Status</button>
                                     <?php endif; ?>
-                                    <button class="download-btn" onclick="confirmDownloadPO('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company'] ?? '') ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>', '<?= htmlspecialchars($order['total_amount']) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>')"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                                    <button class="download-btn" onclick="confirmDownloadPO('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company'] ?? '') ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>', '<?= htmlspecialchars($order['total_amount']) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>')"><i class="fas fa-file-pdf"></i> PO</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -1031,7 +1031,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 <div class="po-container">
                      <div class="po-header"><div class="po-company" id="printCompany"></div><div class="po-title">Purchase Order</div></div>
                      <div class="po-details">
-                         <div class="po-left"><div class="po-detail-row"><span class="po-detail-label">PO Number:</span> <span id="printPoNumber"></span></div><div class="po-detail-row"><span class="po-detail-label">Username:</span> <span id="printUsername"></span></div><div class="po-detail-row"><span class="po-detail-label">Delivery Address:</span> <span id="printDeliveryAddress"></span></div><div class="po-detail-row" id="printInstructionsSection" style="display: none;"><span class="po-detail-label">Special Instructions:</span> <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span></div></div>
+                         <div class="po-left"><div class="po-detail-row"><span class="po-detail-label">PO Number:</span> <span id="printPoNumber"></span></div><div class="po-detail-row"><span class="po-detail-label">Username:</span> <span id="printUsername"></span></div><div class="po-detail-row"><span class="po-detail-label">Delivery Address:</span> <span id="printDeliveryAddress"></span></div><div class="po-detail-row" id="printInstructionsSection"><span class="po-detail-label">Special Instructions:</span> <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span></div></div>
                          <div class="po-right"><div class="po-detail-row"><span class="po-detail-label">Order Date:</span> <span id="printOrderDate"></span></div><div class="po-detail-row"><span class="po-detail-label">Delivery Date:</span> <span id="printDeliveryDate"></span></div></div>
                      </div>
                      <table class="po-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Quantity</th><th>Unit Price</th><th>Total</th></tr></thead><tbody id="printOrderItems"></tbody></table>
@@ -1051,8 +1051,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <div id="orderDetailsModal" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-box-open"></i> Order Details (<span id="orderStatus"></span>)</h2>
-            <div class="order-details-container"><table class="order-details-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th id="status-header-cell">Status</th></tr></thead><tbody id="orderDetailsBody"></tbody></table><div class="order-details-footer"><div class="total-amount" id="orderTotalAmount">PHP 0.00</div></div><div class="item-progress-info" id="overall-progress-info" style="margin-top: 10px; display: none;"><div class="progress-info-label">Overall Progress:</div><div class="progress-bar-container" style="margin-top: 5px;"><div class="progress-bar" id="overall-progress-bar" style="width: 0%"></div><div class="progress-text" id="overall-progress-text">0%</div></div></div></div>
-            <div class="form-buttons"><button type="button" class="back-btn" onclick="closeOrderDetailsModal()"><i class="fas fa-arrow-left"></i> Back</button><button type="button" class="save-progress-btn" onclick="confirmSaveProgress()"><i class="fas fa-save"></i> Save Progress</button></div>
+            <div class="order-details-container"><table class="order-details-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th id="status-header-cell" style="display: none;">Status</th></tr></thead><tbody id="orderDetailsBody"></tbody></table></div><div id="overall-progress-info" style="margin-top:15px; display: none;"><div style="font-weight: bold; margin-bottom: 5px;">Overall Progress: <span id="overall-progress-text">0%</span></div><div class="progress-bar-container"><div id="overall-progress-bar" class="progress-bar" style="width: 0%;"></div></div></div><div class="order-details-footer"><span class="total-amount" id="orderTotalAmount">PHP 0.00</span></div>
+            <div class="form-buttons"><button type="button" class="back-btn" onclick="closeOrderDetailsModal()"><i class="fas fa-arrow-left"></i> Back</button><button type="button" class="save-progress-btn" style="display: none;" onclick="confirmSaveProgress()"><i class="fas fa-save"></i> Save Progress</button></div>
         </div>
     </div>
 
@@ -1060,7 +1060,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <div id="statusModal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2>Change Status</h2><p id="statusMessage"></p>
-            <div class="status-buttons"><button onclick="confirmStatusAction('For Delivery')" class="modal-status-btn delivery"><i class="fas fa-truck"></i> For Delivery<div class="btn-info">(Requires: 100% Progress & Driver)</div></button><button onclick="confirmStatusAction('Pending')" class="modal-status-btn pending"><i class="fas fa-clock"></i> Pending<div class="btn-info">(Will return stock if applicable)</div></button><button onclick="confirmStatusAction('Rejected')" class="modal-status-btn rejected"><i class="fas fa-times-circle"></i> Reject<div class="btn-info">(Will return stock if applicable)</div></button></div>
+            <div class="status-buttons"><button onclick="confirmStatusAction('For Delivery')" class="modal-status-btn delivery"><i class="fas fa-truck"></i> For Delivery<div class="btn-info">(Requires 100% progress & driver)</div></button><button onclick="confirmStatusAction('Rejected')" class="modal-status-btn rejected"><i class="fas fa-times"></i> Rejected<div class="btn-info">(Returns stock)</div></button><button onclick="confirmStatusAction('Pending')" class="modal-status-btn pending"><i class="fas fa-clock"></i> Pending<div class="btn-info">(Returns stock)</div></button></div>
             <div class="modal-footer"><button onclick="closeStatusModal()" class="modal-cancel-btn"><i class="fas fa-times"></i> Cancel</button></div>
         </div>
     </div>
@@ -1069,7 +1069,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <div id="rejectedStatusModal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2>Change Status</h2><p id="rejectedStatusMessage"></p>
-            <div class="status-buttons"><button onclick="confirmStatusAction('Pending')" class="modal-status-btn pending"><i class="fas fa-clock"></i> Pending<div class="btn-info">(Return to pending status)</div></button></div>
+            <div class="status-buttons"><button onclick="confirmStatusAction('Pending')" class="modal-status-btn pending"><i class="fas fa-clock"></i> Pending<div class="btn-info">(Return to pending state)</div></button><button onclick="confirmStatusAction('Active')" class="modal-status-btn active"><i class="fas fa-check"></i> Active<div class="btn-info">(Requires stock check & deduction)</div></button></div>
             <div class="modal-footer"><button onclick="closeRejectedStatusModal()" class="modal-cancel-btn"><i class="fas fa-times"></i> Cancel</button></div>
         </div>
     </div>
@@ -1079,7 +1079,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         <div class="modal-content">
             <h2>Change Status</h2><p id="pendingStatusMessage"></p>
             <div id="rawMaterialsContainer" class="raw-materials-container"><h3>Loading inventory status...</h3></div>
-            <div class="status-buttons"><button id="activeStatusBtn" onclick="confirmStatusAction('Active')" class="modal-status-btn active"><i class="fas fa-check"></i> Active<div class="btn-info">(Will deduct stock)</div></button><button onclick="confirmStatusAction('Rejected')" class="modal-status-btn reject"><i class="fas fa-ban"></i> Reject</button></div>
+            <div class="status-buttons"><button id="activeStatusBtn" onclick="confirmStatusAction('Active')" class="modal-status-btn active"><i class="fas fa-check"></i> Active<div class="btn-info">(Requires stock check & deduction)</div></button><button onclick="confirmStatusAction('Rejected')" class="modal-status-btn rejected"><i class="fas fa-times"></i> Rejected<div class="btn-info">(No stock change)</div></button></div>
             <div class="modal-footer"><button onclick="closePendingStatusModal()" class="modal-cancel-btn"><i class="fas fa-times"></i> Cancel</button></div>
         </div>
     </div>
@@ -1088,8 +1088,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <div id="driverModal" class="overlay" style="display: none;">
         <div class="overlay-content driver-modal-content">
             <h2><i class="fas fa-user"></i> <span id="driverModalTitle">Assign Driver</span></h2><p id="driverModalMessage"></p>
-            <div class="driver-selection"><label for="driverSelect">Select Driver:</label><select id="driverSelect"><option value="0">-- Select a driver --</option><?php foreach ($drivers as $driver): ?> <option value="<?= $driver['id'] ?>"><?= htmlspecialchars($driver['name']) ?></option> <?php endforeach; ?></select></div>
-            <div class="driver-modal-buttons"><button class="cancel-btn" onclick="closeDriverModal()"><i class="fas fa-times"></i> Cancel</button><button class="save-btn" onclick="confirmDriverAssignment()"><i class="fas fa-save"></i> Save</button></div>
+            <div class="driver-selection"><label for="driverSelect">Select Driver:</label><select id="driverSelect"><option value="0">-- Select a driver --</option><?php foreach ($drivers as $driver): ?><option value="<?= $driver['id'] ?>"><?= htmlspecialchars($driver['name']) ?></option><?php endforeach; ?></select></div>
+            <div class="driver-modal-buttons"><button class="cancel-btn" onclick="closeDriverModal()"><i class="fas fa-times"></i> Cancel</button><button class="save-btn" onclick="confirmDriverAssignment()"><i class="fas fa-check"></i> Confirm</button></div>
         </div>
     </div>
 
@@ -1099,19 +1099,19 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <h2><i class="fas fa-plus"></i> Add New Order</h2>
             <form id="addOrderForm" method="POST" class="order-form">
                 <div class="left-section">
-                    <label for="username">Username:</label><select id="username" name="username" required onchange="generatePONumber();"><option value="" disabled selected>Select User</option><?php foreach ($clients as $client): ?> <option value="<?= htmlspecialchars($client) ?>" data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>" data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>"><?= htmlspecialchars($client) ?></option> <?php endforeach; ?></select>
+                    <label for="username">Username:</label><select id="username" name="username" required onchange="generatePONumber();"><option value="" disabled selected>Select User</option><?php foreach ($clients as $client): ?><option value="<?= htmlspecialchars($client) ?>" data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>" data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>"><?= htmlspecialchars($client) ?></option><?php endforeach; ?></select>
                     <label for="order_date">Order Date:</label> <input type="text" id="order_date" name="order_date" readonly>
                     <label for="delivery_date">Delivery Date:</label> <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
                     <label for="delivery_address_type">Delivery Address:</label><select id="delivery_address_type" name="delivery_address_type" onchange="toggleDeliveryAddress()"> <option value="company">Company Address</option> <option value="custom">Custom Address</option> </select>
                     <div id="company_address_container"><input type="text" id="company_address" name="company_address" readonly placeholder="Company address"></div>
                     <div id="custom_address_container" style="display: none;"><textarea id="custom_address" name="custom_address" rows="3" placeholder="Enter delivery address"></textarea></div>
                     <input type="hidden" name="delivery_address" id="delivery_address">
-                    <label for="special_instructions_textarea">Special Instructions:</label> <textarea id="special_instructions_textarea" name="special_instructions" rows="3" placeholder="Enter instructions..."></textarea>
+                    <label for="special_instructions_textarea">Special Instructions:</label> <textarea id="special_instructions_textarea" name="special_instructions" rows="3" placeholder="Enter any special instructions..."></textarea>
                     <div class="centered-button"><button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()"><i class="fas fa-box-open"></i> Select Products</button></div>
-                    <div class="order-summary"><h3>Order Summary</h3><table class="summary-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody id="summaryBody"></tbody></table><div class="summary-total">Total: <span class="summary-total-amount">PHP 0.00</span></div></div>
-                    <input type="hidden" name="po_number" id="po_number"><input type="hidden" name="orders" id="orders"><input type="hidden" name="total_amount" id="total_amount"><input type="hidden" name="company" id="company_hidden">
+                    <div class="order-summary"><h3>Order Summary</h3><table class="summary-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody id="summaryBody"><tr><td colspan="6" style="text-align:center; padding: 10px; color: #6c757d;">No products selected yet</td></tr></tbody></table><div class="summary-total">Total: <span class="summary-total-amount">PHP 0.00</span></div></div>
+                    <input type="hidden" name="po_number" id="po_number"><input type="hidden" name="orders" id="orders"><input type="hidden" name="total_amount" id="total_amount"><input type="hidden" name="company_hidden" id="company_hidden">
                 </div>
-                <div class="form-buttons"><button type="button" class="cancel-btn" onclick="closeAddOrderForm()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="save-btn" onclick="confirmAddOrder()"><i class="fas fa-save"></i> Save</button></div>
+                <div class="form-buttons"><button type="button" class="cancel-btn" onclick="closeAddOrderForm()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="save-btn" onclick="confirmAddOrder()"><i class="fas fa-save"></i> Add Order</button></div>
             </form>
         </div>
     </div>
@@ -1119,17 +1119,17 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <!-- Confirmation modals -->
     <div id="addConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Add Order</div><div class="confirmation-message">Add this new order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeAddConfirmation()">No</button><button class="confirm-yes" onclick="submitAddOrder()">Yes</button></div></div></div>
     <div id="driverConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Driver Assignment</div><div class="confirmation-message">Assign this driver?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeDriverConfirmation()">No</button><button class="confirm-yes" onclick="assignDriver()">Yes</button></div></div></div>
-    <div id="saveProgressConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Save Progress</div><div class="confirmation-message">Save this progress?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeSaveProgressConfirmation()">No</button><button class="confirm-yes" onclick="saveProgressChanges()">Yes</button></div></div></div>
+    <div id="saveProgressConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Save Progress</div><div class="confirmation-message">Save the current progress for this order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeSaveProgressConfirmation()">No</button><button class="confirm-yes" onclick="saveProgressChanges()">Yes</button></div></div></div>
     <div id="statusConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Status Change</div><div class="confirmation-message" id="statusConfirmationMessage">Change status?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeStatusConfirmation()">No</button><button class="confirm-yes" onclick="executeStatusChange()">Yes</button></div></div></div>
-    <div id="downloadConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Download</div><div class="confirmation-message">Download PO as PDF?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeDownloadConfirmation()">No</button><button class="confirm-yes" onclick="downloadPODirectly()">Yes</button></div></div></div>
+    <div id="downloadConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Download</div><div class="confirmation-message">Download this PO?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeDownloadConfirmation()">No</button><button class="confirm-yes" onclick="downloadPODirectly()">Yes</button></div></div></div>
 
     <!-- Inventory Overlay -->
     <div id="inventoryOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
-             <div class="overlay-header"><h2 class="overlay-title"><i class="fas fa-box-open"></i> Select Products</h2><button class="cart-btn" onclick="window.openCartModal()"><i class="fas fa-shopping-cart"></i> View Cart (<span id="cartItemCount">0</span>)</button></div>
+             <div class="overlay-header"><h2 class="overlay-title"><i class="fas fa-box-open"></i> Select Products</h2><button class="cart-btn" onclick="window.openCartModal()"><i class="fas fa-shopping-cart"></i> Cart (<span id="cartItemCount">0</span>)</button></div>
              <div class="inventory-filter-section"><input type="text" id="inventorySearch" placeholder="Search..."><select id="inventoryFilter"><option value="all">All Categories</option></select></div>
              <div class="inventory-table-container"><table class="inventory-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody class="inventory"></tbody></table></div>
-             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="cancel-btn" onclick="closeInventoryOverlay()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="done-btn" onclick="closeInventoryOverlay()"><i class="fas fa-check"></i> Done</button></div>
+             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="cancel-btn" onclick="closeInventoryOverlay()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="save-btn" onclick="closeInventoryOverlay()"><i class="fas fa-check"></i> Done Selecting</button></div>
         </div>
     </div>
 
@@ -1137,14 +1137,14 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <div id="cartModal" class="overlay" style="display: none;">
         <div class="overlay-content">
              <h2><i class="fas fa-shopping-cart"></i> Selected Products</h2>
-             <div class="cart-table-container"><table class="cart-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody class="cart"></tbody></table><div class="no-products" style="display: none; text-align: center; padding: 20px;">Cart is empty.</div></div>
+             <div class="cart-table-container"><table class="cart-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody class="cart"></tbody></table><p class="no-products" style="text-align: center; padding: 20px; color: #6c757d; display: none;">No products in cart.</p></div>
              <div class="cart-total" style="text-align: right; margin-bottom: 20px; font-weight: bold; font-size: 1.1em;">Total: <span class="total-amount">PHP 0.00</span></div>
-             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="back-btn" onclick="closeCartModal()"><i class="fas fa-arrow-left"></i> Back</button><button type="button" class="save-cart-btn" onclick="saveCartChanges()"><i class="fas fa-save"></i> Save Changes</button></div>
+             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="back-btn" onclick="closeCartModal()"><i class="fas fa-arrow-left"></i> Back</button><button type="button" class="save-btn" onclick="saveCartChanges()"><i class="fas fa-check"></i> Save Changes</button></div>
         </div>
     </div>
 
     <script>
-        // --- Global Variables ---
+        // --- Global Variables ---\
         let currentPoNumber = '';
         let currentOrderOriginalStatus = ''; // Store the status when modal opens
         let currentOrderItems = []; // For progress tracking
@@ -1159,7 +1159,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         let poDownloadData = null; // For direct PDF download data
         let cartItems = []; // Holds items for the new order being created
 
-        // --- Utility Functions ---
+        // --- Utility Functions ---\
         function showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toast-container');
              if (!toastContainer) { console.error("Toast container not found!"); return; }
@@ -1175,7 +1175,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             return (weightInGrams ? parseFloat(weightInGrams).toFixed(2) : '0.00') + ' g';
         }
 
-        // --- Status Change Logic ---
+        // --- Status Change Logic ---\
 
         // Opens modal for ACTIVE orders (NO material check)
         function confirmStatusChange(poNumber, username, originalStatus) {
@@ -1233,11 +1233,20 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             $('#activeStatusBtn').prop('disabled', false); // Allow activation attempt despite check failure
                         }
                     },
-                    error: function(xhr, status, error) { // AJAX call itself failed
-                        materialContainer.html(`<h3>Server Error</h3><p style="color:red;">Could not check inventory: ${error}</p><p>Status change allowed, but check failed.</p>`);
+                    // --- MODIFIED ERROR HANDLER ---
+                    error: function(xhr, status, error) { // AJAX call itself failed or parsing failed
+                        console.error("AJAX Error (Inventory Check):", status, error, xhr.responseText); // Log the raw response
+                        let errorMsg = `Could not check inventory: ${error}`;
+                        if (status === 'parsererror') {
+                             errorMsg = `Could not check inventory: Invalid response from server. Check console for details.`;
+                             // Optionally, try to show part of the invalid response if helpful
+                             // let responsePreview = xhr.responseText.substring(0, 100); // Get first 100 chars
+                             // errorMsg += ` Server sent: ${responsePreview}...`;
+                        }
+                        materialContainer.html(`<h3>Server Error</h3><p style="color:red;">${errorMsg}</p><p>Status change allowed, but check failed.</p>`);
                         $('#activeStatusBtn').prop('disabled', false); // Allow activation attempt
-                        console.error("AJAX Error (Inventory Check):", status, error, xhr.responseText);
                     }
+                    // --- END MODIFIED ERROR HANDLER ---
                 });
             } catch (e) { // Error parsing ordersJson or other JS error
                 materialContainer.html(`<h3>Data Error</h3><p style="color:red;">${e.message}</p><p>Status change allowed, but check failed.</p>`);
@@ -1252,7 +1261,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
             let confirmationMsg = `Are you sure you want to change the status to ${selectedStatus}?`;
             // Add specific warnings based on TARGET status and ORIGINAL status
-            if (selectedStatus === 'Active') { // Moving TO Active (from Pending)
+            if (selectedStatus === 'Active') { // Moving TO Active (from Pending or Rejected)
                  confirmationMsg += ' This will deduct required stock from inventory.';
             } else if (currentOrderOriginalStatus === 'Active' && (selectedStatus === 'Pending' || selectedStatus === 'Rejected')) { // Moving FROM Active
                  confirmationMsg += ' This will attempt to return deducted stock to inventory.';
@@ -1287,7 +1296,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             $('#statusConfirmationModal').css('display', 'none'); // Hide confirmation
 
             // Determine flags based on TARGET status and ORIGINAL status
-            let deductMaterials = (selectedStatus === 'Active'); // Deduct ONLY when target is Active
+            let deductMaterials = (selectedStatus === 'Active'); // Deduct ONLY when target is Active (from Pending/Rejected)
             let returnMaterials = (currentOrderOriginalStatus === 'Active' && (selectedStatus === 'Pending' || selectedStatus === 'Rejected')); // Return ONLY when moving FROM Active to Pending/Rejected
 
             // Special check for 'For Delivery' requirements
@@ -1350,22 +1359,22 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             .finally(() => { closeRelevantStatusModals(); }); // Close modals and clear state
         }
 
-        // --- Modal Closing Helpers ---
+        // --- Modal Closing Helpers ---\
         function closeStatusModal() { $('#statusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; }
         function closeRejectedStatusModal() { $('#rejectedStatusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; $('#rejectedStatusModal').removeData('po_number'); }
-        function closePendingStatusModal() { $('#pendingStatusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; $('#pendingStatusModal').removeData('po_number'); $('#rawMaterialsContainer').html('<h3>Loading...</h3>'); }
+        function closePendingStatusModal() { $('#pendingStatusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; $('#pendingStatusModal').removeData('po_number'); }
         function closeRelevantStatusModals() { closeStatusModal(); closePendingStatusModal(); closeRejectedStatusModal(); }
 
-        // --- Material Display Helpers (used by Pending modal) ---
+        // --- Material Display Helpers (used by Pending modal) ---\
         function displayFinishedProducts(productsData, containerSelector) {
              const container = $(containerSelector); if (!container.length) return false;
              let html = `<h3>Finished Products Status</h3>`;
-             if (!productsData || Object.keys(productsData).length === 0) { html += '<p>No finished product information available.</p>'; container.html(html).append('<div id="raw-materials-section"></div>'); return true; }
+             if (!productsData || Object.keys(productsData).length === 0) { html += '<p>No finished product information available.</p>'; container.html(html).append('<div id="raw-materials-section"></div>'); return false; }
              html += `<table class="materials-table"><thead><tr><th>Product</th><th>In Stock</th><th>Required</th><th>Status</th></tr></thead><tbody>`;
              Object.keys(productsData).forEach(product => {
                  const data = productsData[product];
                  const available = parseInt(data.available) || 0; const required = parseInt(data.required) || 0; const isSufficient = data.sufficient; const shortfall = data.shortfall || 0;
-                 html += `<tr><td>${product}</td><td>${available}</td><td>${required}</td><td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">${isSufficient ? 'In Stock' : `Need ${shortfall} more`}</td></tr>`;
+                 html += `<tr><td>${product}</td><td>${available}</td><td>${required}</td><td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">${isSufficient ? 'In Stock' : `Short by ${shortfall}`}</td></tr>`;
              });
              html += `</tbody></table>`; container.html(html);
              const needsMfg = Object.values(productsData).some(p => !p.sufficient);
@@ -1411,14 +1420,14 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
              let statEl = cont.children('.materials-status'); if (statEl.length) statEl.removeClass('status-sufficient status-insufficient').addClass(cls).text(msg); else cont.append(`<p class="materials-status ${cls}">${msg}</p>`);
         }
 
-        // --- Order Details Modal Functions (Progress Tracking) ---
+        // --- Order Details Modal Functions (Progress Tracking) ---\
         function viewOrderDetails(poNumber) {
             currentPoNumber = poNumber;
             fetch(`/backend/get_order_details.php?po_number=${poNumber}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    currentOrderItems = data.orderItems; completedItems = data.completedItems || []; quantityProgressData = data.quantityProgressData || {}; itemProgressPercentages = data.itemProgressPercentages || {}; overallProgress = data.overallProgress || 0;
+                    currentOrderItems = data.orderItems; completedItems = data.completedItems || []; quantityProgressData = data.quantityProgressData || {}; itemProgressPercentages = data.itemProgressPercentages || {}; itemContributions = {};
                     const orderDetailsBody = $('#orderDetailsBody').empty(); $('#status-header-cell').show(); $('#orderStatus').text('Active');
                     const totalItemsCount = currentOrderItems.length; itemContributions = {}; let calculatedOverallProgress = 0;
                     currentOrderItems.forEach((item, index) => {
@@ -1429,13 +1438,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         const contributionToOverall = (unitProgress / 100) * contributionPerItem; calculatedOverallProgress += contributionToOverall;
                         const mainRow = $('<tr>').addClass('item-header-row').toggleClass('completed-item', isCompletedByCheckbox || unitProgress === 100).attr('data-item-index', index);
                         mainRow.html(`<td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>PHP ${parseFloat(item.price).toFixed(2)}</td><td>${item.quantity}</td>
-                            <td class="status-cell"><div style="display: flex; align-items: center; justify-content: space-between;"><input type="checkbox" class="item-status-checkbox" data-index="${index}" ${isCompletedByCheckbox ? 'checked' : ''} onchange="updateRowStyle(this)">${itemQuantity > 0 ? `<button type="button" class="toggle-item-progress" data-index="${index}" onclick="toggleQuantityProgress(${index})"><i class="fas fa-list-ol"></i> Units</button>` : ''}</div>
-                            ${itemQuantity > 0 ? `<div class="item-progress-bar-container"><div class="item-progress-bar" id="item-progress-bar-${index}" style="width: ${unitProgress}%"></div></div><span class="item-progress-text" id="item-progress-text-${index}">${Math.round(unitProgress)}% Complete</span><span class="contribution-text" id="contribution-text-${index}">(${Math.round(contributionToOverall)}% of total)</span>` : '<span style="font-size: 0.9em; color: grey;">(N/A)</span>'}</td>`);
+                            <td class="status-cell"><div style="display: flex; align-items: center; justify-content: space-between;"><input type="checkbox" class="item-status-checkbox" data-index="${index}" onchange="updateRowStyle(this)" ${isCompletedByCheckbox ? 'checked' : ''}> <span id="contribution-text-${index}" style="font-size:0.8em; color:#888;">(${contributionPerItem.toFixed(1)}%)</span> ${itemQuantity > 0 ? `<button class="toggle-units-btn" onclick="toggleQuantityProgress(${index})"><i class="fas fa-chevron-down"></i></button>` : ''}</div>
+                            ${itemQuantity > 0 ? `<div class="item-progress-bar-container"><div class="item-progress-bar" id="item-progress-bar-${index}" style="width: ${unitProgress}%"></div><div class="item-progress-text" id="item-progress-text-${index}">${Math.round(unitProgress)}%</div></div>` : ''}</td>`);
                         orderDetailsBody.append(mainRow);
                         if (itemQuantity > 0) {
                              const dividerRow = $('<tr>').addClass('units-divider').attr('id', `units-divider-${index}`).hide().html(`<td colspan="6" style="border: none; padding: 2px 0; background-color: #eee;"></td>`); orderDetailsBody.append(dividerRow);
-                            for (let i = 0; i < itemQuantity; i++) { const isUnitCompleted = quantityProgressData[index] && quantityProgressData[index][i] === true; const unitRow = $('<tr>').addClass(`unit-row unit-item unit-for-item-${index}`).toggleClass('completed', isUnitCompleted).hide(); unitRow.html(`<td style="padding-left: 20px;">${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>PHP ${parseFloat(item.price).toFixed(2)}</td><td class="unit-number-cell">Unit ${i+1}</td><td><input type="checkbox" class="unit-status-checkbox" data-item-index="${index}" data-unit-index="${i}" ${isUnitCompleted ? 'checked' : ''} onchange="updateUnitStatus(this)"></td>`); orderDetailsBody.append(unitRow); }
-                             const actionRow = $('<tr>').addClass(`unit-row unit-action-row unit-for-item-${index}`).hide().html(`<td colspan="6" style="text-align: right; padding: 10px;"><button type="button" class="select-all-units btn-sm btn-outline-secondary" onclick="selectAllUnits(${index}, ${itemQuantity})"><i class="fas fa-check-square"></i> Mark All Complete</button><button type="button" class="deselect-all-units btn-sm btn-outline-secondary" onclick="deselectAllUnits(${index}, ${itemQuantity})" style="margin-left: 5px;"><i class="far fa-square"></i> Mark All Incomplete</button></td>`); orderDetailsBody.append(actionRow);
+                             for (let i = 0; i < itemQuantity; i++) { const isUnitCompleted = quantityProgressData[index] && quantityProgressData[index][i] === true; const unitRow = $('<tr>').addClass(`unit-row unit-for-item-${index}`).hide().toggleClass('completed', isUnitCompleted).html(`<td colspan="5" style="padding-left: 30px;">Unit ${i+1}</td><td class="status-cell"><input type="checkbox" class="unit-status-checkbox" data-item-index="${index}" data-unit-index="${i}" onchange="updateUnitStatus(this)" ${isUnitCompleted ? 'checked' : ''}></td>`); orderDetailsBody.append(unitRow); }
+                             const actionRow = $('<tr>').addClass(`unit-row unit-action-row unit-for-item-${index}`).hide().html(`<td colspan="6" style="text-align: right; padding: 10px;"><button onclick="selectAllUnits(${index}, ${itemQuantity})">Select All</button> <button onclick="deselectAllUnits(${index}, ${itemQuantity})">Deselect All</button></td>`); orderDetailsBody.append(actionRow);
                         }
                     });
                     overallProgress = calculatedOverallProgress; updateOverallProgressDisplay();
@@ -1448,21 +1457,21 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function viewOrderInfo(ordersJson, orderStatus) {
              try {
                  const orderDetails = JSON.parse(ordersJson); const body = $('#orderDetailsBody').empty(); $('#status-header-cell').hide(); $('#orderStatus').text(orderStatus); let total = 0;
-                 orderDetails.forEach(p => { total += parseFloat(p.price) * parseInt(p.quantity); body.append(`<tr><td>${p.category||''}</td><td>${p.item_description}</td><td>${p.packaging||''}</td><td>PHP ${parseFloat(p.price).toFixed(2)}</td><td>${p.quantity}</td></tr>`); });
+                 orderDetails.forEach(p => { total += parseFloat(p.price) * parseInt(p.quantity); body.append(`<tr><td>${p.category||''}</td><td>${p.item_description}</td><td>${p.packaging||''}</td><td>PHP ${parseFloat(p.price).toFixed(2)}</td><td>${p.quantity}</td><td>PHP ${(parseFloat(p.price) * parseInt(p.quantity)).toFixed(2)}</td></tr>`); });
                  $('#orderTotalAmount').text(`PHP ${total.toFixed(2)}`); $('#overall-progress-info, .save-progress-btn').hide(); $('#orderDetailsModal').css('display', 'flex');
              } catch (e) { console.error('Parse error:', e); showToast('Error displaying info', 'error'); }
         }
         function toggleQuantityProgress(itemIndex) { $(`.unit-for-item-${itemIndex}, #units-divider-${itemIndex}`).toggle(); }
         function updateUnitStatus(checkbox) {
             const itemIndex = parseInt(checkbox.dataset.itemIndex); const unitIndex = parseInt(checkbox.dataset.unitIndex); const isChecked = checkbox.checked; $(checkbox).closest('tr').toggleClass('completed', isChecked);
-            if (!quantityProgressData[itemIndex]) { quantityProgressData[itemIndex] = []; for (let i = 0; i < (parseInt(currentOrderItems[itemIndex].quantity)||0); i++) quantityProgressData[itemIndex].push(false); }
+            if (!quantityProgressData[itemIndex]) { quantityProgressData[itemIndex] = []; for (let i = 0; i < (parseInt(currentOrderItems[itemIndex].quantity)||0); i++) quantityProgressData[itemIndex][i] = false; }
             quantityProgressData[itemIndex][unitIndex] = isChecked; updateItemProgress(itemIndex); updateOverallProgress();
         }
         function updateItemProgress(itemIndex) {
             const item = currentOrderItems[itemIndex]; const qty = parseInt(item.quantity) || 0; if (qty === 0) return; let completed = 0;
             for (let i = 0; i < qty; i++) if (quantityProgressData[itemIndex] && quantityProgressData[itemIndex][i]) completed++;
             const progress = (completed / qty) * 100; itemProgressPercentages[itemIndex] = progress; const contribution = (progress / 100) * itemContributions[itemIndex];
-            $(`#item-progress-bar-${itemIndex}`).css('width', `${progress}%`); $(`#item-progress-text-${itemIndex}`).text(`${Math.round(progress)}% Complete`); $(`#contribution-text-${itemIndex}`).text(`(${Math.round(contribution)}% of total)`);
+            $(`#item-progress-bar-${itemIndex}`).css('width', `${progress}%`); $(`#item-progress-text-${itemIndex}`).text(`${Math.round(progress)}% Complete`); $(`#contribution-text-${itemIndex}`).text(`(${(contribution).toFixed(1)}%)`);
             updateItemStatusBasedOnUnits(itemIndex, completed === qty);
         }
         function updateOverallProgressDisplay() { const rounded = Math.round(overallProgress); $('#overall-progress-bar').css('width', `${rounded}%`); $('#overall-progress-text').text(`${rounded}%`); }
@@ -1490,7 +1499,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             const unitCheckboxes = $(`.unit-status-checkbox[data-item-index="${index}"]`).prop('checked', isChecked); unitCheckboxes.closest('tr').toggleClass('completed', isChecked);
             if (!quantityProgressData[index]) quantityProgressData[index] = []; for (let i = 0; i < qty; i++) quantityProgressData[index][i] = isChecked;
             itemProgressPercentages[index] = isChecked ? 100 : 0; const contribution = (itemProgressPercentages[index] / 100) * itemContributions[index];
-            $(`#item-progress-bar-${index}`).css('width', `${itemProgressPercentages[index]}%`); $(`#item-progress-text-${index}`).text(`${Math.round(itemProgressPercentages[index])}% Complete`); $(`#contribution-text-${index}`).text(`(${Math.round(contribution)}% of total)`);
+            $(`#item-progress-bar-${index}`).css('width', `${itemProgressPercentages[index]}%`); $(`#item-progress-text-${index}`).text(`${Math.round(itemProgressPercentages[index])}% Complete`); $(`#contribution-text-${index}`).text(`(${contribution.toFixed(1)}%)`);
             updateOverallProgress();
         }
         function closeOrderDetailsModal() { $('#orderDetailsModal').css('display', 'none'); }
@@ -1498,18 +1507,18 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function closeSaveProgressConfirmation() { $('#saveProgressConfirmationModal').css('display', 'none'); }
         function saveProgressChanges() {
             $('#saveProgressConfirmationModal').hide(); const finalProgress = updateOverallProgress();
-            fetch('/backend/update_order_progress.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ po_number: currentPoNumber, completed_items: completedItems, quantity_progress_data: quantityProgressData, item_progress_percentages: itemProgressPercentages, progress: finalProgress }) })
+            fetch('/backend/update_order_progress.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ po_number: currentPoNumber, completed_items: completedItems, progress: finalProgress, quantity_progress: quantityProgressData }) })
             .then(response => response.json()).then(data => { if (data.success) { showToast('Progress updated', 'success'); setTimeout(() => { window.location.reload(); }, 1000); } else { showToast('Error saving: ' + data.message, 'error'); } })
             .catch(error => { showToast('Error saving: ' + error, 'error'); console.error('Save progress error:', error); });
         }
 
-        // --- Driver Assignment Modal Functions ---
-        function confirmDriverAssign(poNumber) { currentPoNumber = poNumber; currentDriverId = 0; $('#driverModalTitle').text('Assign Driver'); $('#driverModalMessage').text(`Select driver for ${poNumber}:`); $('#driverSelect').val(0); $('#driverModal').css('display', 'flex'); }
-        function confirmDriverChange(poNumber, driverId, driverName) { currentPoNumber = poNumber; currentDriverId = driverId; $('#driverModalTitle').text('Change Driver'); $('#driverModalMessage').text(`Current: ${driverName}. Select new:`); $('#driverSelect').val(driverId); $('#driverModal').css('display', 'flex'); }
+        // --- Driver Assignment Modal Functions ---\
+        function confirmDriverAssign(poNumber) { currentPoNumber = poNumber; currentDriverId = 0; $('#driverModalTitle').text('Assign Driver'); $('#driverModalMessage').text(`Select driver for ${poNumber}`); $('#driverSelect').val(0); $('#driverModal').show(); }
+        function confirmDriverChange(poNumber, driverId, driverName) { currentPoNumber = poNumber; currentDriverId = driverId; $('#driverModalTitle').text('Change Driver'); $('#driverModalMessage').text(`Current: ${driverName}. Select new driver for ${poNumber}.`); $('#driverSelect').val(driverId); $('#driverModal').show(); }
         function closeDriverModal() { $('#driverModal').hide(); currentDriverId = 0; }
         function confirmDriverAssignment() {
             const driverId = parseInt($('#driverSelect').val()); if (driverId === 0 || isNaN(driverId)) { showToast('Select a driver', 'error'); return; }
-            const name = $('#driverSelect option:selected').text(); let msg = `Assign driver ${name}?`; if (currentDriverId > 0 && currentDriverId !== driverId) msg = `Change driver to ${name}?`; else if (currentDriverId > 0 && currentDriverId === driverId) { showToast('Driver already assigned.', 'info'); closeDriverModal(); return; }
+            const name = $('#driverSelect option:selected').text(); let msg = `Assign driver ${name}?`; if (currentDriverId > 0 && currentDriverId !== driverId) msg = `Change driver to ${name}?`; else if (currentDriverId > 0 && currentDriverId === driverId) { showToast('Same driver selected', 'info'); closeDriverModal(); return; }
             $('#driverConfirmationModal .confirmation-message').text(msg); $('#driverConfirmationModal').show(); $('#driverModal').hide();
         }
         function closeDriverConfirmation() { $('#driverConfirmationModal').hide(); $('#driverModal').show(); }
@@ -1521,43 +1530,43 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             .catch(e => { console.error("Assign driver error:", e); showToast('Network error', 'error'); }).finally(() => { btn.html(txt).prop('disabled', false); closeDriverModal(); });
         }
 
-        // --- PDF Download Functions ---
-        function confirmDownloadPO(...args) { poDownloadData = { poNumber: args[0], username: args[1], company: args[2], orderDate: args[3], deliveryDate: args[4], deliveryAddress: args[5], ordersJson: args[6], totalAmount: args[7], specialInstructions: args[8] }; $('#downloadConfirmationModal').show(); }
+        // --- PDF Download Functions ---\
+        function confirmDownloadPO(...args) { poDownloadData = { poNumber: args[0], username: args[1], company: args[2], orderDate: args[3], deliveryDate: args[4], deliveryAddress: args[5], ordersJson: args[6], totalAmount: args[7], specialInstructions: args[8] }; $('#downloadConfirmationModal .confirmation-message').text(`Download PO ${poDownloadData.poNumber}?`); $('#downloadConfirmationModal').show(); }
         function closeDownloadConfirmation() { $('#downloadConfirmationModal').hide(); poDownloadData = null; }
         function downloadPODirectly() {
             $('#downloadConfirmationModal').hide(); if (!poDownloadData) { showToast('No data', 'error'); return; }
             try {
-                currentPOData = poDownloadData; $('#printCompany').text(currentPOData.company || 'N/A'); $('#printPoNumber').text(currentPOData.poNumber); $('#printUsername').text(currentPOData.username); $('#printDeliveryAddress').text(currentPOData.deliveryAddress); $('#printOrderDate').text(currentPOData.orderDate); $('#printDeliveryDate').text(currentPOData.deliveryDate); $('#printTotalAmount').text(parseFloat(currentPOData.totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-                const instrSec = $('#printInstructionsSection'); if (currentPOData.specialInstructions && currentPOData.specialInstructions.trim()) { $('#printSpecialInstructions').text(currentPOData.specialInstructions).css('white-space', 'pre-wrap'); instrSec.show(); } else { instrSec.hide(); }
+                currentPOData = poDownloadData; $('#printCompany').text(currentPOData.company || 'N/A'); $('#printPoNumber').text(currentPOData.poNumber); $('#printUsername').text(currentPOData.username); $('#printDeliveryAddress').text(currentPOData.deliveryAddress); $('#printOrderDate').text(currentPOData.orderDate); $('#printDeliveryDate').text(currentPOData.deliveryDate); $('#printTotalAmount').text(parseFloat(currentPOData.totalAmount).toFixed(2));
+                const instrSec = $('#printInstructionsSection'); if (currentPOData.specialInstructions && currentPOData.specialInstructions.trim()) { $('#printSpecialInstructions').text(currentPOData.specialInstructions); instrSec.show(); } else { instrSec.hide(); }
                 const items = JSON.parse(currentPOData.ordersJson); const body = $('#printOrderItems').empty();
-                items.forEach(item => { const total = parseFloat(item.price) * parseInt(item.quantity); body.append(`<tr><td>${item.category||''}</td><td>${item.item_description}</td><td>${item.packaging||''}</td><td>${item.quantity}</td><td>PHP ${parseFloat(item.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td>PHP ${total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`); });
-                const element = document.getElementById('contentToDownload'); const opt = { margin: [10,10,10,10], filename: `PO_${currentPOData.poNumber}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-                html2pdf().set(opt).from(element).save().then(() => { showToast(`PO downloaded.`, 'success'); currentPOData = null; poDownloadData = null; }).catch(e => { console.error('PDF error:', e); showToast('PDF generation error.', 'error'); currentPOData = null; poDownloadData = null; });
+                items.forEach(item => { const total = parseFloat(item.price) * parseInt(item.quantity); body.append(`<tr><td>${item.category||''}</td><td>${item.item_description}</td><td>${item.packaging||''}</td><td>${item.quantity}</td><td>PHP ${parseFloat(item.price).toFixed(2)}</td><td>PHP ${total.toFixed(2)}</td></tr>`); });
+                const element = document.getElementById('contentToDownload'); const opt = { margin: [10,10,10,10], filename: `PO_${currentPOData.poNumber}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+                html2pdf().set(opt).from(element).save().then(() => { showToast(`PO downloaded.`, 'success'); currentPOData = null; poDownloadData = null; }).catch(e => { console.error('PDF error:', e); showToast('PDF gen error', 'error'); currentPOData = null; poDownloadData = null; });
             } catch (e) { console.error('PDF prep error:', e); showToast('PDF data error', 'error'); currentPOData = null; poDownloadData = null; }
         }
-        function downloadPDF() { if (!currentPOData) { showToast('No data', 'error'); return; } const element = document.getElementById('contentToDownload'); const opt = { margin:[10,10,10,10], filename:`PO_${currentPOData.poNumber}.pdf`, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2, useCORS:true}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} }; html2pdf().set(opt).from(element).save().then(()=>{ showToast(`PO downloaded.`, 'success'); closePDFPreview(); }).catch(e => { console.error('PDF error:', e); showToast('PDF error.', 'error'); }); }
+        function downloadPDF() { if (!currentPOData) { showToast('No data', 'error'); return; } const element = document.getElementById('contentToDownload'); const opt = { margin:[10,10,10,10], filename: `PO_${currentPOData.poNumber}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }; html2pdf().set(opt).from(element).save().then(() => { showToast('PO downloaded', 'success'); closePDFPreview(); }).catch(e => { console.error('PDF error:', e); showToast('PDF gen error', 'error'); }); }
         function closePDFPreview() { $('#pdfPreview').hide(); currentPOData = null; }
 
-        // --- Special Instructions Modal ---
+        // --- Special Instructions Modal ---\
         function viewSpecialInstructions(poNumber, instructions) { $('#instructionsPoNumber').text('PO: ' + poNumber); const content = $('#instructionsContent'); if (instructions && instructions.trim()) { content.text(instructions).removeClass('empty'); } else { content.text('No instructions.').addClass('empty'); } $('#specialInstructionsModal').show(); }
         function closeSpecialInstructions() { $('#specialInstructionsModal').hide(); }
 
-        // --- Add New Order Form Functions ---
-        function initializeDeliveryDatePicker() { if ($.datepicker) { $("#delivery_date").datepicker("destroy"); $("#delivery_date").datepicker({ dateFormat: 'yy-mm-dd', minDate: 1, beforeShowDay: function(d) { const day = d.getDay(); const isMWF = (day===1||day===3||day===5); return [isMWF, isMWF?"":"ui-state-disabled", isMWF?"M/W/F":"Unavailable"]; } }); } }
-        function openAddOrderForm() { $('#addOrderForm')[0].reset(); cartItems = []; updateOrderSummary(); updateCartItemCount(); const today = new Date(); const fmtDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`; $('#order_date').val(fmtDate); initializeDeliveryDatePicker(); toggleDeliveryAddress(); generatePONumber(); $('#addOrderOverlay').show(); }
+        // --- Add New Order Form Functions ---\
+        function initializeDeliveryDatePicker() { if ($.datepicker) { $("#delivery_date").datepicker("destroy"); $("#delivery_date").datepicker({ dateFormat: 'yy-mm-dd', minDate: 1, beforeShowDay: $.datepicker.noWeekends }); } }
+        function openAddOrderForm() { $('#addOrderForm')[0].reset(); cartItems = []; updateOrderSummary(); updateCartItemCount(); const today = new Date(); const fmtDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`; $('#order_date').val(fmtDate); initializeDeliveryDatePicker(); toggleDeliveryAddress(); generatePONumber(); $('#addOrderOverlay').css('display', 'flex'); }
         function closeAddOrderForm() { $('#addOrderOverlay').hide(); }
-        function toggleDeliveryAddress() { const type = $('#delivery_address_type').val(); $('#company_address_container').toggle(type === 'company'); $('#custom_address_container').toggle(type === 'custom'); let addr = ''; if (type === 'company') addr = $('#username option:selected').data('company-address') || ''; else addr = $('#custom_address').val(); $('#company_address').val(type === 'company' ? addr : ''); $('#delivery_address').val(addr); }
+        function toggleDeliveryAddress() { const type = $('#delivery_address_type').val(); $('#company_address_container').toggle(type === 'company'); $('#custom_address_container').toggle(type === 'custom'); if (type === 'company') $('#delivery_address').val($('#company_address').val()); else $('#delivery_address').val($('#custom_address').val()); }
         $('#custom_address').on('input', function() { if ($('#delivery_address_type').val() === 'custom') $('#delivery_address').val($(this).val()); });
         function generatePONumber() { // Uses Timestamp format
             const userSelect = $('#username'); const username = userSelect.val(); const companyHidden = $('#company_hidden');
             if (username) {
                 const opt = userSelect.find('option:selected'); const addr = opt.data('company-address') || ''; const name = opt.data('company') || ''; $('#company_address').val(addr); companyHidden.val(name); if ($('#delivery_address_type').val() === 'company') $('#delivery_address').val(addr);
-                const today = new Date(); const datePart = `${today.getFullYear().toString().substr(-2)}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`; const timePart = Date.now().toString().slice(-6); const po = `PO-${datePart}-${username.substring(0,3).toUpperCase()}-${timePart}`; $('#po_number').val(po);
+                const today = new Date(); const datePart = `${today.getFullYear().toString().substr(-2)}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`; const timePart = `${String(today.getHours()).padStart(2,'0')}${String(today.getMinutes()).padStart(2,'0')}${String(today.getSeconds()).padStart(2,'0')}`; $('#po_number').val(`${datePart}-${timePart}`);
             } else { $('#company_address').val(''); companyHidden.val(''); $('#po_number').val(''); if ($('#delivery_address_type').val() === 'company') $('#delivery_address').val(''); }
         }
         function prepareOrderData() { // Includes product_id
-            toggleDeliveryAddress(); const addr = $('#delivery_address').val(); const userSelect = $('#username'); if (userSelect.val()) $('#company_hidden').val(userSelect.find('option:selected').data('company')||''); else $('#company_hidden').val('');
-            if (cartItems.length === 0) { showToast('Select products.', 'error'); return false; } if (!userSelect.val()) { showToast('Select user.', 'error'); return false; } if (!$('#delivery_date').val()) { showToast('Select delivery date.', 'error'); return false; } if (!addr || !addr.trim()) { showToast('Enter address.', 'error'); return false; } if (!$('#po_number').val()) { showToast('PO Number missing.', 'error'); return false; }
+            toggleDeliveryAddress(); const addr = $('#delivery_address').val(); const userSelect = $('#username'); if (userSelect.val()) $('#company_hidden').val(userSelect.find('option:selected').data('company') || '');
+            if (cartItems.length === 0) { showToast('Select products.', 'error'); return false; } if (!userSelect.val()) { showToast('Select user.', 'error'); return false; } if (!$('#delivery_date').val()) { showToast('Select delivery date.', 'error'); return false; } if (!addr) { showToast('Enter delivery address.', 'error'); return false; }
             let total = 0; const orders = cartItems.map(item => { total += item.price * item.quantity; return { product_id: item.id, category: item.category, item_description: item.item_description, packaging: item.packaging, price: item.price, quantity: item.quantity }; });
             $('#orders').val(JSON.stringify(orders)); $('#total_amount').val(total.toFixed(2)); return true;
         }
@@ -1565,19 +1574,19 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function closeAddConfirmation() { $('#addConfirmationModal').hide(); }
         function submitAddOrder() {
              $('#addConfirmationModal').hide(); const form = document.getElementById('addOrderForm'); const fd = new FormData(form);
-             fetch('/backend/add_order.php', { method: 'POST', body: fd }).then(r => r.json()).then(d => { if (d.success) { showToast('Order added!', 'success'); closeAddOrderForm(); setTimeout(() => { window.location.reload(); }, 1500); } else { showToast(d.message || 'Error adding order.', 'error'); } }).catch(e => { console.error('Add order error:', e); showToast('Server error.', 'error'); });
+             fetch('/backend/add_order.php', { method: 'POST', body: fd }).then(r => r.json()).then(d => { if (d.success) { showToast('Order added!', 'success'); closeAddOrderForm(); setTimeout(() => { window.location.reload(); }, 1000); } else { showToast('Error: ' + d.message, 'error'); } }).catch(e => { showToast('Network error', 'error'); });
         }
 
-        // --- Inventory Overlay and Cart Functions ---
+        // --- Inventory Overlay and Cart Functions ---\
         function openInventoryOverlay() {
             $('#inventoryOverlay').css('display', 'flex'); const body = $('.inventory').html('<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>');
-            fetch('/backend/get_inventory.php').then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text().then(t => { try { return JSON.parse(t); } catch (e) { console.error("Inv JSON:", t); throw new Error("Invalid JSON"); } }); })
-            .then(data => { console.log("Inv data:", data); if (Array.isArray(data)) { const cats = [...new Set(data.map(i => i.category).filter(c => c))]; populateInventory(data); populateCategories(cats); } else if (data && data.success) { const inv = data.inventory || []; const cats = data.categories || [...new Set(inv.map(i => i.category).filter(c => c))]; populateInventory(inv); populateCategories(cats); } else { throw new Error(data?.message || 'Failed format.'); } })
-            .catch(e => { console.error('Inv fetch:', e); showToast('Inv fetch error: ' + e.message, 'error'); body.html(`<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Error: ${e.message}</td></tr>`); });
+            fetch('/backend/get_inventory.php').then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text().then(t => { try { return JSON.parse(t); } catch (e) { console.error("Inv JSON parse error:", t); throw new Error("Invalid server response"); } }); })
+            .then(data => { console.log("Inv data:", data); if (Array.isArray(data)) { const cats = [...new Set(data.map(i => i.category).filter(c => c))]; populateInventory(data); populateCategories(cats); filterInventory(); } else { throw new Error("Unexpected data format"); } })
+            .catch(e => { console.error('Inv fetch:', e); showToast('Inv fetch error: ' + e.message, 'error'); body.html(`<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Error loading inventory</td></tr>`); });
         }
         function populateInventory(inventory) {
             const body = $('.inventory').empty(); if (!inventory || inventory.length === 0) { body.html('<tr><td colspan="6" style="text-align:center;padding:20px;">No items</td></tr>'); return; }
-            inventory.forEach(item => { const price = parseFloat(item.price); if (isNaN(price)) { console.warn("Skip invalid price:", item); return; } body.append(`<tr><td>${item.category||'Uncat'}</td><td>${item.item_description||'N/A'}</td><td>${item.packaging||''}</td><td>PHP ${price.toFixed(2)}</td><td><input type="number" class="inventory-quantity" min="1" max="1000" value="1"></td><td><button class="add-to-cart-btn" onclick="addToCart(this, '${item.product_id}', '${item.category||''}', '${(item.item_description||'').replace(/'/g, "\\'")}', '${item.packaging||''}', ${price})"><i class="fas fa-cart-plus"></i> Add</button></td></tr>`); });
+            inventory.forEach(item => { const price = parseFloat(item.price); if (isNaN(price)) { console.warn("Skip invalid price:", item); return; } body.append(`<tr><td>${item.category||'Uncategorized'}</td><td>${item.item_description}</td><td>${item.packaging||'N/A'}</td><td>PHP ${price.toFixed(2)}</td><td><input type="number" class="inventory-quantity" value="1" min="1" max="1000"></td><td><button class="add-to-cart-btn" onclick="addToCart(this, ${item.id}, '${item.category||''}', '${item.item_description}', '${item.packaging||''}', ${price})"><i class="fas fa-plus"></i> Add</button></td></tr>`); });
         }
         function populateCategories(categories) {
             const sel = $('#inventoryFilter'); sel.find('option:not(:first-child)').remove(); if (!categories || categories.length === 0) return;
@@ -1586,7 +1595,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         function filterInventory() {
             const cat = $('#inventoryFilter').val(); const search = $('#inventorySearch').val().toLowerCase();
-            $('.inventory tr').each(function() { const row = $(this); if (row.find('th').length > 0 || (row.find('td').length === 1 && row.find('td').attr('colspan') === '6')) return; const cCell = row.find('td:first-child').text(); const rText = row.text().toLowerCase(); const catMatch = cat === 'all' || cCell === cat; const searchMatch = !search || rText.includes(search); row.toggle(catMatch && searchMatch); });
+            $('.inventory tr').each(function() { const row = $(this); if (row.find('th').length > 0 || (row.find('td').length === 1 && row.find('td').attr('colspan') === '6')) return; const cCell = row.find('td:first-child').text(); const matchCat = (cat === 'all' || cCell === cat); const matchSearch = (row.text().toLowerCase().includes(search)); row.toggle(matchCat && matchSearch); });
         }
         $('#inventorySearch').off('input', filterInventory).on('input', filterInventory);
         function closeInventoryOverlay() { $('#inventoryOverlay').hide(); }
@@ -1600,7 +1609,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function updateOrderSummary() {
             const body = $('#summaryBody').empty(); let total = 0;
             if (cartItems.length === 0) { body.html('<tr><td colspan="6" style="text-align:center; padding: 10px; color: #6c757d;">No products</td></tr>'); }
-            else { cartItems.forEach((item, index) => { total += item.price * item.quantity; body.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>PHP ${item.price.toFixed(2)}</td><td>${item.quantity}</td><td><button type="button" class="remove-item-btn btn-sm" onclick="removeSummaryItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`); }); }
+            else { cartItems.forEach((item, index) => { total += item.price * item.quantity; body.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>PHP ${item.price.toFixed(2)}</td><td>${item.quantity}</td><td><button class="remove-item-btn" onclick="removeSummaryItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`); }); }
             $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`);
         }
         function removeSummaryItem(index) { if (index >= 0 && index < cartItems.length) { const removed = cartItems.splice(index, 1)[0]; showToast(`Removed ${removed.item_description}`, 'info'); updateOrderSummary(); updateCartItemCount(); } }
@@ -1610,7 +1619,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function updateCartDisplay() {
             const body = $('.cart').empty(); const msg = $('.no-products'); const totalEl = $('.total-amount'); let total = 0;
             if (cartItems.length === 0) { msg.show(); totalEl.text('PHP 0.00'); return; }
-            msg.hide(); cartItems.forEach((item, index) => { total += item.price * item.quantity; body.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>PHP ${item.price.toFixed(2)}</td><td><input type="number" class="cart-quantity" min="1" max="1000" value="${item.quantity}" data-index="${index}" onchange="updateCartItemQuantity(this)"></td><td><button class="remove-item-btn btn-sm" onclick="removeCartItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`); });
+            msg.hide(); cartItems.forEach((item, index) => { total += item.price * item.quantity; body.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>PHP ${item.price.toFixed(2)}</td><td><input type="number" class="cart-quantity" data-index="${index}" value="${item.quantity}" min="1" max="1000" onchange="updateCartItemQuantity(this)"></td><td><button class="remove-item-btn" onclick="removeCartItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`); });
             totalEl.text(`PHP ${total.toFixed(2)}`);
         }
         function updateCartItemQuantity(input) {
@@ -1621,7 +1630,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function removeCartItem(index) { if (index >= 0 && index < cartItems.length) { const removed = cartItems.splice(index, 1)[0]; showToast(`Removed ${removed.item_description}`, 'info'); updateCartDisplay(); updateCartItemCount(); } }
         function saveCartChanges() { updateOrderSummary(); closeCartModal(); }
 
-        // --- Document Ready ---
+        // --- Document Ready ---\
         $(document).ready(function() {
             // Search for main orders table
             $("#searchInput").on("input", function() { const search = $(this).val().toLowerCase().trim(); $(".orders-table tbody tr").each(function() { $(this).toggle($(this).text().toLowerCase().includes(search)); }); });
@@ -1633,10 +1642,16 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             // Close modals on outside click
             window.addEventListener('click', function(event) {
                  if ($(event.target).hasClass('instructions-modal')) closeSpecialInstructions();
-                 if ($(event.target).hasClass('confirmation-modal')) { $(event.target).hide(); if (event.target.id === 'statusConfirmationModal') closeStatusConfirmation(); }
+                 if ($(event.target).hasClass('confirmation-modal')) { $(event.target).hide(); if (event.target.id === 'statusConfirmationModal') closeStatusConfirmation(); if (event.target.id === 'driverConfirmationModal') closeDriverConfirmation(); } // Added driver confirmation close
                  if ($(event.target).hasClass('overlay')) {
                      const id = event.target.id;
-                     if (id === 'addOrderOverlay') closeAddOrderForm(); else if (id === 'inventoryOverlay') closeInventoryOverlay(); else if (id === 'cartModal') closeCartModal(); else if (id === 'driverModal') closeDriverModal(); else if (id === 'orderDetailsModal') closeOrderDetailsModal(); else $(event.target).hide();
+                     if (id === 'addOrderOverlay') closeAddOrderForm(); else if (id === 'inventoryOverlay') closeInventoryOverlay(); else if (id === 'cartModal') closeCartModal(); else if (id === 'driverModal') closeDriverModal(); else if (id === 'orderDetailsModal') closeOrderDetailsModal(); else if (id === 'pdfPreview') closePDFPreview(); // Added PDF preview close
+                 }
+                 // Close status modals if clicking outside their specific content
+                 if ($(event.target).hasClass('modal') && !$(event.target).closest('.modal-content').length) {
+                    if (event.target.id === 'statusModal') closeStatusModal();
+                    else if (event.target.id === 'pendingStatusModal') closePendingStatusModal();
+                    else if (event.target.id === 'rejectedStatusModal') closeRejectedStatusModal();
                  }
             });
         });
