@@ -413,9 +413,51 @@ function truncate($text, $max = 15) {
     <link rel="stylesheet" href="/css/toast.css">
     <!-- Assume other CSS files are linked -->
     <style>
-        /* --- Base Modal and Overlay --- */
+        /* Keep existing CSS from previous version */
+        #myModal { display: none; position: fixed; z-index: 9999; padding-top: 100px; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.9); }
+        .modal-content { margin: auto; display: block; max-width: 80%; max-height: 80%; }
+        #caption { margin: auto; display: block; width: 80%; max-width: 700px; text-align: center; color: #ccc; padding: 10px 0; height: 150px; }
+        .close { position: absolute; top: 15px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; transition: 0.3s; cursor: pointer; }
+        .close:hover, .close:focus { color: #bbb; text-decoration: none; }
+        .photo-album img { cursor: pointer; transition: all 0.3s; margin: 2px; border: 1px solid #ddd; padding: 1px; background-color: #fff;}
+        .photo-album img:hover { opacity: 0.8; transform: scale(1.05); border-color: #aaa; }
+        .file-info { font-size: 0.9em; color: #666; font-style: italic; }
+        .two-column-form { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-column { display: flex; flex-direction: column; }
+        .form-full-width { grid-column: 1 / span 2; }
+        .required { color: #ff0000; font-weight: bold; }
+        .overlay-content { max-width: 800px; width: 90%; max-height: 95vh; display: flex; flex-direction: column; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; } /* Adjusted for status modal */
+        .two-column-form input, .two-column-form textarea, .two-column-form select { width: 100%; box-sizing: border-box; }
+        textarea#company_address, textarea#edit-company_address, textarea#bill_to_address, textarea#edit-bill_to_address { height: 60px; padding: 8px; font-size: 14px; resize: vertical; min-height: 60px; }
+        input, textarea, select { border: 1px solid #ccc; border-radius: 4px; padding: 6px 10px; transition: border-color 0.3s; outline: none; font-size: 14px; margin-bottom: 10px; }
+        input:focus, textarea:focus, select:focus { border-color: #4a90fe; box-shadow: 0 0 5px rgba(77, 144, 254, 0.5); }
+        input::placeholder, textarea::placeholder { color: #aaa; padding: 4px; font-style: italic; }
+        .view-address-btn, .view-contact-btn { background-color: #4a90e2; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 12px; transition: all 0.3s; }
+        .view-address-btn:hover, .view-contact-btn:hover { background-color: #357abf; }
+        #addressInfoModal, #contactInfoModal { display: none; /* Hidden */ position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center; }
+        .info-modal-content { background-color: #ffffff; margin: 0; padding: 0; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); width: 90%; max-width: 700px; max-height: 80vh; animation: modalFadeIn 0.3s; display: flex; flex-direction: column; /* Removed absolute positioning */ }
+        @keyframes modalFadeIn { from {opacity: 0; transform: scale(0.95);} to {opacity: 1; transform: scale(1);} }
+        .info-modal-header { background-color: #4a90e2; color: #fff; padding: 15px 25px; position: relative; display: flex; align-items: center; border-radius: 10px 10px 0 0; }
+        .info-modal-header h2 { margin: 0; font-size: 20px; flex: 1; font-weight: 500; }
+        .info-modal-header h2 i { margin-right: 10px; }
+        .info-modal-close { color: #fff; font-size: 24px; font-weight: bold; cursor: pointer; transition: all 0.2s; padding: 5px; line-height: 1; }
+        .info-modal-close:hover { transform: scale(1.1); }
+        .info-modal-body { padding: 25px; overflow-y: auto; max-height: calc(80vh - 65px); flex: 1; }
+        .info-section { margin-bottom: 25px; background-color: #f9f9f9; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .info-section:last-child { margin-bottom: 0; }
+        .info-section-title { display: flex; align-items: center; color: #4a90e2; margin-top: 0; margin-bottom: 15px; font-size: 16px; padding-bottom: 10px; border-bottom: 1px solid #e0e0e0; }
+        .info-section-title i { margin-right: 10px; width: 20px; text-align: center; }
+        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+        .info-table th { text-align: left; background-color: #eef5ff; padding: 12px 15px; border: 1px solid #d1e1f9; width: 30%; vertical-align: top; color: #3a5d85; font-weight: 600; font-size: 14px; }
+        .info-table td { padding: 12px 15px; border: 1px solid #d1e1f9; word-break: break-word; vertical-align: top; line-height: 1.5; color: #333; background-color: #fff; font-size: 14px; }
+        .contact-item { display: flex; align-items: center; padding: 15px; background-color: #fff; border-radius: 6px; margin-bottom: 15px; border: 1px solid #d1e1f9; }
+        .contact-item:last-child { margin-bottom: 0; }
+        .contact-icon { width: 45px; height: 45px; background-color: #eef5ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #4a90e2; font-size: 18px; margin-right: 15px; }
+        .contact-text { flex: 1; }
+        .contact-value { font-weight: bold; color: #333; font-size: 14px; word-break: break-all; }
+        .contact-label { font-size: 13px; color: #777; display: block; margin-top: 5px; }
         .overlay {
-            display: none; /* Hidden by default */
+            display: none; /* This is the crucial line - makes it hidden by default */
             position: fixed;
             width: 100%;
             height: 100%;
@@ -423,478 +465,88 @@ function truncate($text, $max = 15) {
             left: 0;
             background-color: rgba(0, 0, 0, 0.7);
             z-index: 1000;
-            /* display: flex; */ /* REMOVED - JS will handle showing */
-            justify-content: center; /* Keep these for when JS sets display:flex */
-            align-items: center;     /* Keep these for when JS sets display:flex */
+            /* display: flex; */ /* REMOVE or COMMENT OUT this line if present */
+            justify-content: center; /* Keep these */
+            align-items: center;     /* Keep these */
             backdrop-filter: blur(3px);
-            overflow-y: auto; /* Allow scrolling if content overflows viewport */
-            padding: 20px 0; /* Add some padding top/bottom */
+            overflow-y: auto;
+            padding: 20px 0;
         }
-
-        /* --- Form Modal Content (Add/Edit) --- */
-        .form-modal-content {
-            display: flex;
-            flex-direction: column;
-            max-height: 90vh; /* Adjusted slightly */
-            height: auto;
-            width: 90%; /* More responsive */
-            max-width: 700px; /* Increased max-width slightly */
-            background-color: #fff;
-            border-radius: 8px;
-            overflow: hidden; /* Content scroll handled by modal-body */
-            margin: auto; /* Center horizontally */
-            position: relative;
-            top: auto; left: auto; transform: none;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        /* --- Info Modal Content (Contact/Address) --- */
-        .info-modal-content {
-            background-color: #ffffff;
-            margin: 0; /* Centered by overlay's flex */
-            padding: 0;
-            border-radius: 10px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-            width: 90%;
-            max-width: 700px;
-            max-height: 80vh;
-            animation: modalFadeIn 0.3s ease-out;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* --- Specific rule for Info Modals to ensure they are hidden --- */
-        #addressInfoModal, #contactInfoModal {
-            display: none !important; /* Explicitly hide, using !important for override */
-            position: fixed;
-            z-index: 9999; /* Keep higher z-index if needed */
-            left: 0; top: 0; width: 100%; height: 100%;
-            overflow: hidden; /* Keep */
-            background-color: rgba(0,0,0,0.7); /* Keep */
-            /* display: flex; */ /* MAKE SURE THIS IS GONE */
-            align-items: center;     /* Keep these for when JS shows modal */
-            justify-content: center; /* Keep these for when JS shows modal */
-        }
-
-        /* --- Status Modal Content --- */
-        #statusModal .overlay-content { /* Specific styling for status modal */
-            max-width: 450px; /* Narrower */
-            width: 90%;
-            background-color: #fff;
-            border-radius: 8px;
-            overflow: hidden;
-            margin: auto;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            padding: 25px;
-            text-align: center;
-        }
-
-        /* --- Confirmation Modal Content --- */
+        .address-group { border: 1px solid #eee; padding: 12px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; }
+        .address-group h3 { margin-top: 0; color: #4a90e2; font-size: 15px; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
+        .modal-header { background-color: #ffffff; padding: 15px 20px; /* Adjusted padding */ text-align: center; border-radius: 8px 8px 0 0; border-bottom: 1px solid #ddd; /* Lighter border */ position: sticky; top: 0; z-index: 10; }
+        .modal-header h2 { margin: 0; padding: 0; font-size: 18px; font-weight: 600; } /* Adjusted font */
+        .modal-footer { background-color: #f7f7f7; /* Lighter footer */ padding: 12px 20px; border-top: 1px solid #ddd; text-align: center; border-radius: 0 0 8px 8px; position: sticky; bottom: 0; z-index: 10; display: flex; justify-content: flex-end; /* Align buttons right */ gap: 10px; margin-top: auto; }
+        .modal-body { padding: 20px; overflow-y: auto; max-height: calc(85vh - 120px); /* Adjusted calc */ height: auto; }
+        .form-modal-content { display: flex; flex-direction: column; max-height: 85vh; height: auto; width: 90%; /* More responsive */ max-width: 650px; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; position: relative; top: auto; left: auto; transform: none; box-shadow: 0 5px 15px rgba(0,0,0,0.2); /* Added shadow */ }
+        label { display: block; font-size: 14px; margin-bottom: 5px; /* Slightly more space */ font-weight: 500; }
+        .error-message { color: #D8000C; background-color: #FFD2D2; padding: 10px 15px; border-radius: 4px; border: 1px solid #FFB8B8; margin-top: 5px; margin-bottom: 15px; display: none; font-size: 13px; line-height: 1.4; }
+        .modal-footer button { padding: 8px 16px; font-size: 14px; min-width: 100px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; border: none; margin: 0; font-weight: 500; }
+        .save-btn { background-color: #4a90e2; color: white; }
+        .save-btn:hover { background-color: #357abf; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .cancel-btn { background-color: #f1f1f1; color: #333; border: 1px solid #ccc; }
+        .cancel-btn:hover { background-color: #e1e1e1; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .status-active { color: #28a745; font-weight: bold; }
+        .status-pending { color: #ffc107; font-weight: bold; }
+        .status-rejected { color: #dc3545; font-weight: bold; }
+        .status-inactive { color: #6c757d; font-weight: bold; }
+        .password-note { font-size: 12px; color: #666; margin-top: 4px; margin-bottom: 10px; /* Added bottom margin */ font-style: italic; }
+        .auto-generated { background-color: #f8f8f8; color: #888; cursor: not-allowed; }
+        .password-container { position: relative; width: 100%; margin-bottom: 10px; }
+        .toggle-password { position: absolute; right: 1px; top: 1px; bottom: 1px; /* Align with input border */ display: flex; align-items: center; padding: 0 10px; cursor: pointer; color: #666; background-color: #fff; border-left: 1px solid #ccc; border-radius: 0 4px 4px 0; }
+        .toggle-password:hover { color: #333; }
+        .switch-container { display: flex; align-items: center; margin-top: 8px; margin-bottom: 12px; }
+        .switch-label { font-size: 13px; margin-left: 8px; color: #555; cursor: pointer; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: #4a90e2; }
+        input:focus + .slider { box-shadow: 0 0 1px #4a90e2; }
+        input:checked + .slider:before { transform: translateX(26px); }
         .confirmation-modal {
-            display: none; /* Hidden */
+            display: none; /* This is the crucial line */
             position: fixed;
             z-index: 1100;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.6); /* Adjusted slightly */
+            background-color: rgba(0, 0, 0, 0.6);
             overflow: hidden;
-            /* display: flex; */ /* REMOVED - JS will handle showing */
-            align-items: center;     /* Keep these for when JS sets display:flex */
-            justify-content: center; /* Keep these for when JS sets display:flex */
-        }
-        .confirmation-content {
-            background-color: #fefefe;
-            padding: 25px 30px;
-            border-radius: 8px;
-            width: 380px;
-            max-width: 90%;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            animation: modalPopIn 0.3s ease-out;
-            margin: auto; /* Centered by overlay's flex */
-        }
-
-        /* --- Image Zoom Modal --- */
-        #myModal {
-            display: none; /* Hidden by default */
-            position: fixed;
-            z-index: 9999;
-            padding-top: 60px; /* Adjusted padding */
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.9);
-        }
-        .modal-content { /* Image inside zoom modal */
-            margin: auto;
-            display: block;
-            max-width: 90%;
-            max-height: 85vh; /* Limit image height */
-            animation: zoomIn 0.3s ease-out;
-        }
-        #caption {
-            margin: auto;
-            display: block;
-            width: 80%;
-            max-width: 700px;
-            text-align: center;
-            color: #ccc;
-            padding: 15px 0;
-            height: auto; /* Allow dynamic height */
-        }
-        .close { /* Close button for image zoom */
-            position: absolute;
-            top: 15px;
-            right: 35px;
-            color: #f1f1f1;
-            font-size: 40px;
-            font-weight: bold;
-            transition: 0.3s;
-            cursor: pointer;
-            line-height: 1;
-        }
-        .close:hover,
-        .close:focus {
-            color: #bbb;
-            text-decoration: none;
-        }
-
-        /* --- Modal Header/Body/Footer --- */
-        .modal-header {
-            background-color: #ffffff;
-            padding: 15px 20px;
-            text-align: center;
-            border-radius: 8px 8px 0 0;
-            border-bottom: 1px solid #ddd;
-            position: sticky; /* Keep header visible on scroll */
-            top: 0;
-            z-index: 10;
-        }
-        .modal-header h2 {
-            margin: 0;
-            padding: 0;
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-        }
-        .modal-header h2 i {
-            margin-right: 8px;
-            color: #4a90e2;
-        }
-        .modal-body {
-            padding: 20px;
-            overflow-y: auto; /* Enable vertical scroll within body */
-            /* Calculate max height based on viewport and header/footer */
-            max-height: calc(90vh - 130px); /* Adjust as needed */
-            flex-grow: 1; /* Allow body to take available space */
-        }
-        .modal-footer {
-            background-color: #f7f7f7;
-            padding: 12px 20px;
-            border-top: 1px solid #ddd;
-            text-align: right; /* Align buttons right by default */
-            border-radius: 0 0 8px 8px;
-            position: sticky; /* Keep footer visible */
-            bottom: 0;
-            z-index: 10;
-            display: flex;
-            justify-content: flex-end; /* Align buttons right */
-            gap: 10px;
-        }
-
-        /* --- Form Specific Styles --- */
-        .two-column-form {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Responsive columns */
-            gap: 15px 20px; /* Row and column gap */
-        }
-        .form-column {
-            display: flex;
-            flex-direction: column;
-        }
-        .form-full-width {
-            grid-column: 1 / -1; /* Span all columns */
-        }
-        label {
-            display: block;
-            font-size: 14px;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: #333;
-        }
-        input[type="text"],
-        input[type="email"],
-        input[type="tel"],
-        input[type="password"],
-        input[type="file"],
-        textarea,
-        select {
-            width: 100%;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 8px 12px; /* Slightly more padding */
-            transition: border-color 0.3s, box-shadow 0.3s;
-            outline: none;
-            font-size: 14px;
-            margin-bottom: 15px; /* Consistent bottom margin */
-            background-color: #fff;
-        }
-        input:focus, textarea:focus, select:focus {
-            border-color: #4a90fe;
-            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2); /* Focus ring */
-        }
-        input::placeholder, textarea::placeholder {
-            color: #aaa;
-            font-style: italic;
-        }
-        input[type="file"] {
-            padding: 5px; /* Adjust file input padding */
-            border: 1px dashed #ccc; /* Dashed border for file input */
-            background-color: #f9f9f9;
-        }
-        input[readonly].auto-generated {
-            background-color: #f8f8f8;
-            color: #888;
-            cursor: not-allowed;
-            border-style: dashed;
-        }
-        textarea {
-            resize: vertical;
-            min-height: 80px; /* Increased min-height */
-        }
-        .required { color: #d9534f; font-weight: bold; margin-left: 2px; }
-        .file-info { font-size: 0.85em; color: #666; font-style: italic; display: block; margin-top: -10px; margin-bottom: 10px;}
-        .password-note { font-size: 0.8em; color: #666; margin-top: -10px; margin-bottom: 10px; font-style: italic; }
-        .address-group {
-            border: 1px solid #eee;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            background-color: #fafafa;
-        }
-        .address-group h3 {
-            margin-top: 0;
-            color: #4a90e2;
-            font-size: 15px;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 8px;
-            display: flex;
-            align-items: center;
-        }
-        .address-group h3 i {
-            margin-right: 8px;
-        }
-
-        /* --- Password Toggle Switch --- */
-        .switch-container { display: flex; align-items: center; margin-top: 8px; margin-bottom: 15px; }
-        .switch-label { font-size: 13px; margin-left: 8px; color: #555; cursor: pointer; user-select: none; }
-        .switch { position: relative; display: inline-block; width: 50px; height: 24px; flex-shrink: 0; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-        input:checked + .slider { background-color: #4a90e2; }
-        input:focus + .slider { box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2); }
-        input:checked + .slider:before { transform: translateX(26px); }
-
-        /* --- Password Visibility Toggle Icon --- */
-        .password-container { position: relative; width: 100%; margin-bottom: 15px; }
-        .toggle-password {
-            position: absolute;
-            right: 1px; top: 1px; bottom: 1px;
-            display: flex; align-items: center;
-            padding: 0 10px;
-            cursor: pointer;
-            color: #666;
-            background-color: #fff;
-            border-left: 1px solid #ccc;
-            border-radius: 0 4px 4px 0;
-            z-index: 2; /* Ensure it's above input */
-        }
-        .toggle-password:hover { color: #333; }
-        .password-container input[type="password"],
-        .password-container input[type="text"] { /* Ensure input padding doesn't overlap icon */
-            padding-right: 40px;
-        }
-
-        /* --- Business Proof Display in Edit Form --- */
-        #edit-business-proof-container {
-            margin-bottom: 15px;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border: 1px dashed #ddd;
-            border-radius: 4px;
-            min-height: 60px; /* Adjusted height */
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 8px; /* Spacing between images */
-        }
-        #edit-business-proof-container h4 {
-            width: 100%;
-            margin-bottom: 8px; /* Spacing below header */
-            font-size: 14px;
-            color: #555;
-            font-weight: 500;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #eee;
-        }
-        #edit-business-proof-container img {
-            border: 1px solid #ccc;
-            padding: 2px;
-            max-width: 65px; /* Slightly larger */
-            height: auto;
-            background: #fff;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-        #edit-business-proof-container img:hover {
-            transform: scale(1.05);
-            border-color: #888;
-        }
-        #edit-business-proof-container p {
-            width: 100%;
-            font-size: 13px;
-            color: #888;
-            margin: 5px 0;
-            text-align: center;
-        }
-
-        /* --- Table Styles --- */
-        .accounts-table-container { overflow-x: auto; } /* Allow horizontal scroll on small screens */
-        .accounts-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .accounts-table th, .accounts-table td {
-            border: 1px solid #ddd;
-            padding: 10px 12px; /* Adjusted padding */
-            text-align: left;
-            vertical-align: middle; /* Align content vertically */
-            font-size: 14px;
-        }
-        .accounts-table th { background-color: #f2f2f2; font-weight: 600; white-space: nowrap; }
-        .accounts-table tr:nth-child(even) { background-color: #f9f9f9; }
-        .accounts-table tr:hover { background-color: #eef5ff; }
-        .no-accounts td { text-align: center; color: #777; padding: 20px; font-style: italic; }
-        .action-buttons { white-space: nowrap; text-align: center; } /* Prevent wrapping */
-        .action-buttons button { margin: 0 3px; } /* Spacing between action buttons */
-        .photo-album { text-align: center; }
-        .photo-album img { margin: 2px; border: 1px solid #ddd; padding: 1px; background-color: #fff; vertical-align: middle; }
-
-        /* --- Status Styles --- */
-        .status-active { color: #28a745; font-weight: bold; }
-        .status-pending { color: #ffc107; font-weight: bold; }
-        .status-rejected { color: #dc3545; font-weight: bold; }
-        .status-inactive { color: #6c757d; font-weight: bold; }
-
-        /* --- Button Styles --- */
-        .add-account-btn, .edit-btn, .status-btn, .view-address-btn, .view-contact-btn {
-            padding: 6px 12px;
-            font-size: 13px;
-            border-radius: 4px;
-            cursor: pointer;
-            border: none;
-            transition: background-color 0.2s, box-shadow 0.2s;
-            vertical-align: middle;
-            margin-left: 5px; /* Spacing for header buttons */
-        }
-        .add-account-btn { background-color: #5cb85c; color: white; }
-        .add-account-btn:hover { background-color: #4cae4c; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .edit-btn { background-color: #f0ad4e; color: white; }
-        .edit-btn:hover { background-color: #ec971f; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .status-btn { background-color: #5bc0de; color: white; }
-        .status-btn:hover { background-color: #46b8da; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .view-address-btn, .view-contact-btn { background-color: #4a90e2; color: white; font-size: 12px; padding: 5px 10px; }
-        .view-address-btn:hover, .view-contact-btn:hover { background-color: #357abf; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .modal-footer button {
-            padding: 8px 18px; /* Adjusted padding */
-            font-size: 14px;
-            min-width: 100px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s, box-shadow 0.2s;
-            border: none;
-            font-weight: 500;
-        }
-        .save-btn { background-color: #4a90e2; color: white; }
-        .save-btn:hover { background-color: #357abf; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .cancel-btn { background-color: #f1f1f1; color: #333; border: 1px solid #ccc; }
-        .cancel-btn:hover { background-color: #e1e1e1; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-
-        /* --- Status Modal Buttons --- */
-        #statusModal .modal-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        #statusModal .modal-buttons button { flex-grow: 1; padding: 10px 15px; cursor: pointer; border: none; border-radius: 4px; transition: background-color 0.2s, box-shadow 0.2s; color: white; font-weight: 500; font-size: 14px; min-width: 100px; display: flex; align-items: center; justify-content: center; gap: 5px; }
-        #statusModal .approve-btn { background-color: #28a745; } #statusModal .approve-btn:hover { background-color: #218838; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
-        #statusModal .reject-btn { background-color: #dc3545; } #statusModal .reject-btn:hover { background-color: #c82333; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
-        #statusModal .pending-btn { background-color: #ffc107; color: #333; } #statusModal .pending-btn:hover { background-color: #e0a800; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
-        #statusModal .inactive-btn { background-color: #6c757d; } #statusModal .inactive-btn:hover { background-color: #5a6268; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
-        #statusModal .single-button { text-align: center; margin-top: 10px; }
-        #statusModal .single-button button { width: auto; min-width: 120px; justify-content: center; } /* Center cancel button */
-
-        /* --- Confirmation Modal Buttons --- */
+            /* display: flex; */ /* REMOVE or COMMENT OUT this line if present */
+            align-items: center;     /* Keep these */
+            justify-content: center; /* Keep these */
+        }        
+        .confirmation-content { background-color: #fefefe; padding: 25px 30px; border-radius: 8px; width: 380px; max-width: 90%; text-align: center; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); animation: modalPopIn 0.3s ease-out; }
+        @keyframes modalPopIn { from {transform: scale(0.8) translateY(20px); opacity: 0;} to {transform: scale(1) translateY(0); opacity: 1;} }
+        .confirmation-title { font-size: 20px; margin-bottom: 15px; color: #333; font-weight: 600; }
+        .confirmation-message { margin-bottom: 25px; color: #555; font-size: 14px; line-height: 1.5; }
         .confirmation-buttons { display: flex; justify-content: center; gap: 15px; }
         .confirm-yes, .confirm-no { padding: 10px 25px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background-color 0.2s, box-shadow 0.2s; border: none; font-size: 14px; }
         .confirm-yes { background-color: #4a90e2; color: white; }
         .confirm-yes:hover { background-color: #357abf; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .confirm-no { background-color: #f1f1f1; color: #333; border: 1px solid #ccc; }
         .confirm-no:hover { background-color: #e1e1e1; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-
-        /* --- Header Styles --- */
-        .accounts-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
-        .accounts-header h1 { margin: 0; font-size: 24px; }
-        .filter-section { display: flex; align-items: center; gap: 8px; }
-        .filter-section label { margin: 0; font-size: 14px; font-weight: 500; }
-        .filter-section select { padding: 6px 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; margin-bottom: 0; /* Remove margin from select */ }
-
-        /* --- Info Modal Header/Body/Section/Table/Item Styles --- */
-        .info-modal-header { background-color: #4a90e2; color: #fff; }
-        .info-modal-header h2 i { margin-right: 10px; }
-        .info-modal-close { color: #fff; }
-        .info-section { margin-bottom: 25px; background-color: #f9f9f9; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .info-section-title { color: #4a90e2; border-bottom: 1px solid #e0e0e0; }
-        .info-table th { background-color: #eef5ff; border: 1px solid #d1e1f9; color: #3a5d85; }
-        .info-table td { border: 1px solid #d1e1f9; background-color: #fff; }
-        .contact-item { border: 1px solid #d1e1f9; background-color: #fff; }
-        .contact-icon { background-color: #eef5ff; color: #4a90e2; }
-
-        /* --- Error Message --- */
-        .error-message {
-            color: #D8000C; /* Dark red */
-            background-color: #FFD2D2; /* Light red background */
-            padding: 10px 15px;
-            border-radius: 4px;
-            border: 1px solid #FFB8B8; /* Slightly darker red border */
-            margin-top: 5px;
-            margin-bottom: 15px;
-            display: none; /* Hidden by default */
-            font-size: 13px;
-            line-height: 1.4;
-            text-align: left;
-        }
-        .error-message i { margin-right: 5px; } /* Optional icon */
-
-        /* --- Toastr Customization --- */
-        #toast-container .toast-close-button { display: none; } /* Hide default close button */
-        /* Add other toastr overrides if needed */
-
-        /* --- Animations --- */
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes modalPopIn {
-            from { transform: scale(0.8) translateY(20px); opacity: 0; }
-            to { transform: scale(1) translateY(0); opacity: 1; }
-        }
-        @keyframes zoomIn {
-             from { transform: scale(0.5); opacity: 0; }
-             to { transform: scale(1); opacity: 1; }
-        }
-
+        #toast-container .toast-close-button { display: none; }
+        #edit-business-proof-container { margin-bottom: 10px; padding: 10px; background-color: #f9f9f9; border: 1px dashed #ddd; border-radius: 4px; min-height: 50px; display: flex; flex-wrap: wrap; align-items: center; }
+        #edit-business-proof-container img { margin: 5px; border: 1px solid #ccc; padding: 2px; max-width: 60px; height: auto; background: #fff; border-radius: 3px; cursor: pointer; }
+        #edit-business-proof-container h4 { width: 100%; margin-bottom: 5px; font-size: 14px; color: #555; font-weight: 500; }
+        #edit-business-proof-container p { width: 100%; font-size: 13px; color: #888; margin: 5px 0; }
+        #statusModal .overlay-content { padding: 25px; text-align: center; }
+        #statusModal h2 { margin-bottom: 15px; font-weight: 600; }
+        #statusModal p { margin-bottom: 25px; color: #555; font-size: 15px; }
+        #statusModal .modal-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        #statusModal .modal-buttons button { flex-grow: 1; padding: 10px 15px; cursor: pointer; border: none; border-radius: 4px; transition: background-color 0.2s, box-shadow 0.2s; color: white; font-weight: 500; font-size: 14px; min-width: 100px; }
+        #statusModal .approve-btn { background-color: #28a745; } #statusModal .approve-btn:hover { background-color: #218838; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+        #statusModal .reject-btn { background-color: #dc3545; } #statusModal .reject-btn:hover { background-color: #c82333; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+        #statusModal .pending-btn { background-color: #ffc107; color: #333; } #statusModal .pending-btn:hover { background-color: #e0a800; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+        #statusModal .inactive-btn { background-color: #6c757d; } #statusModal .inactive-btn:hover { background-color: #5a6268; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+        #statusModal .single-button { text-align: center; margin-top: 10px; }
+        #statusModal .single-button button { width: auto; min-width: 120px; }
+        /* Add spinner styles if using */
+        /* .spinner { ... } */
+        /* .loading { pointer-events: none; opacity: 0.7; } */
     </style>
 </head>
 <body>
