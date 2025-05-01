@@ -1,5 +1,5 @@
 <?php
-// Current Date: 2025-05-01 19:45:55
+// Current Date: 2025-05-01 19:50:45
 // Author: aedanevangelista
 
 session_start();
@@ -51,18 +51,25 @@ $stmt->close();
 
 // Modified query to show Active, Pending, and Rejected orders with sorting
 $orders = []; // Initialize $orders as an empty array
+// --- Corrected SQL Query ---
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress, o.driver_assigned,
-        o.company, o.special_instructions,                                                                                                                                                                                                                                                                                                                                                                          // Ensure company is selected
+        o.company, o.special_instructions,
         IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name
         FROM orders o
         LEFT JOIN driver_assignments da ON o.po_number = da.po_number
         LEFT JOIN drivers d ON da.driver_id = d.id
         WHERE o.status IN ('Active', 'Pending', 'Rejected')";
+// --- End Corrected SQL Query ---
 
 // Add sorting
 $sql .= " ORDER BY {$sort_column} {$sort_direction}";
 
+// Line 65 where the error occurred:
 $stmt = $conn->prepare($sql);
+// Check if prepare failed after correction
+if ($stmt === false) {
+     die('Prepare failed after correction: ' . htmlspecialchars($conn->error) . ' - SQL: ' . $sql);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 if ($result && $result->num_rows > 0) {
@@ -70,6 +77,7 @@ if ($result && $result->num_rows > 0) {
         $orders[] = $row;
     }
 }
+$stmt->close(); // Close statement after fetching results
 
 // Helper function to generate sort URL
 function getSortUrl($column, $currentColumn, $currentDirection) {
@@ -1623,10 +1631,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     dateFormat: 'yy-mm-dd',
                     minDate: 1, // Minimum date is tomorrow
                     beforeShowDay: function(date) {
-                        const day = date.getDay();
+                        const day = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
                         // Allow Monday (1), Wednesday (3), Friday (5)
                         const isSelectable = (day === 1 || day === 3 || day === 5);
-                        return [isSelectable, isSelectable ? "" : "ui-state-disabled", ""]; // Return [selectable, cssClass, tooltip]
+                        // Return format: [selectable, cssClass, tooltip]
+                        // Mark non-selectable days with 'ui-state-disabled' class
+                        return [isSelectable, isSelectable ? "" : "ui-state-disabled", isSelectable ? "" : "Not available"];
                     }
                 });
             } else {
