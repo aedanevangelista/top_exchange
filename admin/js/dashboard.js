@@ -1,695 +1,576 @@
-// Wait for the DOM to fully load
-document.addEventListener("DOMContentLoaded", function () {
+function filterByStatus() {
+    const status = document.getElementById('statusFilter').value;
+    const currentUrl = new URL(window.location.href);
+    
+    if (status) {
+        currentUrl.searchParams.set('status', status);
+    } else {
+        currentUrl.searchParams.delete('status');
+    }
+    
+    window.location.href = currentUrl.toString();
+}
 
-    // Console logging to help with debugging
-    console.log("Dashboard.js loaded. Current path:", window.location.pathname);
+// Global variable for selected products
+let selectedProducts = [];
 
-    /*** ===========================
-     *  CLIENT ORDERS PIE CHART
-     *  =========================== ***/
+// Toast notification function
+function showToast(message, type = 'success') {
+    const toastContainer = document.getElementById('toast-container');
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icon = document.createElement('i');
+    
+    // Set appropriate icon based on type
+    if (type === 'success') {
+        icon.className = 'fas fa-check-circle';
+    } else if (type === 'error' || type === 'remove') {
+        icon.className = 'fas fa-times-circle';
+    } else if (type === 'info') {
+        icon.className = 'fas fa-info-circle';
+    } else if (type === 'active') {
+        icon.className = 'fas fa-check';
+    } else if (type === 'pending') {
+        icon.className = 'fas fa-clock';
+    } else if (type === 'reject') {
+        icon.className = 'fas fa-ban';
+    } else if (type === 'complete') {
+        icon.className = 'fas fa-check-circle';
+    }
+    
+    const text = document.createElement('span');
+    text.textContent = message;
+    
+    toast.appendChild(icon);
+    toast.appendChild(text);
+    toastContainer.appendChild(toast);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            toastContainer.removeChild(toast);
+        }, 300);
+    }, 3000);
+    
+    return toast;
+}
 
-    // Professional color array with 30 colors
-    const chartColors = [
-        'rgba(69, 160, 73, 0.85)',    // Green
-        'rgba(71, 120, 209, 0.85)',   // Royal Blue
-        'rgba(235, 137, 49, 0.85)',   // Orange
-        'rgba(165, 84, 184, 0.85)',   // Purple
-        'rgba(214, 68, 68, 0.85)',    // Red
-        'rgba(60, 179, 163, 0.85)',   // Turquoise
-        'rgba(201, 151, 63, 0.85)',   // Golden Brown
-        'rgba(86, 120, 141, 0.85)',   // Steel Blue
-        'rgba(182, 73, 141, 0.85)',   // Magenta
-        'rgba(110, 146, 64, 0.85)',   // Olive Green
-        'rgba(149, 82, 81, 0.85)',    // Rust
-        'rgba(95, 61, 150, 0.85)',    // Deep Purple
-        'rgba(170, 166, 57, 0.85)',   // Mustard
-        'rgba(87, 144, 176, 0.85)',   // Sky Blue
-        'rgba(192, 88, 116, 0.85)',   // Rose
-        'rgba(85, 156, 110, 0.85)',   // Sea Green
-        'rgba(161, 88, 192, 0.85)',   // Orchid
-        'rgba(169, 106, 76, 0.85)',   // Brown
-        'rgba(78, 130, 162, 0.85)',   // Blue Gray
-        'rgba(190, 117, 50, 0.85)',   // Bronze
-        'rgba(111, 83, 150, 0.85)',   // Lavender
-        'rgba(158, 126, 74, 0.85)',   // Sand
-        'rgba(92, 153, 123, 0.85)',   // Sage
-        'rgba(173, 76, 104, 0.85)',   // Berry
-        'rgba(67, 134, 147, 0.85)',   // Ocean Blue
-        'rgba(187, 96, 68, 0.85)',    // Terra Cotta
-        'rgba(124, 110, 163, 0.85)',  // Dusty Purple
-        'rgba(146, 134, 54, 0.85)',   // Dark Yellow
-        'rgba(82, 137, 110, 0.85)',   // Forest
-        'rgba(155, 89, 136, 0.85)'    // Plum
-    ];
+// Global function for fetching inventory
+function fetchInventory() {
+    $.getJSON('/admin/backend/fetch_inventory.php', function(data) {
+        const inventory = $('.inventory');
+        inventory.empty();
 
-    let clientOrdersChart = null;
+        data.forEach(product => {
+            const price = parseFloat(product.price);
+            // Calculate the maximum allowed quantity (minimum of stock quantity and 200)
+            const maxQuantity = Math.min(product.stock_quantity, 200);
+            const productElement = `
+                <tr>
+                    <td>${product.category}</td>
+                    <td>${product.item_description}</td>
+                    <td>${product.packaging}</td>
+                    <td>PHP ${price.toFixed(2)}</td>
+                    <td>
+                        <input type="number" 
+                            class="product-quantity" 
+                            min="1" 
+                            max="200"
+                            data-product-id="${product.product_id}"
+                            data-category="${product.category}"
+                            data-description="${product.item_description}"
+                            data-packaging="${product.packaging}"
+                            data-price="${price}">
+                    </td>
+                    <td>
+                        <button class="add-to-cart-btn">Add</button>
+                    </td>
+                </tr>
+            `;
+            inventory.append(productElement);
+        });
+    });
+}
 
-    // Function to initialize the chart
-    function initializeClientOrdersChart(data) {
-        const ctx = document.getElementById('clientOrdersChart');
-        if (!ctx) return;
+// Calculate cart total
+function calculateCartTotal() {
+    let total = 0;
+    selectedProducts.forEach(product => {
+        total += product.price * product.quantity;
+    });
+    return total;
+}
 
-        const chartContext = ctx.getContext('2d');
+// Update cart total display
+function updateCartTotal() {
+    const total = calculateCartTotal();
+    $('.total-amount').text(`PHP ${total.toFixed(2)}`);
+}
+
+// Global function for updating order summary
+function updateOrderSummary() {
+    const summaryBody = $('#summaryBody');
+    summaryBody.empty();
+    let total = 0;
+
+    selectedProducts.forEach((product, index) => {
+        const subtotal = product.price * product.quantity;
+        total += subtotal;
         
-        const labels = data.map(item => item.username);
-        const values = data.map(item => item.count);
-        const colors = data.map((_, index) => chartColors[index % chartColors.length]);
+        const row = `
+            <tr>
+                <td>${product.category}</td>
+                <td>${product.item_description}</td>
+                <td>${product.packaging}</td>
+                <td>PHP ${product.price.toFixed(2)}</td>
+                <td>
+                    <input type="number" 
+                        class="summary-quantity" 
+                        value="${product.quantity}" 
+                        min="1"
+                        max="200"
+                        data-index="${index}">
+                </td>
+            </tr>
+        `;
+        summaryBody.append(row);
+    });
 
-        if (clientOrdersChart) {
-            clientOrdersChart.destroy();
+    $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`);
+    
+    // Add event listener for quantity changes in summary
+    $('.summary-quantity').on('change input', function() {
+        const index = $(this).data('index');
+        let newQuantity = parseInt($(this).val(), 10);
+        
+        if (isNaN(newQuantity) || newQuantity < 1) {
+            newQuantity = 1;
+            $(this).val(1);
+        } else if (newQuantity > 200) {
+            newQuantity = 200;
+            $(this).val(200);
         }
+        
+        selectedProducts[index].quantity = newQuantity;
+        updateSummaryTotal();
+    });
+}
 
-        clientOrdersChart = new Chart(chartContext, {
-            type: 'pie',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: values,
-                    backgroundColor: colors,
-                    borderColor: colors.map(color => color.replace('0.8)', '1)')),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        labels: {
-                            boxWidth: 15,
-                            padding: 15
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: `Completed Orders Distribution - ${document.getElementById('year-select')?.value || new Date().getFullYear()}`,
-                        font: {
-                            size: 16
-                        }
-                    }
+// Function to update just the summary total without rebuilding the entire table
+function updateSummaryTotal() {
+    let total = 0;
+    selectedProducts.forEach(product => {
+        total += product.price * product.quantity;
+    });
+    $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`);
+}
+
+// Global function for populating cart
+function populateCart() {
+    const cartBody = $('.cart');
+    cartBody.empty();
+    
+    if (selectedProducts.length === 0) {
+        $('.no-products').show();
+        $('.cart-table').hide();
+        $('.total-amount').text(`PHP 0.00`);
+    } else {
+        $('.no-products').hide();
+        $('.cart-table').show();
+        
+        let total = 0;
+        selectedProducts.forEach((product, index) => {
+            const subtotal = product.price * product.quantity;
+            total += subtotal;
+            
+            const row = `
+                <tr>
+                    <td>${product.category}</td>
+                    <td>${product.item_description}</td>
+                    <td>${product.packaging}</td>
+                    <td>PHP ${product.price.toFixed(2)}</td>
+                    <td>
+                        <input type="number" 
+                            class="cart-quantity" 
+                            value="${product.quantity}" 
+                            min="1"
+                            max="200"
+                            data-index="${index}">
+                        <button class="remove-from-cart" data-index="${index}" data-product="${product.item_description}" data-quantity="${product.quantity}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            cartBody.append(row);
+        });
+        
+        $('.total-amount').text(`PHP ${total.toFixed(2)}`);
+    }
+}
+
+// Function to toggle delivery address fields
+window.toggleDeliveryAddress = function() {
+    const addressType = $('#delivery_address_type').val();
+    if (addressType === 'company') {
+        $('#company_address_container').show();
+        $('#custom_address_container').hide();
+        
+        // Update hidden delivery address field with company address
+        const companyAddress = $('#company_address').val();
+        $('#delivery_address').val(companyAddress);
+    } else {
+        $('#company_address_container').hide();
+        $('#custom_address_container').show();
+        
+        // Update hidden delivery address field with custom address
+        const customAddress = $('#custom_address').val();
+        $('#delivery_address').val(customAddress);
+    }
+};
+
+// Global functions for modal operations
+window.openCartModal = function() {
+    $('#cartModal').show();
+    populateCart();
+};
+
+window.closeCartModal = function() {
+    $('#cartModal').hide();
+};
+
+window.saveCartChanges = function() {
+    $('.cart-quantity').each(function() {
+        const index = $(this).data('index');
+        const newQuantity = parseInt($(this).val(), 10);
+        if (newQuantity > 0) {
+            selectedProducts[index].quantity = Math.min(newQuantity, 200); // Ensure quantity doesn't exceed 200
+        }
+    });
+    
+    updateOrderSummary();
+    closeCartModal();
+};
+
+window.generatePONumber = function() {
+    const username = $('#username').val();
+    if (username) {
+        $.ajax({
+            url: '/admin/backend/get_next_po_number.php',
+            type: 'POST',
+            data: { username: username },
+            success: function(response) {
+                $('#po_number').val(response.po_number);
+                
+                // Update the company address field with the selected user's company address
+                const selectedOption = $('#username option:selected');
+                const companyAddress = selectedOption.data('company-address');
+                $('#company_address').val(companyAddress || 'No company address available');
+                
+                // If company address is selected, update the delivery address field
+                if ($('#delivery_address_type').val() === 'company') {
+                    $('#delivery_address').val(companyAddress || 'No company address available');
                 }
             }
         });
     }
+};
 
-    // Function to load years and populate dropdown
-    function loadYears() {
-        // Let's debug what's happening with our fetch paths
-        const url = '/admin/backend/get_available_years_dashboard.php';
-        console.log("Fetching years from:", url);
-        
-        fetch(url)
-            .then(response => {
-                console.log("Years response status:", response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(years => {
-                console.log("Years data received:", years);
-                
-                const yearSelect = document.getElementById('year-select');
-                if (!yearSelect) {
-                    console.log("Year select element not found");
-                    return;
-                }
-
-                yearSelect.innerHTML = years.map(year => 
-                    `<option value="${year}">${year}</option>`
-                ).join('');
-                
-                if (years.length > 0) {
-                    loadClientOrders(years[0]);
-                }
-            })
-            .catch(error => console.error('Error loading years:', error));
+window.prepareOrderData = function() {
+    // Update delivery address based on the selected type
+    const addressType = $('#delivery_address_type').val();
+    if (addressType === 'company') {
+        $('#delivery_address').val($('#company_address').val());
+    } else {
+        $('#delivery_address').val($('#custom_address').val());
     }
+    
+    const orderData = JSON.stringify(selectedProducts);
+    $('#orders').val(orderData);
+    const totalAmount = calculateCartTotal();
+    $('#total_amount').val(totalAmount.toFixed(2));
+};
 
-    // Function to load client orders for a specific year
-    function loadClientOrders(year) {
-        const url = `/admin/backend/get_client_orders.php?year=${year}`;
-        console.log("Fetching client orders from:", url);
+window.viewOrderDetails = function(orders) {
+    try {
+        const orderDetails = JSON.parse(orders);
+        const orderDetailsBody = $('#orderDetailsBody');
+        orderDetailsBody.empty();
         
-        fetch(url)
-            .then(response => {
-                console.log("Client orders response status:", response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log("Client orders data received:", data);
-                initializeClientOrdersChart(data);
-            })
-            .catch(error => console.error('Error loading client orders:', error));
-    }
-
-    // Initialize the year select event listener
-    const yearSelect = document.getElementById('year-select');
-    if (yearSelect) {
-        yearSelect.addEventListener('change', function() {
-            loadClientOrders(this.value);
+        orderDetails.forEach(product => {
+            const row = `
+                <tr>
+                    <td>${product.category}</td>
+                    <td>${product.item_description}</td>
+                    <td>${product.packaging}</td>
+                    <td>PHP ${parseFloat(product.price).toFixed(2)}</td>
+                    <td>${product.quantity}</td>
+                </tr>
+            `;
+            orderDetailsBody.append(row);
         });
-    }
-
-    // Load the years when the page loads
-    loadYears();
-
-    /*** ===========================
-     *  ORDERS SOLD SECTION
-     *  =========================== ***/
-    const ordersSoldYear = document.getElementById("packs-sold-year");
-    const ordersSoldCompareYear = document.getElementById("packs-sold-compare-year");
-    const ordersSoldCount = document.getElementById("packs-sold-count");
-    const ordersSoldPercentage = document.getElementById("packs-sold-percentage");
-
-    // Function to get order counts from database
-    function getOrderCounts(year) {
-        const url = `/admin/backend/get_order_counts.php?year=${year}`;
-        console.log("Fetching order counts from:", url);
         
-        return fetch(url)
-            .then(response => {
-                console.log("Order counts response status:", response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+        $('#orderDetailsModal').show();
+    } catch (e) {
+        console.error('Error parsing order details:', e);
+        alert('Error displaying order details');
+    }
+};
+
+window.openAddOrderForm = function() {
+    $('#addOrderOverlay').show();
+};
+
+window.closeAddOrderForm = function() {
+    $('#addOrderOverlay').hide();
+    selectedProducts = [];
+    updateOrderSummary();
+};
+
+window.openInventoryOverlay = function() {
+    $('#inventoryOverlay').show();
+    fetchInventory();
+};
+
+window.closeInventoryOverlay = function() {
+    $('#inventoryOverlay').hide();
+};
+
+window.closeOrderDetailsModal = function() {
+    $('#orderDetailsModal').hide();
+};
+
+window.openStatusModal = function(poNumber, username) {
+    $('#statusMessage').text('Change order-status for ' + poNumber);
+    $('#statusModal').data('po_number', poNumber).show();
+};
+
+window.closeStatusModal = function() {
+    $('#statusModal').hide();
+};
+
+window.changeStatus = function(status) {
+    var poNumber = $('#statusModal').data('po_number');
+    $.ajax({
+        type: 'POST',
+        url: '/admin/backend/update_order_status.php',
+        data: { 
+            po_number: poNumber, 
+            status: status
+        },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                // Convert status to lowercase for consistency in toast types
+                // and handle variations like "Completed"/"Complete" and "Rejected"/"Reject"
+                let toastType = status.toLowerCase();
+                
+                // Standardize status names for CSS classes
+                if (toastType === 'completed') {
+                    toastType = 'complete';
+                } else if (toastType === 'rejected') {
+                    toastType = 'reject';
                 }
-                return response.json();
-            })
-            .catch(error => {
-                console.error('Error fetching order counts:', error);
-                return 0;
-            });
-    }
-
-    // Function to Update Orders Sold Display
-    async function updateOrdersSold() {
-        const selectedYear = ordersSoldYear?.value;
-        const compareYear = ordersSoldCompareYear?.value;
-        
-        // Get order counts for both years
-        const currentOrders = await getOrderCounts(selectedYear);
-        const previousOrders = await getOrderCounts(compareYear);
-
-        // Update Orders Count
-        if (ordersSoldCount) {
-            ordersSoldCount.textContent = `${currentOrders} Orders`;
-        }
-
-        // Update Percentage Change
-        if (previousOrders > 0) {
-            const percentageChange = (((currentOrders - previousOrders) / previousOrders) * 100).toFixed(2);
-            if (ordersSoldPercentage) {
-                ordersSoldPercentage.textContent = `${percentageChange > 0 ? "+" : ""}${percentageChange}% since`;
-                ordersSoldPercentage.style.color = percentageChange >= 0 ? "#45A049" : "#FF4444";
+                
+                showToast(`Changed status for ${poNumber} to ${status}.`, toastType);
+                
+                // Wait a moment for the toast to be visible before reloading
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                alert('Failed to change status: ' + (response.error || 'Unknown error'));
             }
-        } else {
-            if (ordersSoldPercentage) {
-                ordersSoldPercentage.textContent = "N/A since";
-                ordersSoldPercentage.style.color = "#666";
-            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error:', error);
+            alert('Failed to change status. Please try again.');
         }
-    }
+    });
+};
 
-    // Function to populate year dropdowns
-    function populateYearDropdowns() {
-        const url = '/admin/backend/get_available_years_dashboard.php';
-        console.log("Fetching years for dropdowns from:", url);
-        
-        fetch(url)
-            .then(response => {
-                console.log("Years dropdown response status:", response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(years => {
-                console.log("Years dropdown data received:", years);
-                if (years.length > 0) {
-                    // Sort years in descending order
-                    years.sort((a, b) => b - a);
-                    
-                    // Populate main year dropdown
-                    if (ordersSoldYear) {
-                        ordersSoldYear.innerHTML = years.map(year => 
-                            `<option value="${year}">${year}</option>`
-                        ).join('');
-                    }
+// Document ready function
+$(document).ready(function() {
+    // Initialize datepicker for delivery date
+    $('#delivery_date').datepicker({
+        dateFormat: 'yy-mm-dd',
+        minDate: 0,
+        beforeShowDay: function(date) {
+            const day = date.getDay();
+            return [day === 1 || day === 3 || day === 5];
+        }
+    });
 
-                    // Populate comparison year dropdown
-                    if (ordersSoldCompareYear) {
-                        ordersSoldCompareYear.innerHTML = years.map(year => 
-                            `<option value="${year}">${year}</option>`
-                        ).join('');
-                        
-                        // Select the second year by default for comparison
-                        if (years.length > 1) {
-                            ordersSoldCompareYear.selectedIndex = 1;
-                        }
-                    }
+    // Set current date for order_date
+    $('#order_date').val(new Date().toISOString().split('T')[0]);
 
-                    // Initial update
-                    updateOrdersSold();
-                }
-            })
-            .catch(error => console.error('Error loading years for dropdowns:', error));
-    }
+    // Initialize delivery address type change handler
+    $('#delivery_address_type').change(function() {
+        toggleDeliveryAddress();
+    });
 
-    // Add Event Listeners to Dropdowns
-    ordersSoldYear?.addEventListener("change", updateOrdersSold);
-    ordersSoldCompareYear?.addEventListener("change", updateOrdersSold);
+    // Initialize custom address input change handler
+    $('#custom_address').on('input', function() {
+        if ($('#delivery_address_type').val() === 'custom') {
+            $('#delivery_address').val($(this).val());
+        }
+    });
 
-    // Initialize when page loads
-    populateYearDropdowns();
-
-
-    /*** ===========================
-    *  SALES PER DEPARTMENT BAR CHART
-    *  =========================== ***/
-    const ctxSalesPerDepartment = document.getElementById("salesPerDepartmentChart")?.getContext("2d");
-    let salesPerDepartmentChart = null; // Define the chart variable globally
-    let currentTimePeriod = 'weekly'; // Default time period
-
-    // Function to load sales data by category with specified time period
-    function loadSalesByCategory(timePeriod) {
-        const url = `/admin/backend/get_sales_by_category.php?period=${timePeriod}`;
-        console.log(`Fetching ${timePeriod} sales data from:`, url);
-        
-        fetch(url)
-            .then(response => {
-                console.log(`${timePeriod} sales data response status:`, response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.text();
-            })
-            .then(text => {
-                console.log(`Raw ${timePeriod} sales data response:`, text);
-                try {
-                    const data = JSON.parse(text);
-                    if (data.error) {
-                        console.error('Server Error:', data.message);
-                        return;
-                    }
-
-                    // Destroy existing chart if it exists
-                    if (salesPerDepartmentChart) {
-                        salesPerDepartmentChart.destroy();
-                    }
-
-                    // Create Sales per Department Chart (Bar)
-                    salesPerDepartmentChart = new Chart(ctxSalesPerDepartment, {
-                        type: "bar",
-                        data: {
-                            labels: data.categories,
-                            datasets: [
-                                {
-                                    label: `${data.currentYear.year} Sales`,
-                                    data: data.currentYear.data,
-                                    backgroundColor: "#28a745", // Green
-                                    borderWidth: 1,
-                                    borderRadius: 5
-                                },
-                                {
-                                    label: `${data.lastYear.year} Sales`,
-                                    data: data.lastYear.data,
-                                    backgroundColor: "#999999", // Gray
-                                    borderWidth: 1,
-                                    borderRadius: 5
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                },
-                                title: {
-                                    display: true,
-                                    text: `Sales by Department - ${timePeriod.charAt(0).toUpperCase() + timePeriod.slice(1)}`,
-                                    font: {
-                                        size: 16
-                                    }
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    title: {
-                                        display: true,
-                                        text: 'Number of Orders',
-                                        font: {
-                                            size: 14,
-                                            weight: 'bold'
-                                        }
-                                    },
-                                    ticks: {
-                                        callback: function(value) {
-                                            const values = this.chart.data.datasets.flatMap(d => d.data);
-                                            const max = Math.max(...values);
-                                            // Only return values for 0 and max
-                                            return value === 0 || value === max ? value : '';
-                                        },
-                                        font: {
-                                            size: 12
-                                        }
-                                    }
-                                },
-                                x: {
-                                    ticks: {
-                                        autoSkip: false,
-                                    }
-                                }
-                            }
-                        }
-                    });
-                } catch (e) {
-                    console.error('Error parsing response:', text);
-                    console.error('Parse error:', e);
-                }
-            })
-            .catch(error => console.error(`Error loading ${timePeriod} sales data:`, error));
-    }
-
-    // Set up event listeners for the time period tabs
-    document.querySelectorAll('.time-period-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            // Remove active class from all tabs
-            document.querySelectorAll('.time-period-tab').forEach(t => {
-                t.classList.remove('active');
-            });
-            
-            // Add active class to the clicked tab
-            this.classList.add('active');
-            
-            // Get the time period from the data attribute
-            const timePeriod = this.getAttribute('data-period');
-            currentTimePeriod = timePeriod;
-            
-            // Load the data for this time period
-            loadSalesByCategory(timePeriod);
+    // Initialize inventory search and filter
+    $('#inventorySearch').on('keyup', function() {
+        const searchText = $(this).val().toLowerCase();
+        $('.inventory tr').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
         });
     });
 
-    // Call the function when the document loads
-    if (ctxSalesPerDepartment) {
-        // Initial load with the default time period
-        loadSalesByCategory(currentTimePeriod);
-    }
-});
-    }
-
-    // Function to load years and populate dropdown
-    function loadYears() {
-        // Let's debug what's happening with our fetch paths
-        const url = '/admin/backend/get_available_years_dashboard.php';
-        console.log("Fetching years from:", url);
+    // Add product to cart
+    $(document).on('click', '.add-to-cart-btn', function() {
+        const row = $(this).closest('tr');
+        const quantityInput = row.find('.product-quantity');
+        const quantity = parseInt(quantityInput.val(), 10);
         
-        fetch(url)
-            .then(response => {
-                console.log("Years response status:", response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(years => {
-                console.log("Years data received:", years);
-                
-                const yearSelect = document.getElementById('year-select');
-                if (!yearSelect) {
-                    console.log("Year select element not found");
-                    return;
-                }
-
-                yearSelect.innerHTML = years.map(year => 
-                    `<option value="${year}">${year}</option>`
-                ).join('');
-                
-                if (years.length > 0) {
-                    loadClientOrders(years[0]);
-                }
-            })
-            .catch(error => console.error('Error loading years:', error));
-    }
-
-    // Function to load client orders for a specific year
-    function loadClientOrders(year) {
-        const url = `/admin/backend/get_client_orders.php?year=${year}`;
-        console.log("Fetching client orders from:", url);
-        
-        fetch(url)
-            .then(response => {
-                console.log("Client orders response status:", response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log("Client orders data received:", data);
-                initializeClientOrdersChart(data);
-            })
-            .catch(error => console.error('Error loading client orders:', error));
-    }
-
-    // Initialize the year select event listener
-    const yearSelect = document.getElementById('year-select');
-    if (yearSelect) {
-        yearSelect.addEventListener('change', function() {
-            loadClientOrders(this.value);
-        });
-    }
-
-    // Load the years when the page loads
-    loadYears();
-
-    /*** ===========================
-     *  ORDERS SOLD SECTION
-     *  =========================== ***/
-    const ordersSoldYear = document.getElementById("packs-sold-year");
-    const ordersSoldCompareYear = document.getElementById("packs-sold-compare-year");
-    const ordersSoldCount = document.getElementById("packs-sold-count");
-    const ordersSoldPercentage = document.getElementById("packs-sold-percentage");
-
-    // Function to get order counts from database
-    function getOrderCounts(year) {
-        const url = `/admin/backend/get_order_counts.php?year=${year}`;
-        console.log("Fetching order counts from:", url);
-        
-        return fetch(url)
-            .then(response => {
-                console.log("Order counts response status:", response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .catch(error => {
-                console.error('Error fetching order counts:', error);
-                return 0;
-            });
-    }
-
-    // Function to Update Orders Sold Display
-    async function updateOrdersSold() {
-        const selectedYear = ordersSoldYear?.value;
-        const compareYear = ordersSoldCompareYear?.value;
-        
-        // Get order counts for both years
-        const currentOrders = await getOrderCounts(selectedYear);
-        const previousOrders = await getOrderCounts(compareYear);
-
-        // Update Orders Count
-        if (ordersSoldCount) {
-            ordersSoldCount.textContent = `${currentOrders} Orders`;
+        if (!quantity || quantity < 1) {
+            alert('Please enter a valid quantity');
+            return;
         }
 
-        // Update Percentage Change
-        if (previousOrders > 0) {
-            const percentageChange = (((currentOrders - previousOrders) / previousOrders) * 100).toFixed(2);
-            if (ordersSoldPercentage) {
-                ordersSoldPercentage.textContent = `${percentageChange > 0 ? "+" : ""}${percentageChange}% since`;
-                ordersSoldPercentage.style.color = percentageChange >= 0 ? "#45A049" : "#FF4444";
-            }
+        const product = {
+            product_id: quantityInput.data('product-id'),
+            category: quantityInput.data('category'),
+            item_description: quantityInput.data('description'),
+            packaging: quantityInput.data('packaging'),
+            price: parseFloat(quantityInput.data('price')),
+            quantity: Math.min(quantity, 200) // Ensure quantity doesn't exceed 200
+        };
+
+        const existingProductIndex = selectedProducts.findIndex(p => 
+            p.product_id === product.product_id);
+
+        if (existingProductIndex !== -1) {
+            // Add to existing product, but cap at 200
+            const newTotalQuantity = Math.min(selectedProducts[existingProductIndex].quantity + quantity, 200);
+            selectedProducts[existingProductIndex].quantity = newTotalQuantity;
         } else {
-            if (ordersSoldPercentage) {
-                ordersSoldPercentage.textContent = "N/A since";
-                ordersSoldPercentage.style.color = "#666";
-            }
+            selectedProducts.push(product);
         }
-    }
 
-    // Function to populate year dropdowns
-    function populateYearDropdowns() {
-        const url = '/admin/backend/get_available_years_dashboard.php';
-        console.log("Fetching years for dropdowns from:", url);
+        // Show toast notification immediately with updated text
+        showToast(`${product.item_description} with a quantity of ${quantity} has been added`, 'success');
+
+        quantityInput.val('');
+        updateOrderSummary();
+    });
+
+    // Remove product from cart
+    $(document).on('click', '.remove-from-cart', function() {
+        const index = $(this).data('index');
+        const productName = $(this).data('product');
+        const quantity = $(this).data('quantity');
         
-        fetch(url)
-            .then(response => {
-                console.log("Years dropdown response status:", response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(years => {
-                console.log("Years dropdown data received:", years);
-                if (years.length > 0) {
-                    // Sort years in descending order
-                    years.sort((a, b) => b - a);
-                    
-                    // Populate main year dropdown
-                    if (ordersSoldYear) {
-                        ordersSoldYear.innerHTML = years.map(year => 
-                            `<option value="${year}">${year}</option>`
-                        ).join('');
-                    }
-
-                    // Populate comparison year dropdown
-                    if (ordersSoldCompareYear) {
-                        ordersSoldCompareYear.innerHTML = years.map(year => 
-                            `<option value="${year}">${year}</option>`
-                        ).join('');
-                        
-                        // Select the second year by default for comparison
-                        if (years.length > 1) {
-                            ordersSoldCompareYear.selectedIndex = 1;
-                        }
-                    }
-
-                    // Initial update
-                    updateOrdersSold();
-                }
-            })
-            .catch(error => console.error('Error loading years for dropdowns:', error));
-    }
-
-    // Add Event Listeners to Dropdowns
-    ordersSoldYear?.addEventListener("change", updateOrdersSold);
-    ordersSoldCompareYear?.addEventListener("change", updateOrdersSold);
-
-    // Initialize when page loads
-    populateYearDropdowns();
-
-
-    /*** ===========================
-    *  SALES PER DEPARTMENT BAR CHART
-    *  =========================== ***/
-    const ctxSalesPerDepartment = document.getElementById("salesPerDepartmentChart")?.getContext("2d");
-    let salesPerDepartmentChart = null; // Define the chart variable globally
-
-    // Function to load sales data by category
-    function loadSalesByCategory() {
-        const url = '/admin/backend/get_sales_by_category.php';
-        console.log("Fetching sales data from:", url);
+        // Show red toast notification for removal
+        showToast(`${productName} with a quantity of ${quantity} has been removed`, 'remove');
         
-        fetch(url)
-            .then(response => {
-                console.log("Sales data response status:", response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+        selectedProducts.splice(index, 1);
+        
+        // Update both the order summary and cart displays
+        updateOrderSummary();
+        updateCartTotal();
+        populateCart();
+    });
+
+    // Handle quantity change in cart
+    $(document).on('change input', '.cart-quantity', function() {
+        const index = $(this).data('index');
+        let newQuantity = parseInt($(this).val(), 10);
+        
+        if (isNaN(newQuantity) || newQuantity < 1) {
+            newQuantity = 1;
+            $(this).val(1);
+        } else if (newQuantity > 200) {
+            newQuantity = 200;
+            $(this).val(200);
+        }
+        
+        selectedProducts[index].quantity = newQuantity;
+        updateCartTotal();
+    });
+
+    // Form submission
+    $('#addOrderForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        if (selectedProducts.length === 0) {
+            alert('Please add products to your order');
+            return;
+        }
+
+        prepareOrderData();
+        
+        // Validate delivery address
+        const deliveryAddress = $('#delivery_address').val();
+        if (!deliveryAddress || deliveryAddress.trim() === '') {
+            alert('Please provide a delivery address');
+            return;
+        }
+        
+        // Show a toast notification when saving the order
+        const poNumber = $('#po_number').val();
+        const username = $('#username').val();
+        
+        if (poNumber && username) {
+            showToast(`The order: ${poNumber} has been created for ${username}.`, 'success');
+        }
+
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    // Wait a moment for the toast to be visible before reloading
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    alert('Error: ' + response.message);
                 }
-                return response.text();
-            })
-            .then(text => {
-                console.log("Raw sales data response:", text);
-                try {
-                    const data = JSON.parse(text);
-                    if (data.error) {
-                        console.error('Server Error:', data.message);
-                        return;
-                    }
+            },
+            error: function() {
+                alert('Error submitting order. Please try again.');
+            }
+        });
+    });
+    
+    // Category filter change handler
+    $('#inventoryFilter').on('change', function() {
+        const category = $(this).val();
+        if (category === 'all') {
+            $('.inventory tr').show();
+        } else {
+            $('.inventory tr').hide();
+            $(`.inventory tr:contains('${category}')`).show();
+        }
+    });
 
-                    // Destroy existing chart if it exists
-                    if (salesPerDepartmentChart) {
-                        salesPerDepartmentChart.destroy();
-                    }
-
-                    // Create Sales per Department Chart (Bar)
-                    salesPerDepartmentChart = new Chart(ctxSalesPerDepartment, {
-                        type: "bar",
-                        data: {
-                            labels: data.categories,
-                            datasets: [
-                                {
-                                    label: `${data.currentYear.year} Sales`,
-                                    data: data.currentYear.data,
-                                    backgroundColor: "#28a745", // Green
-                                    borderWidth: 1,
-                                    borderRadius: 5
-                                },
-                                {
-                                    label: `${data.lastYear.year} Sales`,
-                                    data: data.lastYear.data,
-                                    backgroundColor: "#999999", // Gray
-                                    borderWidth: 1,
-                                    borderRadius: 5
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                },
-                                title: {
-                                    display: true,
-                                    text: 'Sales by Department Comparison',
-                                    font: {
-                                        size: 16
-                                    }
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    title: {
-                                        display: true,
-                                        text: 'Number of Orders',
-                                        font: {
-                                            size: 14,
-                                            weight: 'bold'
-                                        }
-                                    },
-                                    ticks: {
-                                        callback: function(value) {
-                                            const values = this.chart.data.datasets.flatMap(d => d.data);
-                                            const max = Math.max(...values);
-                                            // Only return values for 0 and max
-                                            return value === 0 || value === max ? value : '';
-                                        },
-                                        font: {
-                                            size: 12
-                                        }
-                                    }
-                                },
-                                x: {
-                                    ticks: {
-                                        autoSkip: false,
-                                    }
-                                }
-                            }
-                        }
-                    });
-                } catch (e) {
-                    console.error('Error parsing response:', text);
-                    console.error('Parse error:', e);
-                }
-            })
-            .catch(error => console.error('Error loading sales data:', error));
-    }
-
-    // Call the function when the document loads
-    if (ctxSalesPerDepartment) {
-        loadSalesByCategory();
-    }
+    // Fetch categories for filter
+    $.getJSON('/admin/backend/fetch_categories.php', function(categories) {
+        const filter = $('#inventoryFilter');
+        filter.empty();
+        filter.append('<option value="all">All Categories</option>');
+        categories.forEach(category => {
+            filter.append(`<option value="${category}">${category}</option>`);
+        });
+    });
+    
+    // Add a global input event handler to restrict all number inputs in the app to max 200
+    $(document).on('input', 'input[type="number"]', function() {
+        if (parseInt(this.value) > 200) {
+            this.value = 200;
+        }
+    });
 });
