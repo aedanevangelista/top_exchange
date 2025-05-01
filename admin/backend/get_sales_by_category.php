@@ -41,8 +41,9 @@ try {
             'currentYear' => ['year' => date('Y'), 'data' => []],
             'lastYear' => ['year' => date('Y') - 1, 'data' => []]
         ]);
-        if ($conn) $conn->close();
-        exit;
+        // Ensure connection is closed before exiting
+        if ($conn && $conn instanceof mysqli) $conn->close();
+        exit; // Stop script execution here
     }
 
 
@@ -162,7 +163,7 @@ try {
         unset($targetSalesArray);
     }
 
-    $stmt->close(); // Close statement
+    // $stmt->close(); // <<<--- REMOVED THIS LINE FROM HERE
 
     // --- 5. Prepare Final JSON Output ---
     // Map the aggregated sales data onto the ordered list of all categories
@@ -185,6 +186,7 @@ try {
 
     // --- 6. Send Response ---
     echo json_encode($response);
+    // IMPORTANT: No other echos or output should happen after this line in the try block.
 
 } catch (Exception $e) {
     // Log the detailed error to the server log
@@ -192,19 +194,27 @@ try {
 
     // Send a generic error response to the client
     // Avoid sending detailed error messages or stack traces to the client in production
-    echo json_encode([
-        'error' => true,
-        'message' => 'An internal server error occurred while fetching sales data. Please check server logs.'
-        // 'debug_message' => $e->getMessage() // Optional: Uncomment for debugging ONLY
-    ]);
+    // Ensure this echo happens only ONCE if an error occurs
+    if (!headers_sent()) { // Check if headers are already sent to avoid further errors
+         // We might still be able to send a JSON error if headers not sent
+         // If headers ARE sent, this echo will likely fail or cause more issues
+         echo json_encode([
+             'error' => true,
+             'message' => 'An internal server error occurred while fetching sales data. Please check server logs.'
+             // 'debug_message' => $e->getMessage() // Optional: Uncomment for debugging ONLY
+         ]);
+    }
 
 } finally {
     // Ensure statement and connection are closed if they were opened
+    // This block runs regardless of whether an exception occurred or not
     if ($stmt && $stmt instanceof mysqli_stmt) {
-        @$stmt->close();
+        @$stmt->close(); // <<<--- KEEP THIS LINE (using @ is okay here)
     }
     if ($conn && $conn instanceof mysqli) {
         $conn->close();
     }
 }
+
+// IMPORTANT: No code or whitespace should exist after the closing PHP tag (if you have one)
 ?>
