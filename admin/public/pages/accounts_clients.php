@@ -875,27 +875,28 @@ function truncate($text, $max = 15) {
                                 </td>
                                 <td class="<?= 'status-' . strtolower($row['status'] ?? 'pending') ?>"><?= htmlspecialchars($row['status'] ?? 'Pending') ?></td>
                                 <td class="action-buttons">
-                                                                <?php
+                                    <?php
+                                    // Encode the business_proof JSON string properly
                                     $business_proof_json = htmlspecialchars($row['business_proof'], ENT_QUOTES);
-                                ?>
-                                <button class="edit-btn"
-                                    onclick='openEditAccountForm(
-                                        <?= json_encode($row["id"]) ?>,
-                                        <?= json_encode($row["username"]) ?>,
-                                        <?= json_encode($row["email"]) ?>,
-                                        <?= json_encode($row["phone"]) ?>,
-                                        <?= json_encode($row["region"]) ?>,
-                                        <?= json_encode($row["city"]) ?>,
-                                        <?= json_encode($row["company"]) ?>,
-                                        <?= json_encode($row["company_address"]) ?>,
-                                        <?= json_encode($row["bill_to_address"]) ?>,
-                                        <?= $business_proof_json ?>
-                                    )'>
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
-                                <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username']) ?>', '<?= htmlspecialchars($row['email']) ?>')">
-                                    <i class="fas fa-exchange-alt"></i> Change Status
-                                </button>
+                                    ?>
+                                    <button class="edit-btn"
+                                        onclick='openEditAccountForm(
+                                            <?= $row["id"] ?>,
+                                            <?= json_encode($row["username"]) ?>,
+                                            <?= json_encode($row["email"]) ?>,
+                                            <?= json_encode($row["phone"]) ?>,
+                                            <?= json_encode($row["region"]) ?>,
+                                            <?= json_encode($row["city"]) ?>,
+                                            <?= json_encode($row["company"]) ?>,
+                                            <?= json_encode($row["company_address"]) ?>,
+                                            <?= json_encode($row["bill_to_address"]) ?>,
+                                            <?= $business_proof_json ?>
+                                        )'>
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars($row['username']) ?>', '<?= htmlspecialchars($row['email']) ?>')">
+                                        <i class="fas fa-exchange-alt"></i> Change Status
+                                    </button>
                                 </td>
                             </tr>
                         <?php endwhile; ?>
@@ -999,7 +1000,7 @@ function truncate($text, $max = 15) {
                                 title="Username can only contain letters, numbers, and underscores. Maximum 15 characters.">
                             
                             <label for="phone">Phone/Telephone Number: <span class="required">*</span></label>
-                            <input type="tel" id="phone" name="phone" required placeholder="e.g., 1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
+                            <input type="tel" id="phone" name="phone" required placeholder="e.g., 1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                             
                             <label for="password">Password: <span class="required">*</span></label>
                             <input type="text" id="password" name="password" maxlength="20" readonly class="auto-generated" placeholder="Auto-generated password">
@@ -1072,7 +1073,7 @@ function truncate($text, $max = 15) {
                                 title="Username can only contain letters, numbers, and underscores. Maximum 15 characters.">
                             
                             <label for="edit-phone">Phone/Telephone Number: <span class="required">*</span></label>
-                            <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
+                            <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                             
                             <label for="edit-password">Password: (Auto-generated)</label>
                             <input type="text" id="edit-password" name="password" readonly class="auto-generated">
@@ -1159,8 +1160,6 @@ function truncate($text, $max = 15) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/js/toast.js"></script>
-    <script src="/js/accounts_clients.js"></script>
-    
     <script>
     // Variable to store the current account ID for status changes
     let currentAccountId = 0;
@@ -1289,6 +1288,281 @@ function truncate($text, $max = 15) {
             }
         };
     });
+
+    // Show error message in a visible way
+    function showError(elementId, message) {
+        const errorElement = document.getElementById(elementId);
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
+
+    // Reset error messages
+    function resetErrors() {
+        document.getElementById('addAccountError').style.display = 'none';
+        document.getElementById('editAccountError').style.display = 'none';
+    }
+
+    // Handle form submissions with AJAX
+    $(document).ready(function() {
+        // Add Account Form Submission
+        $('#addAccountForm').submit(function(e) {
+            e.preventDefault();
+            resetErrors();
+            
+            var formData = new FormData(this);
+            formData.append('ajax', true);
+            
+            $.ajax({
+                url: window.location.href,
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    try {
+                        if (typeof response === 'string') {
+                            response = JSON.parse(response);
+                        }
+                        
+                        if(response.success) {
+                            showToast('Account added successfully!', 'success');
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            showError('addAccountError', response.message || 'An error occurred.');
+                            showToast(response.message || 'An error occurred.', 'error');
+                        }
+                    } catch (e) {
+                        console.error('Error parsing response:', e);
+                        showError('addAccountError', 'Invalid server response.');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('AJAX error:', xhr.responseText);
+                    showError('addAccountError', 'A server error occurred.');
+                    showToast('A server error occurred.', 'error');
+                }
+            });
+        });
+        
+        // Edit Account Form Submission
+        $('#editAccountForm').submit(function(e) {
+            e.preventDefault();
+            resetErrors();
+            
+            var formData = new FormData(this);
+            formData.append('ajax', true);
+            
+            $.ajax({
+                url: window.location.href,
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    try {
+                        if (typeof response === 'string') {
+                            response = JSON.parse(response);
+                        }
+                        
+                        if(response.success) {
+                            showToast('Account updated successfully!', 'success');
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            showError('editAccountError', response.message || 'An error occurred.');
+                            showToast(response.message || 'An error occurred.', 'error');
+                        }
+                    } catch (e) {
+                        console.error('Error parsing response:', e);
+                        showError('editAccountError', 'Invalid server response.');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('AJAX error:', xhr.responseText);
+                    showError('editAccountError', 'A server error occurred.');
+                    showToast('A server error occurred.', 'error');
+                }
+            });
+        });
+    });
+
+    // Function to open the add account form
+    function openAddAccountForm() {
+        document.getElementById("addAccountOverlay").style.display = "block";
+        resetErrors();
+    }
+
+    // Function to close the add account form
+    function closeAddAccountForm() {
+        document.getElementById("addAccountOverlay").style.display = "none";
+        document.getElementById("addAccountForm").reset();
+    }
+
+    // Function to open the edit form
+    function openEditAccountForm(id, username, email, phone, region, city, company, company_address, bill_to_address, business_proof) {
+        resetErrors();
+        
+        document.getElementById('edit-id').value = id;
+        document.getElementById('edit-username').value = username;
+        document.getElementById('edit-email').value = email;
+        document.getElementById('edit-phone').value = phone;
+        document.getElementById('edit-company').value = company;
+        document.getElementById('edit-company_address').value = company_address;
+        document.getElementById('edit-bill_to_address').value = bill_to_address;
+        
+        // Get the select fields
+        const regionSelect = document.getElementById('edit-region');
+        const citySelect = document.getElementById('edit-city');
+        
+        // Set region
+        if (regionSelect && region) {
+            regionSelect.value = region;
+            // Load cities for this region
+            loadCities(region, 'edit-city').then(() => {
+                // Set city after cities are loaded
+                if (citySelect && city) {
+                    citySelect.value = city;
+                    citySelect.disabled = false;
+                }
+            });
+        }
+
+        // Handle business proof (images)
+        const businessProofContainer = document.getElementById('edit-business-proof-container');
+        businessProofContainer.innerHTML = '<h4>Current Business Proof:</h4>';
+        
+        try {
+            // Try to parse business_proof as JSON if it's a string
+            const proofs = typeof business_proof === 'string' ? 
+                JSON.parse(business_proof) : business_proof;
+            
+            if (Array.isArray(proofs) && proofs.length > 0) {
+                proofs.forEach(proof => {
+                    const img = document.createElement('img');
+                    img.src = proof;
+                    img.alt = 'Business Proof';
+                    img.width = 50;
+                    img.style.margin = '5px';
+                    businessProofContainer.appendChild(img);
+                });
+            } else {
+                businessProofContainer.innerHTML += '<p>No business proof images</p>';
+            }
+            
+            // Set existing business proof in hidden input
+            document.getElementById('existing-business-proof').value = JSON.stringify(proofs || []);
+            
+        } catch (e) {
+            console.error('Error parsing business proof:', e);
+            businessProofContainer.innerHTML += '<p>Error loading business proof images</p>';
+            document.getElementById('existing-business-proof').value = '[]';
+        }
+
+        document.getElementById('editAccountOverlay').style.display = 'block';
+    }
+
+    // Function to close the edit form
+    function closeEditAccountForm() {
+        document.getElementById("editAccountOverlay").style.display = "none";
+        document.getElementById("editAccountForm").reset();
+    }
+
+    // Function to open the status change modal
+    function openStatusModal(id, username, email) {
+        currentAccountId = id;
+        document.getElementById("statusMessage").textContent = "Change status for " + username + " (" + email + ")";
+        document.getElementById("statusModal").style.display = "block";
+    }
+
+    // Function to close the status modal
+    function closeStatusModal() {
+        document.getElementById("statusModal").style.display = "none";
+    }
+
+    // Function to change account status
+    function changeStatus(status) {
+        if (!currentAccountId) return;
+        
+        $.ajax({
+            url: window.location.href,
+            type: 'POST',
+            data: {
+                ajax: true,
+                formType: 'status',
+                id: currentAccountId,
+                status: status
+            },
+            success: function(response) {
+                try {
+                    if (typeof response === 'string') {
+                        response = JSON.parse(response);
+                    }
+                    
+                    if(response.success) {
+                        showToast('Status changed successfully!', 'success');
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showToast(response.message || 'An error occurred.', 'error');
+                    }
+                } catch (e) {
+                    console.error('Error parsing response:', e);
+                    showToast('Invalid server response.', 'error');
+                }
+                closeStatusModal();
+            },
+            error: function(xhr) {
+                console.error('AJAX error:', xhr.responseText);
+                showToast('A server error occurred.', 'error');
+                closeStatusModal();
+            }
+        });
+    }
+
+    // Function to filter accounts by status
+    function filterByStatus() {
+        var status = document.getElementById("statusFilter").value;
+        window.location.href = '?status=' + status;
+    }
+
+    // Function to show toast notifications
+    function showToast(message, type = 'success') {
+        // Check if toastr is available
+        if (typeof toastr !== 'undefined') {
+            toastr.options = {
+                closeButton: true,
+                progressBar: true,
+                positionClass: "toast-top-right",
+                timeOut: 3000
+            };
+            
+            switch(type) {
+                case 'success':
+                    toastr.success(message);
+                    break;
+                case 'error':
+                case 'reject':
+                    toastr.error(message);
+                    break;
+                case 'pending':
+                    toastr.warning(message);
+                    break;
+                case 'active':
+                    toastr.success(message);
+                    break;
+                default:
+                    toastr.info(message);
+            }
+        } else {
+            // Fallback to alert if toastr is not available
+            console.log(`${type}: ${message}`);
+            alert(message);
+        }
+    }
     </script>
 </body>
 </html>
