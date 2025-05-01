@@ -2974,7 +2974,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         
         // Inventory Management for Order Creation
-        function openInventoryOverlay() {
+       function openInventoryOverlay() {
     document.getElementById('inventoryOverlay').style.display = 'flex';
     
     // Show loading state
@@ -2999,21 +2999,54 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     .then(data => {
         console.log("Raw inventory data:", data); // Debug log
         
-        // Check if data is directly an array (which appears to be the case)
+        // Check if data is directly an array
         if (Array.isArray(data)) {
-            // Extract categories from the data
-            const categories = [...new Set(data
-                .map(item => item.category || "Uncategorized")
-                .filter(category => category))];
+            // Categorize items based on their description
+            const processedData = data.map(item => {
+                let category = "Other";
                 
+                // Map product descriptions to categories
+                const description = item.item_description.toLowerCase();
+                
+                if (description.includes("siopao")) {
+                    category = "Siopao";
+                } else if (description.includes("siomai")) {
+                    category = "Siomai";
+                } else if (description.includes("dumpling")) {
+                    category = "Dumplings";
+                } else if (description.includes("sauce")) {
+                    category = "Sauces";
+                } else if (description.includes("noodles") || description.includes("ramen")) {
+                    category = "Noodles";
+                } else if (description.includes("wrapper")) {
+                    category = "Wrappers";
+                } else if (description.includes("pao") || description.includes("bun") || description.includes("mantao")) {
+                    category = "Buns";
+                } else if (description.includes("cake")) {
+                    category = "Cakes";
+                } else if (description.includes("roll")) {
+                    category = "Rolls";
+                } else if (description.includes("sisig") || description.includes("chicken") || description.includes("beef") || description.includes("pork")) {
+                    category = "Meat Products";
+                }
+                
+                return {
+                    ...item,
+                    category: category
+                };
+            });
+            
+            // Extract unique categories
+            const categories = [...new Set(processedData.map(item => item.category))];
+            
             // Call populate functions with transformed data
-            populateInventory(data);
+            populateInventory(processedData);
             populateCategories(categories);
             
             return; // Exit early since we've handled the data
         }
         
-        // If we get here, try the expected format
+        // Fallback for other formats
         if (data && data.success) {
             populateInventory(data.inventory || []);
             populateCategories(data.categories || []);
@@ -3030,8 +3063,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         inventoryBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${error.message}</td></tr>`;
     });
 }
-        
-        function populateInventory(inventory) {
+
+function populateInventory(inventory) {
     const inventoryBody = document.querySelector('.inventory');
     inventoryBody.innerHTML = '';
     
@@ -3102,10 +3135,14 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             const rows = document.querySelectorAll('.inventory tr');
             
             rows.forEach(row => {
-                const categoryCell = row.querySelector('td:first-child').textContent;
+                const categoryCell = row.querySelector('td:first-child');
+                
+                if (!categoryCell) return; // Skip if row doesn't have cells (like headers)
+                
+                const rowCategory = categoryCell.textContent;
                 const rowText = row.textContent.toLowerCase();
                 
-                const categoryMatch = category === 'all' || categoryCell === category;
+                const categoryMatch = category === 'all' || rowCategory === category;
                 const searchMatch = !searchText || rowText.includes(searchText);
                 
                 row.style.display = categoryMatch && searchMatch ? '' : 'none';
