@@ -2975,24 +2975,61 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         
         // Inventory Management for Order Creation
         function openInventoryOverlay() {
-            document.getElementById('inventoryOverlay').style.display = 'flex';
-            
-            // Fetch inventory data
-            fetch('/backend/get_inventory.php')
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.success) {
-                    populateInventory(data.inventory || []);
-                    populateCategories(data.categories || []);
-                } else {
-                    showToast('Failed to load inventory: ' + (data && data.message ? data.message : 'Server error'), 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching inventory:', error);
-                showToast('Error fetching inventory data', 'error');
-            });
+    document.getElementById('inventoryOverlay').style.display = 'flex';
+    
+    // Show loading state
+    const inventoryBody = document.querySelector('.inventory');
+    inventoryBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading inventory...</td></tr>';
+    
+    // Fetch inventory data
+    fetch('/backend/get_inventory.php')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
         }
+        return response.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error("Invalid JSON response:", text);
+                throw new Error("Invalid JSON response");
+            }
+        });
+    })
+    .then(data => {
+        if (!data) {
+            throw new Error("Empty response received");
+        }
+        
+        console.log("Inventory data received:", data); // Debug log
+        
+        if (data.success) {
+            if (!data.inventory || !Array.isArray(data.inventory)) {
+                console.warn("Inventory data is missing or not an array:", data.inventory);
+                populateInventory([]);
+            } else {
+                populateInventory(data.inventory);
+            }
+            
+            if (!data.categories || !Array.isArray(data.categories)) {
+                console.warn("Categories data is missing or not an array:", data.categories);
+                populateCategories([]);
+            } else {
+                populateCategories(data.categories);
+            }
+        } else {
+            showToast('Failed to load inventory: ' + (data.message || 'Unknown error'), 'error');
+            inventoryBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Failed to load inventory data</td></tr>';
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching inventory:', error);
+        showToast('Error fetching inventory: ' + error.message, 'error');
+        
+        const inventoryBody = document.querySelector('.inventory');
+        inventoryBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${error.message}</td></tr>`;
+    });
+}
         
         function populateInventory(inventory) {
             const inventoryBody = document.querySelector('.inventory');
