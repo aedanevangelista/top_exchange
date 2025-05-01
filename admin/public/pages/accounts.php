@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "../../backend/db_connection.php";
+include "../../backend/db_connection.php"; // Establishes $conn
 include "../../backend/check_role.php";
 checkRole('Accounts - Admin'); // Ensure user has access
 
@@ -22,7 +22,7 @@ if (strtoupper($sort_direction) !== 'ASC' && strtoupper($sort_direction) !== 'DE
 // --- Status Filter ---
 $status_filter = $_GET['status'] ?? '';
 
-// --- Fetch Roles (No changes needed here) ---
+// --- Fetch Roles ---
 $roles = [];
 $roleQuery = "SELECT role_name FROM roles WHERE status = 'active'";
 $resultRoles = $conn->query($roleQuery);
@@ -31,13 +31,21 @@ if ($resultRoles && $resultRoles->num_rows > 0) {
         $roles[] = $row['role_name'];
     }
 }
+// Not closing $resultRoles here assuming it's small or implicitly handled
 
-// --- AJAX Handlers (No changes needed here) ---
+// --- AJAX Handlers ---
 function returnJsonResponse($success, $reload, $message = '') {
+    // Note: This function calls exit, so connection closing needs careful consideration
+    // if database operations happen *after* a potential AJAX call.
+    // For now, assuming AJAX handlers are self-contained and main page load continues.
+    global $conn; // Make connection available if needed within AJAX, though ideally handled differently
     echo json_encode(['success' => $success, 'reload' => $reload, 'message' => $message]);
+    // $conn->close(); // Don't close here if main script continues
     exit;
 }
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
+    // Important: If AJAX handlers use $conn, ensure it's not closed before they run.
+    // The current structure seems okay as AJAX exits, but keep this in mind.
     header('Content-Type: application/json');
     $formType = $_POST['formType'] ?? '';
 
@@ -55,31 +63,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         $checkStmt->store_result();
 
         if ($checkStmt->num_rows > 0) {
+            $checkStmt->close(); // Close check statement
             returnJsonResponse(false, false, 'Username already exists.');
         }
         $checkStmt->close();
 
         $stmt = $conn->prepare("INSERT INTO accounts (username, password, role, status, created_at) VALUES (?, ?, ?, ?, ?)");
         // IMPORTANT: In a real application, hash the password!
-        // $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        // $stmt->bind_param("sssss", $username, $hashed_password, $role, $status, $created_at);
-        $stmt->bind_param("sssss", $username, $password, $role, $status, $created_at); // Using plain text for now as per original
+        $stmt->bind_param("sssss", $username, $password, $role, $status, $created_at); // Using plain text for now
 
         if ($stmt->execute()) {
+             $stmt->close(); // Close insert statement
             returnJsonResponse(true, true);
         } else {
             error_log("Add account failed: " . $stmt->error);
+             $stmt->close(); // Close insert statement even on failure
             returnJsonResponse(false, false, 'Database error adding account.');
         }
-        $stmt->close();
-        exit;
+        // Exit is handled by returnJsonResponse
     }
 
     // Edit Account
     elseif ($formType == 'edit') {
         $id = $_POST['id'];
         $username = trim($_POST['username']);
-        $password = $_POST['password']; // Consider if password should always be updated
+        $password = $_POST['password'];
         $role = $_POST['role'];
 
         $checkStmt = $conn->prepare("SELECT id FROM accounts WHERE username = ? AND id != ?");
@@ -88,39 +96,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         $checkStmt->store_result();
 
         if ($checkStmt->num_rows > 0) {
+            $checkStmt->close();
             returnJsonResponse(false, false, 'Username already exists.');
         }
         $checkStmt->close();
 
-        // Decide whether to update password
+        $stmt = null; // Initialize stmt
         if (!empty($password)) {
             // IMPORTANT: Hash the new password!
-            // $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            // $stmt = $conn->prepare("UPDATE accounts SET username = ?, password = ?, role = ? WHERE id = ?");
-            // $stmt->bind_param("sssi", $username, $hashed_password, $role, $id);
             $stmt = $conn->prepare("UPDATE accounts SET username = ?, password = ?, role = ? WHERE id = ?");
             $stmt->bind_param("sssi", $username, $password, $role, $id); // Plain text for now
         } else {
-            // Don't update password if field is empty
             $stmt = $conn->prepare("UPDATE accounts SET username = ?, role = ? WHERE id = ?");
             $stmt->bind_param("ssi", $username, $role, $id);
         }
 
         if ($stmt->execute()) {
+            $stmt->close();
             returnJsonResponse(true, true);
         } else {
             error_log("Edit account failed: " . $stmt->error);
+            $stmt->close();
             returnJsonResponse(false, false, 'Database error updating account.');
         }
-        $stmt->close();
-        exit;
+         // Exit is handled by returnJsonResponse
     }
 
     // Change Status
     elseif ($formType == 'status') {
         $id = $_POST['id'];
         $status = $_POST['status'];
-        // Validate status
         $allowed_statuses = ['Active', 'Reject', 'Archived'];
         if (!in_array($status, $allowed_statuses)) {
              returnJsonResponse(false, false, 'Invalid status value.');
@@ -130,17 +135,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         $stmt->bind_param("si", $status, $id);
 
         if ($stmt->execute()) {
+            $stmt->close();
             returnJsonResponse(true, true);
         } else {
             error_log("Change status failed: " . $stmt->error);
+            $stmt->close();
             returnJsonResponse(false, false, 'Failed to change status.');
         }
-        $stmt->close();
-        exit;
+         // Exit is handled by returnJsonResponse
     }
-}
+} // End AJAX handling block
 
-// --- Fetch Accounts Data ---
+// --- Fetch Accounts Data for Page Load ---
 $sql = "SELECT id, username, role, status, created_at FROM accounts";
 $params = [];
 $param_types = "";
@@ -158,6 +164,8 @@ $sql .= " ORDER BY {$sort_column} {$sort_direction}";
 // Prepare and execute the main query
 $stmt = $conn->prepare($sql);
 if ($stmt === false) {
+    // Close connection before dying if prepare fails early
+    if ($conn instanceof mysqli) $conn->close();
     die("Prepare failed: (" . $conn->errno . ") " . $conn->error);
 }
 
@@ -172,20 +180,21 @@ if ($result) {
     while ($row = $result->fetch_assoc()) {
         $accounts[] = $row;
     }
-    $stmt->close();
+    $stmt->close(); // Close the statement after fetching results
 } else {
      error_log("Fetch accounts failed: " . $conn->error);
+     $stmt->close(); // Close statement even if get_result failed
      // Handle error appropriately, maybe show a message
 }
 
 // --- Helper Functions for Sorting ---
+// These functions don't need the database connection
 function getSortUrl($column, $currentColumn, $currentDirection, $currentStatus) {
     $newDirection = ($column === $currentColumn && strtoupper($currentDirection) === 'ASC') ? 'DESC' : 'ASC';
     $urlParams = [
         'sort' => $column,
         'direction' => $newDirection
     ];
-    // Preserve status filter
     if (!empty($currentStatus)) {
         $urlParams['status'] = $currentStatus;
     }
@@ -194,15 +203,17 @@ function getSortUrl($column, $currentColumn, $currentDirection, $currentStatus) 
 
 function getSortIcon($column, $currentColumn, $currentDirection) {
     if ($column !== $currentColumn) {
-        return '<i class="fas fa-sort"></i>'; // Neutral icon
+        return '<i class="fas fa-sort"></i>';
     } elseif (strtoupper($currentDirection) === 'ASC') {
-        return '<i class="fas fa-sort-up"></i>'; // Ascending icon
+        return '<i class="fas fa-sort-up"></i>';
     } else {
-        return '<i class="fas fa-sort-down"></i>'; // Descending icon
+        return '<i class="fas fa-sort-down"></i>';
     }
 }
 
-$conn->close(); // Close connection after all queries
+// *** DO NOT CLOSE CONNECTION HERE ***
+// $conn->close(); // <-- REMOVED FROM HERE
+
 ?>
 
 <!DOCTYPE html>
@@ -280,7 +291,12 @@ $conn->close(); // Close connection after all queries
 </head>
 <body>
     <div id="toast-container"></div>
-    <?php include '../sidebar.php'; ?>
+
+    <?php
+    // Include the sidebar - $conn should still be open here
+    include '../sidebar.php';
+    ?>
+
     <div class="main-content">
         <div class="accounts-header">
             <h1>Staff Accounts</h1>
@@ -339,18 +355,24 @@ $conn->close(); // Close connection after all queries
                 <tbody>
                     <?php if (count($accounts) > 0): ?>
                         <?php foreach ($accounts as $account):
-                            // Calculate account age (no changes needed here)
-                            $created_at = new DateTime($account['created_at']);
-                            $now = new DateTime();
-                            $diff = $created_at->diff($now);
-                            if ($diff->y > 0) {
-                                $account_age = $diff->y . " year" . ($diff->y > 1 ? "s" : "") . " ago";
-                            } elseif ($diff->m > 0) {
-                                $account_age = $diff->m . " month" . ($diff->m > 1 ? "s" : "") . " ago";
-                            } elseif ($diff->d > 0) {
-                                $account_age = $diff->d . " day" . ($diff->d > 1 ? "s" : "") . " ago";
-                            } else {
-                                $account_age = "Just now";
+                            // Calculate account age
+                            try {
+                                $created_at = new DateTime($account['created_at']);
+                                $now = new DateTime();
+                                $diff = $created_at->diff($now);
+                                if ($diff->y > 0) {
+                                    $account_age = $diff->y . " year" . ($diff->y > 1 ? "s" : "") . " ago";
+                                } elseif ($diff->m > 0) {
+                                    $account_age = $diff->m . " month" . ($diff->m > 1 ? "s" : "") . " ago";
+                                } elseif ($diff->d > 0) {
+                                    $account_age = $diff->d . " day" . ($diff->d > 1 ? "s" : "") . " ago";
+                                } elseif ($diff->h > 0 || $diff->i > 0 || $diff->s >= 0) {
+                                     $account_age = "Just now";
+                                } else {
+                                     $account_age = "Unknown"; // Fallback
+                                }
+                            } catch (Exception $e) {
+                                $account_age = "Invalid date"; // Handle potential date parsing errors
                             }
                         ?>
                             <tr>
@@ -358,7 +380,9 @@ $conn->close(); // Close connection after all queries
                                 <td>
                                     <?php
                                     $role = ucfirst($account['role']);
-                                    echo "<span class='role-label role-" . strtolower($account['role']) . "'>$role</span>";
+                                    // Ensure role is not empty before creating class name
+                                    $roleClass = !empty($account['role']) ? strtolower($account['role']) : 'unknown';
+                                    echo "<span class='role-label role-" . $roleClass . "'>$role</span>";
                                     ?>
                                 </td>
                                 <td><?= $account_age ?></td>
@@ -388,22 +412,27 @@ $conn->close(); // Close connection after all queries
         </div>
     </div>
 
-    <!-- Modals (Add, Edit, Status) - No changes needed here -->
-    <div id="addAccountOverlay" class="overlay" style="display: none;">
+    <!-- Modals (Add, Edit, Status) -->
+     <div id="addAccountOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-user-plus"></i> Add New Account</h2>
             <div id="addAccountError" class="error-message"></div>
             <form id="addAccountForm" method="POST" class="account-form" action="">
                 <input type="hidden" name="formType" value="add">
+                <input type="hidden" name="ajax" value="1"> <!-- Ensure AJAX flag is sent -->
                 <label for="username">Username:</label>
                 <input type="text" id="username" name="username" autocomplete="username" required>
                 <label for="password">Password:</label>
-                <input type="text" id="password" name="password" autocomplete="new-password" required>
+                <input type="text" id="password" name="password" autocomplete="new-password" required> <!-- Consider type="password" -->
                 <label for="role">Role:</label>
                 <select id="role" name="role" autocomplete="role" required>
-                    <?php foreach ($roles as $role): ?>
-                        <option value="<?= htmlspecialchars($role) ?>"><?= htmlspecialchars($role) ?></option>
-                    <?php endforeach; ?>
+                     <?php if (empty($roles)): ?>
+                          <option value="" disabled>No roles available</option>
+                     <?php else: ?>
+                         <?php foreach ($roles as $role): ?>
+                             <option value="<?= htmlspecialchars($role) ?>"><?= htmlspecialchars($role) ?></option>
+                         <?php endforeach; ?>
+                     <?php endif; ?>
                 </select>
                 <div class="form-buttons">
                     <button type="button" class="cancel-btn" onclick="closeAddAccountForm()">
@@ -421,22 +450,27 @@ $conn->close(); // Close connection after all queries
             <div id="editAccountError" class="error-message"></div>
             <form id="editAccountForm" method="POST" class="account-form" action="">
                 <input type="hidden" name="formType" value="edit">
+                <input type="hidden" name="ajax" value="1"> <!-- Ensure AJAX flag is sent -->
                 <input type="hidden" id="edit-id" name="id">
                 <label for="edit-username">Username:</label>
                 <input type="text" id="edit-username" name="username" autocomplete="username" required>
                 <label for="edit-password">Password: <small>(Leave blank to keep current)</small></label>
-                <input type="text" id="edit-password" name="password" autocomplete="new-password">
+                <input type="text" id="edit-password" name="password" autocomplete="new-password"> <!-- Consider type="password" -->
                 <label for="edit-role">Role:</label>
                 <select id="edit-role" name="role" autocomplete="role" required>
-                    <?php foreach ($roles as $role): ?>
-                        <option value="<?= htmlspecialchars($role) ?>"><?= htmlspecialchars($role) ?></option>
-                    <?php endforeach; ?>
+                     <?php if (empty($roles)): ?>
+                          <option value="" disabled>No roles available</option>
+                     <?php else: ?>
+                        <?php foreach ($roles as $role): ?>
+                            <option value="<?= htmlspecialchars($role) ?>"><?= htmlspecialchars($role) ?></option>
+                        <?php endforeach; ?>
+                     <?php endif; ?>
                 </select>
                 <div class="form-buttons">
                     <button type="button" class="cancel-btn" onclick="closeEditAccountForm()">
                         <i class="fas fa-times"></i> Cancel
                     </button>
-                    <button type="submit" class="save-btn"><i class=\"fas fa-save\"></i> Update</button>
+                    <button type="submit" class="save-btn"><i class="fas fa-save"></i> Update</button>
                 </div>
             </form>
         </div>
@@ -446,14 +480,20 @@ $conn->close(); // Close connection after all queries
         <div class="overlay-content">
             <h2>Change Status</h2>
             <p id="statusMessage"></p>
+             <!-- Hidden fields for AJAX submission -->
+             <input type="hidden" id="status-change-id" name="id">
+             <input type="hidden" id="status-change-value" name="status">
+             <input type="hidden" name="formType" value="status">
+             <input type="hidden" name="ajax" value="1">
+
             <div class="modal-buttons">
-                <button class="approve-btn" onclick="changeStatus('Active')">
+                <button class="approve-btn" onclick="confirmStatusChange('Active')">
                     <i class="fas fa-check"></i> Active
                 </button>
-                <button class="reject-btn" onclick="changeStatus('Reject')">
+                <button class="reject-btn" onclick="confirmStatusChange('Reject')">
                     <i class="fas fa-times"></i> Reject
                 </button>
-                <button class="archive-btn" onclick="changeStatus('Archived')">
+                <button class="archive-btn" onclick="confirmStatusChange('Archived')">
                     <i class="fas fa-archive"></i> Archive
                 </button>
             </div>
@@ -468,6 +508,7 @@ $conn->close(); // Close connection after all queries
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/js/toast.js"></script>
+    <!-- Ensure accounts.js is loaded AFTER the inline script or includes necessary functions -->
     <script src="/js/accounts.js"></script>
     <script>
         // --- Client-side Search ---
@@ -475,21 +516,22 @@ $conn->close(); // Close connection after all queries
             function performSearch() {
                 const searchTerm = $('#searchInput').val().toLowerCase().trim();
                 let visibleCount = 0;
+                let totalRows = 0; // Count actual data rows
+
                 $('.accounts-table tbody tr').each(function() {
                     const row = $(this);
-                    // Skip the 'no accounts found' row template
+                    // Skip the 'no accounts found' template row
                     if (row.attr('id') === 'noAccountsFound') {
                         return; // continue to next iteration
                     }
-                    // Check if the original 'no accounts' row exists
+                    // Check if it's the original 'no accounts' row
                     if (row.find('.no-accounts').length > 0) {
-                         // If the original 'no accounts' row is the ONLY row, hide it during search
-                         if ($('.accounts-table tbody tr').length === 1) {
-                             row.hide();
-                         }
-                         return; // continue
+                        // Hide this row during search
+                        row.hide();
+                        return; // continue
                     }
 
+                    totalRows++; // This is a data row
                     const rowText = row.text().toLowerCase();
                     if (rowText.includes(searchTerm)) {
                         row.show();
@@ -499,13 +541,13 @@ $conn->close(); // Close connection after all queries
                     }
                 });
 
-                 // Show/hide the 'no accounts found' message row
-                 if (visibleCount === 0 && searchTerm !== '') {
+                 // Show/hide the 'no accounts found' message row template
+                 if (visibleCount === 0 && totalRows > 0 && searchTerm !== '') {
                      $('#noAccountsFound').show();
                  } else {
                      $('#noAccountsFound').hide();
-                     // If search is cleared and original 'no accounts' row exists, show it
-                     if(searchTerm === '' && $('.accounts-table tbody .no-accounts').length > 0) {
+                     // If search is cleared and the original 'no accounts' row exists, show it
+                     if (searchTerm === '' && totalRows === 0 && $('.accounts-table tbody .no-accounts').length > 0) {
                           $('.accounts-table tbody .no-accounts').closest('tr').show();
                      }
                  }
@@ -513,12 +555,16 @@ $conn->close(); // Close connection after all queries
 
             $('#searchInput').on('input', performSearch);
             $('#searchBtn').on('click', performSearch); // Also trigger search on button click
+
+             // Ensure search is performed on page load if search input has value (e.g. after back button)
+             if ($('#searchInput').val()) {
+                 performSearch();
+             }
         });
 
         // --- Status Filter Function ---
         function filterByStatus() {
             const selectedStatus = document.getElementById('statusFilter').value;
-            // Preserve existing sort parameters if any
             const url = new URL(window.location.href);
             const currentSort = url.searchParams.get('sort');
             const currentDirection = url.searchParams.get('direction');
@@ -534,10 +580,155 @@ $conn->close(); // Close connection after all queries
                 params.direction = currentDirection;
             }
 
-            // Build the new query string
             const queryString = Object.keys(params).map(key => key + '=' + encodeURIComponent(params[key])).join('&');
             window.location.search = queryString; // Reload page with new filter/sort
         }
+
+         // --- Functions needed by modals/buttons (Ensure these are in accounts.js or here) ---
+         let currentAccountId = null; // To store ID for status change
+
+         function openAddAccountForm() {
+             $('#addAccountForm')[0].reset();
+             $('#addAccountError').text('').hide();
+             $('#addAccountOverlay').css('display', 'flex');
+         }
+         function closeAddAccountForm() { $('#addAccountOverlay').hide(); }
+
+         function openEditAccountForm(id, username, password, role) {
+             $('#edit-id').val(id);
+             $('#edit-username').val(username);
+             $('#edit-password').val(''); // Clear password field for editing
+             $('#edit-role').val(role);
+             $('#editAccountError').text('').hide();
+             $('#editAccountOverlay').css('display', 'flex');
+         }
+         function closeEditAccountForm() { $('#editAccountOverlay').hide(); }
+
+         function openStatusModal(id, username) {
+             currentAccountId = id; // Store the ID
+             $('#statusMessage').text(`Change status for account: ${username}`);
+             // Clear previous status selection if needed
+             $('#status-change-id').val(id); // Set hidden ID field
+             $('#statusModal').css('display', 'flex');
+         }
+         function closeStatusModal() {
+             $('#statusModal').hide();
+             currentAccountId = null; // Clear stored ID
+         }
+
+         // Confirms which status button was clicked, sets hidden value
+         function confirmStatusChange(newStatus) {
+             $('#status-change-value').val(newStatus);
+             // Now call the function that will perform the AJAX submit
+             submitStatusChange();
+         }
+
+         // Submits the status change via AJAX
+         function submitStatusChange() {
+             const accountId = $('#status-change-id').val();
+             const newStatus = $('#status-change-value').val();
+
+             if (!accountId || !newStatus) {
+                 showToast('Error: Missing account ID or status.', 'error');
+                 return;
+             }
+
+             $.ajax({
+                 url: window.location.pathname, // Post back to the same page
+                 type: 'POST',
+                 data: {
+                     ajax: 1,
+                     formType: 'status',
+                     id: accountId,
+                     status: newStatus
+                 },
+                 dataType: 'json',
+                 success: function(response) {
+                     if (response.success) {
+                         showToast('Status updated successfully!', 'success');
+                         if (response.reload) {
+                             setTimeout(() => { window.location.reload(); }, 1000);
+                         }
+                     } else {
+                         showToast('Error: ' + (response.message || 'Failed to update status.'), 'error');
+                     }
+                 },
+                 error: function(xhr, status, error) {
+                     console.error("Status change AJAX error:", status, error, xhr.responseText);
+                     showToast('Error: Could not connect to server.', 'error');
+                 },
+                 complete: function() {
+                     closeStatusModal(); // Close modal regardless of success/failure
+                 }
+             });
+         }
+
+         // --- Form Submissions via AJAX (Add/Edit) ---
+         $(document).ready(function() {
+             $('#addAccountForm').on('submit', function(e) {
+                 e.preventDefault();
+                 const form = $(this);
+                 $.ajax({
+                     url: window.location.pathname, // Post back to same page
+                     type: 'POST',
+                     data: form.serialize() + '&ajax=1', // Ensure ajax=1 is sent
+                     dataType: 'json',
+                     success: function(response) {
+                         if (response.success) {
+                             showToast('Account added successfully!', 'success');
+                             closeAddAccountForm();
+                             if (response.reload) {
+                                 setTimeout(() => { window.location.reload(); }, 1000);
+                             }
+                         } else {
+                             $('#addAccountError').text(response.message || 'Failed to add account.').show();
+                             showToast('Error: ' + (response.message || 'Failed to add account.'), 'error');
+                         }
+                     },
+                     error: function(xhr, status, error) {
+                         console.error("Add account AJAX error:", status, error, xhr.responseText);
+                         $('#addAccountError').text('Server error occurred.').show();
+                         showToast('Error: Could not connect to server.', 'error');
+                     }
+                 });
+             });
+
+             $('#editAccountForm').on('submit', function(e) {
+                 e.preventDefault();
+                 const form = $(this);
+                 $.ajax({
+                     url: window.location.pathname, // Post back to same page
+                     type: 'POST',
+                     data: form.serialize() + '&ajax=1', // Ensure ajax=1 is sent
+                     dataType: 'json',
+                     success: function(response) {
+                         if (response.success) {
+                             showToast('Account updated successfully!', 'success');
+                             closeEditAccountForm();
+                             if (response.reload) {
+                                 setTimeout(() => { window.location.reload(); }, 1000);
+                             }
+                         } else {
+                             $('#editAccountError').text(response.message || 'Failed to update account.').show();
+                             showToast('Error: ' + (response.message || 'Failed to update account.'), 'error');
+                         }
+                     },
+                     error: function(xhr, status, error) {
+                         console.error("Edit account AJAX error:", status, error, xhr.responseText);
+                         $('#editAccountError').text('Server error occurred.').show();
+                         showToast('Error: Could not connect to server.', 'error');
+                     }
+                 });
+             });
+         });
+
+
     </script>
 </body>
 </html>
+<?php
+// --- Close Connection AT THE END ---
+if ($conn instanceof mysqli) {
+    $conn->close();
+}
+?>
