@@ -1,17 +1,20 @@
 <?php
-// Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): 2025-05-01 17:51:05
+// Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): 2025-05-01 17:53:25
 // Current User's Login: aedanevangelista
 
 session_start();
+// **Important: db_connection.php should ESTABLISH $conn, but NOT close it.**
 include "../../backend/db_connection.php"; // Ensure this path is correct
 include "../../backend/check_role.php";   // Ensure this path is correct
 checkRole('Orders'); // Ensure user has access to Orders (or adjust role if needed)
 
+// --- Database Operations START ---
+
 // Get current date for auto-transit
 $current_date = date('Y-m-d');
+$auto_transit_count = 0; // Initialize count
 
 // Automatically update orders to In Transit if today is delivery day
-// **Added error handling for prepare**
 $auto_transit_sql = "UPDATE orders SET status = 'In Transit'
                      WHERE status = 'For Delivery'
                      AND delivery_date = ?
@@ -19,7 +22,6 @@ $auto_transit_sql = "UPDATE orders SET status = 'In Transit'
 $auto_transit_stmt = $conn->prepare($auto_transit_sql);
 if ($auto_transit_stmt) {
     $auto_transit_stmt->bind_param("s", $current_date);
-    // **Added error handling for execute**
     if ($auto_transit_stmt->execute()) {
         $auto_transit_count = $auto_transit_stmt->affected_rows;
     } else {
@@ -36,7 +38,6 @@ if ($auto_transit_stmt) {
 // Fetch all drivers for the driver assignment dropdown
 $drivers = [];
 $driverStmt = $conn->prepare("SELECT id, name FROM drivers WHERE availability = 'Available' AND current_deliveries < 20 ORDER BY name");
-// **Added error handling**
 if ($driverStmt) {
     if ($driverStmt->execute()) {
         $driverResult = $driverStmt->get_result();
@@ -66,24 +67,21 @@ if (!in_array($sortColumn, $allowedColumns)) {
 }
 
 $allowedOrders = ['ASC', 'DESC'];
-if (!in_array(strtoupper($sortOrder), $allowedOrders)) { // Use strtoupper for case-insensitivity
+if (!in_array(strtoupper($sortOrder), $allowedOrders)) {
     $sortOrder = 'ASC';
 }
 
 // Build the SQL query with or without status filter
-// **Use prepared statement for filterStatus to prevent SQL injection**
 $params = [];
 $types = "";
 
 $whereClause = "WHERE o.status IN ('For Delivery', 'In Transit')";
 if (!empty($filterStatus)) {
-    // Validate filterStatus against allowed values
     if (in_array($filterStatus, ['For Delivery', 'In Transit'])) {
         $whereClause = "WHERE o.status = ?";
         $params[] = $filterStatus;
         $types .= "s";
     } else {
-        // Invalid status provided, default to showing all
         $filterStatus = ''; // Clear invalid filter
     }
 }
@@ -95,16 +93,14 @@ $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.deliver
         LEFT JOIN driver_assignments da ON o.po_number = da.po_number
         LEFT JOIN drivers d ON da.driver_id = d.id
         $whereClause
-        ORDER BY o.`$sortColumn` $sortOrder"; // Use backticks for column names
+        ORDER BY o.`$sortColumn` $sortOrder";
 
 $orders = [];
 $orderStmt = $conn->prepare($sql);
 if ($orderStmt) {
-    // Bind parameters if filtering by status
     if (!empty($params)) {
         $orderStmt->bind_param($types, ...$params);
     }
-
     if ($orderStmt->execute()) {
         $orderResult = $orderStmt->get_result();
         if ($orderResult && $orderResult->num_rows > 0) {
@@ -117,15 +113,14 @@ if ($orderStmt) {
     }
     $orderStmt->close();
 } else {
-    // For debugging - log the SQL error
     error_log("SQL Prepare Error in deliverable_orders.php: " . $conn->error);
 }
 
 // Get filter options for status
 $statusOptions = ['For Delivery', 'In Transit'];
 
-// **Close connection at the end of PHP block**
-$conn->close();
+// **DO NOT CLOSE $conn HERE**
+// --- Database Operations END ---
 ?>
 
 <!DOCTYPE html>
@@ -286,6 +281,7 @@ $conn->close();
         .pdf-container { background-color: white; width: 90%; max-width: 850px; /* A bit wider for A4 */ margin: 30px auto; padding: 20px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); position: relative; }
         .close-pdf { position: absolute; top: 10px; right: 15px; font-size: 24px; background: none; border: none; cursor: pointer; color: #555; padding: 5px; line-height: 1; }
         .close-pdf:hover { color: #000; }
+        #pdfRenderArea { border: 1px solid #eee; margin-bottom: 15px; min-height: 300px; /* Placeholder height */ background-color: #f8f9fa; } /* Area to show the rendered preview */
         .pdf-actions { text-align: center; margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee; }
         .download-pdf-btn { padding: 10px 25px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; transition: background-color 0.2s; display: inline-flex; align-items: center; gap: 8px; }
         .download-pdf-btn:hover { background-color: #0b5ed7; }
@@ -343,12 +339,10 @@ $conn->close();
 </head>
 <body>
     <?php
-        // **Corrected sidebar include path assumption**
         $sidebarPath = '../sidebar.php'; // Assumes sidebar.php is in /public/
         if (file_exists($sidebarPath)) {
             include $sidebarPath;
         } else {
-            // Fallback or error message if sidebar is not found
              echo "<div style='position:fixed; top:0; left:0; background:red; color:white; padding:10px; z-index: 10000;'>Error: Sidebar file not found at '$sidebarPath'. Please check the include path in deliverable_orders.php.</div>";
         }
     ?>
@@ -374,7 +368,7 @@ $conn->close();
                         <?php if (isset($auto_transit_count) && $auto_transit_count > 0): ?>
                             (<?= $auto_transit_count ?> auto-updated)
                         <?php elseif (isset($auto_transit_count) && $auto_transit_count < 0): ?>
-                            <span style="color: red; margin-left: 5px;">(Error updating)</span>
+                            <span style="color: red; margin-left: 5px;">(Update Error)</span>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -444,8 +438,6 @@ $conn->close();
                                         </button>
                                     <?php else: ?>
                                         <span class="no-driver" style="color: #dc3545; font-style: italic; font-size: 12px;">No driver</span>
-                                        <!-- Optionally add an Assign button if needed -->
-                                        <!-- <button class="driver-btn assign" onclick="openDriverModal('<?= htmlspecialchars($order['po_number']) ?>', 0, '')"><i class="fas fa-user-plus"></i> Assign</button> -->
                                     <?php endif; ?>
                                 </td>
                                 <td style="text-align: center;">
@@ -517,9 +509,7 @@ $conn->close();
                             <th style="text-align: right;">Total</th>
                         </tr>
                      </thead>
-                     <tbody id="orderDetailsBody">
-                         <!-- Order details populated by JS -->
-                     </tbody>
+                     <tbody id="orderDetailsBody"></tbody>
                  </table>
              </div>
              <div class="form-buttons">
@@ -537,7 +527,7 @@ $conn->close();
             <p id="driverModalMessage"></p>
             <div class="driver-selection">
                 <label for="driverSelect">Select New Driver:</label>
-                <select id="driverSelect" name="driver_id"> <!-- Added name attribute -->
+                <select id="driverSelect" name="driver_id">
                     <option value="0">-- Select a driver --</option>
                     <?php foreach ($drivers as $driver): ?>
                         <option value="<?= $driver['id'] ?>"><?= htmlspecialchars($driver['name']) ?></option>
@@ -545,11 +535,10 @@ $conn->close();
                 </select>
             </div>
             <div class="driver-modal-buttons">
-                <button type="button" class="cancel-btn" onclick="closeDriverModal()"> <!-- Changed to type="button" -->
+                <button type="button" class="cancel-btn" onclick="closeDriverModal()">
                     <i class="fas fa-times"></i> Cancel
                 </button>
-                <!-- Changed onclick to open confirmation -->
-                <button type="button" class="save-btn" onclick="confirmDriverChange()"> <!-- Changed to type="button" -->
+                <button type="button" class="save-btn" onclick="confirmDriverChange()">
                     <i class="fas fa-save"></i> Change Driver
                 </button>
             </div>
@@ -560,14 +549,11 @@ $conn->close();
     <div id="driverConfirmationModal" class="confirmation-modal overlay" onclick="if (event.target === this) closeDriverConfirmation();">
          <div class="overlay-content">
              <h2><i class="fas fa-user-check"></i> Confirm Driver Change</h2>
-             <div class="modal-message" id="driverConfirmMessage">
-                 Are you sure you want to change the driver?
-             </div>
+             <div class="modal-message" id="driverConfirmMessage">Are you sure?</div>
              <div class="modal-buttons">
                  <button class="btn-no" onclick="closeDriverConfirmation()">
                      <i class="fas fa-times"></i> No
                  </button>
-                 <!-- This button will trigger the actual assignment -->
                  <button id="confirmDriverAssignBtn" class="btn-yes">
                      <i class="fas fa-check"></i> Yes, Change
                  </button>
@@ -579,14 +565,11 @@ $conn->close();
     <div id="statusChangeModal" class="confirmation-modal overlay" onclick="if (event.target === this) closeStatusChangeModal();">
         <div class="overlay-content">
             <h2><i id="statusIcon" class="fas fa-question-circle"></i> <span id="statusModalTitle">Confirm Status Change</span></h2>
-            <div class="modal-message" id="statusModalMessage">
-                Are you sure?
-            </div>
+            <div class="modal-message" id="statusModalMessage">Are you sure?</div>
             <div class="modal-buttons">
                 <button class="btn-no" onclick="closeStatusChangeModal()">
                     <i class="fas fa-times"></i> No
                 </button>
-                <!-- This button triggers the actual status toggle -->
                 <button id="confirmStatusChangeBtn" class="btn-yes">
                     <i class="fas fa-check"></i> Yes
                 </button>
@@ -598,14 +581,11 @@ $conn->close();
     <div id="completeOrderModal" class="confirmation-modal overlay" onclick="if (event.target === this) closeCompleteModal();">
         <div class="overlay-content">
             <h2><i class="fas fa-check-double"></i> Confirm Completion</h2>
-            <div class="modal-message" id="completeModalMessage">
-                Are you sure you want to mark this delivery as completed?
-            </div>
+            <div class="modal-message" id="completeModalMessage">Are you sure?</div>
             <div class="modal-buttons">
                 <button class="btn-no" onclick="closeCompleteModal()">
                     <i class="fas fa-times"></i> No
                 </button>
-                <!-- This button triggers the actual completion -->
                 <button id="confirmCompleteOrderBtn" class="btn-yes">
                     <i class="fas fa-check"></i> Yes, Complete
                 </button>
@@ -620,9 +600,7 @@ $conn->close();
                  <h3><i class="fas fa-comment-alt"></i> Special Instructions</h3>
                  <div class="instructions-po-number" id="instructionsPoNumber">PO: ...</div>
              </div>
-             <div class="instructions-body" id="instructionsContent">
-                 Loading...
-             </div>
+             <div class="instructions-body" id="instructionsContent">Loading...</div>
              <div class="instructions-footer">
                  <button type="button" class="close-instructions-btn" onclick="closeSpecialInstructions()">Close</button>
              </div>
@@ -633,9 +611,7 @@ $conn->close();
     <div id="pdfPreview" class="overlay" onclick="if (event.target === this) closePDFPreview();">
         <div class="pdf-container">
             <button class="close-pdf" onclick="closePDFPreview()" aria-label="Close PDF Preview"><i class="fas fa-times"></i></button>
-            <div id="pdfRenderArea">
-                <!-- Content is copied here before rendering for preview -->
-            </div>
+            <div id="pdfRenderArea"></div>
             <div class="pdf-actions">
                 <button class="download-pdf-btn" onclick="downloadPDF()">
                     <i class="fas fa-download"></i> Download PDF
@@ -647,38 +623,21 @@ $conn->close();
     <!-- Hidden div for html2pdf generation -->
     <div id="contentToDownload" style="position: absolute; left: -9999px; top: auto; width: 800px;">
         <div class="po-container">
-            <div class="po-header">
-                <div class="po-company" id="printCompany"></div>
-                <div class="po-title">Purchase Order</div>
-            </div>
-            <div class="po-details">
-                <div class="po-left">
-                    <div class="po-detail-row"><span class="po-detail-label">PO Number:</span> <span id="printPoNumber"></span></div>
-                    <div class="po-detail-row"><span class="po-detail-label">Username:</span> <span id="printUsername"></span></div>
-                    <div class="po-detail-row"><span class="po-detail-label">Delivery Address:</span> <span id="printDeliveryAddress"></span></div>
-                    <div class="po-detail-row" id="printInstructionsSection" style="display: none;"><span class="po-detail-label">Instructions:</span> <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span></div>
-                </div>
-                <div class="po-right">
-                    <div class="po-detail-row"><span class="po-detail-label">Order Date:</span> <span id="printOrderDate"></span></div>
-                    <div class="po-detail-row"><span class="po-detail-label">Delivery Date:</span> <span id="printDeliveryDate"></span></div>
-                </div>
-            </div>
-            <table class="po-table">
-                <thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align: right;">Qty</th><th style="text-align: right;">Unit Price</th><th style="text-align: right;">Total</th></tr></thead>
-                <tbody id="printOrderItems"></tbody>
-            </table>
+            <div class="po-header"><div class="po-company" id="printCompany"></div><div class="po-title">Purchase Order</div></div>
+            <div class="po-details"><div class="po-left"><div class="po-detail-row"><span class="po-detail-label">PO Number:</span> <span id="printPoNumber"></span></div><div class="po-detail-row"><span class="po-detail-label">Username:</span> <span id="printUsername"></span></div><div class="po-detail-row"><span class="po-detail-label">Delivery Address:</span> <span id="printDeliveryAddress"></span></div><div class="po-detail-row" id="printInstructionsSection" style="display: none;"><span class="po-detail-label">Instructions:</span> <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span></div></div><div class="po-right"><div class="po-detail-row"><span class="po-detail-label">Order Date:</span> <span id="printOrderDate"></span></div><div class="po-detail-row"><span class="po-detail-label">Delivery Date:</span> <span id="printDeliveryDate"></span></div></div></div>
+            <table class="po-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align: right;">Qty</th><th style="text-align: right;">Unit Price</th><th style="text-align: right;">Total</th></tr></thead><tbody id="printOrderItems"></tbody></table>
             <div class="po-total">Total Amount: PHP <span id="printTotalAmount"></span></div>
         </div>
     </div>
 
 
     <script>
-        // Global variables to store context for confirmation modals
+        // Global variables
         let currentPoNumber = '';
         let currentDriverId = 0;
-        let targetDriverId = 0; // Store selected driver before confirmation
-        let targetStatus = ''; // Store target status before confirmation
-        let currentPOData = null; // For PDF generation
+        let targetDriverId = 0;
+        let targetStatus = '';
+        let currentPOData = null; // For PDF preview/download
 
         // --- Toast Function ---
         function showToast(message, type = 'info') {
@@ -691,25 +650,22 @@ $conn->close();
                     <i class="fas ${type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-times-circle' : 'fa-info-circle')}"></i>
                     <div class="message">${message}</div>
                 </div>
-                <i class="fas fa-times close" onclick="this.parentElement.classList.remove('show'); setTimeout(() => { if(this.parentElement) this.parentElement.remove(); }, 400);"></i>`; // Close button
+                <i class="fas fa-times close" onclick="this.parentElement.classList.remove('show'); setTimeout(() => { if(this.parentElement) this.parentElement.remove(); }, 400);"></i>`;
             container.appendChild(toast);
             setTimeout(() => { toast.classList.add('show'); }, 10);
             setTimeout(() => {
                 toast.classList.remove('show');
                 toast.addEventListener('transitionend', () => { if(toast.parentElement) toast.remove(); });
-                setTimeout(() => { if(toast.parentElement) toast.remove(); }, 500); // Fallback removal
-            }, 4000); // Show for 4 seconds
+                setTimeout(() => { if(toast.parentElement) toast.remove(); }, 500);
+            }, 4000);
         }
 
         // --- Filtering and Sorting ---
         function filterByStatus() {
             const status = document.getElementById('statusFilter').value;
             const url = new URL(window.location.href);
-            if (status) {
-                url.searchParams.set('status', status);
-            } else {
-                url.searchParams.delete('status');
-            }
+            if (status) url.searchParams.set('status', status);
+            else url.searchParams.delete('status');
             window.location.href = url.toString();
         }
 
@@ -717,329 +673,193 @@ $conn->close();
             header.addEventListener('click', function() {
                 const column = this.getAttribute('data-column');
                 const url = new URL(window.location.href);
-                const currentOrder = url.searchParams.get('order') || 'ASC'; // Default ASC
-                let newOrder = 'ASC';
-
-                if (url.searchParams.get('sort') === column && currentOrder === 'ASC') {
-                    newOrder = 'DESC';
-                }
-
+                const currentOrder = url.searchParams.get('order') || 'ASC';
+                let newOrder = (url.searchParams.get('sort') === column && currentOrder === 'ASC') ? 'DESC' : 'ASC';
                 url.searchParams.set('sort', column);
                 url.searchParams.set('order', newOrder);
                 window.location.href = url.toString();
             });
         });
 
-        // --- Status Change ---
+        // --- Status Change Confirmation Flow ---
         function openStatusChangeModal(poNumber, newStatus) {
             currentPoNumber = poNumber;
-            targetStatus = newStatus; // Store target status
-
+            targetStatus = newStatus;
             const modalTitle = document.getElementById('statusModalTitle');
             const modalMessage = document.getElementById('statusModalMessage');
             const statusIcon = document.getElementById('statusIcon');
-            const confirmBtn = document.getElementById('confirmStatusChangeBtn'); // Target the correct button
+            const confirmBtn = document.getElementById('confirmStatusChangeBtn');
 
             if (newStatus === 'In Transit') {
                 modalTitle.textContent = 'Confirm: Mark as In Transit';
                 modalMessage.innerHTML = `Change order <strong>${poNumber}</strong> status to <span class="status-pill in-transit">In Transit</span>?`;
-                statusIcon.className = 'fas fa-truck'; // Update icon
-            } else { // For Delivery
+                statusIcon.className = 'fas fa-truck';
+            } else {
                 modalTitle.textContent = 'Confirm: Mark as For Delivery';
                 modalMessage.innerHTML = `Change order <strong>${poNumber}</strong> status to <span class="status-pill for-delivery">For Delivery</span>?`;
-                statusIcon.className = 'fas fa-warehouse'; // Update icon
+                statusIcon.className = 'fas fa-warehouse';
             }
-
-            // Set the action for the "Yes" button in this specific modal
-            confirmBtn.onclick = executeToggleTransitStatus; // Call the execution function
-
+            confirmBtn.onclick = executeToggleTransitStatus;
             document.getElementById('statusChangeModal').style.display = 'flex';
         }
 
         function closeStatusChangeModal() {
             document.getElementById('statusChangeModal').style.display = 'none';
-            currentPoNumber = '';
-            targetStatus = ''; // Clear target status
+            currentPoNumber = ''; targetStatus = '';
         }
 
-        // Executes the status toggle AFTER confirmation
         function executeToggleTransitStatus() {
             if (!currentPoNumber || !targetStatus) return;
-
-            const poNumber = currentPoNumber;
-            const newStatus = targetStatus;
-
-            closeStatusChangeModal(); // Close the confirmation modal first
+            const poNumber = currentPoNumber, newStatus = targetStatus; // Capture before closing
+            closeStatusChangeModal();
             showToast(`Updating status for ${poNumber}...`, 'info');
 
-            // **Assume backend endpoint exists and handles status updates**
-            fetch('/backend/update_order_status.php', { // Using the general status update endpoint
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    po_number: poNumber,
-                    status: newStatus,
-                    // No material flags needed for these transitions
-                    deduct_materials: '0',
-                    return_materials: '0'
-                 })
+            fetch('/backend/update_order_status.php', { // Use general endpoint
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ po_number: poNumber, status: newStatus, deduct_materials: '0', return_materials: '0' })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     showToast(`Order ${poNumber} status updated to ${newStatus}`, 'success');
                     setTimeout(() => { window.location.reload(); }, 1500);
-                } else {
-                    showToast(`Error updating status: ${data.message || 'Unknown error'}`, 'error');
-                }
+                } else throw new Error(data.message || 'Unknown error');
             })
-            .catch(error => {
-                console.error('Status toggle error:', error);
-                showToast('Network error updating status.', 'error');
-            });
+            .catch(error => { console.error('Status toggle error:', error); showToast(`Error: ${error.message}`, 'error'); });
         }
 
-
-        // --- Order Completion ---
+        // --- Order Completion Confirmation Flow ---
         function openCompleteModal(poNumber, username) {
-            currentPoNumber = poNumber; // Store PO for confirmation
-
-            const modalMessage = document.getElementById('completeModalMessage');
-            modalMessage.innerHTML = `Mark order <strong>${poNumber}</strong> for <strong>${username}</strong> as completed?`;
-
-            // Set the action for the "Yes" button in this specific modal
+            currentPoNumber = poNumber;
+            document.getElementById('completeModalMessage').innerHTML = `Mark order <strong>${poNumber}</strong> for <strong>${username}</strong> as completed?`;
             document.getElementById('confirmCompleteOrderBtn').onclick = executeCompleteDelivery;
-
             document.getElementById('completeOrderModal').style.display = 'flex';
         }
 
         function closeCompleteModal() {
             document.getElementById('completeOrderModal').style.display = 'none';
-            currentPoNumber = ''; // Clear PO
+            currentPoNumber = '';
         }
 
-        // Executes the completion AFTER confirmation
         function executeCompleteDelivery() {
             if (!currentPoNumber) return;
-
-            const poNumber = currentPoNumber;
-            closeCompleteModal(); // Close confirmation modal first
+            const poNumber = currentPoNumber; // Capture before closing
+            closeCompleteModal();
             showToast(`Completing delivery for ${poNumber}...`, 'info');
 
-            // **Assume backend endpoint exists and handles setting status to 'Completed'**
-            fetch('/backend/update_order_status.php', { // Using the general status update endpoint
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    po_number: poNumber,
-                    status: 'Completed',
-                    // No material flags needed for this transition
-                    deduct_materials: '0',
-                    return_materials: '0'
-                })
+            fetch('/backend/update_order_status.php', { // Use general endpoint
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ po_number: poNumber, status: 'Completed', deduct_materials: '0', return_materials: '0' })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     showToast(`Order ${poNumber} marked as Completed`, 'success');
                     setTimeout(() => { window.location.reload(); }, 1500);
-                } else {
-                    showToast(`Error completing order: ${data.message || 'Unknown error'}`, 'error');
-                }
+                } else throw new Error(data.message || 'Unknown error');
             })
-            .catch(error => {
-                console.error('Completion error:', error);
-                showToast('Network error completing order.', 'error');
-            });
+            .catch(error => { console.error('Completion error:', error); showToast(`Error: ${error.message}`, 'error'); });
         }
 
-        // --- Driver Change ---
+        // --- Driver Change Confirmation Flow ---
         function openDriverModal(poNumber, driverId, driverName) {
-            currentPoNumber = poNumber;
-            currentDriverId = driverId; // Store the *current* driver ID
-
+            currentPoNumber = poNumber; currentDriverId = driverId;
             document.getElementById('driverModalTitle').textContent = driverName ? 'Change Driver' : 'Assign Driver';
             document.getElementById('driverModalMessage').textContent = driverName ? `Current driver: ${driverName}. Select new driver:` : `Assign driver for PO: ${poNumber}`;
-
-            const driverSelect = document.getElementById('driverSelect');
-            driverSelect.value = driverId; // Pre-select current driver (or 0 if none)
-
-            // Reset save button state in case it was disabled previously
-             const saveBtn = document.querySelector('#driverModal .save-btn');
-             saveBtn.innerHTML = '<i class="fas fa-save"></i> Change Driver';
-             saveBtn.disabled = false;
-
-
+            document.getElementById('driverSelect').value = driverId;
+            const saveBtn = document.querySelector('#driverModal .save-btn');
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Change Driver'; saveBtn.disabled = false;
             document.getElementById('driverModal').style.display = 'flex';
         }
 
         function closeDriverModal() {
             document.getElementById('driverModal').style.display = 'none';
-            currentPoNumber = '';
-            currentDriverId = 0;
+            currentPoNumber = ''; currentDriverId = 0;
         }
 
-        // Opens the DRIVER confirmation modal
         function confirmDriverChange() {
-            targetDriverId = parseInt(document.getElementById('driverSelect').value); // Get selected driver ID
+            targetDriverId = parseInt(document.getElementById('driverSelect').value);
             const selectedDriverName = $("#driverSelect option:selected").text();
+            if (targetDriverId === 0) { showToast('Please select a driver.', 'error'); return; }
+            if (targetDriverId === currentDriverId) { showToast('Selected driver is already assigned.', 'info'); return; }
 
-            if (targetDriverId === 0) {
-                showToast('Please select a driver first.', 'error');
-                return;
-            }
-            if (targetDriverId === currentDriverId) {
-                 showToast('Selected driver is already assigned.', 'info');
-                 return;
-            }
-
-            // Prepare confirmation message
-            const confirmMsg = document.getElementById('driverConfirmMessage');
-            confirmMsg.innerHTML = `Are you sure you want to assign driver <strong>${selectedDriverName}</strong> to order <strong>${currentPoNumber}</strong>?`;
-
-            // Set the action for the "Yes" button in the confirmation modal
+            document.getElementById('driverConfirmMessage').innerHTML = `Assign driver <strong>${selectedDriverName}</strong> to order <strong>${currentPoNumber}</strong>?`;
             document.getElementById('confirmDriverAssignBtn').onclick = executeAssignDriver;
-
-            // Hide the selection modal and show the confirmation modal
             document.getElementById('driverModal').style.display = 'none';
             document.getElementById('driverConfirmationModal').style.display = 'flex';
         }
 
-         function closeDriverConfirmation() {
-             document.getElementById('driverConfirmationModal').style.display = 'none';
-             // Optionally reopen the selection modal if needed:
-             // document.getElementById('driverModal').style.display = 'flex';
-             targetDriverId = 0; // Clear target
-         }
+        function closeDriverConfirmation() {
+            document.getElementById('driverConfirmationModal').style.display = 'none';
+            targetDriverId = 0;
+        }
 
-        // Executes the driver assignment AFTER confirmation
         function executeAssignDriver() {
-            if (targetDriverId === 0 || !currentPoNumber) {
-                console.error("Missing target driver or PO number for assignment.");
-                return;
-            }
-
-            const driverIdToAssign = targetDriverId; // Use the stored target ID
-            const poNumberForAssign = currentPoNumber;
-
-            closeDriverConfirmation(); // Close the confirmation modal
+            if (targetDriverId === 0 || !currentPoNumber) return;
+            const driverIdToAssign = targetDriverId, poNumberForAssign = currentPoNumber; // Capture
+            closeDriverConfirmation();
             showToast(`Assigning driver to ${poNumberForAssign}...`, 'info');
 
-            // Assume backend endpoint exists
             fetch('/backend/assign_driver.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    po_number: poNumberForAssign,
-                    driver_id: driverIdToAssign
-                })
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ po_number: poNumberForAssign, driver_id: driverIdToAssign })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     showToast('Driver updated successfully', 'success');
                     setTimeout(() => { window.location.reload(); }, 1500);
-                } else {
-                    showToast(`Error assigning driver: ${data.message || 'Unknown error'}`, 'error');
-                }
+                } else throw new Error(data.message || 'Unknown error');
             })
-            .catch(error => {
-                console.error('Assign driver error:', error);
-                showToast('Network error assigning driver.', 'error');
-            });
+            .catch(error => { console.error('Assign driver error:', error); showToast(`Error: ${error.message}`, 'error'); });
         }
-
 
         // --- View Order Details ---
         function viewOrderDetails(poNumber) {
             currentPoNumber = poNumber;
             const orderDetailsBody = document.getElementById('orderDetailsBody');
             const modal = document.getElementById('orderDetailsModal');
-            modal.querySelector('h2').innerHTML = `<i class="fas fa-receipt"></i> Order Details (${poNumber})`; // Update title
+            modal.querySelector('h2').innerHTML = `<i class="fas fa-receipt"></i> Order Details (${poNumber})`;
             orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
             modal.style.display = 'flex';
 
             fetch(`/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
-            .then(response => {
-                if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
-                return response.json();
-            })
+            .then(response => { if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`); return response.json(); })
             .then(data => {
-                orderDetailsBody.innerHTML = ''; // Clear loading/previous
+                orderDetailsBody.innerHTML = ''; // Clear
                 if (data && data.success && data.orderItems) {
                     let parsedItems = data.orderItems;
-                    // Check if orderItems is a JSON string and parse it
-                    if (typeof parsedItems === 'string') {
-                        try { parsedItems = JSON.parse(parsedItems); }
-                        catch (e) { throw new Error("Invalid order items JSON format."); }
-                    }
-                    // Ensure it's an array
-                    if (!Array.isArray(parsedItems)) { throw new Error("Order items data is not an array."); }
-
-                    if (parsedItems.length === 0) {
-                        orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;font-style:italic;">No items found.</td></tr>';
-                        return;
-                    }
+                    if (typeof parsedItems === 'string') { try { parsedItems = JSON.parse(parsedItems); } catch (e) { throw new Error("Invalid JSON format."); } }
+                    if (!Array.isArray(parsedItems)) throw new Error("Data is not an array.");
+                    if (parsedItems.length === 0) { orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;font-style:italic;">No items found.</td></tr>'; return; }
 
                     let grandTotal = 0;
                     parsedItems.forEach(item => {
-                        const quantity = parseInt(item.quantity) || 0;
-                        const price = parseFloat(item.price) || 0;
-                        const itemTotal = quantity * price;
+                        const quantity = parseInt(item.quantity) || 0, price = parseFloat(item.price) || 0, itemTotal = quantity * price;
                         grandTotal += itemTotal;
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${item.category || '-'}</td>
-                            <td>${item.item_description || '-'}</td>
-                            <td>${item.packaging || '-'}</td>
-                            <td style="text-align: right;">PHP ${price.toFixed(2)}</td>
-                            <td style="text-align: right;">${quantity}</td>
-                            <td style="text-align: right;">PHP ${itemTotal.toFixed(2)}</td>
-                        `;
-                        orderDetailsBody.appendChild(row);
+                        orderDetailsBody.innerHTML += `<tr><td>${item.category || '-'}</td><td>${item.item_description || '-'}</td><td>${item.packaging || '-'}</td><td style="text-align: right;">PHP ${price.toFixed(2)}</td><td style="text-align: right;">${quantity}</td><td style="text-align: right;">PHP ${itemTotal.toFixed(2)}</td></tr>`;
                     });
-                    // Add total row
-                    const totalRow = document.createElement('tr');
-                    totalRow.style.fontWeight = 'bold';
-                    totalRow.innerHTML = `<td colspan="5" style="text-align: right; border-top: 2px solid #adb5bd;">Grand Total:</td><td style="text-align: right; border-top: 2px solid #adb5bd;">PHP ${grandTotal.toFixed(2)}</td>`;
-                    orderDetailsBody.appendChild(totalRow);
-
-                } else {
-                    throw new Error(data.message || 'Could not retrieve order details.');
-                }
+                    orderDetailsBody.innerHTML += `<tr style="font-weight: bold;"><td colspan="5" style="text-align: right; border-top: 2px solid #adb5bd;">Grand Total:</td><td style="text-align: right; border-top: 2px solid #adb5bd;">PHP ${grandTotal.toFixed(2)}</td></tr>`;
+                } else throw new Error(data.message || 'Could not retrieve details.');
             })
-            .catch(error => {
-                console.error('Error fetching/processing order details:', error);
-                orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${error.message}</td></tr>`;
-                showToast('Error loading order details.', 'error');
-            });
+            .catch(error => { console.error('Details error:', error); orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${error.message}</td></tr>`; showToast('Error loading details.', 'error'); });
         }
 
-        function closeOrderDetailsModal() {
-            document.getElementById('orderDetailsModal').style.display = 'none';
-        }
+        function closeOrderDetailsModal() { document.getElementById('orderDetailsModal').style.display = 'none'; }
 
         // --- Special Instructions ---
         function viewSpecialInstructions(poNumber, instructions) {
             document.getElementById('instructionsPoNumber').textContent = 'PO: ' + (poNumber || 'N/A');
             const contentEl = document.getElementById('instructionsContent');
-            if (instructions && instructions.trim().length > 0) {
-                contentEl.textContent = instructions; // Display raw text
-                contentEl.classList.remove('empty');
-            } else {
-                contentEl.textContent = 'No special instructions provided.';
-                contentEl.classList.add('empty');
-            }
-            document.getElementById('specialInstructionsModal').style.display = 'flex'; // Show using flex
+            if (instructions && instructions.trim()) { contentEl.textContent = instructions; contentEl.classList.remove('empty'); }
+            else { contentEl.textContent = 'No special instructions.'; contentEl.classList.add('empty'); }
+            document.getElementById('specialInstructionsModal').style.display = 'flex';
         }
 
-        function closeSpecialInstructions() {
-            document.getElementById('specialInstructionsModal').style.display = 'none';
-        }
+        function closeSpecialInstructions() { document.getElementById('specialInstructionsModal').style.display = 'none'; }
 
         // --- PDF Functions ---
         function populatePdfData(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
-             // 1. Populate the hidden div used by html2pdf
              document.getElementById('printCompany').textContent = company || 'N/A';
              document.getElementById('printPoNumber').textContent = poNumber || 'N/A';
              document.getElementById('printUsername').textContent = username || 'N/A';
@@ -1047,126 +867,81 @@ $conn->close();
              document.getElementById('printOrderDate').textContent = orderDate || 'N/A';
              document.getElementById('printDeliveryDate').textContent = deliveryDate || 'N/A';
              document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
              const instrSec = document.getElementById('printInstructionsSection');
-             if (specialInstructions && specialInstructions.trim()) {
-                 document.getElementById('printSpecialInstructions').textContent = specialInstructions;
-                 instrSec.style.display = 'block';
-             } else {
-                 instrSec.style.display = 'none';
-             }
-
+             if (specialInstructions && specialInstructions.trim()) { document.getElementById('printSpecialInstructions').textContent = specialInstructions; instrSec.style.display = 'block'; }
+             else { instrSec.style.display = 'none'; }
              const items = JSON.parse(ordersJson || '[]');
-             const body = document.getElementById('printOrderItems');
-             body.innerHTML = ''; // Clear previous items
+             const body = document.getElementById('printOrderItems'); body.innerHTML = '';
              if (!Array.isArray(items)) throw new Error("Order items JSON is not an array.");
-
              items.forEach(item => {
-                 const price = parseFloat(item.price) || 0;
-                 const qty = parseInt(item.quantity) || 0;
-                 const total = price * qty;
-                 const row = `<tr><td>${item.category||''}</td><td>${item.item_description||''}</td><td>${item.packaging||''}</td><td style="text-align: right;">${qty}</td><td style="text-align: right;">PHP ${price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td style="text-align: right;">PHP ${total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;
-                 body.innerHTML += row; // Append row HTML
+                 const price = parseFloat(item.price) || 0, qty = parseInt(item.quantity) || 0, total = price * qty;
+                 body.innerHTML += `<tr><td>${item.category||''}</td><td>${item.item_description||''}</td><td>${item.packaging||''}</td><td style="text-align: right;">${qty}</td><td style="text-align: right;">PHP ${price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td style="text-align: right;">PHP ${total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;
              });
         }
 
         function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
-            console.log("Requesting direct PDF download for:", poNumber);
+            console.log("Direct PDF download:", poNumber);
             try {
                 populatePdfData(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions);
-
                 const element = document.getElementById('contentToDownload');
                 const opt = { margin: [10, 10, 10, 10], filename: `PO_${poNumber || 'UnknownPO'}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true, logging: false }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-
                 showToast(`Generating PDF for ${poNumber}...`, 'info');
                 html2pdf().set(opt).from(element).save()
-                .then(() => { console.log("Direct PDF Download successful for:", poNumber); })
-                .catch(error => { console.error(`Error generating direct PDF for ${poNumber}:`, error); showToast('Error generating PDF.', 'error'); });
-
-            } catch (e) {
-                console.error(`Error preparing direct PDF data for ${poNumber}:`, e);
-                showToast(`Error preparing PDF data: ${e.message}`, 'error');
-            }
+                .then(() => { console.log("Direct PDF Download success:", poNumber); })
+                .catch(error => { console.error(`Direct PDF error ${poNumber}:`, error); showToast('Error generating PDF.', 'error'); });
+            } catch (e) { console.error(`Prep direct PDF error ${poNumber}:`, e); showToast(`PDF data error: ${e.message}`, 'error'); }
         }
 
-        // Shows the PDF Preview Modal
         function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
-             console.log("Generating PDF preview for:", poNumber);
+             console.log("PDF preview:", poNumber);
              try {
-                 // Store data for potential download later
                  currentPOData = { poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions };
-                 // Populate the *hidden* div first
                  populatePdfData(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions);
-                 // Copy the *inner* HTML of the hidden content to the visible preview area
                  document.getElementById('pdfRenderArea').innerHTML = document.getElementById('contentToDownload').innerHTML;
-                 // Show the preview modal
-                 document.getElementById('pdfPreview').style.display = 'flex'; // Use flex
-             } catch (e) {
-                 console.error('Error preparing PDF preview data:', e);
-                 showToast(`Error preparing PDF preview: ${e.message}`, 'error');
-             }
+                 document.getElementById('pdfPreview').style.display = 'flex';
+             } catch (e) { console.error('PDF preview prep error:', e); showToast(`PDF preview error: ${e.message}`, 'error'); }
          }
 
          function closePDFPreview() {
              document.getElementById('pdfPreview').style.display = 'none';
-             document.getElementById('pdfRenderArea').innerHTML = ''; // Clear preview area
-             currentPOData = null; // Clear stored data
+             document.getElementById('pdfRenderArea').innerHTML = '';
+             currentPOData = null;
          }
 
-         // Downloads PDF from the preview modal's data
          function downloadPDF() {
-             if (!currentPOData) {
-                 showToast('No PO data available for download.', 'error');
-                 return;
-             }
-             // We need to re-populate the hidden div just before download
-             // as the preview area might not be perfectly identical for html2pdf
+             if (!currentPOData) { showToast('No PO data for download.', 'error'); return; }
              try {
-                  populatePdfData(
-                      currentPOData.poNumber, currentPOData.username, currentPOData.company,
-                      currentPOData.orderDate, currentPOData.deliveryDate, currentPOData.deliveryAddress,
-                      currentPOData.ordersJson, currentPOData.totalAmount, currentPOData.specialInstructions
-                  );
-
-                  const element = document.getElementById('contentToDownload'); // Target the hidden div
+                  populatePdfData( currentPOData.poNumber, currentPOData.username, currentPOData.company, currentPOData.orderDate, currentPOData.deliveryDate, currentPOData.deliveryAddress, currentPOData.ordersJson, currentPOData.totalAmount, currentPOData.specialInstructions );
+                  const element = document.getElementById('contentToDownload');
                   const opt = { margin: [10, 10, 10, 10], filename: `PO_${currentPOData.poNumber || 'UnknownPO'}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true, logging: false }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-
                   showToast(`Generating PDF for ${currentPOData.poNumber}...`, 'info');
                   html2pdf().set(opt).from(element).save()
-                  .then(() => {
-                      console.log("PDF Download from preview successful for:", currentPOData.poNumber);
-                      closePDFPreview(); // Close preview after download starts
-                  })
-                  .catch(error => {
-                      console.error(`Error generating PDF from preview for ${currentPOData.poNumber}:`, error);
-                      showToast('Error generating PDF.', 'error');
-                  });
-             } catch (e) {
-                  console.error(`Error preparing PDF data for download from preview:`, e);
-                  showToast(`Error preparing PDF data: ${e.message}`, 'error');
-             }
+                  .then(() => { console.log("PDF Download from preview success:", currentPOData.poNumber); closePDFPreview(); })
+                  .catch(error => { console.error(`PDF download from preview error ${currentPOData.poNumber}:`, error); showToast('Error generating PDF.', 'error'); });
+             } catch (e) { console.error(`PDF download prep error:`, e); showToast(`PDF data error: ${e.message}`, 'error'); }
          }
-
 
         // --- Document Ready / Event Listeners ---
         $(document).ready(function() {
-            // Search functionality
             $("#searchInput").on("input", function() {
                 let searchText = $(this).val().toLowerCase().trim();
-                $(".order-row").each(function() {
-                    $(this).toggle($(this).text().toLowerCase().includes(searchText));
-                });
+                $(".order-row").each(function() { $(this).toggle($(this).text().toLowerCase().includes(searchText)); });
             });
-            $(".search-btn").on("click", () => $("#searchInput").trigger("input")); // Trigger input event on button click
+            $(".search-btn").on("click", () => $("#searchInput").trigger("input"));
 
-             // Make tables scroll horizontally on small screens if needed
              if (window.innerWidth < 768) {
                  const tableContainer = document.querySelector('.orders-table-container');
                  if (tableContainer) tableContainer.style.overflowX = 'auto';
-                 // Add for other tables if necessary
              }
         });
 
     </script>
+
+<?php
+// **CLOSE THE CONNECTION AT THE VERY END**
+if (isset($conn) && $conn instanceof mysqli) {
+    $conn->close();
+}
+?>
 </body>
 </html>
