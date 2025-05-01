@@ -1017,7 +1017,7 @@ function truncate($text, $max = 15) {
                             <input type="tel" id="phone" name="phone" required placeholder="e.g., 1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
                             
                             <label for="password">Password: <span class="required">*</span></label>
-                            <input type="text" id="password" name="password" readonly class="auto-generated" placeholder="Auto-generated password">
+                            <input type="text" id="password" name="password" maxlength="20" readonly class="auto-generated" placeholder="Auto-generated password">
                             <div class="password-note">Password will be auto-generated as username + last 4 digits of phone</div>
                             
                             <label for="email">Email: <span class="required">*</span></label>
@@ -1031,7 +1031,7 @@ function truncate($text, $max = 15) {
                             </select>
 
                             <label for="city">City: <span class="required">*</span></label>
-                            <select id="city" name="city" required>
+                            <select id="city" name="city" required disabled>
                                 <option value="">Select City</option>
                             </select>
                             
@@ -1089,7 +1089,7 @@ function truncate($text, $max = 15) {
                             <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
                             
                             <label for="edit-password">Password: (Leave empty to keep current)</label>
-                            <input type="text" id="edit-password" name="password" placeholder="Enter new password">
+                            <input type="text" id="edit-password" name="password" maxlength="20" placeholder="Enter new password">
                             
                             <label for="edit-email">Email: <span class="required">*</span></label>
                             <input type="email" id="edit-email" name="email" required maxlength="40" placeholder="e.g., johndoe@example.com">
@@ -1102,7 +1102,7 @@ function truncate($text, $max = 15) {
                             </select>
 
                             <label for="edit-city">City: <span class="required">*</span></label>
-                            <select id="edit-city" name="city" required>
+                            <select id="edit-city" name="city" required disabled>
                                 <option value="">Select City</option>
                             </select>
                             
@@ -1463,6 +1463,7 @@ function truncate($text, $max = 15) {
     // Philippines Region/City Integration
 async function loadPhilippinesRegions() {
     try {
+        // Fetch regions
         const response = await fetch('https://psgc.gitlab.io/api/regions/');
         const regions = await response.json();
         const regionSelect = document.getElementById('region');
@@ -1471,9 +1472,11 @@ async function loadPhilippinesRegions() {
         [regionSelect, editRegionSelect].forEach(select => {
             if (select) {
                 select.innerHTML = '<option value="">Select Region</option>';
-                regions.forEach(region => {
-                    select.innerHTML += `<option value="${region.name}">${region.name}</option>`;
-                });
+                regions
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .forEach(region => {
+                        select.innerHTML += `<option value="${region.code}">${region.name}</option>`;
+                    });
             }
         });
     } catch (error) {
@@ -1481,41 +1484,59 @@ async function loadPhilippinesRegions() {
     }
 }
 
-    async function loadCities(region, targetId) {
-        if (!region) return;
+async function loadCities(regionCode, targetId) {
+    if (!regionCode) return;
+    
+    try {
+        // Fetch cities using region code
+        const response = await fetch(`https://psgc.gitlab.io/api/regions/${regionCode}/cities-municipalities`);
+        const cities = await response.json();
+        const citySelect = document.getElementById(targetId);
         
-        try {
-            const response = await fetch(`https://psgc.gitlab.io/api/regions/${region}/cities-municipalities`);
-            const cities = await response.json();
-            const citySelect = document.getElementById(targetId);
-            
-            if (citySelect) {
-                citySelect.innerHTML = '<option value="">Select City</option>';
-                cities.forEach(city => {
+        if (citySelect) {
+            citySelect.innerHTML = '<option value="">Select City</option>';
+            cities
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .forEach(city => {
                     citySelect.innerHTML += `<option value="${city.name}">${city.name}</option>`;
                 });
-            }
-        } catch (error) {
-            console.error('Error loading cities:', error);
+            citySelect.disabled = false;
         }
+    } catch (error) {
+        console.error('Error loading cities:', error);
     }
+}
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         loadPhilippinesRegions();
 
+        // Add password character limit
+        const passwordInputs = document.querySelectorAll('input[type="password"], input[name="password"]');
+        passwordInputs.forEach(input => {
+            input.setAttribute('maxlength', '20');
+        });
+
         // Region change handlers
         const regionSelect = document.getElementById('region');
         const editRegionSelect = document.getElementById('edit-region');
+        const citySelect = document.getElementById('city');
+        const editCitySelect = document.getElementById('edit-city');
+
+        // Disable city selects initially
+        citySelect.disabled = true;
+        editCitySelect.disabled = true;
 
         if (regionSelect) {
             regionSelect.addEventListener('change', function() {
+                citySelect.disabled = !this.value;
                 loadCities(this.value, 'city');
             });
         }
 
         if (editRegionSelect) {
             editRegionSelect.addEventListener('change', function() {
+                editCitySelect.disabled = !this.value;
                 loadCities(this.value, 'edit-city');
             });
         }
