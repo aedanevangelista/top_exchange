@@ -30,7 +30,7 @@ $categories_result = $conn->query($categories_query);
 $categories = [];
 if ($categories_result && $categories_result->num_rows > 0) {
     while ($row = $categories_result->fetch_assoc()) {
-        $categories[] = $row['category_name'];
+        $categories[] = $row['category'];
     }
 }
 
