@@ -1,5 +1,5 @@
 <?php
-// Current Date: 2025-05-01 19:39:14
+// Current Date: 2025-05-01 19:45:55
 // Author: aedanevangelista
 
 session_start();
@@ -35,7 +35,7 @@ $result = $stmt->get_result();
 while ($row = $result->fetch_assoc()) {
     $clients[] = $row['username'];
     $clients_with_company_address[$row['username']] = $row['company_address'];
-    $clients_with_company[$row['username']] = $row['company'];
+    $clients_with_company[$row['username']] = $row['company']; // Ensure company name is fetched
 }
 $stmt->close();
 
@@ -52,7 +52,7 @@ $stmt->close();
 // Modified query to show Active, Pending, and Rejected orders with sorting
 $orders = []; // Initialize $orders as an empty array
 $sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress, o.driver_assigned,
-        o.company, o.special_instructions,
+        o.company, o.special_instructions,                                                                                                                                                                                                                                                                                                                                                                          // Ensure company is selected
         IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name
         FROM orders o
         LEFT JOIN driver_assignments da ON o.po_number = da.po_number
@@ -1008,6 +1008,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php elseif ($order['status'] === 'Rejected'): ?>
                                         <button class="status-btn" onclick="confirmRejectedStatusChange('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', 'Rejected')"><i class="fas fa-edit"></i> Status</button>
                                     <?php endif; ?>
+                                    <!-- Ensure $order['company'] is passed correctly -->
                                     <button class="download-btn" onclick="confirmDownloadPO('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars($order['company'] ?? '') ?>', '<?= htmlspecialchars($order['order_date']) ?>', '<?= htmlspecialchars($order['delivery_date']) ?>', '<?= htmlspecialchars($order['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>', '<?= htmlspecialchars($order['total_amount']) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>')"><i class="fas fa-file-pdf"></i> PO</button>
                                 </td>
                             </tr>
@@ -1099,7 +1100,17 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <h2><i class="fas fa-plus"></i> Add New Order</h2>
             <form id="addOrderForm" method="POST" class="order-form">
                 <div class="left-section">
-                    <label for="username">Username:</label><select id="username" name="username" required onchange="generatePONumber();"><option value="" disabled selected>Select User</option><?php foreach ($clients as $client): ?><option value="<?= htmlspecialchars($client) ?>" data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>" data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>"><?= htmlspecialchars($client) ?></option><?php endforeach; ?></select>
+                    <label for="username">Username:</label>
+                    <select id="username" name="username" required onchange="generatePONumber();">
+                        <option value="" disabled selected>Select User</option>
+                        <?php foreach ($clients as $client): ?>
+                            <option value="<?= htmlspecialchars($client) ?>"
+                                    data-company-address="<?= htmlspecialchars($clients_with_company_address[$client] ?? '') ?>"
+                                    data-company="<?= htmlspecialchars($clients_with_company[$client] ?? '') ?>">
+                                <?= htmlspecialchars($client) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                     <label for="order_date">Order Date:</label> <input type="text" id="order_date" name="order_date" readonly>
                     <label for="delivery_date">Delivery Date:</label> <input type="text" id="delivery_date" name="delivery_date" autocomplete="off" required>
                     <label for="delivery_address_type">Delivery Address:</label><select id="delivery_address_type" name="delivery_address_type" onchange="toggleDeliveryAddress()"> <option value="company">Company Address</option> <option value="custom">Custom Address</option> </select>
@@ -1109,7 +1120,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     <label for="special_instructions_textarea">Special Instructions:</label> <textarea id="special_instructions_textarea" name="special_instructions" rows="3" placeholder="Enter any special instructions..."></textarea>
                     <div class="centered-button"><button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()"><i class="fas fa-box-open"></i> Select Products</button></div>
                     <div class="order-summary"><h3>Order Summary</h3><table class="summary-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody id="summaryBody"><tr><td colspan="6" style="text-align:center; padding: 10px; color: #6c757d;">No products selected yet</td></tr></tbody></table><div class="summary-total">Total: <span class="summary-total-amount">PHP 0.00</span></div></div>
-                    <input type="hidden" name="po_number" id="po_number"><input type="hidden" name="orders" id="orders"><input type="hidden" name="total_amount" id="total_amount"><input type="hidden" name="company_hidden" id="company_hidden">
+                    <input type="hidden" name="po_number" id="po_number">
+                    <input type="hidden" name="orders" id="orders">
+                    <input type="hidden" name="total_amount" id="total_amount">
+                    <input type="hidden" name="company_hidden" id="company_hidden"> <!-- Make sure this matches PHP backend -->
                 </div>
                 <div class="form-buttons"><button type="button" class="cancel-btn" onclick="closeAddOrderForm()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="save-btn" onclick="confirmAddOrder()"><i class="fas fa-save"></i> Add Order</button></div>
             </form>
@@ -1209,10 +1223,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             try {
                  if (!ordersJson) throw new Error("Order items data missing.");
                  // --- Add check for product_id in the FIRST item before parsing ---
-                 // This helps catch the missing ID issue early if the JS fix wasn't applied/cached
                  if (ordersJson.length > 5 && !ordersJson.includes('"product_id":')) {
                      console.warn("Received ordersJson might be missing product_id:", ordersJson.substring(0, 100) + "...");
-                     throw new Error("Order data seems incomplete (missing product_id). Please clear browser cache and retry adding the order.");
+                     // Display a more user-friendly error in this case
+                     throw new Error("Order data seems incomplete or corrupted. It might be missing essential product information. Please try adding the order again. If the problem persists, contact support.");
                  }
                  // --- End check ---
                  JSON.parse(ordersJson); // Validate JSON format
@@ -1245,9 +1259,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         let errorMsg = `Could not check inventory: ${error}`;
                         if (status === 'parsererror') {
                              errorMsg = `Could not check inventory: Invalid response from server. Check console for details.`;
-                             // Optionally, try to show part of the invalid response if helpful
-                             // let responsePreview = xhr.responseText.substring(0, 100); // Get first 100 chars
-                             // errorMsg += ` Server sent: ${responsePreview}...`;
                         }
                         materialContainer.html(`<h3>Server Error</h3><p style="color:red;">${errorMsg}</p><p>Status change allowed, but check failed.</p>`);
                         $('#activeStatusBtn').prop('disabled', false); // Allow activation attempt
@@ -1536,20 +1547,67 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
 
         // --- PDF Download Functions ---\
-        function confirmDownloadPO(...args) { poDownloadData = { poNumber: args[0], username: args[1], company: args[2], orderDate: args[3], deliveryDate: args[4], deliveryAddress: args[5], ordersJson: args[6], totalAmount: args[7], specialInstructions: args[8] }; $('#downloadConfirmationModal .confirmation-message').text(`Download PO ${poDownloadData.poNumber}?`); $('#downloadConfirmationModal').show(); }
+        function confirmDownloadPO(...args) {
+             // Arguments: poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions
+             poDownloadData = { poNumber: args[0], username: args[1], company: args[2], orderDate: args[3], deliveryDate: args[4], deliveryAddress: args[5], ordersJson: args[6], totalAmount: args[7], specialInstructions: args[8] };
+             console.log("Data for PDF:", poDownloadData); // Debug: Check company name here
+             $('#downloadConfirmationModal .confirmation-message').text(`Download PO ${poDownloadData.poNumber}?`);
+             $('#downloadConfirmationModal').show();
+         }
         function closeDownloadConfirmation() { $('#downloadConfirmationModal').hide(); poDownloadData = null; }
         function downloadPODirectly() {
-            $('#downloadConfirmationModal').hide(); if (!poDownloadData) { showToast('No data', 'error'); return; }
+            $('#downloadConfirmationModal').hide(); if (!poDownloadData) { showToast('No data for PO download', 'error'); return; }
             try {
-                currentPOData = poDownloadData; $('#printCompany').text(currentPOData.company || 'N/A'); $('#printPoNumber').text(currentPOData.poNumber); $('#printUsername').text(currentPOData.username); $('#printDeliveryAddress').text(currentPOData.deliveryAddress); $('#printOrderDate').text(currentPOData.orderDate); $('#printDeliveryDate').text(currentPOData.deliveryDate); $('#printTotalAmount').text(parseFloat(currentPOData.totalAmount).toFixed(2));
-                const instrSec = $('#printInstructionsSection'); if (currentPOData.specialInstructions && currentPOData.specialInstructions.trim()) { $('#printSpecialInstructions').text(currentPOData.specialInstructions); instrSec.show(); } else { instrSec.hide(); }
-                const items = JSON.parse(currentPOData.ordersJson); const body = $('#printOrderItems').empty();
-                items.forEach(item => { const total = parseFloat(item.price) * parseInt(item.quantity); body.append(`<tr><td>${item.category||''}</td><td>${item.item_description}</td><td>${item.packaging||''}</td><td>${item.quantity}</td><td>PHP ${parseFloat(item.price).toFixed(2)}</td><td>PHP ${total.toFixed(2)}</td></tr>`); });
-                const element = document.getElementById('contentToDownload'); const opt = { margin: [10,10,10,10], filename: `PO_${currentPOData.poNumber}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-                html2pdf().set(opt).from(element).save().then(() => { showToast(`PO downloaded.`, 'success'); currentPOData = null; poDownloadData = null; }).catch(e => { console.error('PDF error:', e); showToast('PDF gen error', 'error'); currentPOData = null; poDownloadData = null; });
-            } catch (e) { console.error('PDF prep error:', e); showToast('PDF data error', 'error'); currentPOData = null; poDownloadData = null; }
+                currentPOData = poDownloadData;
+                // Use the company name passed, default to 'N/A' ONLY if it's truly empty/null
+                $('#printCompany').text(currentPOData.company || 'N/A');
+                $('#printPoNumber').text(currentPOData.poNumber);
+                $('#printUsername').text(currentPOData.username);
+                $('#printDeliveryAddress').text(currentPOData.deliveryAddress);
+                $('#printOrderDate').text(currentPOData.orderDate);
+                $('#printDeliveryDate').text(currentPOData.deliveryDate);
+                $('#printTotalAmount').text(parseFloat(currentPOData.totalAmount).toFixed(2));
+
+                const instrSec = $('#printInstructionsSection');
+                if (currentPOData.specialInstructions && currentPOData.specialInstructions.trim()) {
+                    $('#printSpecialInstructions').text(currentPOData.specialInstructions);
+                    instrSec.show();
+                } else {
+                    instrSec.hide();
+                }
+
+                const items = JSON.parse(currentPOData.ordersJson); // Use the JSON string passed in
+                const body = $('#printOrderItems').empty();
+                items.forEach(item => {
+                    const total = parseFloat(item.price) * parseInt(item.quantity);
+                    // Ensure all expected properties exist before adding row
+                     if (item.category !== undefined && item.item_description !== undefined && item.packaging !== undefined && item.quantity !== undefined && item.price !== undefined) {
+                         body.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>${item.quantity}</td><td>PHP ${parseFloat(item.price).toFixed(2)}</td><td>PHP ${total.toFixed(2)}</td></tr>`);
+                     } else {
+                         console.warn("Skipping incomplete item in PDF:", item);
+                     }
+                });
+
+                const element = document.getElementById('contentToDownload');
+                const opt = { margin: [10,10,10,10], filename: `PO_${currentPOData.poNumber}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+                html2pdf().set(opt).from(element).save().then(() => {
+                    showToast(`PO downloaded.`, 'success');
+                    currentPOData = null; // Clear data after use
+                    poDownloadData = null;
+                }).catch(e => {
+                    console.error('PDF generation error:', e);
+                    showToast('PDF generation error', 'error');
+                    currentPOData = null;
+                    poDownloadData = null;
+                });
+            } catch (e) {
+                console.error('PDF preparation error:', e);
+                showToast('PDF data error: ' + e.message, 'error');
+                currentPOData = null;
+                poDownloadData = null;
+            }
         }
-        function downloadPDF() { if (!currentPOData) { showToast('No data', 'error'); return; } const element = document.getElementById('contentToDownload'); const opt = { margin:[10,10,10,10], filename: `PO_${currentPOData.poNumber}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }; html2pdf().set(opt).from(element).save().then(() => { showToast('PO downloaded', 'success'); closePDFPreview(); }).catch(e => { console.error('PDF error:', e); showToast('PDF gen error', 'error'); }); }
+        function downloadPDF() { /* Keep existing downloadPDF function for preview modal */ if (!currentPOData) { showToast('No data', 'error'); return; } const element = document.getElementById('contentToDownload'); const opt = { margin:[10,10,10,10], filename: `PO_${currentPOData.poNumber}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }; html2pdf().set(opt).from(element).save().then(() => { showToast('PO downloaded', 'success'); closePDFPreview(); }).catch(e => { console.error('PDF error:', e); showToast('PDF gen error', 'error'); }); }
         function closePDFPreview() { $('#pdfPreview').hide(); currentPOData = null; }
 
         // --- Special Instructions Modal ---\
@@ -1557,26 +1615,74 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function closeSpecialInstructions() { $('#specialInstructionsModal').hide(); }
 
         // --- Add New Order Form Functions ---\
-        function initializeDeliveryDatePicker() { if ($.datepicker) { $("#delivery_date").datepicker("destroy"); $("#delivery_date").datepicker({ dateFormat: 'yy-mm-dd', minDate: 1, beforeShowDay: $.datepicker.noWeekends }); } }
+        // --- MODIFIED initializeDeliveryDatePicker ---
+        function initializeDeliveryDatePicker() {
+            if ($.datepicker) {
+                $("#delivery_date").datepicker("destroy"); // Destroy existing instance first
+                $("#delivery_date").datepicker({
+                    dateFormat: 'yy-mm-dd',
+                    minDate: 1, // Minimum date is tomorrow
+                    beforeShowDay: function(date) {
+                        const day = date.getDay();
+                        // Allow Monday (1), Wednesday (3), Friday (5)
+                        const isSelectable = (day === 1 || day === 3 || day === 5);
+                        return [isSelectable, isSelectable ? "" : "ui-state-disabled", ""]; // Return [selectable, cssClass, tooltip]
+                    }
+                });
+            } else {
+                console.error("jQuery UI Datepicker not loaded.");
+            }
+        }
+        // --- END MODIFIED initializeDeliveryDatePicker ---
         function openAddOrderForm() { $('#addOrderForm')[0].reset(); cartItems = []; updateOrderSummary(); updateCartItemCount(); const today = new Date(); const fmtDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`; $('#order_date').val(fmtDate); initializeDeliveryDatePicker(); toggleDeliveryAddress(); generatePONumber(); $('#addOrderOverlay').css('display', 'flex'); }
         function closeAddOrderForm() { $('#addOrderOverlay').hide(); }
         function toggleDeliveryAddress() { const type = $('#delivery_address_type').val(); $('#company_address_container').toggle(type === 'company'); $('#custom_address_container').toggle(type === 'custom'); if (type === 'company') $('#delivery_address').val($('#company_address').val()); else $('#delivery_address').val($('#custom_address').val()); }
         $('#custom_address').on('input', function() { if ($('#delivery_address_type').val() === 'custom') $('#delivery_address').val($(this).val()); });
-        function generatePONumber() { // Uses Timestamp format
-            const userSelect = $('#username'); const username = userSelect.val(); const companyHidden = $('#company_hidden');
+        function generatePONumber() { // Also sets company address/name
+            const userSelect = $('#username');
+            const username = userSelect.val();
+            const companyHiddenInput = $('#company_hidden');
+            const companyAddressInput = $('#company_address');
+
             if (username) {
-                const opt = userSelect.find('option:selected'); const addr = opt.data('company-address') || ''; const name = opt.data('company') || ''; $('#company_address').val(addr); companyHidden.val(name); if ($('#delivery_address_type').val() === 'company') $('#delivery_address').val(addr);
-                const today = new Date(); const datePart = `${today.getFullYear().toString().substr(-2)}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`; const timePart = `${String(today.getHours()).padStart(2,'0')}${String(today.getMinutes()).padStart(2,'0')}${String(today.getSeconds()).padStart(2,'0')}`; $('#po_number').val(`${datePart}-${timePart}`);
-            } else { $('#company_address').val(''); companyHidden.val(''); $('#po_number').val(''); if ($('#delivery_address_type').val() === 'company') $('#delivery_address').val(''); }
+                const selectedOption = userSelect.find('option:selected');
+                const companyAddress = selectedOption.data('company-address') || '';
+                const companyName = selectedOption.data('company') || ''; // Get company name
+
+                companyAddressInput.val(companyAddress);
+                companyHiddenInput.val(companyName); // Set hidden input value
+
+                // Update delivery address if 'company' type is selected
+                if ($('#delivery_address_type').val() === 'company') {
+                    $('#delivery_address').val(companyAddress);
+                }
+
+                // Generate PO Number (Timestamp format)
+                const today = new Date();
+                const datePart = `${today.getFullYear().toString().substr(-2)}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+                const timePart = `${String(today.getHours()).padStart(2,'0')}${String(today.getMinutes()).padStart(2,'0')}${String(today.getSeconds()).padStart(2,'0')}`;
+                $('#po_number').val(`${datePart}-${timePart}`); // Use timestamp PO for simplicity now
+                 console.log("Generated PO, Set Company Hidden:", companyName); // Debug log
+            } else {
+                // Clear fields if no user is selected
+                companyAddressInput.val('');
+                companyHiddenInput.val('');
+                $('#po_number').val('');
+                if ($('#delivery_address_type').val() === 'company') {
+                    $('#delivery_address').val('');
+                }
+            }
         }
-        // --- CORRECTED prepareOrderData ---
+        // --- CORRECTED prepareOrderData (including logging) ---
         function prepareOrderData() {
             toggleDeliveryAddress(); // Ensure correct address is set
             const addr = $('#delivery_address').val();
             const userSelect = $('#username');
-            if (userSelect.val()) { // Update company name based on selection
-                $('#company_hidden').val(userSelect.find('option:selected').data('company') || '');
-            }
+            const companyName = userSelect.find('option:selected').data('company') || ''; // Get company name again for safety
+
+            // Ensure hidden input is set before validation/submission
+            $('#company_hidden').val(companyName);
+            console.log("Company Hidden Value before validation:", $('#company_hidden').val()); // Debug log
 
             // Validation checks
             if (cartItems.length === 0) { showToast('Please select products.', 'error'); return false; }
@@ -1603,6 +1709,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             $('#orders').val(JSON.stringify(orders));
             $('#total_amount').val(total.toFixed(2));
             console.log("Prepared Orders JSON:", $('#orders').val()); // Add console log for debugging
+            console.log("Prepared Company Hidden:", $('#company_hidden').val()); // Add console log for debugging
             return true; // Data is prepared and valid
         }
         // --- END CORRECTED prepareOrderData ---
@@ -1610,10 +1717,14 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function closeAddConfirmation() { $('#addConfirmationModal').hide(); }
         function submitAddOrder() {
              $('#addConfirmationModal').hide(); const form = document.getElementById('addOrderForm'); const fd = new FormData(form);
+
+             console.log("Submitting FormData - Company Hidden:", fd.get('company_hidden')); // Debug log
+             console.log("Submitting FormData - Orders:", fd.get('orders')); // Debug log
+
              fetch('/backend/add_order.php', { method: 'POST', body: fd }).then(r => r.json()).then(d => { if (d.success) { showToast('Order added!', 'success'); closeAddOrderForm(); setTimeout(() => { window.location.reload(); }, 1000); } else { showToast('Error: ' + d.message, 'error'); } }).catch(e => { showToast('Network error', 'error'); });
         }
 
-        // --- Inventory Overlay and Cart Functions ---
+        // --- Inventory Overlay and Cart Functions (Using product_id) ---
         function openInventoryOverlay() {
             $('#inventoryOverlay').css('display', 'flex'); const body = $('.inventory').html('<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>');
             fetch('/backend/get_inventory.php').then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text().then(t => { try { return JSON.parse(t); } catch (e) { console.error("Inv JSON parse error:", t); throw new Error("Invalid server response"); } }); })
@@ -1709,7 +1820,9 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             $(".search-btn").on("click", () => $("#searchInput").trigger("input"));
 
             // Initialize Add Order form state
-            initializeDeliveryDatePicker(); toggleDeliveryAddress(); generatePONumber();
+            initializeDeliveryDatePicker(); // Initialize datepicker on load
+            toggleDeliveryAddress();
+            generatePONumber(); // Call on load to set initial state if a user might be pre-selected (though unlikely)
 
             // Close modals on outside click
             window.addEventListener('click', function(event) {
