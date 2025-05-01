@@ -44,7 +44,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
         exit;
     }
 
-    $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/admin/uploads/' . $username . '/';
+    $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $username . '/';
     if (!file_exists($user_upload_dir)) {
         mkdir($user_upload_dir, 0777, true);
     }
@@ -62,7 +62,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
                 $file_size = $_FILES['business_proof']['size'][$key];
 
                 if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-                    $business_proof_path = '/admin/admin/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                    $business_proof_path = '/admin/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
                     if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
                         $business_proof[] = $business_proof_path;
                     } else {
@@ -123,13 +123,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
     }
     $stmt->close();
 
-    $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/admin/uploads/' . $username . '/';
+    $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $username . '/';
     if (!file_exists($user_upload_dir)) {
         mkdir($user_upload_dir, 0777, true);
     }
 
     $existing_business_proof = json_decode($_POST['existing_business_proof'], true) ?? [];
-    $old_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/admin/uploads/' . $old_username . '/';
+    $old_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/' . $old_username . '/';
 
     if (isset($_FILES['business_proof']) && !empty($_FILES['business_proof']['name'][0])) {
         $business_proof = [];
@@ -158,7 +158,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
                 $file_size = $_FILES['business_proof']['size'][$key];
 
                 if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-                    $business_proof_path = '/admin/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                    $business_proof_path = '/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
                     if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
                         $business_proof[] = $business_proof_path;
                     } else {
@@ -177,7 +177,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
                 $old_file = basename($old_path);
                 $old_file_path = $old_upload_dir . $old_file;
                 $new_file_path = $user_upload_dir . $old_file;
-                $new_path = '/admin/uploads/' . $username . '/' . $old_file;
+                $new_path = '/uploads/' . $username . '/' . $old_file;
 
                 if (file_exists($old_file_path) && copy($old_file_path, $new_file_path)) {
                     $business_proof[] = $new_path;
@@ -258,12 +258,12 @@ function truncate($text, $max = 15) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client Accounts</title>
-    <link rel="stylesheet" href="/css/accounts.css">
-    <link rel="stylesheet" href="/css/sidebar.css">
+    <link rel="stylesheet" href="/admin/css/accounts.css">
+    <link rel="stylesheet" href="/admin/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-    <link rel="stylesheet" href="/css/accounts_clients.css">
-    <link rel="stylesheet" href="/css/toast.css">
+    <link rel="stylesheet" href="/admin/css/accounts_clients.css">
+    <link rel="stylesheet" href="/admin/css/toast.css">
     <style>
         #myModal {
             display: none;
@@ -1113,8 +1113,8 @@ function truncate($text, $max = 15) {
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src="/js/toast.js"></script>
-    <script src="/js/accounts_clients.js"></script>
+    <script src="/admin/js/toast.js"></script>
+    <script src="/admin/js/accounts_clients.js"></script>
     
     <script>
     // Variable to store the current account ID for status changes
