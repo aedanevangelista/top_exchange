@@ -8,9 +8,9 @@ checkRole('Orders'); // Ensure user has access to Orders
 $current_date = date('Y-m-d');
 
 // Automatically update orders to In Transit if today is delivery day
-$auto_transit_sql = "UPDATE orders SET status = 'In Transit' 
-                     WHERE status = 'For Delivery' 
-                     AND delivery_date = ? 
+$auto_transit_sql = "UPDATE orders SET status = 'In Transit'
+                     WHERE status = 'For Delivery'
+                     AND delivery_date = ?
                      AND status != 'In Transit'";
 $auto_transit_stmt = $conn->prepare($auto_transit_sql);
 if ($auto_transit_stmt) {
@@ -53,21 +53,26 @@ if (!in_array($sortOrder, $allowedOrders)) {
 // Build the SQL query with or without status filter
 $whereClause = "WHERE o.status IN ('For Delivery', 'In Transit')";
 if (!empty($filterStatus)) {
-    $whereClause = "WHERE o.status = '$filterStatus'";
+    // Use prepared statement for status filter
+    $whereClause = "WHERE o.status = ?";
 }
 
-$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, 
+$sql = "SELECT o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address,
         o.orders, o.total_amount, o.status, o.driver_assigned, o.special_instructions, o.company,
-        IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name 
-        FROM orders o 
-        LEFT JOIN driver_assignments da ON o.po_number = da.po_number 
-        LEFT JOIN drivers d ON da.driver_id = d.id 
+        IFNULL(da.driver_id, 0) as driver_id, IFNULL(d.name, '') as driver_name
+        FROM orders o
+        LEFT JOIN driver_assignments da ON o.po_number = da.po_number
+        LEFT JOIN drivers d ON da.driver_id = d.id
         $whereClause
         ORDER BY o.$sortColumn $sortOrder";
 
 $orders = [];
 $orderStmt = $conn->prepare($sql);
+
 if ($orderStmt) {
+    if (!empty($filterStatus)) {
+        $orderStmt->bind_param("s", $filterStatus); // Bind the status if filtering
+    }
     $orderStmt->execute();
     $orderResult = $orderStmt->get_result();
     if ($orderResult && $orderResult->num_rows > 0) {
@@ -99,7 +104,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <!-- HTML2PDF Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         .search-container {
             display: flex;
@@ -133,36 +138,36 @@ $statusOptions = ['For Delivery', 'In Transit'];
             align-items: center;
             margin-bottom: 20px;
         }
-        
+
         .page-title {
             font-size: 24px;
             font-weight: bold;
             margin: 0;
         }
-        
+
         .header-content {
             display: flex;
             align-items: center;
             justify-content: space-between;
             width: 100%;
         }
-        
+
         .filter-section {
             display: flex;
             align-items: center;
         }
-        
+
         .filter-group {
             display: flex;
             align-items: center;
             margin-right: 15px;
         }
-        
+
         .filter-label {
             margin-right: 8px;
             font-weight: bold;
         }
-        
+
         .filter-select {
             padding: 8px 10px;
             border-radius: 4px;
@@ -185,7 +190,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             background-color: #fd7e14;
             color: white;
         }
-        
+
         .status-in-transit {
             background-color: #17a2b8;
             color: white;
@@ -235,7 +240,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
         .complete-delivery-btn:hover {
             background-color: #218838;
         }
-        
+
         .toggle-transit-btn {
             background-color: #17a2b8;
             color: white;
@@ -247,7 +252,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             transition: background-color 0.3s;
             margin-bottom: 5px;
         }
-        
+
         .toggle-transit-btn:hover {
             background-color: #138496;
         }
@@ -259,7 +264,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             gap: 5px;
             min-width: 210px;
         }
-        
+
         /* Highlighted delivery date */
         .today-delivery {
             background-color: #fff3cd;
@@ -270,7 +275,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             font-weight: normal;
             font-style: italic;
         }
-        
+
         /* Order details modal */
         .order-details-container {
             max-height: 70vh;
@@ -278,7 +283,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             margin-bottom: 10px;
             padding-right: 5px;
         }
-        
+
         /* No orders message */
         .no-orders {
             text-align: center;
@@ -294,37 +299,37 @@ $statusOptions = ['For Delivery', 'In Transit'];
             padding-right: 20px;
             transition: background-color 0.2s;
         }
-        
+
         .sort-header:hover {
             background-color:rgb(51, 51, 51);
         }
-        
+
         .sort-header::after {
-            content: '\f0dc';
+            content: '\f0dc'; /* fa-sort */
             font-family: 'Font Awesome 5 Free';
             font-weight: 900;
             position: absolute;
             right: 5px;
             color: #6c757d;
         }
-        
+
         .sort-header.asc::after {
-            content: '\f0de';
+            content: '\f0de'; /* fa-sort-up */
             color:rgb(255, 255, 255);
         }
-        
+
         .sort-header.desc::after {
-            content: '\f0dd';
+            content: '\f0dd'; /* fa-sort-down */
             color:rgb(255, 255, 255);
         }
-        
+
         /* Modal styling */
         .overlay-content {
             max-width: 550px;
             padding: 25px;
             border-radius: 8px;
         }
-        
+
         .modal-content h2 {
             color: #333;
             text-align: center;
@@ -332,14 +337,14 @@ $statusOptions = ['For Delivery', 'In Transit'];
             padding-bottom: 15px;
             margin-bottom: 20px;
         }
-        
+
         .modal-message {
             margin: 25px 0;
             font-size: 16px;
             line-height: 1.6;
             text-align: center;
         }
-        
+
         /* Modal buttons */
         .modal-buttons {
             display: flex;
@@ -347,7 +352,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             gap: 20px;
             margin-top: 25px;
         }
-        
+
         .btn-no, .btn-yes {
             padding: 10px 25px;
             border-radius: 25px;
@@ -357,29 +362,29 @@ $statusOptions = ['For Delivery', 'In Transit'];
             transition: all 0.3s;
             min-width: 120px;
         }
-        
+
         .btn-no {
             background-color: #dc3545;
             color: white;
         }
-        
+
         .btn-no:hover {
             background-color: #c82333;
             transform: translateY(-2px);
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        
+
         .btn-yes {
             background-color: #28a745;
             color: white;
         }
-        
+
         .btn-yes:hover {
             background-color: #218838;
             transform: translateY(-2px);
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        
+
         /* Status pill in modal */
         .status-pill {
             display: inline-block;
@@ -389,11 +394,11 @@ $statusOptions = ['For Delivery', 'In Transit'];
             margin: 0 3px;
             color: white;
         }
-        
+
         .status-pill.for-delivery {
             background-color: #fd7e14;
         }
-        
+
         .status-pill.in-transit {
             background-color: #17a2b8;
         }
@@ -422,15 +427,15 @@ $statusOptions = ['For Delivery', 'In Transit'];
             display: inline-block;
             text-align: center;
         }
-        
+
         .download-btn:hover {
             background-color: #138496;
         }
-        
+
         .download-btn i {
             margin-right: 5px;
         }
-        
+
         /* View orders button styling */
         .view-orders-btn {
             padding: 6px 12px;
@@ -442,15 +447,15 @@ $statusOptions = ['For Delivery', 'In Transit'];
             font-size: 12px;
             text-align: center;
         }
-        
+
         .view-orders-btn:hover {
             background-color: #2980b9;
         }
-        
+
         .view-orders-btn i {
             margin-right: 5px;
         }
-        
+
         /* Instructions button styling */
         .instructions-btn {
             padding: 6px 12px;
@@ -464,11 +469,11 @@ $statusOptions = ['For Delivery', 'In Transit'];
             text-align: center;
             transition: background-color 0.2s;
         }
-        
+
         .instructions-btn:hover {
             background-color: #2471a3;
         }
-        
+
         .no-instructions {
             color: #6c757d;
             font-style: italic;
@@ -482,68 +487,68 @@ $statusOptions = ['For Delivery', 'In Transit'];
             padding: 20px;
             background-color: white;
         }
-        
+
         .po-header {
             text-align: center;
             margin-bottom: 30px;
         }
-        
+
         .po-company {
             font-size: 22px;
             font-weight: bold;
             margin-bottom: 10px;
         }
-        
+
         .po-title {
             font-size: 18px;
             font-weight: bold;
             margin-bottom: 20px;
             text-transform: uppercase;
         }
-        
+
         .po-details {
             display: flex;
             justify-content: space-between;
             margin-bottom: 30px;
         }
-        
+
         .po-left, .po-right {
             width: 48%;
         }
-        
+
         .po-detail-row {
             margin-bottom: 10px;
         }
-        
+
         .po-detail-label {
             font-weight: bold;
             display: inline-block;
             width: 120px;
         }
-        
+
         .po-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 30px;
         }
-        
+
         .po-table th, .po-table td {
             border: 1px solid #ddd;
             padding: 10px;
             text-align: left;
         }
-        
+
         .po-table th {
             background-color: #f2f2f2;
         }
-        
+
         .po-total {
             text-align: right;
             font-weight: bold;
             font-size: 14px;
             margin-bottom: 30px;
         }
-        
+
         #pdfPreview {
             display: none;
             position: fixed;
@@ -555,7 +560,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             z-index: 1000;
             overflow: auto;
         }
-        
+
         .pdf-container {
             background-color: white;
             width: 80%;
@@ -565,7 +570,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
             position: relative;
         }
-        
+
         .close-pdf {
             position: absolute;
             top: 10px;
@@ -576,12 +581,12 @@ $statusOptions = ['For Delivery', 'In Transit'];
             cursor: pointer;
             color: #333;
         }
-        
+
         .pdf-actions {
             text-align: center;
             margin-top: 20px;
         }
-        
+
         .download-pdf-btn {
             padding: 10px 20px;
             background-color: #17a2b8;
@@ -604,7 +609,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             overflow: auto;
             background-color: rgba(0, 0, 0, 0.7);
         }
-        
+
         .instructions-modal-content {
             background-color: #ffffff;
             margin: 10% auto;
@@ -625,7 +630,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             from { opacity: 0; transform: translateY(-20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
+
         .instructions-header {
             background-color: #2980b9;
             color: white;
@@ -644,7 +649,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             margin-top: 5px;
             opacity: 0.9;
         }
-        
+
         .instructions-body {
             padding: 20px;
             max-height: 300px;
@@ -655,20 +660,20 @@ $statusOptions = ['For Delivery', 'In Transit'];
             background-color: #f8f9fa;
             border-bottom: 1px solid #eaeaea;
         }
-        
+
         .instructions-body.empty {
             color: #6c757d;
             font-style: italic;
             text-align: center;
             padding: 40px 20px;
         }
-        
+
         .instructions-footer {
             padding: 15px 20px;
             text-align: right;
             background-color: #ffffff;
         }
-        
+
         .close-instructions-btn {
             background-color: #2980b9;
             color: white;
@@ -679,7 +684,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             font-size: 12px;
             transition: background-color 0.2s;
         }
-        
+
         .close-instructions-btn:hover {
             background-color: #2471a3;
         }
@@ -704,17 +709,95 @@ $statusOptions = ['For Delivery', 'In Transit'];
         #contentToDownload .po-total {
             font-size: 12px;
         }
-        
+
+        /* Confirmation modal styles */
+        .confirmation-modal {
+            display: none;
+            position: fixed;
+            z-index: 1100; /* Ensure it's above other overlays */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            overflow: hidden; /* Prevent background scroll */
+        }
+
+        .confirmation-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 350px;
+            max-width: 90%;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: modalPopIn 0.3s;
+        }
+
+        @keyframes modalPopIn {
+            from {transform: scale(0.8); opacity: 0;}
+            to {transform: scale(1); opacity: 1;}
+        }
+
+        .confirmation-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .confirmation-message {
+            margin-bottom: 20px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .confirmation-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .confirm-yes {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        .confirm-yes:hover {
+            background-color: #357abf;
+        }
+
+        .confirm-no {
+            background-color: #f1f1f1;
+            color: #333;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .confirm-no:hover {
+            background-color: #e1e1e1;
+        }
+
+
         /* Fix tables on mobile devices */
         @media screen and (max-width: 768px) {
             .orders-table-container {
                 overflow-x: auto;
             }
-            
+
             .order-details-container {
                 overflow-x: auto;
             }
-            
+
             .action-buttons-cell {
                 min-width: 210px;
             }
@@ -727,7 +810,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
         <div class="orders-header">
             <div class="header-content">
                 <h1 class="page-title">Deliverable Orders</h1>
-                
+
                 <!-- Filter section in the middle -->
                 <div class="filter-section">
                     <div class="filter-group">
@@ -735,8 +818,8 @@ $statusOptions = ['For Delivery', 'In Transit'];
                         <select id="statusFilter" class="filter-select" onchange="filterByStatus()">
                             <option value="">All</option>
                             <?php foreach ($statusOptions as $status): ?>
-                                <option value="<?= $status ?>" <?= $filterStatus === $status ? 'selected' : '' ?>>
-                                    <?= $status ?>
+                                <option value="<?= htmlspecialchars($status) ?>" <?= $filterStatus === $status ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($status) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -748,14 +831,14 @@ $statusOptions = ['For Delivery', 'In Transit'];
                         <?php endif; ?>
                     </div>
                 </div>
-                
+
                 <div class="search-container">
                     <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
                     <button class="search-btn"><i class="fas fa-search"></i></button>
                 </div>
             </div>
         </div>
-        
+
         <div class="orders-table-container">
             <table class="orders-table">
                 <thead>
@@ -775,7 +858,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                 </thead>
                 <tbody>
                     <?php if (count($orders) > 0): ?>
-                        <?php foreach ($orders as $order): 
+                        <?php foreach ($orders as $order):
                             $isDeliveryDay = ($order['delivery_date'] === $current_date);
                         ?>
                             <tr class="order-row" data-status="<?= htmlspecialchars($order['status']) ?>">
@@ -789,14 +872,15 @@ $statusOptions = ['For Delivery', 'In Transit'];
                                 <td><?= htmlspecialchars($order['delivery_address']) ?></td>
                                 <td>
                                     <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')">
-                                        <i class="fas fa-clipboard-list"></i>    
+                                        <i class="fas fa-clipboard-list"></i>
                                         View Order Items
                                     </button>
                                 </td>
                                 <td>PHP <?= htmlspecialchars(number_format($order['total_amount'], 2)) ?></td>
                                 <td>
                                     <?php if (!empty($order['special_instructions'])): ?>
-                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'])) ?>')">
+                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>')">
+                                            <i class="fas fa-info-circle"></i>
                                             View
                                         </button>
                                     <?php else: ?>
@@ -813,6 +897,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                                         </button>
                                     <?php else: ?>
                                         <span class="no-driver">No driver assigned</span>
+                                        <!-- Add Assign button if needed, similar to orders.php -->
                                     <?php endif; ?>
                                 </td>
                                 <td>
@@ -823,20 +908,20 @@ $statusOptions = ['For Delivery', 'In Transit'];
                                     <?php endif; ?>
                                 </td>
                                 <td class="action-buttons-cell">
-                                    <button class="download-btn" onclick="downloadPODirectly(
-                                        '<?= htmlspecialchars($order['po_number']) ?>', 
-                                        '<?= htmlspecialchars($order['username']) ?>', 
-                                        '<?= htmlspecialchars($order['company'] ?? '') ?>', 
-                                        '<?= htmlspecialchars($order['order_date']) ?>', 
-                                        '<?= htmlspecialchars($order['delivery_date']) ?>', 
-                                        '<?= htmlspecialchars($order['delivery_address']) ?>', 
-                                        '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 
-                                        '<?= htmlspecialchars($order['total_amount']) ?>', 
+                                    <button class="download-btn" onclick="confirmDownloadPO(
+                                        '<?= htmlspecialchars($order['po_number']) ?>',
+                                        '<?= htmlspecialchars($order['username']) ?>',
+                                        '<?= htmlspecialchars($order['company'] ?? '') ?>',
+                                        '<?= htmlspecialchars($order['order_date']) ?>',
+                                        '<?= htmlspecialchars($order['delivery_date']) ?>',
+                                        '<?= htmlspecialchars($order['delivery_address']) ?>',
+                                        '<?= htmlspecialchars(addslashes($order['orders'])) ?>',
+                                        '<?= htmlspecialchars($order['total_amount']) ?>',
                                         '<?= htmlspecialchars(addslashes($order['special_instructions'] ?? '')) ?>'
                                     )">
                                         <i class="fas fa-file-pdf"></i> Download PDF
                                     </button>
-                                    
+
                                     <?php if ($order['status'] === 'For Delivery'): ?>
                                         <button class="toggle-transit-btn" onclick="openStatusChangeModal('<?= htmlspecialchars($order['po_number']) ?>', 'In Transit')">
                                             <i class="fas fa-truck"></i> Mark In Transit
@@ -846,7 +931,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                                             <i class="fas fa-warehouse"></i> Mark For Delivery
                                         </button>
                                     <?php endif; ?>
-                                    
+
                                     <button class="complete-delivery-btn" onclick="openCompleteModal('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>')">
                                         <i class="fas fa-check-circle"></i> Complete
                                     </button>
@@ -866,8 +951,8 @@ $statusOptions = ['For Delivery', 'In Transit'];
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- PO PDF Preview Section -->
-    <div id="pdfPreview">
+    <!-- PO PDF Preview Section (Hidden) -->
+    <div id="pdfPreview" style="display: none;">
         <div class="pdf-container">
             <button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button>
             <div id="contentToDownload">
@@ -876,7 +961,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                         <div class="po-company" id="printCompany"></div>
                         <div class="po-title">Purchase Order</div>
                     </div>
-                    
+
                     <div class="po-details">
                         <div class="po-left">
                             <div class="po-detail-row">
@@ -891,12 +976,12 @@ $statusOptions = ['For Delivery', 'In Transit'];
                                 <span class="po-detail-label">Delivery Address:</span>
                                 <span id="printDeliveryAddress"></span>
                             </div>
-                            <div class="po-detail-row" id="printInstructionsSection">
+                            <div class="po-detail-row" id="printInstructionsSection" style="display: none;">
                                 <span class="po-detail-label">Special Instructions:</span>
                                 <span id="printSpecialInstructions" style="white-space: pre-wrap;"></span>
                             </div>
                         </div>
-                        
+
                         <div class="po-right">
                             <div class="po-detail-row">
                                 <span class="po-detail-label">Order Date:</span>
@@ -908,7 +993,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                             </div>
                         </div>
                     </div>
-                    
+
                     <table class="po-table">
                         <thead>
                             <tr>
@@ -924,11 +1009,11 @@ $statusOptions = ['For Delivery', 'In Transit'];
                             <!-- Items will be populated here -->
                         </tbody>
                     </table>
-                    
+
                     <div class="po-total">
                         Total Amount: PHP <span id="printTotalAmount"></span>
                     </div>
-                    
+
                 </div>
             </div>
             <div class="pdf-actions">
@@ -998,16 +1083,17 @@ $statusOptions = ['For Delivery', 'In Transit'];
             </div>
             <div class="driver-modal-buttons">
                 <button class="cancel-btn" onclick="closeDriverModal()">
-                    <i class="fas fa-times"></i> No
+                    <i class="fas fa-times"></i> Cancel
                 </button>
-                <button class="save-btn" onclick="assignDriver()">
-                    <i class="fas fa-check"></i> Yes
+                <!-- Changed this button to trigger confirmation -->
+                <button class="save-btn" onclick="confirmDriverChangeAction()">
+                    <i class="fas fa-check"></i> Confirm Change
                 </button>
             </div>
         </div>
     </div>
-    
-    <!-- Status Change Confirmation Modal -->
+
+    <!-- Status Change Confirmation Modal (For Delivery / In Transit) -->
     <div id="statusChangeModal" class="overlay" style="display: none;">
         <div class="overlay-content modal-content">
             <h2><i id="statusIcon" class="fas fa-truck"></i> <span id="statusModalTitle">Change Status</span></h2>
@@ -1024,7 +1110,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             </div>
         </div>
     </div>
-    
+
     <!-- Complete Order Confirmation Modal -->
     <div id="completeOrderModal" class="overlay" style="display: none;">
         <div class="overlay-content modal-content">
@@ -1043,42 +1129,68 @@ $statusOptions = ['For Delivery', 'In Transit'];
         </div>
     </div>
 
+    <!-- Driver Change Confirmation Modal (Added) -->
+    <div id="driverConfirmationModal" class="confirmation-modal">
+        <div class="confirmation-content">
+            <div class="confirmation-title">Confirm Driver Assignment</div>
+            <div class="confirmation-message">Assign this driver?</div>
+            <div class="confirmation-buttons">
+                <button class="confirm-no" onclick="closeDriverConfirmation()">No</button>
+                <button class="confirm-yes" onclick="assignDriver()">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download Confirmation Modal (Added) -->
+    <div id="downloadConfirmationModal" class="confirmation-modal">
+        <div class="confirmation-content">
+            <div class="confirmation-title">Confirm Download</div>
+            <div class="confirmation-message">Download this PO?</div>
+            <div class="confirmation-buttons">
+                <button class="confirm-no" onclick="closeDownloadConfirmation()">No</button>
+                <button class="confirm-yes" onclick="_executeDownloadPO()">Yes</button> <!-- Calls renamed function -->
+            </div>
+        </div>
+    </div>
+
+
     <script>
         let currentPoNumber = '';
         let currentDriverId = 0;
         let currentStatusChange = '';
-        let currentPOData = null; // For PDF generation
-        
+        let currentPOData = null; // For PDF generation preview
+        let poDownloadData = null; // For direct PDF download data
+
         function filterByStatus() {
             const status = document.getElementById('statusFilter').value;
             const currentSort = '<?= $sortColumn ?>';
             const currentOrder = '<?= $sortOrder ?>';
-            
+
             let url = '?';
             const params = [];
-            
+
             if (status) {
                 params.push(`status=${encodeURIComponent(status)}`);
             }
-            
+
             if (currentSort && currentOrder) {
                 params.push(`sort=${currentSort}&order=${currentOrder}`);
             }
-            
+
             url += params.join('&');
             window.location.href = url;
         }
-        
+
         function openStatusChangeModal(poNumber, newStatus) {
             currentPoNumber = poNumber;
             currentStatusChange = newStatus;
-            
+
             // Set modal title and message based on the status change
             const modalTitle = document.getElementById('statusModalTitle');
             const modalMessage = document.getElementById('statusModalMessage');
             const statusIcon = document.getElementById('statusIcon');
             const confirmBtn = document.getElementById('confirmStatusChange');
-            
+
             if (newStatus === 'In Transit') {
                 modalTitle.textContent = 'Mark as In Transit';
                 modalMessage.innerHTML = `Are you sure you want to mark order <strong>${poNumber}</strong> as <span class="status-pill in-transit">In Transit</span>?`;
@@ -1088,51 +1200,51 @@ $statusOptions = ['For Delivery', 'In Transit'];
                 modalMessage.innerHTML = `Are you sure you want to mark order <strong>${poNumber}</strong> as <span class="status-pill for-delivery">For Delivery</span>?`;
                 statusIcon.className = 'fas fa-warehouse';
             }
-            
+
             // Set up confirmation button
             confirmBtn.onclick = function() {
                 toggleTransitStatus(poNumber, newStatus);
             };
-            
+
             // Show modal
             document.getElementById('statusChangeModal').style.display = 'flex';
         }
-        
+
         function closeStatusChangeModal() {
             document.getElementById('statusChangeModal').style.display = 'none';
         }
-        
+
         function openCompleteModal(poNumber, username) {
             currentPoNumber = poNumber;
-            
+
             // Set modal message
             const modalMessage = document.getElementById('completeModalMessage');
             modalMessage.innerHTML = `Are you sure you want to mark order <strong>${poNumber}</strong> for <strong>${username}</strong> as completed?`;
-            
+
             // Set up confirmation button
             document.getElementById('confirmCompleteOrder').onclick = function() {
                 completeDelivery(poNumber);
             };
-            
+
             // Show modal
             document.getElementById('completeOrderModal').style.display = 'flex';
         }
-        
+
         function closeCompleteModal() {
             document.getElementById('completeOrderModal').style.display = 'none';
         }
-        
+
         function toggleTransitStatus(poNumber, newStatus) {
             // Close modal
             closeStatusChangeModal();
-            
+
             // Show loading toast
             showToast(`Updating order status...`, 'info');
-            
+
             fetch('/backend/toggle_transit_status.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     po_number: poNumber,
                     status: newStatus
                 })
@@ -1158,102 +1270,102 @@ $statusOptions = ['For Delivery', 'In Transit'];
         }
 
         function viewOrderDetails(poNumber) {
-    currentPoNumber = poNumber;
-    
-    // Show loading indicator
-    const orderDetailsBody = document.getElementById('orderDetailsBody');
-    orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading order details...</td></tr>';
-    document.getElementById('orderDetailsModal').style.display = 'flex';
-    
-    // Add console log to see what's being sent
-    console.log("Fetching order details for PO: " + poNumber);
-    
-    // Fetch the order items
-    fetch(`/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
-    .then(response => {
-        console.log("Response status:", response.status);
-        return response.json().catch(err => {
-            console.error("JSON parse error:", err);
-            throw new Error("Failed to parse server response");
-        });
-    })
-    .then(data => {
-        // Log the response for debugging
-        console.log("Response data:", data);
-        
-        // Clear the loading message
-        orderDetailsBody.innerHTML = '';
-        
-        if (data && data.success && data.orderItems) {
-            const orderItems = data.orderItems;
-            
-            try {
-                // Parse orders if it's a string (JSON)
-                let parsedItems = orderItems;
-                if (typeof orderItems === 'string') {
-                    parsedItems = JSON.parse(orderItems);
-                }
-                
-                // Ensure parsedItems is an array
-                if (!Array.isArray(parsedItems)) {
-                    throw new Error("Order items is not an array");
-                }
-                
-                // Check if there are any items
-                if (parsedItems.length === 0) {
-                    orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;font-style:italic;">No items found in this order.</td></tr>';
-                    return;
-                }
-                
-                let totalAmount = 0;
-                
-                parsedItems.forEach(item => {
-                    if (!item) return; // Skip if item is null or undefined
-                    
-                    const quantity = parseInt(item.quantity) || 0;
-                    const price = parseFloat(item.price) || 0;
-                    const itemTotal = quantity * price;
-                    totalAmount += itemTotal;
-                    
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${item.category || ''}</td>
-                        <td>${item.item_description || ''}</td>
-                        <td>${item.packaging || ''}</td>
-                        <td>PHP ${price.toFixed(2)}</td>
-                        <td>${quantity}</td>
-                        <td>PHP ${itemTotal.toFixed(2)}</td>
-                    `;
-                    orderDetailsBody.appendChild(row);
+            currentPoNumber = poNumber;
+
+            // Show loading indicator
+            const orderDetailsBody = document.getElementById('orderDetailsBody');
+            orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading order details...</td></tr>';
+            document.getElementById('orderDetailsModal').style.display = 'flex';
+
+            // Add console log to see what's being sent
+            console.log("Fetching order details for PO: " + poNumber);
+
+            // Fetch the order items
+            fetch(`/backend/get_order_items.php?po_number=${encodeURIComponent(poNumber)}`)
+            .then(response => {
+                console.log("Response status:", response.status);
+                return response.json().catch(err => {
+                    console.error("JSON parse error:", err);
+                    throw new Error("Failed to parse server response");
                 });
-                
-                // Add a total row
-                const totalRow = document.createElement('tr');
-                totalRow.style.fontWeight = 'bold';
-                totalRow.innerHTML = `
-                    <td colspan="5" style="text-align: right;">Total:</td>
-                    <td>PHP ${totalAmount.toFixed(2)}</td>
-                `;
-                orderDetailsBody.appendChild(totalRow);
-            } catch (parseError) {
-                console.error("Error processing order items:", parseError);
-                orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error processing order data: ${parseError.message}</td></tr>`;
-                showToast('Error processing order data: ' + parseError.message, 'error');
-            }
-        } else {
-            // Handle when the API returns success: false or missing orderItems array
-            let errorMessage = (data && data.message) ? data.message : 'Could not retrieve order details';
-            orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${errorMessage}</td></tr>`;
-            
-            showToast('Error: ' + errorMessage, 'error');
+            })
+            .then(data => {
+                // Log the response for debugging
+                console.log("Response data:", data);
+
+                // Clear the loading message
+                orderDetailsBody.innerHTML = '';
+
+                if (data && data.success && data.orderItems) {
+                    const orderItems = data.orderItems;
+
+                    try {
+                        // Parse orders if it's a string (JSON)
+                        let parsedItems = orderItems;
+                        if (typeof orderItems === 'string') {
+                            parsedItems = JSON.parse(orderItems);
+                        }
+
+                        // Ensure parsedItems is an array
+                        if (!Array.isArray(parsedItems)) {
+                            throw new Error("Order items is not an array");
+                        }
+
+                        // Check if there are any items
+                        if (parsedItems.length === 0) {
+                            orderDetailsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;font-style:italic;">No items found in this order.</td></tr>';
+                            return;
+                        }
+
+                        let totalAmount = 0;
+
+                        parsedItems.forEach(item => {
+                            if (!item) return; // Skip if item is null or undefined
+
+                            const quantity = parseInt(item.quantity) || 0;
+                            const price = parseFloat(item.price) || 0;
+                            const itemTotal = quantity * price;
+                            totalAmount += itemTotal;
+
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${item.category || ''}</td>
+                                <td>${item.item_description || ''}</td>
+                                <td>${item.packaging || ''}</td>
+                                <td>PHP ${price.toFixed(2)}</td>
+                                <td>${quantity}</td>
+                                <td>PHP ${itemTotal.toFixed(2)}</td>
+                            `;
+                            orderDetailsBody.appendChild(row);
+                        });
+
+                        // Add a total row
+                        const totalRow = document.createElement('tr');
+                        totalRow.style.fontWeight = 'bold';
+                        totalRow.innerHTML = `
+                            <td colspan="5" style="text-align: right;">Total:</td>
+                            <td>PHP ${totalAmount.toFixed(2)}</td>
+                        `;
+                        orderDetailsBody.appendChild(totalRow);
+                    } catch (parseError) {
+                        console.error("Error processing order items:", parseError);
+                        orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error processing order data: ${parseError.message}</td></tr>`;
+                        showToast('Error processing order data: ' + parseError.message, 'error');
+                    }
+                } else {
+                    // Handle when the API returns success: false or missing orderItems array
+                    let errorMessage = (data && data.message) ? data.message : 'Could not retrieve order details';
+                    orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${errorMessage}</td></tr>`;
+
+                    showToast('Error: ' + errorMessage, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching order details:', error);
+                orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${error.message}</td></tr>`;
+                showToast('Error: ' + error.message, 'error');
+            });
         }
-    })
-    .catch(error => {
-        console.error('Error fetching order details:', error);
-        orderDetailsBody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Error: ${error.message}</td></tr>`;
-        showToast('Error: ' + error.message, 'error');
-    });
-}
 
         function closeOrderDetailsModal() {
             document.getElementById('orderDetailsModal').style.display = 'none';
@@ -1261,15 +1373,15 @@ $statusOptions = ['For Delivery', 'In Transit'];
 
         function openDriverModal(poNumber, driverId, driverName) {
             currentPoNumber = poNumber;
-            currentDriverId = driverId;
-            
+            currentDriverId = driverId; // Store the original driver ID
+
             document.getElementById('driverModalTitle').textContent = 'Change Driver';
-            document.getElementById('driverModalMessage').textContent = `Current driver: ${driverName}`;
-            
-            // Set the current driver in the dropdown
+            document.getElementById('driverModalMessage').textContent = `Current driver: ${driverName}. Select a new driver below.`;
+
+            // Set the current driver in the dropdown (or default if none)
             const driverSelect = document.getElementById('driverSelect');
-            driverSelect.value = driverId;
-            
+            driverSelect.value = driverId > 0 ? driverId : "0";
+
             // Show the modal
             document.getElementById('driverModal').style.display = 'flex';
         }
@@ -1278,19 +1390,60 @@ $statusOptions = ['For Delivery', 'In Transit'];
             document.getElementById('driverModal').style.display = 'none';
         }
 
-        function assignDriver() {
-            const driverId = document.getElementById('driverSelect').value;
-            
-            if (driverId == 0) {
-                showToast('Please select a driver', 'error');
+        // New function to show driver confirmation modal
+        function confirmDriverChangeAction() {
+            const driverSelect = document.getElementById('driverSelect');
+            const selectedDriverId = parseInt(driverSelect.value);
+            const selectedDriverName = driverSelect.options[driverSelect.selectedIndex].text;
+
+            if (selectedDriverId === 0 || isNaN(selectedDriverId)) {
+                showToast('Please select a driver.', 'error');
                 return;
             }
-            
-            // Show loading state
-            const saveBtn = document.querySelector('#driverModal .save-btn');
-            const originalBtnText = saveBtn.innerHTML;
-            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
-            saveBtn.disabled = true;
+
+            // Check if the selected driver is the same as the current one
+            if (selectedDriverId === currentDriverId) {
+                 showToast('Selected driver is the same as the current one.', 'info');
+                 closeDriverModal(); // Just close the selection modal
+                 return;
+            }
+
+
+            let msg = `Assign driver ${selectedDriverName} to order ${currentPoNumber}?`;
+            if (currentDriverId > 0) {
+                msg = `Change driver for order ${currentPoNumber} to ${selectedDriverName}?`;
+            }
+
+            $('#driverConfirmationModal .confirmation-message').text(msg);
+            $('#driverConfirmationModal').show(); // Show the confirmation modal
+            $('#driverModal').hide(); // Hide the selection modal
+        }
+
+        // New function to close driver confirmation and reopen selection
+        function closeDriverConfirmation() {
+            $('#driverConfirmationModal').hide();
+            $('#driverModal').show(); // Re-show the selection modal
+        }
+
+
+        // Original assignDriver function, now called by the confirmation modal
+        function assignDriver() {
+            $('#driverConfirmationModal').hide(); // Hide confirmation modal first
+
+            const driverId = document.getElementById('driverSelect').value; // Get the selected ID again
+
+            if (driverId == 0) {
+                showToast('Please select a driver', 'error');
+                // Optionally re-open the selection modal if needed:
+                // $('#driverModal').show();
+                return;
+            }
+
+            // Show loading state (optional, can add later)
+            // const saveBtn = document.querySelector('#driverConfirmationModal .confirm-yes');
+            // const originalBtnText = saveBtn.innerHTML;
+            // saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            // saveBtn.disabled = true;
 
             // Send request to assign driver
             fetch('/backend/assign_driver.php', {
@@ -1308,27 +1461,29 @@ $statusOptions = ['For Delivery', 'In Transit'];
                     setTimeout(() => { window.location.reload(); }, 1000);
                 } else {
                     showToast('Error: ' + (data.message || 'Unknown error'), 'error');
-                    saveBtn.innerHTML = originalBtnText;
-                    saveBtn.disabled = false;
+                    // Restore button state if loading state was added
+                    // saveBtn.innerHTML = originalBtnText;
+                    // saveBtn.disabled = false;
                 }
-                closeDriverModal();
+                // Don't need to closeDriverModal() here as it's already hidden
             })
             .catch(error => {
                 console.error('Error:', error);
                 showToast('Error: Failed to communicate with server', 'error');
-                saveBtn.innerHTML = originalBtnText;
-                saveBtn.disabled = false;
-                closeDriverModal();
+                // Restore button state if loading state was added
+                // saveBtn.innerHTML = originalBtnText;
+                // saveBtn.disabled = false;
             });
         }
+
 
         function completeDelivery(poNumber) {
             // Close the confirm modal
             closeCompleteModal();
-            
+
             // Show loading toast
             showToast('Processing completion...', 'info');
-            
+
             fetch('/backend/complete_delivery.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1350,221 +1505,179 @@ $statusOptions = ['For Delivery', 'In Transit'];
         }
 
         // PDF Functions
-        function downloadPODirectly(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
+
+        // New function to show download confirmation
+        function confirmDownloadPO(...args) {
+            poDownloadData = {
+                poNumber: args[0],
+                username: args[1],
+                company: args[2],
+                orderDate: args[3],
+                deliveryDate: args[4],
+                deliveryAddress: args[5],
+                ordersJson: args[6],
+                totalAmount: args[7],
+                specialInstructions: args[8]
+            };
+            const msg = `Download Purchase Order PDF for ${poDownloadData.poNumber}?`;
+            $('#downloadConfirmationModal .confirmation-message').text(msg);
+            $('#downloadConfirmationModal').css('display', 'block'); // Use block or flex depending on CSS
+        }
+
+        // New function to close download confirmation
+        function closeDownloadConfirmation() {
+            $('#downloadConfirmationModal').hide();
+            poDownloadData = null;
+        }
+
+
+        // Renamed original function to execute download after confirmation
+        function _executeDownloadPO() {
+            $('#downloadConfirmationModal').hide(); // Hide confirmation modal first
+            if (!poDownloadData) {
+                showToast('No data available for download.', 'error');
+                return;
+            }
+
             try {
-                // Store current PO data
-                currentPOData = {
-                    poNumber,
-                    username,
-                    company,
-                    orderDate,
-                    deliveryDate,
-                    deliveryAddress,
-                    ordersJson,
-                    totalAmount,
-                    specialInstructions
-                };
-                
+                // Use the stored data from poDownloadData
+                currentPOData = poDownloadData;
+
                 // Populate the hidden PDF content silently
-                document.getElementById('printCompany').textContent = company || 'No Company Name';
-                document.getElementById('printPoNumber').textContent = poNumber;
-                document.getElementById('printUsername').textContent = username;
-                document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
-                document.getElementById('printOrderDate').textContent = orderDate;
-                document.getElementById('printDeliveryDate').textContent = deliveryDate;
-                
+                document.getElementById('printCompany').textContent = currentPOData.company || 'No Company Name';
+                document.getElementById('printPoNumber').textContent = currentPOData.poNumber;
+                document.getElementById('printUsername').textContent = currentPOData.username;
+                document.getElementById('printDeliveryAddress').textContent = currentPOData.deliveryAddress;
+                document.getElementById('printOrderDate').textContent = currentPOData.orderDate;
+                document.getElementById('printDeliveryDate').textContent = currentPOData.deliveryDate;
+
                 // Format the total amount
-                document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
+                document.getElementById('printTotalAmount').textContent = parseFloat(currentPOData.totalAmount).toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 });
-                
+
                 // Handle special instructions
                 const instructionsSection = document.getElementById('printInstructionsSection');
-                if (specialInstructions && specialInstructions.trim() !== '') {
-                    document.getElementById('printSpecialInstructions').textContent = specialInstructions;
+                if (currentPOData.specialInstructions && currentPOData.specialInstructions.trim() !== '') {
+                    document.getElementById('printSpecialInstructions').textContent = currentPOData.specialInstructions;
                     instructionsSection.style.display = 'block';
                 } else {
                     instructionsSection.style.display = 'none';
                 }
-                
+
                 // Parse and populate order items
-                const orderItems = JSON.parse(ordersJson);
+                const orderItems = JSON.parse(currentPOData.ordersJson);
                 const orderItemsBody = document.getElementById('printOrderItems');
-                
+
                 // Clear previous content
                 orderItemsBody.innerHTML = '';
-                
+
                 // Add items to the table
                 orderItems.forEach(item => {
                     const row = document.createElement('tr');
-                    
-                    // Calculate item total
                     const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
-                    
                     row.innerHTML = `
                         <td>${item.category || ''}</td>
                         <td>${item.item_description}</td>
                         <td>${item.packaging || ''}</td>
                         <td>${item.quantity}</td>
-                        <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        })}</td>
-                        <td>PHP ${itemTotal.toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        })}</td>
+                        <td>PHP ${parseFloat(item.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td>PHP ${itemTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     `;
-                    
                     orderItemsBody.appendChild(row);
                 });
-                
+
                 // Get the element to convert to PDF
                 const element = document.getElementById('contentToDownload');
-                
+
                 // Configure html2pdf options
                 const opt = {
                     margin:       [10, 10, 10, 10],
-                    filename:     `PO_${poNumber}.pdf`,
+                    filename:     `PO_${currentPOData.poNumber}.pdf`,
                     image:        { type: 'jpeg', quality: 0.98 },
                     html2canvas:  { scale: 2, useCORS: true },
                     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
-                
+
                 // Generate and download PDF directly
                 html2pdf().set(opt).from(element).save().then(() => {
-                    showToast(`Purchase Order ${poNumber} has been downloaded.`, 'success');
+                    showToast(`Purchase Order ${currentPOData.poNumber} has been downloaded.`, 'success');
                 }).catch(error => {
                     console.error('Error generating PDF:', error);
                     alert('Error generating PDF. Please try again.');
-                });
-                
+                }).finally(() => {
+                     currentPOData = null; // Clear data after use
+                     poDownloadData = null;
+                 });
+
             } catch (e) {
                 console.error('Error preparing PDF data:', e);
                 alert('Error preparing PDF data');
+                 poDownloadData = null; // Clear data on error
             }
         }
-        
-        // Function to show PDF preview
+
+        // Function to show PDF preview (if needed, e.g., from another button)
         function generatePO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions) {
-            try {
-                // Store current PO data for later use
-                currentPOData = {
-                    poNumber,
-                    username,
-                    company,
-                    orderDate,
-                    deliveryDate,
-                    deliveryAddress,
-                    ordersJson,
-                    totalAmount,
-                    specialInstructions
-                };
-                
-                // Set basic information
+             // This function remains the same as before for previewing
+             try {
+                currentPOData = { poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJson, totalAmount, specialInstructions };
                 document.getElementById('printCompany').textContent = company || 'No Company Name';
                 document.getElementById('printPoNumber').textContent = poNumber;
                 document.getElementById('printUsername').textContent = username;
                 document.getElementById('printDeliveryAddress').textContent = deliveryAddress;
                 document.getElementById('printOrderDate').textContent = orderDate;
                 document.getElementById('printDeliveryDate').textContent = deliveryDate;
-                
-                // Handle special instructions
                 const instructionsSection = document.getElementById('printInstructionsSection');
                 if (specialInstructions && specialInstructions.trim() !== '') {
                     document.getElementById('printSpecialInstructions').textContent = specialInstructions;
                     instructionsSection.style.display = 'block';
-                } else {
-                    instructionsSection.style.display = 'none';
-                }
-                
-                // Format the total amount with commas and decimals
-                document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                });
-                
-                // Parse and populate order items
+                } else { instructionsSection.style.display = 'none'; }
+                document.getElementById('printTotalAmount').textContent = parseFloat(totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const orderItems = JSON.parse(ordersJson);
                 const orderItemsBody = document.getElementById('printOrderItems');
-                
-                // Clear previous content
-                orderItemsBody.innerHTML = '';
-                
-                // Add items to the table
+                orderItemsBody.innerHTML = ''; // Clear previous
                 orderItems.forEach(item => {
                     const row = document.createElement('tr');
-                    
-                    // Calculate item total
                     const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
-                    
                     row.innerHTML = `
-                        <td>${item.category || ''}</td>
-                        <td>${item.item_description}</td>
-                        <td>${item.packaging || ''}</td>
-                        <td>${item.quantity}</td>
-                        <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        })}</td>
-                        <td>PHP ${itemTotal.toLocaleString('en-US', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        })}</td>
+                        <td>${item.category || ''}</td><td>${item.item_description}</td><td>${item.packaging || ''}</td><td>${item.quantity}</td>
+                        <td>PHP ${parseFloat(item.price).toLocaleString('en-US', {minimumFractionDigits: 2,maximumFractionDigits: 2})}</td>
+                        <td>PHP ${itemTotal.toLocaleString('en-US', {minimumFractionDigits: 2,maximumFractionDigits: 2})}</td>
                     `;
-                    
                     orderItemsBody.appendChild(row);
                 });
-                
-                // Show the PDF preview
                 document.getElementById('pdfPreview').style.display = 'block';
-                
-            } catch (e) {
-                console.error('Error preparing PDF data:', e);
-                alert('Error preparing PDF data');
-            }
+            } catch (e) { console.error('Error preparing PDF data:', e); alert('Error preparing PDF data'); }
         }
-        
+
         // Function to close PDF preview
         function closePDFPreview() {
             document.getElementById('pdfPreview').style.display = 'none';
+            currentPOData = null; // Clear data when closing preview
         }
-        
-        // Function to download the PDF
+
+        // Function to download the PDF from the preview
         function downloadPDF() {
-            if (!currentPOData) {
-                alert('No PO data available for download.');
-                return;
-            }
-            
-            // Get the element to convert to PDF
+            if (!currentPOData) { alert('No PO data available for download.'); return; }
             const element = document.getElementById('contentToDownload');
-            
-            // Configure html2pdf options
             const opt = {
-                margin:       [10, 10, 10, 10],
-                filename:     `PO_${currentPOData.poNumber}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
+                margin:       [10, 10, 10, 10], filename:     `PO_${currentPOData.poNumber}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 }, html2canvas:  { scale: 2, useCORS: true },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
-            
-            // Generate and download PDF
             html2pdf().set(opt).from(element).save().then(() => {
                 showToast(`Purchase Order ${currentPOData.poNumber} has been downloaded as PDF.`, 'success');
-                closePDFPreview();
-            }).catch(error => {
-                console.error('Error generating PDF:', error);
-                alert('Error generating PDF. Please try again.');
-            });
+                closePDFPreview(); // Close preview after download
+            }).catch(error => { console.error('Error generating PDF:', error); alert('Error generating PDF. Please try again.'); });
         }
-        
+
         // Special Instructions Modal Functions
         function viewSpecialInstructions(poNumber, instructions) {
             document.getElementById('instructionsPoNumber').textContent = 'PO Number: ' + poNumber;
             const contentEl = document.getElementById('instructionsContent');
-            
+
             if (instructions && instructions.trim().length > 0) {
                 contentEl.textContent = instructions;
                 contentEl.classList.remove('empty');
@@ -1572,7 +1685,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
                 contentEl.textContent = 'No special instructions provided for this order.';
                 contentEl.classList.add('empty');
             }
-            
+
             document.getElementById('specialInstructionsModal').style.display = 'block';
         }
 
@@ -1581,53 +1694,56 @@ $statusOptions = ['For Delivery', 'In Transit'];
         }
 
         function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toast-container');
+             if (!toastContainer) { console.error("Toast container not found!"); return; }
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
+            // Simple toast structure without close button
             toast.innerHTML = `
                 <div class="toast-content">
-                    <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                     <i class="fas ${type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-times-circle' : 'fa-info-circle')}"></i>
                     <div class="message">${message}</div>
                 </div>
-                <i class="fas fa-times close" onclick="this.parentElement.remove()"></i>
             `;
-            document.getElementById('toast-container').appendChild(toast);
-            
-            setTimeout(() => { toast.remove(); }, 5000);
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => { toast.remove(); }, 3000); // Auto-remove after 3 seconds
         }
+
 
         // Sorting functionality
         document.querySelectorAll('.sort-header').forEach(header => {
             header.addEventListener('click', function() {
                 const column = this.getAttribute('data-column');
                 let order = 'ASC';
-                
+
                 // If already sorted by this column, toggle order
                 if (this.classList.contains('asc')) {
                     order = 'DESC';
                 }
-                
+
                 // Preserve any filter when sorting
                 const statusFilter = document.getElementById('statusFilter').value;
                 let url = `?sort=${column}&order=${order}`;
-                
+
                 if (statusFilter) {
                     url += `&status=${encodeURIComponent(statusFilter)}`;
                 }
-                
+
                 window.location.href = url;
             });
         });
 
-        // Search functionality
+        // Search functionality & Modal closing
         $(document).ready(function() {
             // Search functionality
             $("#searchInput").on("input", function() {
                 let searchText = $(this).val().toLowerCase().trim();
-                
+
                 $(".order-row").each(function() {
                     let row = $(this);
                     let text = row.text().toLowerCase();
-                    
+
                     if (text.includes(searchText)) {
                         row.show();
                     } else {
@@ -1635,45 +1751,41 @@ $statusOptions = ['For Delivery', 'In Transit'];
                     }
                 });
             });
-            
+
             // Handle search button click
             $(".search-btn").on("click", function() {
-                let searchText = $("#searchInput").val().toLowerCase().trim();
-                
-                $(".order-row").each(function() {
-                    let row = $(this);
-                    let text = row.text().toLowerCase();
-                    
-                    if (text.includes(searchText)) {
-                        row.show();
-                    } else {
-                        row.hide();
-                    }
-                });
+                 $("#searchInput").trigger("input"); // Trigger the input event handler
             });
 
             // Handle clicks outside modals
-            $(document).on('click', '.overlay', function(event) {
-                if (event.target === this) {
-                    if (this.id === 'orderDetailsModal') closeOrderDetailsModal();
-                    else if (this.id === 'driverModal') closeDriverModal();
-                    else if (this.id === 'statusChangeModal') closeStatusChangeModal();
-                    else if (this.id === 'completeOrderModal') closeCompleteModal();
+            $(document).on('click', function(event) {
+                // General Overlays
+                if ($(event.target).hasClass('overlay')) {
+                    const overlayId = event.target.id;
+                    if (overlayId === 'orderDetailsModal') closeOrderDetailsModal();
+                    else if (overlayId === 'driverModal') closeDriverModal();
+                    else if (overlayId === 'statusChangeModal') closeStatusChangeModal();
+                    else if (overlayId === 'completeOrderModal') closeCompleteModal();
+                    else if (overlayId === 'pdfPreview') closePDFPreview();
+                }
+                // Confirmation Modals
+                if ($(event.target).hasClass('confirmation-modal')) {
+                     $(event.target).hide();
+                     // If specific actions needed on outside click cancel, add here
+                     if(event.target.id === 'driverConfirmationModal') closeDriverConfirmation(); // Reopen selection
+                     if(event.target.id === 'downloadConfirmationModal') closeDownloadConfirmation(); // Clear data
+                }
+                // Instructions Modal
+                if ($(event.target).hasClass('instructions-modal')) {
+                     closeSpecialInstructions();
                 }
             });
 
-            // Close special instructions modal when clicking outside
-            window.addEventListener('click', function(event) {
-                const modal = document.getElementById('specialInstructionsModal');
-                if (event.target === modal) {
-                    closeSpecialInstructions();
-                }
-            });
-            
+
             // Make tables scroll horizontally on small screens
             if (window.innerWidth < 768) {
-                document.querySelector('.orders-table-container').style.overflowX = 'auto';
-                document.querySelector('.order-details-container').style.overflowX = 'auto';
+                $('.orders-table-container').css('overflow-x', 'auto');
+                $('.order-details-container').css('overflow-x', 'auto');
             }
         });
     </script>
