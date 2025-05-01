@@ -4,9 +4,9 @@ include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
 checkRole('Accounts - Clients');
 
-// Change this to see errors during development
+// Error handling configuration
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0); // Set to 0 for production
 
 function validateUnique($conn, $username, $email, $id = null) {
     $result = [
@@ -64,244 +64,208 @@ function validateUnique($conn, $username, $email, $id = null) {
     return $result;
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
     header('Content-Type: application/json');
-
-    $username = trim($_POST['username']);
-    $email = $_POST['email'];
     
-    // Validate unique username/email
-    $uniqueCheck = validateUnique($conn, $username, $email);
-    if ($uniqueCheck['exists']) {
-        echo json_encode([
-            'success' => false,
-            'message' => $uniqueCheck['message']
-        ]);
-        exit;
-    }
-    
-    // Auto-generate password: username + last 4 digits of phone
-    $last4digits = (strlen($phone) >= 4) ? substr($phone, -4) : str_pad($phone, 4, '0');
-    $autoPassword = $username . $last4digits;
-    $password = password_hash($autoPassword, PASSWORD_DEFAULT);
-    
-    $email = $_POST['email'];
-    $region = $_POST['region'];
-    $city = $_POST['city'];
-    $company = $_POST['company'] ?? ''; 
-    $company_address = $_POST['company_address'];
-    $bill_to_address = $_POST['bill_to_address'] ?? ''; 
-    $business_proof = [];
-
-    if (validateUnique($conn, $username, $email)) {
-        echo json_encode(['success' => false, 'message' => 'Username or email already exists.']);
-        exit;
-    }
-
-    $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/admin/uploads/' . $username . '/';
-    if (!file_exists($user_upload_dir)) {
-        mkdir($user_upload_dir, 0777, true);
-    }
-
-    if (isset($_FILES['business_proof'])) {
-        if (count($_FILES['business_proof']['name']) > 3) {
-            echo json_encode(['success' => false, 'message' => 'Maximum of 3 photos allowed.']);
+    if ($_POST['formType'] == 'add') {
+        $username = trim($_POST['username']);
+        $email = $_POST['email'];
+        $phone = $_POST['phone'] ?? ''; // Initialize phone variable
+        
+        // Validate unique username/email
+        $uniqueCheck = validateUnique($conn, $username, $email);
+        if ($uniqueCheck['exists']) {
+            echo json_encode([
+                'success' => false,
+                'message' => $uniqueCheck['message']
+            ]);
             exit;
         }
-        foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
-            if ($_FILES['business_proof']['error'][$key] == 0) {
-                $allowed_types = ['image/jpeg', 'image/png'];
-                $max_size = 20 * 1024 * 1024; 
-                $file_type = $_FILES['business_proof']['type'][$key];
-                $file_size = $_FILES['business_proof']['size'][$key];
-
-                if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-                    $business_proof_path = '/admin/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
-                    if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
-                        $business_proof[] = $business_proof_path;
-                    } else {
-                        echo json_encode(['success' => false, 'message' => 'Failed to upload file.']);
-                        exit;
-                    }
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
-                    exit;
-                }
-            }
-        }
-    }
-
-    $business_proof_json = json_encode($business_proof);
-
-    // Added bill_to_address field to the SQL query
-    $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
-    $stmt->bind_param("ssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json);
-
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'reload' => true]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to add account.']);
-    }
-
-    $stmt->close();
-    exit;
-}
-
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'edit') {
-    header('Content-Type: application/json');
-
-    $id = $_POST['id'];
-    $username = trim($_POST['username']);
-    $email = $_POST['email'];
-    
-    // Validate unique username/email
-    $uniqueCheck = validateUnique($conn, $username, $email, $id);
-    if ($uniqueCheck['exists']) {
-        echo json_encode([
-            'success' => false,
-            'message' => $uniqueCheck['message']
-        ]);
-        exit;
-    }
-    
-    // Get phone number from form
-    $phone = $_POST['phone'] ?? '';
-    
-    // Auto-generate password: username + last 4 digits of phone
-    $last4digits = (strlen($phone) >= 4) ? substr($phone, -4) : str_pad($phone, 4, '0');
-    $autoPassword = $username . $last4digits;
-    $password = password_hash($autoPassword, PASSWORD_DEFAULT);
-    
-    $email = $_POST['email'];
-    $region = $_POST['region'];
-    $city = $_POST['city'];
-    $company = $_POST['company'] ?? ''; 
-    $company_address = $_POST['company_address'];
-    $bill_to_address = $_POST['bill_to_address'] ?? ''; 
-    $business_proof = [];
-
-    if (validateUnique($conn, $username, $email, $id)) {
-        echo json_encode(['success' => false, 'message' => 'Username or email already exists.']);
-        exit;
-    }
-
-    $old_username = '';
-    $stmt = $conn->prepare("SELECT username FROM clients_accounts WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    if ($row = $result->fetch_assoc()) {
-        $old_username = $row['username'];
-    }
-    $stmt->close();
-
-    $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/admin/uploads/' . $username . '/';
-    if (!file_exists($user_upload_dir)) {
-        mkdir($user_upload_dir, 0777, true);
-    }
-
-    $existing_business_proof = json_decode($_POST['existing_business_proof'], true) ?? [];
-    $old_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/admin/uploads/' . $old_username . '/';
-
-    if (isset($_FILES['business_proof']) && !empty($_FILES['business_proof']['name'][0])) {
+        
+        // Auto-generate password: username + last 4 digits of phone
+        $last4digits = (strlen($phone) >= 4) ? substr($phone, -4) : str_pad($phone, 4, '0');
+        $autoPassword = $username . $last4digits;
+        $password = password_hash($autoPassword, PASSWORD_DEFAULT);
+        
+        $region = $_POST['region'];
+        $city = $_POST['city'];
+        $company = $_POST['company'] ?? ''; 
+        $company_address = $_POST['company_address'];
+        $bill_to_address = $_POST['bill_to_address'] ?? ''; 
         $business_proof = [];
 
-        if ($old_username !== $username && !file_exists($user_upload_dir)) {
+        $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/admin/uploads/' . $username . '/';
+        if (!file_exists($user_upload_dir)) {
             mkdir($user_upload_dir, 0777, true);
         }
 
-        if (file_exists($old_upload_dir)) {
-            $old_files = array_diff(scandir($old_upload_dir), array('.', '..'));
-            foreach ($old_files as $file) {
-                @unlink($old_upload_dir . $file);
+        if (isset($_FILES['business_proof'])) {
+            if (count($_FILES['business_proof']['name']) > 3) {
+                echo json_encode(['success' => false, 'message' => 'Maximum of 3 photos allowed.']);
+                exit;
             }
-        }
+            foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
+                if ($_FILES['business_proof']['error'][$key] == 0) {
+                    $allowed_types = ['image/jpeg', 'image/png'];
+                    $max_size = 20 * 1024 * 1024; 
+                    $file_type = $_FILES['business_proof']['type'][$key];
+                    $file_size = $_FILES['business_proof']['size'][$key];
 
-        if (count($_FILES['business_proof']['name']) > 3) {
-            echo json_encode(['success' => false, 'message' => 'Maximum of 3 photos allowed.']);
-            exit;
-        }
-
-        foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
-            if ($_FILES['business_proof']['error'][$key] == 0) {
-                $allowed_types = ['image/jpeg', 'image/png'];
-                $max_size = 20 * 1024 * 1024;
-                $file_type = $_FILES['business_proof']['type'][$key];
-                $file_size = $_FILES['business_proof']['size'][$key];
-
-                if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-                    $business_proof_path = '/admin/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
-                    if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
-                        $business_proof[] = $business_proof_path;
+                    if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
+                        $business_proof_path = '/admin/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                        if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
+                            $business_proof[] = $business_proof_path;
+                        } else {
+                            echo json_encode(['success' => false, 'message' => 'Failed to upload file.']);
+                            exit;
+                        }
                     } else {
-                        echo json_encode(['success' => false, 'message' => 'Failed to upload file.']);
+                        echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
                         exit;
                     }
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
-                    exit;
                 }
             }
         }
-    } else {
-        if ($old_username !== $username) {
-            foreach ($existing_business_proof as $index => $old_path) {
-                $old_file = basename($old_path);
-                $old_file_path = $old_upload_dir . $old_file;
-                $new_file_path = $user_upload_dir . $old_file;
-                $new_path = '/admin/uploads/' . $username . '/' . $old_file;
 
-                if (file_exists($old_file_path) && copy($old_file_path, $new_file_path)) {
-                    $business_proof[] = $new_path;
-                    @unlink($old_file_path); 
+        $business_proof_json = json_encode($business_proof);
+
+        $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
+        $stmt->bind_param("ssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json);
+
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true, 'reload' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to add account.']);
+        }
+
+        $stmt->close();
+        exit;
+    }
+
+    if ($_POST['formType'] == 'edit') {
+        $id = $_POST['id'];
+        $username = trim($_POST['username']);
+        $email = $_POST['email'];
+        $phone = $_POST['phone'] ?? '';
+        
+        // Validate unique username/email
+        $uniqueCheck = validateUnique($conn, $username, $email, $id);
+        if ($uniqueCheck['exists']) {
+            echo json_encode([
+                'success' => false,
+                'message' => $uniqueCheck['message']
+            ]);
+            exit;
+        }
+        
+        // Generate new password only if phone is provided
+        if (!empty($_POST['phone'])) {
+            $last4digits = (strlen($phone) >= 4) ? substr($phone, -4) : str_pad($phone, 4, '0');
+            $autoPassword = $username . $last4digits;
+            $password = password_hash($autoPassword, PASSWORD_DEFAULT);
+        }
+        
+        $region = $_POST['region'];
+        $city = $_POST['city'];
+        $company = $_POST['company'] ?? '';
+        $company_address = $_POST['company_address'];
+        $bill_to_address = $_POST['bill_to_address'] ?? '';
+        $business_proof = [];
+
+        $old_username = '';
+        $stmt = $conn->prepare("SELECT username FROM clients_accounts WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            $old_username = $row['username'];
+        }
+        $stmt->close();
+
+        $user_upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/admin/uploads/' . $username . '/';
+        if (!file_exists($user_upload_dir)) {
+            mkdir($user_upload_dir, 0777, true);
+        }
+
+        if (isset($_FILES['business_proof']) && !empty($_FILES['business_proof']['name'][0])) {
+            if (count($_FILES['business_proof']['name']) > 3) {
+                echo json_encode(['success' => false, 'message' => 'Maximum of 3 photos allowed.']);
+                exit;
+            }
+
+            foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
+                if ($_FILES['business_proof']['error'][$key] == 0) {
+                    $allowed_types = ['image/jpeg', 'image/png'];
+                    $max_size = 20 * 1024 * 1024;
+                    $file_type = $_FILES['business_proof']['type'][$key];
+                    $file_size = $_FILES['business_proof']['size'][$key];
+
+                    if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
+                        $business_proof_path = '/admin/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                        if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
+                            $business_proof[] = $business_proof_path;
+                        } else {
+                            echo json_encode(['success' => false, 'message' => 'Failed to upload file.']);
+                            exit;
+                        }
+                    } else {
+                        echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
+                        exit;
+                    }
                 }
             }
             
-            if (file_exists($old_upload_dir) && count(array_diff(scandir($old_upload_dir), array('.', '..'))) == 0) {
-                @rmdir($old_upload_dir);
-            }
+            $business_proof_json = json_encode($business_proof);
         } else {
-            $business_proof = $existing_business_proof;
+            $business_proof_json = $_POST['existing_business_proof'];
         }
+
+        // Update query with all fields
+        $sql = "UPDATE clients_accounts SET username = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to_address = ?, business_proof = ?";
+        if (isset($password)) {
+            $sql .= ", password = ?";
+        }
+        $sql .= " WHERE id = ?";
+
+        $stmt = $conn->prepare($sql);
+        
+        if (isset($password)) {
+            $stmt->bind_param("ssssssssssi", $username, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json, $password, $id);
+        } else {
+            $stmt->bind_param("sssssssssi", $username, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json, $id);
+        }
+
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true, 'reload' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to update account.']);
+        }
+
+        $stmt->close();
+        exit;
     }
 
-    $business_proof_json = json_encode($business_proof);
+    if ($_POST['formType'] == 'status') {
+        $id = $_POST['id'];
+        $status = $_POST['status'];
+        
+        $stmt = $conn->prepare("UPDATE clients_accounts SET status = ? WHERE id = ?");
+        $stmt->bind_param("si", $status, $id);
 
-    // Added bill_to_address field to the SQL query
-    $stmt = $conn->prepare("UPDATE clients_accounts SET username = ?, password = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to_address = ?, business_proof = ? WHERE id = ?");
-    $stmt->bind_param("ssssssssssi", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json, $id);
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true, 'reload' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to change status.']);
+        }
 
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'reload' => true]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to update account.']);
+        $stmt->close();
+        exit;
     }
-
-    $stmt->close();
-    exit;
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'status') {
-    header('Content-Type: application/json');
-
-    $id = $_POST['id'];
-    $status = $_POST['status'];
-    $stmt = $conn->prepare("UPDATE clients_accounts SET status = ? WHERE id = ?");
-    $stmt->bind_param("si", $status, $id);
-
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'reload' => true]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to change status.']);
-    }
-
-    $stmt->close();
-    exit;
-}
-
+// Get accounts for display
 $status_filter = $_GET['status'] ?? '';
 
-// Added bill_to_address to the query
 $sql = "SELECT id, username, email, phone, region, city, company, company_address, bill_to_address, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
 if (!empty($status_filter)) {
     $sql .= " AND status = ?";
@@ -312,7 +276,7 @@ $sql .= " ORDER BY
         WHEN status = 'Active' THEN 2
         WHEN status = 'Rejected' THEN 3
         WHEN status = 'Inactive' THEN 4
-    END, created_at DESC"; // Changed from ASC to DESC to show newest first
+    END, created_at DESC";
 $stmt = $conn->prepare($sql);
 if (!empty($status_filter)) {
     $stmt->bind_param("s", $status_filter);
@@ -405,7 +369,7 @@ function truncate($text, $max = 15) {
         .two-column-form {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px; /* Reduced gap */
+            gap: 15px;
         }
         
         .form-column {
@@ -442,30 +406,27 @@ function truncate($text, $max = 15) {
             flex-direction: column;
         }
         
-        /* Make inputs a bit wider as they have more space now */
         .two-column-form input, 
         .two-column-form textarea {
             width: 100%;
         }
         
-        /* Enhanced company address textarea */
         textarea#company_address, textarea#edit-company_address,
         textarea#bill_to_address, textarea#edit-bill_to_address {
-            height: 60px; /* Smaller text areas */
-            padding: 8px; /* Reduced padding */
-            font-size: 14px; /* Increased font size by 1px */
-            resize: vertical; /* Allow vertical resizing only */
-            min-height: 60px; /* Smaller minimum height */
+            height: 60px;
+            padding: 8px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 60px;
         }
         
-        /* Style consistent input borders */
         input, textarea {
             border: 1px solid #ccc;
             border-radius: 4px;
-            padding: 6px 10px; /* Reduced padding */
+            padding: 6px 10px;
             transition: border-color 0.3s;
             outline: none;
-            font-size: 14px; /* Increased font size by 1px */
+            font-size: 14px;
         }
         
         input:focus, textarea:focus {
@@ -473,14 +434,12 @@ function truncate($text, $max = 15) {
             box-shadow: 0 0 5px rgba(77, 144, 254, 0.5);
         }
         
-        /* Style placeholder text */
         input::placeholder, textarea::placeholder {
             color: #aaa;
             padding: 4px;
             font-style: italic;
         }
 
-        /* View address button styles */
         .view-address-btn, .view-contact-btn {
             background-color: #4a90e2;
             color: white;
@@ -496,7 +455,6 @@ function truncate($text, $max = 15) {
             background-color: #357abf;
         }
 
-        /* Improved Info Modal Styles - Unified Design */
         #addressInfoModal, #contactInfoModal {
             display: none;
             position: fixed;
@@ -505,7 +463,7 @@ function truncate($text, $max = 15) {
             top: 0;
             width: 100%;
             height: 100%;
-            overflow: hidden; /* Changed from auto to hidden to remove outer scrollbar */
+            overflow: hidden;
             background-color: rgba(0,0,0,0.7);
         }
 
@@ -517,12 +475,12 @@ function truncate($text, $max = 15) {
             box-shadow: 0 8px 30px rgba(0,0,0,0.3);
             width: 90%;
             max-width: 700px;
-            max-height: 80vh; /* Limit the height */
+            max-height: 80vh;
             animation: modalFadeIn 0.3s;
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%); /* Center the modal */
+            transform: translate(-50%, -50%);
             display: flex;
             flex-direction: column;
         }
@@ -569,8 +527,8 @@ function truncate($text, $max = 15) {
 
         .info-modal-body {
             padding: 25px;
-            overflow-y: auto; /* Add scrollbar only to the body */
-            max-height: calc(80vh - 65px); /* Account for header height */
+            overflow-y: auto;
+            max-height: calc(80vh - 65px);
             flex: 1;
         }
 
@@ -592,7 +550,7 @@ function truncate($text, $max = 15) {
             color: #4a90e2;
             margin-top: 0;
             margin-bottom: 15px;
-            font-size: 16px; /* Increased font size by 1px */
+            font-size: 16px;
             padding-bottom: 10px;
             border-bottom: 1px solid #e0e0e0;
         }
@@ -603,7 +561,6 @@ function truncate($text, $max = 15) {
             text-align: center;
         }
 
-        /* Unified table styling */
         .info-table {
             width: 100%;
             border-collapse: collapse;
@@ -619,7 +576,7 @@ function truncate($text, $max = 15) {
             vertical-align: top;
             color: #3a5d85;
             font-weight: 600;
-            font-size: 14px; /* Increased font size by 1px */
+            font-size: 14px;
         }
 
         .info-table td {
@@ -630,10 +587,9 @@ function truncate($text, $max = 15) {
             line-height: 1.5;
             color: #333;
             background-color: #fff;
-            font-size: 14px; /* Increased font size by 1px */
+            font-size: 14px;
         }
 
-        /* Contact info styling */
         .contact-item {
             display: flex;
             align-items: center;
@@ -668,18 +624,17 @@ function truncate($text, $max = 15) {
         .contact-value {
             font-weight: bold;
             color: #333;
-            font-size: 14px; /* Increased font size by 1px */
+            font-size: 14px;
             word-break: break-all;
         }
 
         .contact-label {
-            font-size: 13px; /* Increased font size by 1px */
+            font-size: 13px;
             color: #777;
             display: block;
             margin-top: 5px;
         }
 
-        /* Overlays */
         .overlay {
             position: fixed;
             width: 100%;
@@ -694,29 +649,27 @@ function truncate($text, $max = 15) {
             backdrop-filter: blur(3px);
         }
 
-        /* Address groups in forms */
         .address-group {
             border: 1px solid #eee;
-            padding: 12px; /* Reduced padding */
+            padding: 12px;
             border-radius: 8px;
-            margin-bottom: 15px; /* Reduced margin */
+            margin-bottom: 15px;
             background-color: #fafafa;
         }
 
         .address-group h3 {
             margin-top: 0;
             color: #4a90e2;
-            font-size: 15px; /* Increased font size by 1px */
-            margin-bottom: 12px; /* Reduced margin */
+            font-size: 15px;
+            margin-bottom: 12px;
             border-bottom: 1px solid #eee;
-            padding-bottom: 6px; /* Reduced padding */
+            padding-bottom: 6px;
         }
 
-        /* Fixed header and footer in modal */
         .modal-header {
             background-color: #ffffff;
             padding-top: 24px;
-            padding: 12px; /* Reduced padding */
+            padding: 12px;
             text-align: center;
             border-radius: 8px 8px 0 0;
             border-bottom: 1px solid rgb(68, 68, 68);
@@ -728,14 +681,14 @@ function truncate($text, $max = 15) {
         .modal-header h2 {
             margin: 0;
             padding: 0;
-            font-size: 18px; /* Reduced font size */
+            font-size: 18px;
         }
 
         .modal-footer {
             background-color: #ffffff;
-            padding: 12px 12px; /* Reduced padding */
+            padding: 12px;
             border-top: 1px solid rgb(68, 68, 68);
-            text-align: center; /* Center the buttons */
+            text-align: center;
             border-radius: 0 0 8px 8px;
             position: sticky;
             bottom: 0;
@@ -743,27 +696,26 @@ function truncate($text, $max = 15) {
             display: flex;
             justify-content: center;
             gap: 10px;
-            margin-top: auto; /* Push footer to bottom of content */
+            margin-top: auto;
         }
 
         .modal-body {
-            padding: 15px; /* Reduced padding */
-            overflow-y: auto; /* Add scrollbar to modal body */
-            max-height: calc(85vh - 110px); /* Subtracting approximate header/footer height */
-            height: auto; /* Let content determine height */
+            padding: 15px;
+            overflow-y: auto;
+            max-height: calc(85vh - 110px);
+            height: auto;
         }
 
-        /* Style for form modals with fixed header and footer */
         .form-modal-content {
             display: flex;
             flex-direction: column;
-            max-height: 85vh; /* Changed from fixed height to max-height */
-            height: auto; /* Let content determine height */
+            max-height: 85vh;
+            height: auto;
             width: 80%;
             max-width: 650px;
             background-color: #fff;
             border-radius: 8px;
-            overflow: hidden; /* Keep this to contain child overflow */
+            overflow: hidden;
             margin: auto;
             position: absolute;
             top: 50%;
@@ -771,13 +723,11 @@ function truncate($text, $max = 15) {
             transform: translate(-50%, -50%);
         }
 
-        /* Label styling - normal */
         label {
-            font-size: 14px; /* Increased font size by 1px */
-            margin-bottom: 4px; /* Less spacing */
+            font-size: 14px;
+            margin-bottom: 4px;
         }
 
-        /* Error message styling */
         .error-message {
             color: #ff3333;
             background-color: rgba(255, 51, 51, 0.1);
@@ -787,16 +737,15 @@ function truncate($text, $max = 15) {
             display: none;
         }
         
-        /* Form buttons - improved */
         .modal-footer button {
-            padding: 8px 16px; /* Better padding */
-            font-size: 14px; /* Increased font size by 1px */
-            min-width: 100px; /* Minimum width for buttons */
+            padding: 8px 16px;
+            font-size: 14px;
+            min-width: 100px;
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.2s;
             border: none;
-            margin: 0; /* Remove margins */
+            margin: 0;
         }
 
         .save-btn {
@@ -817,7 +766,6 @@ function truncate($text, $max = 15) {
             background-color: #e1e1e1;
         }
 
-        /* Status styling */
         .status-active {
             color: #28a745;
             padding: 4px 8px;
@@ -842,7 +790,6 @@ function truncate($text, $max = 15) {
             border-radius: 4px;
         }
 
-        /* Style for password field */
         .password-note {
             font-size: 12px;
             color: #666;
@@ -855,7 +802,6 @@ function truncate($text, $max = 15) {
             color: #888;
             cursor: not-allowed;
         }
-
     </style>
 </head>
 <body>
@@ -929,7 +875,7 @@ function truncate($text, $max = 15) {
                                 </td>
                                 <td class="<?= 'status-' . strtolower($row['status'] ?? 'pending') ?>"><?= htmlspecialchars($row['status'] ?? 'Pending') ?></td>
                                 <td class="action-buttons">
-                                <?php
+                                                                <?php
                                     $business_proof_json = htmlspecialchars($row['business_proof'], ENT_QUOTES);
                                 ?>
                                 <button class="edit-btn"
@@ -1082,7 +1028,8 @@ function truncate($text, $max = 15) {
                             <div class="address-group">
                                 <h3><i class="fas fa-building"></i> Company Address</h3>
                                 <label for="company_address">Ship to Address: <span class="required">*</span></label>
-                                <textarea id="company_address" name="company_address" required maxlength="100" placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>                                
+                                <textarea id="company_address" name="company_address" required maxlength="100" placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
+                                
                                 <label for="bill_to_address">Bill To Address: <span class="required">*</span></label>
                                 <textarea id="bill_to_address" name="bill_to_address" required maxlength="100" placeholder="e.g., 456 Billing St, Metro Manila, Quezon City"></textarea>
                             </div>
@@ -1127,8 +1074,9 @@ function truncate($text, $max = 15) {
                             <label for="edit-phone">Phone/Telephone Number: <span class="required">*</span></label>
                             <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
                             
-                            <label for="edit-password">Password: (Leave empty to keep current)</label>
-                            <input type="text" id="edit-password" name="password" maxlength="20" placeholder="Enter new password">
+                            <label for="edit-password">Password: (Auto-generated)</label>
+                            <input type="text" id="edit-password" name="password" readonly class="auto-generated">
+                            <div class="password-note">Password will be auto-generated as username + last 4 digits of phone</div>
                             
                             <label for="edit-email">Email: <span class="required">*</span></label>
                             <input type="email" id="edit-email" name="email" required maxlength="40" placeholder="e.g., johndoe@example.com">
@@ -1241,7 +1189,6 @@ function truncate($text, $max = 15) {
         document.getElementById("contactInfoModal").style.display = "none";
     }
 
-    // Updated to add bill_to_address parameter
     function showAddressInfo(companyAddress, region, city, billToAddress) {
         document.getElementById("modalCompanyAddress").textContent = companyAddress || 'N/A';
         document.getElementById("modalBillToAddress").textContent = billToAddress || 'N/A';
@@ -1254,318 +1201,52 @@ function truncate($text, $max = 15) {
         document.getElementById("addressInfoModal").style.display = "none";
     }
 
-    // Function to generate and update auto password
-    function updateAutoPassword(usernameInput, phoneInput, passwordInput) {
-        const username = usernameInput.value;
-        const phone = phoneInput.value;
-        if (username && phone) {
-            const last4digits = phone.length >= 4 ? phone.slice(-4) : phone.padStart(4, '0');
-            passwordInput.value = username + last4digits;
-        } else {
-            passwordInput.value = '';
-        }
-    }
-    
-    // Client-side validation for username (prevent special characters)
-    document.addEventListener('DOMContentLoaded', function() {
-        const usernameInputs = document.querySelectorAll('#username, #edit-username');
-        const phoneInputs = document.querySelectorAll('#phone, #edit-phone');
-        const passwordInputs = document.querySelectorAll('#password, #edit-password');
-        
-        usernameInputs.forEach((input, index) => {
-            input.addEventListener('input', function() {
-                // Replace any characters that aren't alphanumeric or underscore
-                this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '');
-                
-                // Enforce max length (redundant with maxlength attribute, but good for extra security)
-                if (this.value.length > 15) {
-                    this.value = this.value.slice(0, 15);
+    async function loadPhilippinesRegions() {
+        try {
+            const response = await fetch('https://psgc.gitlab.io/api/regions/');
+            const regions = await response.json();
+            const regionSelect = document.getElementById('region');
+            const editRegionSelect = document.getElementById('edit-region');
+            
+            [regionSelect, editRegionSelect].forEach(select => {
+                if (select) {
+                    select.innerHTML = '<option value="">Select Region</option>';
+                    regions
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .forEach(region => {
+                            select.innerHTML += `<option value="${region.code}">${region.name}</option>`;
+                        });
                 }
-                
-                // Update auto-generated password
-                updateAutoPassword(this, phoneInputs[index], passwordInputs[index]);
             });
-        });
-        
-        // Phone number validation (digits only)
-        phoneInputs.forEach((input, index) => {
-            input.addEventListener('input', function() {
-                // Replace any non-digit characters
-                this.value = this.value.replace(/\D/g, '');
-                
-                // Enforce max length (12 digits)
-                if (this.value.length > 12) {
-                    this.value = this.value.slice(0, 12);
-                }
-                
-                // Update auto-generated password
-                updateAutoPassword(usernameInputs[index], this, passwordInputs[index]);
-            });
-        });
-
-        // When the user clicks anywhere outside of the modals, close them
-        window.onclick = function(event) {
-            var addressModal = document.getElementById('addressInfoModal');
-            var contactModal = document.getElementById('contactInfoModal');
-            var imageModal = document.getElementById('myModal');
-            
-            if (event.target == addressModal) {
-                addressModal.style.display = "none";
-            }
-            
-            if (event.target == contactModal) {
-                contactModal.style.display = "none";
-            }
-            
-            if (event.target == imageModal) {
-                imageModal.style.display = "none";
-            }
-        };
-
-        // Add Form Submission via AJAX
-        const addAccountForm = document.getElementById('addAccountForm');
-        if (addAccountForm) {
-            addAccountForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const formData = new FormData(this);
-                formData.append('ajax', true);
-                
-                fetch(window.location.href, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showToast('Account added successfully', 'success');
-                        setTimeout(() => { window.location.reload(); }, 1500);
-                    } else {
-                        document.getElementById('addAccountError').textContent = data.message || 'Error adding account.';
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('addAccountError').textContent = 'Error submitting form: ' + error;
-                });
-            });
+        } catch (error) {
+            console.error('Error loading regions:', error);
         }
+    }
+
+    async function loadCities(regionCode, targetId) {
+        if (!regionCode) return;
         
-        // Edit Form Submission via AJAX
-        const editAccountForm = document.getElementById('editAccountForm');
-        if (editAccountForm) {
-            editAccountForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const formData = new FormData(this);
-                formData.append('ajax', true);
-                
-                fetch(window.location.href, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        showToast('Account updated successfully', 'success');
-                        setTimeout(() => { window.location.reload(); }, 1500);
-                    } else {
-                        const errorDiv = document.getElementById('editAccountError');
-                        errorDiv.textContent = data.message || 'Error updating account.';
-                        errorDiv.style.display = 'block';
-                        showToast(data.message || 'Error updating account.', 'error');
-                    }
-                })
-                .catch(error => {
-                    const errorDiv = document.getElementById('editAccountError');
-                    errorDiv.textContent = 'Error submitting form: ' + error.message;
-                    errorDiv.style.display = 'block';
-                    showToast('Error submitting form: ' + error.message, 'error');
-                });
-            });
-        }
-    });
-
-    // Form management functions
-    function openAddAccountForm() {
-        document.getElementById('addAccountOverlay').style.display = 'block';
-    }
-
-    function closeAddAccountForm() {
-        document.getElementById('addAccountForm').reset();
-        document.getElementById('addAccountError').textContent = '';
-        document.getElementById('addAccountOverlay').style.display = 'none';
-    }
-
-    function closeEditAccountForm() {
-        document.getElementById('editAccountForm').reset();
-        document.getElementById('editAccountError').textContent = '';
-        document.getElementById('editAccountOverlay').style.display = 'none';
-    }
-
-    // Status management functions
-    function openStatusModal(id, username, email) {
-        currentAccountId = id;
-        document.getElementById('statusMessage').textContent = `Change status for ${username} (${email})`;
-        document.getElementById('statusModal').style.display = 'block';
-    }
-
-    function closeStatusModal() {
-        document.getElementById('statusModal').style.display = 'none';
-    }
-
-    function changeStatus(status) {
-        const formData = new FormData();
-        formData.append('formType', 'status');
-        formData.append('ajax', true);
-        formData.append('id', currentAccountId);
-        formData.append('status', status);
-
-        fetch(window.location.href, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast(`Account status changed to ${status}`, 'success');
-                setTimeout(() => { window.location.reload(); }, 1500);
-            } else {
-                showToast('Error changing status: ' + (data.message || 'Unknown error'), 'error');
-            }
-            closeStatusModal();
-        })
-        .catch(error => {
-            showToast('Error: ' + error, 'error');
-            closeStatusModal();
-        });
-    }
-
-    function filterByStatus() {
-        const status = document.getElementById('statusFilter').value;
-        window.location.href = '?status=' + encodeURIComponent(status);
-    }
-
-    // Updated to add bill_to_address parameter
-    function openEditAccountForm(id, username, email, phone, region, city, company, company_address, bill_to_address, business_proof) {
-        document.getElementById("edit-id").value = id;
-        document.getElementById("edit-username").value = username;
-        document.getElementById("edit-email").value = email;
-        document.getElementById("edit-phone").value = phone || '';
-        document.getElementById("edit-region").value = region;
-        document.getElementById("edit-city").value = city;
-        document.getElementById("edit-company").value = company || '';
-        document.getElementById("edit-company_address").value = company_address;
-        document.getElementById("edit-bill_to_address").value = bill_to_address || '';
-        
-        // Auto-generate password
-        const phoneValue = phone || '';
-        const last4digits = phoneValue.length >= 4 ? phoneValue.slice(-4) : phoneValue.padStart(4, '0');
-        document.getElementById("edit-password").value = username + last4digits;
-        
-        // Parse business_proof if it's a string
-        let proofs = business_proof;
-        if (typeof business_proof === 'string') {
-            try {
-                proofs = JSON.parse(business_proof);
-            } catch (e) {
-                console.error("Error parsing business proof:", e);
-                proofs = [];
-            }
-        }
-        
-        document.getElementById("existing-business-proof").value = JSON.stringify(proofs);
-        
-        var proofContainer = document.getElementById("edit-business-proof-container");
-        proofContainer.innerHTML = '';
-        
-        if (proofs && Array.isArray(proofs) && proofs.length > 0) {
-            var proofLabel = document.createElement('label');
-            proofLabel.innerHTML = 'Current Business Proof:';
-            proofContainer.appendChild(proofLabel);
+        try {
+            const response = await fetch(`https://psgc.gitlab.io/api/regions/${regionCode}/cities-municipalities`);
+            const cities = await response.json();
+            const citySelect = document.getElementById(targetId);
             
-            var proofDiv = document.createElement('div');
-            proofDiv.className = 'current-proofs';
-            proofDiv.style.marginBottom = '15px';
-            
-            proofs.forEach(function(proof) {
-                var img = document.createElement('img');
-                img.src = proof;
-                img.alt = 'Business Proof';
-                img.style.width = '80px';
-                img.style.height = 'auto';
-                img.style.margin = '5px';
-                img.style.cursor = 'pointer';
-                img.onclick = function() { openModal(this); };
-                proofDiv.appendChild(img);
-            });
-            
-            proofContainer.appendChild(proofDiv);
-        }
-        
-        document.getElementById("editAccountOverlay").style.display = "block";
-    }
-
-    // Philippines Region/City Integration
-async function loadPhilippinesRegions() {
-    try {
-        // Fetch regions
-        const response = await fetch('https://psgc.gitlab.io/api/regions/');
-        const regions = await response.json();
-        const regionSelect = document.getElementById('region');
-        const editRegionSelect = document.getElementById('edit-region');
-        
-        [regionSelect, editRegionSelect].forEach(select => {
-            if (select) {
-                select.innerHTML = '<option value="">Select Region</option>';
-                regions
+            if (citySelect) {
+                citySelect.innerHTML = '<option value="">Select City</option>';
+                cities
                     .sort((a, b) => a.name.localeCompare(b.name))
-                    .forEach(region => {
-                        select.innerHTML += `<option value="${region.code}">${region.name}</option>`;
+                    .forEach(city => {
+                        citySelect.innerHTML += `<option value="${city.name}">${city.name}</option>`;
                     });
+                citySelect.disabled = false;
             }
-        });
-    } catch (error) {
-        console.error('Error loading regions:', error);
-    }
-}
-
-async function loadCities(regionCode, targetId) {
-    if (!regionCode) return;
-    
-    try {
-        // Fetch cities using region code
-        const response = await fetch(`https://psgc.gitlab.io/api/regions/${regionCode}/cities-municipalities`);
-        const cities = await response.json();
-        const citySelect = document.getElementById(targetId);
-        
-        if (citySelect) {
-            citySelect.innerHTML = '<option value="">Select City</option>';
-            cities
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .forEach(city => {
-                    citySelect.innerHTML += `<option value="${city.name}">${city.name}</option>`;
-                });
-            citySelect.disabled = false;
+        } catch (error) {
+            console.error('Error loading cities:', error);
         }
-    } catch (error) {
-        console.error('Error loading cities:', error);
     }
-}
 
-    // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         loadPhilippinesRegions();
-
-        // Add password character limit
-        const passwordInputs = document.querySelectorAll('input[type="password"], input[name="password"]');
-        passwordInputs.forEach(input => {
-            input.setAttribute('maxlength', '20');
-        });
 
         // Region change handlers
         const regionSelect = document.getElementById('region');
@@ -1590,6 +1271,23 @@ async function loadCities(regionCode, targetId) {
                 loadCities(this.value, 'edit-city');
             });
         }
+
+        // When the user clicks anywhere outside of the modals, close them
+        window.onclick = function(event) {
+            const addressModal = document.getElementById('addressInfoModal');
+            const contactModal = document.getElementById('contactInfoModal');
+            const imageModal = document.getElementById('myModal');
+            
+            if (event.target == addressModal) {
+                addressModal.style.display = "none";
+            }
+            if (event.target == contactModal) {
+                contactModal.style.display = "none";
+            }
+            if (event.target == imageModal) {
+                imageModal.style.display = "none";
+            }
+        };
     });
     </script>
 </body>
