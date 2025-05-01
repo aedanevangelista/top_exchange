@@ -2978,7 +2978,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             document.getElementById('inventoryOverlay').style.display = 'flex';
             
             // Fetch inventory data
-            fetch('/backend/get_inventory.php')
+            fetch('/admin/backend/get_inventory.php')
             .then(response => response.json())
             .then(data => {
                 if (data && data.success) {
