@@ -2997,28 +2997,28 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         });
     })
     .then(data => {
-        if (!data) {
-            throw new Error("Empty response received");
+        console.log("Raw inventory data:", data); // Debug log
+        
+        // Check if data is directly an array (which appears to be the case)
+        if (Array.isArray(data)) {
+            // Extract categories from the data
+            const categories = [...new Set(data
+                .map(item => item.category || "Uncategorized")
+                .filter(category => category))];
+                
+            // Call populate functions with transformed data
+            populateInventory(data);
+            populateCategories(categories);
+            
+            return; // Exit early since we've handled the data
         }
         
-        console.log("Inventory data received:", data); // Debug log
-        
-        if (data.success) {
-            if (!data.inventory || !Array.isArray(data.inventory)) {
-                console.warn("Inventory data is missing or not an array:", data.inventory);
-                populateInventory([]);
-            } else {
-                populateInventory(data.inventory);
-            }
-            
-            if (!data.categories || !Array.isArray(data.categories)) {
-                console.warn("Categories data is missing or not an array:", data.categories);
-                populateCategories([]);
-            } else {
-                populateCategories(data.categories);
-            }
+        // If we get here, try the expected format
+        if (data && data.success) {
+            populateInventory(data.inventory || []);
+            populateCategories(data.categories || []);
         } else {
-            showToast('Failed to load inventory: ' + (data.message || 'Unknown error'), 'error');
+            showToast('Failed to load inventory: ' + (data && data.message ? data.message : 'Unknown data format'), 'error');
             inventoryBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#dc3545;">Failed to load inventory data</td></tr>';
         }
     })
@@ -3032,48 +3032,68 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 }
         
         function populateInventory(inventory) {
-            const inventoryBody = document.querySelector('.inventory');
-            inventoryBody.innerHTML = '';
-            
-            inventory.forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${item.category || 'N/A'}</td>
-                    <td>${item.item_description}</td>
-                    <td>${item.packaging || 'N/A'}</td>
-                    <td>PHP ${parseFloat(item.price).toFixed(2)}</td>
-                    <td>
-                        <input type="number" class="inventory-quantity" min="1" max="100" value="1">
-                    </td>
-                    <td>
-                        <button class="add-to-cart-btn" onclick="addToCart(this, ${item.id}, '${item.category}', '${item.item_description}', '${item.packaging}', ${item.price})">
-                            <i class="fas fa-cart-plus"></i> Add
-                        </button>
-                    </td>
-                `;
-                inventoryBody.appendChild(row);
-            });
-        }
+    const inventoryBody = document.querySelector('.inventory');
+    inventoryBody.innerHTML = '';
+    
+    if (!inventory || inventory.length === 0) {
+        inventoryBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">No inventory items found</td></tr>';
+        return;
+    }
+    
+    inventory.forEach(item => {
+        const row = document.createElement('tr');
+        
+        // Extract values, handling the different format
+        const itemId = item.id || item.product_id || '';
+        const category = item.category || 'Uncategorized';
+        const itemDescription = item.item_description || '';
+        const packaging = item.packaging || '';
+        const price = parseFloat(item.price) || 0;
+        
+        row.innerHTML = `
+            <td>${category}</td>
+            <td>${itemDescription}</td>
+            <td>${packaging}</td>
+            <td>PHP ${price.toFixed(2)}</td>
+            <td>
+                <input type="number" class="inventory-quantity" min="1" max="100" value="1">
+            </td>
+            <td>
+                <button class="add-to-cart-btn" onclick="addToCart(this, '${itemId}', '${category}', '${itemDescription.replace(/'/g, "\\'")}', '${packaging}', ${price})">
+                    <i class="fas fa-cart-plus"></i> Add
+                </button>
+            </td>
+        `;
+        inventoryBody.appendChild(row);
+    });
+}
         
         function populateCategories(categories) {
-            const filterSelect = document.getElementById('inventoryFilter');
-            
-            // Clear existing options except "All Categories"
-            while (filterSelect.options.length > 1) {
-                filterSelect.remove(1);
-            }
-            
-            // Add categories to filter dropdown
-            categories.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category;
-                option.textContent = category;
-                filterSelect.appendChild(option);
-            });
-            
-            // Add event listener for filtering
-            filterSelect.addEventListener('change', filterInventory);
-        }
+    const filterSelect = document.getElementById('inventoryFilter');
+    
+    // Clear existing options except "All Categories"
+    while (filterSelect.options.length > 1) {
+        filterSelect.remove(1);
+    }
+    
+    // If no categories were provided, just return
+    if (!categories || categories.length === 0) {
+        return;
+    }
+    
+    // Add categories to filter dropdown
+    categories.forEach(category => {
+        if (!category) return; // Skip empty categories
+        
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        filterSelect.appendChild(option);
+    });
+    
+    // Add event listener for filtering
+    filterSelect.addEventListener('change', filterInventory);
+}
         
         function filterInventory() {
             const category = document.getElementById('inventoryFilter').value;
