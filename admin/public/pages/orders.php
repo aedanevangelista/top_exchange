@@ -3,7 +3,7 @@
 // Author: aedanevangelista
 
 session_start();
-include "../../backend/db_connection.php";
+include "../../db_connection.php";
 include "../../backend/check_role.php";
 checkRole('Orders'); // Ensure the user has access to the Orders page
 
@@ -1306,7 +1306,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <div id="addOrderOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-plus"></i> Add New Order</h2>
-            <form id="addOrderForm" method="POST" class="order-form" action="/backend/add_order.php">
+            <form id="addOrderForm" method="POST" class="order-form" action="/admin/backend/add_order.php">
                 <div class="left-section">
                     <label for="username">Username:</label>
                     <select id="username" name="username" required onchange="generatePONumber();">
@@ -1611,7 +1611,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 buttons.forEach(btn => btn.disabled = true);
                 
                 // Fetch the order details to check driver_assigned flag and progress
-                fetch(`/backend/check_order_driver.php?po_number=${currentPoNumber}`)
+                fetch(`/admin/backend/check_order_driver.php?po_number=${currentPoNumber}`)
                     .then(response => response.json())
                     .then(data => {
                         // Remove loading indicator
@@ -1690,7 +1690,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             formData.append('return_materials', returnMaterials ? '1' : '0');
             
             // Send AJAX request to update status
-            fetch('/backend/update_order_status.php', {
+            fetch('/admin/backend/update_order_status.php', {
                 method: 'POST',
                 body: formData
             })
@@ -1747,7 +1747,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             // Parse the orders JSON and check materials
             try {
                 $.ajax({
-                    url: '/backend/check_raw_materials.php',
+                    url: '/admin/backend/check_raw_materials.php',
                     type: 'POST',
                     data: { 
                         orders: ordersJson,
@@ -1981,7 +1981,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             currentPoNumber = poNumber;
             
             // Fetch the order data and completion status
-            fetch(`/backend/get_order_details.php?po_number=${poNumber}`)
+            fetch(`/admin/backend/get_order_details.php?po_number=${poNumber}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -2472,7 +2472,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             const shouldMarkForDelivery = progressPercentage === 100;
             
             // Send AJAX request to update progress
-            fetch('/backend/update_order_progress.php', {
+            fetch('/admin/backend/update_order_progress.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -2589,7 +2589,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             formData.append('driver_id', driverId);
             
             // Use fetch API for cleaner code
-            fetch('/backend/assign_driver.php', {
+            fetch('/admin/backend/assign_driver.php', {
                 method: 'POST',
                 body: formData
             })
@@ -2952,7 +2952,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             // Submit the form via AJAX
             const formData = new FormData(document.getElementById('addOrderForm'));
             
-            fetch('/backend/add_order.php', {
+            fetch('/admin/backend/add_order.php', {
                 method: 'POST',
                 body: formData
             })
