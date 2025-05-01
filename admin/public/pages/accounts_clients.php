@@ -9,20 +9,44 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 function validateUnique($conn, $username, $email, $id = null) {
-    $query = "SELECT COUNT(*) as count FROM clients_accounts WHERE (username = ? OR email = ?)";
+    // Check username and email separately to give specific error messages
+    // First check username
+    $query = "SELECT COUNT(*) as count FROM clients_accounts WHERE username = ?";
     if ($id) {
         $query .= " AND id != ?";
     }
     $stmt = $conn->prepare($query);
     if ($id) {
-        $stmt->bind_param("ssi", $username, $email, $id);
+        $stmt->bind_param("si", $username, $id);
     } else {
-        $stmt->bind_param("ss", $username, $email);
+        $stmt->bind_param("s", $username);
     }
     $stmt->execute();
     $result = $stmt->get_result()->fetch_assoc();
+    if ($result['count'] > 0) {
+        return ['exists' => true, 'field' => 'username'];
+    }
     $stmt->close();
-    return $result['count'] > 0;
+
+    // Then check email
+    $query = "SELECT COUNT(*) as count FROM clients_accounts WHERE email = ?";
+    if ($id) {
+        $query .= " AND id != ?";
+    }
+    $stmt = $conn->prepare($query);
+    if ($id) {
+        $stmt->bind_param("si", $email, $id);
+    } else {
+        $stmt->bind_param("s", $email);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    if ($result['count'] > 0) {
+        return ['exists' => true, 'field' => 'email'];
+    }
+    $stmt->close();
+
+    return ['exists' => false];
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
@@ -949,7 +973,7 @@ function truncate($text, $max = 15) {
                     <h3 class="info-section-title"><i class="fas fa-building"></i> Company Location</h3>
                     <table class="info-table">
                         <tr>
-                            <th>Company Address</th>
+                            <th>Ship to Address</th>
                             <td id="modalCompanyAddress"></td>
                         </tr>
                         <tr>
@@ -997,28 +1021,31 @@ function truncate($text, $max = 15) {
                             <div class="password-note">Password will be auto-generated as username + last 4 digits of phone</div>
                             
                             <label for="email">Email: <span class="required">*</span></label>
-                            <input type="email" id="email" name="email" required placeholder="e.g., johndoe@example.com">
+                            <input type="email" id="email" name="email" required maxlength="40" placeholder="e.g., johndoe@example.com">
                         </div>
                         
                         <div class="form-column">
                             <label for="region">Region: <span class="required">*</span></label>
-                            <input type="text" id="region" name="region" required placeholder="e.g., Metro Manila">
-                            
+                            <select id="region" name="region" required>
+                                <option value="">Select Region</option>
+                            </select>
+
                             <label for="city">City: <span class="required">*</span></label>
-                            <input type="text" id="city" name="city" required placeholder="e.g., Quezon City">
+                            <select id="city" name="city" required>
+                                <option value="">Select City</option>
+                            </select>
                             
                             <label for="company">Company Name: <span class="required">*</span></label>
-                            <input type="text" id="company" name="company" required placeholder="e.g., Top Exchange Food Corp">
+                            <input type="text" id="company" name="company" required maxlength="25" placeholder="e.g., Top Exchange Food Corp">
                         </div>
                         
                         <div class="form-full-width">
                             <div class="address-group">
                                 <h3><i class="fas fa-building"></i> Company Address</h3>
-                                <label for="company_address">Company Address: <span class="required">*</span></label>
-                                <textarea id="company_address" name="company_address" required placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
-                                
+                                <label for="company_address">Ship to Address: <span class="required">*</span></label>
+                                <textarea id="company_address" name="company_address" required maxlength="100" placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>                                
                                 <label for="bill_to_address">Bill To Address: <span class="required">*</span></label>
-                                <textarea id="bill_to_address" name="bill_to_address" required placeholder="e.g., 456 Billing St, Metro Manila, Quezon City"></textarea>
+                                <textarea id="bill_to_address" name="bill_to_address" required maxlength="100" placeholder="e.g., 456 Billing St, Metro Manila, Quezon City"></textarea>
                             </div>
                             
                             <label for="business_proof">Business Proof: <span class="required">*</span> <span class="file-info">(Max: 20MB per image, JPG/PNG only)</span></label>
@@ -1061,33 +1088,36 @@ function truncate($text, $max = 15) {
                             <label for="edit-phone">Phone/Telephone Number: <span class="required">*</span></label>
                             <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 1234567890" maxlength="12" pattern="[0-9]+" title="Please enter up to 12 digits (numbers only)">
                             
-                            <label for="edit-password">Password: <span class="required">*</span></label>
-                            <input type="text" id="edit-password" name="password" readonly class="auto-generated" placeholder="Auto-generated password">
-                            <div class="password-note">Password will be auto-generated as username + last 4 digits of phone</div>
+                            <label for="edit-password">Password: (Leave empty to keep current)</label>
+                            <input type="text" id="edit-password" name="password" placeholder="Enter new password">
                             
                             <label for="edit-email">Email: <span class="required">*</span></label>
-                            <input type="email" id="edit-email" name="email" required placeholder="e.g., johndoe@example.com">
+                            <input type="email" id="edit-email" name="email" required maxlength="40" placeholder="e.g., johndoe@example.com">
                         </div>
                         
                         <div class="form-column">
                             <label for="edit-region">Region: <span class="required">*</span></label>
-                            <input type="text" id="edit-region" name="region" required placeholder="e.g., North America">
-                            
+                            <select id="edit-region" name="region" required>
+                                <option value="">Select Region</option>
+                            </select>
+
                             <label for="edit-city">City: <span class="required">*</span></label>
-                            <input type="text" id="edit-city" name="city" required placeholder="e.g., New York">
+                            <select id="edit-city" name="city" required>
+                                <option value="">Select City</option>
+                            </select>
                             
                             <label for="edit-company">Company Name: <span class="required">*</span></label>
-                            <input type="text" id="edit-company" name="company" required placeholder="e.g., ABC Corp">
+                            <input type="text" id="edit-company" name="company" required maxlength="25" placeholder="e.g., Top Exchange Food Corp">
                         </div>
                         
                         <div class="form-full-width">
                             <div class="address-group">
                                 <h3><i class="fas fa-building"></i> Company Address</h3>
-                                <label for="edit-company_address">Company Address: <span class="required">*</span></label>
-                                <textarea id="edit-company_address" name="company_address" required placeholder="e.g., 123 Main St, New York, NY 10001"></textarea>
+                                <label for="edit-company_address">Ship to Address: <span class="required">*</span></label>
+                                <textarea id="edit-company_address" name="company_address" required maxlength="100" placeholder="e.g., 123 Main St, Metro Manila, Quezon City"></textarea>
                                 
                                 <label for="edit-bill_to_address">Bill To Address: <span class="required">*</span></label>
-                                <textarea id="edit-bill_to_address" name="bill_to_address" required placeholder="e.g., 456 Billing St, New York, NY 10001"></textarea>
+                                <textarea id="edit-bill_to_address" name="bill_to_address" required maxlength="100" placeholder="e.g., 456 Billing St, Metro Manila, Quezon City"></textarea>
                             </div>
                             
                             <div id="edit-business-proof-container"></div>
@@ -1429,6 +1459,67 @@ function truncate($text, $max = 15) {
         
         document.getElementById("editAccountOverlay").style.display = "block";
     }
+
+    // Philippines Region/City Integration
+async function loadPhilippinesRegions() {
+    try {
+        const response = await fetch('https://psgc.gitlab.io/api/regions/');
+        const regions = await response.json();
+        const regionSelect = document.getElementById('region');
+        const editRegionSelect = document.getElementById('edit-region');
+        
+        [regionSelect, editRegionSelect].forEach(select => {
+            if (select) {
+                select.innerHTML = '<option value="">Select Region</option>';
+                regions.forEach(region => {
+                    select.innerHTML += `<option value="${region.name}">${region.name}</option>`;
+                });
+            }
+        });
+    } catch (error) {
+        console.error('Error loading regions:', error);
+    }
+}
+
+    async function loadCities(region, targetId) {
+        if (!region) return;
+        
+        try {
+            const response = await fetch(`https://psgc.gitlab.io/api/regions/${region}/cities-municipalities`);
+            const cities = await response.json();
+            const citySelect = document.getElementById(targetId);
+            
+            if (citySelect) {
+                citySelect.innerHTML = '<option value="">Select City</option>';
+                cities.forEach(city => {
+                    citySelect.innerHTML += `<option value="${city.name}">${city.name}</option>`;
+                });
+            }
+        } catch (error) {
+            console.error('Error loading cities:', error);
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadPhilippinesRegions();
+
+        // Region change handlers
+        const regionSelect = document.getElementById('region');
+        const editRegionSelect = document.getElementById('edit-region');
+
+        if (regionSelect) {
+            regionSelect.addEventListener('change', function() {
+                loadCities(this.value, 'city');
+            });
+        }
+
+        if (editRegionSelect) {
+            editRegionSelect.addEventListener('change', function() {
+                loadCities(this.value, 'edit-city');
+            });
+        }
+    });
     </script>
 </body>
 </html>
