@@ -79,7 +79,7 @@ if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
         // Save the new image
         $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
         $filename = 'product_image.' . $file_extension;
-        $product_image_path = '' . $item_folder . '/' . $filename;
+        $product_image_path = '/uploads/products/' . $item_folder . '/' . $filename;
         
         if (move_uploaded_file($_FILES['product_image']['tmp_name'], $item_dir . $filename)) {
             $product_image = $product_image_path;
