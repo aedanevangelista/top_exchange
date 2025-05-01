@@ -62,7 +62,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
                 $file_size = $_FILES['business_proof']['size'][$key];
 
                 if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-                    $business_proof_path = '/admin/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
+                    $business_proof_path = '/uploads/' . $username . '/' . basename($_FILES['business_proof']['name'][$key]);
                     if (move_uploaded_file($tmp_name, $user_upload_dir . basename($_FILES['business_proof']['name'][$key]))) {
                         $business_proof[] = $business_proof_path;
                     } else {
