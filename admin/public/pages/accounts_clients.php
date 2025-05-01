@@ -9,7 +9,12 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 function validateUnique($conn, $username, $email, $id = null) {
-    // Check username and email separately to give specific error messages
+    $result = [
+        'exists' => false,
+        'field' => null,
+        'message' => ''
+    ];
+
     // First check username
     $query = "SELECT COUNT(*) as count FROM clients_accounts WHERE username = ?";
     if ($id) {
@@ -22,11 +27,16 @@ function validateUnique($conn, $username, $email, $id = null) {
         $stmt->bind_param("s", $username);
     }
     $stmt->execute();
-    $result = $stmt->get_result()->fetch_assoc();
-    if ($result['count'] > 0) {
-        return ['exists' => true, 'field' => 'username'];
-    }
+    $resultUsername = $stmt->get_result()->fetch_assoc();
     $stmt->close();
+    
+    if ($resultUsername['count'] > 0) {
+        return [
+            'exists' => true,
+            'field' => 'username',
+            'message' => 'Username already exists'
+        ];
+    }
 
     // Then check email
     $query = "SELECT COUNT(*) as count FROM clients_accounts WHERE email = ?";
@@ -40,20 +50,35 @@ function validateUnique($conn, $username, $email, $id = null) {
         $stmt->bind_param("s", $email);
     }
     $stmt->execute();
-    $result = $stmt->get_result()->fetch_assoc();
-    if ($result['count'] > 0) {
-        return ['exists' => true, 'field' => 'email'];
-    }
+    $resultEmail = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    return ['exists' => false];
+    if ($resultEmail['count'] > 0) {
+        return [
+            'exists' => true,
+            'field' => 'email',
+            'message' => 'Email already exists'
+        ];
+    }
+
+    return $result;
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
     header('Content-Type: application/json');
 
     $username = trim($_POST['username']);
-    $phone = $_POST['phone'] ?? '';
+    $email = $_POST['email'];
+    
+    // Validate unique username/email
+    $uniqueCheck = validateUnique($conn, $username, $email);
+    if ($uniqueCheck['exists']) {
+        echo json_encode([
+            'success' => false,
+            'message' => $uniqueCheck['message']
+        ]);
+        exit;
+    }
     
     // Auto-generate password: username + last 4 digits of phone
     $last4digits = (strlen($phone) >= 4) ? substr($phone, -4) : str_pad($phone, 4, '0');
@@ -127,6 +152,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax']) && $_POST['for
 
     $id = $_POST['id'];
     $username = trim($_POST['username']);
+    $email = $_POST['email'];
+    
+    // Validate unique username/email
+    $uniqueCheck = validateUnique($conn, $username, $email, $id);
+    if ($uniqueCheck['exists']) {
+        echo json_encode([
+            'success' => false,
+            'message' => $uniqueCheck['message']
+        ]);
+        exit;
+    }
     
     // Get phone number from form
     $phone = $_POST['phone'] ?? '';
@@ -744,8 +780,11 @@ function truncate($text, $max = 15) {
         /* Error message styling */
         .error-message {
             color: #ff3333;
-            padding: 5px 0;
-            font-size: 14px;
+            background-color: rgba(255, 51, 51, 0.1);
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: none;
         }
         
         /* Form buttons - improved */
@@ -1324,17 +1363,28 @@ function truncate($text, $max = 15) {
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         showToast('Account updated successfully', 'success');
                         setTimeout(() => { window.location.reload(); }, 1500);
                     } else {
-                        document.getElementById('editAccountError').textContent = data.message || 'Error updating account.';
+                        const errorDiv = document.getElementById('editAccountError');
+                        errorDiv.textContent = data.message || 'Error updating account.';
+                        errorDiv.style.display = 'block';
+                        showToast(data.message || 'Error updating account.', 'error');
                     }
                 })
                 .catch(error => {
-                    document.getElementById('editAccountError').textContent = 'Error submitting form: ' + error;
+                    const errorDiv = document.getElementById('editAccountError');
+                    errorDiv.textContent = 'Error submitting form: ' + error.message;
+                    errorDiv.style.display = 'block';
+                    showToast('Error submitting form: ' + error.message, 'error');
                 });
             });
         }
