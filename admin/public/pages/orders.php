@@ -1,5 +1,5 @@
 <?php
-// Current Date: 2025-05-01 19:22:46
+// Current Date: 2025-05-01 19:39:14
 // Author: aedanevangelista
 
 session_start();
@@ -1208,6 +1208,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
             try {
                  if (!ordersJson) throw new Error("Order items data missing.");
+                 // --- Add check for product_id in the FIRST item before parsing ---
+                 // This helps catch the missing ID issue early if the JS fix wasn't applied/cached
+                 if (ordersJson.length > 5 && !ordersJson.includes('"product_id":')) {
+                     console.warn("Received ordersJson might be missing product_id:", ordersJson.substring(0, 100) + "...");
+                     throw new Error("Order data seems incomplete (missing product_id). Please clear browser cache and retry adding the order.");
+                 }
+                 // --- End check ---
                  JSON.parse(ordersJson); // Validate JSON format
 
                 $.ajax({
@@ -1562,7 +1569,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 const today = new Date(); const datePart = `${today.getFullYear().toString().substr(-2)}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`; const timePart = `${String(today.getHours()).padStart(2,'0')}${String(today.getMinutes()).padStart(2,'0')}${String(today.getSeconds()).padStart(2,'0')}`; $('#po_number').val(`${datePart}-${timePart}`);
             } else { $('#company_address').val(''); companyHidden.val(''); $('#po_number').val(''); if ($('#delivery_address_type').val() === 'company') $('#delivery_address').val(''); }
         }
-        // --- RE-CONFIRMED prepareOrderData ---
+        // --- CORRECTED prepareOrderData ---
         function prepareOrderData() {
             toggleDeliveryAddress(); // Ensure correct address is set
             const addr = $('#delivery_address').val();
@@ -1582,9 +1589,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             const orders = cartItems.map(item => { // Iterates through items added to the cart
                 total += item.price * item.quantity;
                 return {
-                    // This line reads the 'id' property from the 'item' object in the cartItems array
-                    // and assigns it to the 'product_id' key in the new object being created.
-                    product_id: item.id, // <<< THIS IS THE FIX
+                    // Reads the 'product_id' property from the 'item' object in the cartItems array
+                    product_id: item.product_id, // <<< Use product_id from cart item
                     category: item.category,
                     item_description: item.item_description,
                     packaging: item.packaging,
@@ -1596,9 +1602,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             // The 'orders' array (now containing objects with 'product_id') is stringified here
             $('#orders').val(JSON.stringify(orders));
             $('#total_amount').val(total.toFixed(2));
+            console.log("Prepared Orders JSON:", $('#orders').val()); // Add console log for debugging
             return true; // Data is prepared and valid
         }
-        // --- END RE-CONFIRMED prepareOrderData ---
+        // --- END CORRECTED prepareOrderData ---
         function confirmAddOrder() { if (prepareOrderData()) $('#addConfirmationModal').show(); }
         function closeAddConfirmation() { $('#addConfirmationModal').hide(); }
         function submitAddOrder() {
@@ -1606,17 +1613,36 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
              fetch('/backend/add_order.php', { method: 'POST', body: fd }).then(r => r.json()).then(d => { if (d.success) { showToast('Order added!', 'success'); closeAddOrderForm(); setTimeout(() => { window.location.reload(); }, 1000); } else { showToast('Error: ' + d.message, 'error'); } }).catch(e => { showToast('Network error', 'error'); });
         }
 
-        // --- Inventory Overlay and Cart Functions ---\
+        // --- Inventory Overlay and Cart Functions ---
         function openInventoryOverlay() {
             $('#inventoryOverlay').css('display', 'flex'); const body = $('.inventory').html('<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>');
             fetch('/backend/get_inventory.php').then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text().then(t => { try { return JSON.parse(t); } catch (e) { console.error("Inv JSON parse error:", t); throw new Error("Invalid server response"); } }); })
-            .then(data => { console.log("Inv data:", data); if (Array.isArray(data)) { const cats = [...new Set(data.map(i => i.category).filter(c => c))]; populateInventory(data); populateCategories(cats); filterInventory(); } else { throw new Error("Unexpected data format"); } })
+            .then(data => {
+                console.log("Received Inventory data:", data); // Log received inventory data
+                if (Array.isArray(data)) {
+                    const cats = [...new Set(data.map(i => i.category).filter(c => c))];
+                    populateInventory(data);
+                    populateCategories(cats);
+                    filterInventory();
+                } else { throw new Error("Unexpected data format"); }
+             })
             .catch(e => { console.error('Inv fetch:', e); showToast('Inv fetch error: ' + e.message, 'error'); body.html(`<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Error loading inventory</td></tr>`); });
         }
+        // --- CORRECTED populateInventory ---
         function populateInventory(inventory) {
             const body = $('.inventory').empty(); if (!inventory || inventory.length === 0) { body.html('<tr><td colspan="6" style="text-align:center;padding:20px;">No items</td></tr>'); return; }
-            inventory.forEach(item => { const price = parseFloat(item.price); if (isNaN(price)) { console.warn("Skip invalid price:", item); return; } body.append(`<tr><td>${item.category||'Uncategorized'}</td><td>${item.item_description}</td><td>${item.packaging||'N/A'}</td><td>PHP ${price.toFixed(2)}</td><td><input type="number" class="inventory-quantity" value="1" min="1" max="1000"></td><td><button class="add-to-cart-btn" onclick="addToCart(this, ${item.id}, '${item.category||''}', '${item.item_description}', '${item.packaging||''}', ${price})"><i class="fas fa-plus"></i> Add</button></td></tr>`); });
+            inventory.forEach(item => {
+                const price = parseFloat(item.price);
+                // Ensure product_id exists before creating the button
+                if (isNaN(price) || item.product_id === undefined || item.product_id === null) {
+                    console.warn("Skipping item due to invalid price or missing product_id:", item);
+                    return;
+                }
+                // Use item.product_id in the onclick handler
+                body.append(`<tr><td>${item.category||'Uncategorized'}</td><td>${item.item_description}</td><td>${item.packaging||'N/A'}</td><td>PHP ${price.toFixed(2)}</td><td><input type="number" class="inventory-quantity" value="1" min="1" max="1000"></td><td><button class="add-to-cart-btn" onclick="addToCart(this, ${item.product_id}, '${item.category||''}', '${item.item_description}', '${item.packaging||''}', ${price})"><i class="fas fa-plus"></i> Add</button></td></tr>`);
+             });
         }
+        // --- END CORRECTED populateInventory ---
         function populateCategories(categories) {
             const sel = $('#inventoryFilter'); sel.find('option:not(:first-child)').remove(); if (!categories || categories.length === 0) return;
             categories.sort().forEach(c => { if (c) sel.append(`<option value="${c}">${c}</option>`); });
@@ -1628,13 +1654,30 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         $('#inventorySearch').off('input', filterInventory).on('input', filterInventory);
         function closeInventoryOverlay() { $('#inventoryOverlay').hide(); }
-        function addToCart(button, itemId, category, itemDesc, packaging, price) {
-            const qtyInput = $(button).closest('tr').find('.inventory-quantity'); const qty = parseInt(qtyInput.val());
-            if (isNaN(qty) || qty < 1 || qty > 1000) { showToast('Qty 1-1000', 'error'); qtyInput.val(1); return; }
-            const idx = cartItems.findIndex(i => i.id === itemId && i.packaging === packaging);
-            if (idx >= 0) cartItems[idx].quantity += qty; else cartItems.push({ id: itemId, category, item_description: itemDesc, packaging, price, quantity: qty });
-            showToast(`Added ${qty} x ${itemDesc}`, 'success'); qtyInput.val(1); updateOrderSummary(); updateCartItemCount();
+        // --- CORRECTED addToCart ---
+        function addToCart(button, productId, category, itemDesc, packaging, price) {
+            const qtyInput = $(button).closest('tr').find('.inventory-quantity');
+            const qty = parseInt(qtyInput.val());
+            if (isNaN(qty) || qty < 1 || qty > 1000) { showToast('Quantity must be between 1 and 1000.', 'error'); qtyInput.val(1); return; }
+
+            // Find existing item in cart using product_id
+            const idx = cartItems.findIndex(i => i.product_id === productId && i.packaging === packaging);
+
+            if (idx >= 0) {
+                 // Item exists, increase quantity
+                 cartItems[idx].quantity += qty;
+            } else {
+                // Item does not exist, add new item using product_id
+                cartItems.push({ product_id: productId, category, item_description: itemDesc, packaging, price, quantity: qty });
+            }
+
+            console.log("Cart Items after add:", cartItems); // Log cart items for debugging
+            showToast(`Added ${qty} x ${itemDesc}`, 'success');
+            qtyInput.val(1); // Reset quantity input
+            updateOrderSummary();
+            updateCartItemCount();
         }
+        // --- END CORRECTED addToCart ---
         function updateOrderSummary() {
             const body = $('#summaryBody').empty(); let total = 0;
             if (cartItems.length === 0) { body.html('<tr><td colspan="6" style="text-align:center; padding: 10px; color: #6c757d;">No products</td></tr>'); }
