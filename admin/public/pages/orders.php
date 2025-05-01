@@ -1,4 +1,7 @@
 <?php
+// Current Date: 2025-05-01 15:13:55
+// Author: aedanevangelista
+
 session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
@@ -680,8 +683,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         }
         
         .add-order-btn {
-            flex: 1;
-            display: flex;
+            display: inline-flex;
+            align-items: center;
             justify-content: flex-end;
             background-color: #4a90e2;
             color: white;
@@ -690,6 +693,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             padding: 8px 16px;
             cursor: pointer;
             font-size: 14px;
+            width: auto;
+            white-space: nowrap;
             margin-left: auto;
         }
         
@@ -865,6 +870,17 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .cart-quantity {
             width: 60px;
             text-align: center;
+        }
+        
+        /* Modal positioning fix */
+        #addOrderOverlay .overlay-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: 0; /* Remove default margin */
         }
     </style>
 </head>
@@ -1624,7 +1640,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             // Both requirements are met, proceed with status change
                             updateOrderStatus(selectedStatus, false);
                         } else {
-                            showToast('Error checking order requirements: ' + data.message, 'error');
+                                                        showToast('Error checking order requirements: ' + data.message, 'error');
                             closeStatusModal();
                         }
                     })
@@ -1637,7 +1653,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         // Re-enable buttons
                         buttons.forEach(btn => btn.disabled = false);
                         
-                                                console.error('Error:', error);
+                        console.error('Error:', error);
                         showToast('Error checking requirements: ' + error, 'error');
                         closeStatusModal();
                     });
@@ -2965,11 +2981,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             fetch('/backend/get_inventory.php')
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    populateInventory(data.inventory);
-                    populateCategories(data.categories);
+                if (data && data.success) {
+                    populateInventory(data.inventory || []);
+                    populateCategories(data.categories || []);
                 } else {
-                    showToast('Failed to load inventory: ' + data.message, 'error');
+                    showToast('Failed to load inventory: ' + (data && data.message ? data.message : 'Server error'), 'error');
                 }
             })
             .catch(error => {
