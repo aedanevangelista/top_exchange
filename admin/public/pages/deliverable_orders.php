@@ -3,8 +3,8 @@
 // Author: aedanevangelista
 
 session_start();
-include "../backend/db_connection.php"; // Ensure this path is correct
-include "../backend/check_role.php"; // Ensure this path is correct
+include "../../backend/db_connection.php"; // Ensure this path is correct
+include "../../backend/check_role.php"; // Ensure this path is correct
 
 checkRole('Deliverables'); // Adjust role name if necessary
 
