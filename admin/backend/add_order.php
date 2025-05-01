@@ -22,7 +22,7 @@ $total_amount = $_POST['total_amount'] ?? null;
 $company = $_POST['company'] ?? ''; // Get company name
 
 // Basic validation (add more robust validation as needed)
-if (!$username || !$delivery_date || !$delivery_address || !$orders_json || $total_amount === null) {
+if (!$username || !$order_date || !$delivery_date || !$delivery_address || !$orders_json || $total_amount === null) {
     echo json_encode(['success' => false, 'message' => 'Missing required order information.']);
     exit;
 }
@@ -93,7 +93,7 @@ $new_po_number = sprintf('PO-%s-%03d', $username, $next_sequence);
 
 // **IMPORTANT**: Use the $new_po_number generated above, NOT $_POST['po_number']
 $status = 'Pending'; // New orders start as Pending
-$progress = 0;
+$progress = 0; // Ensure progress is integer 0
 
 $sql_insert = "INSERT INTO orders
                (po_number, username, order_date, delivery_date, delivery_address, orders, total_amount, status, progress, company, special_instructions, driver_assigned)
@@ -109,8 +109,9 @@ if ($stmt_insert === false) {
 
 $driver_assigned_default = 0; // Default value for driver_assigned
 
+// *** THIS IS THE CORRECTED LINE ***
 $stmt_insert->bind_param(
-    "ssssssdssssi", // s = string, d = double, i = integer
+    "ssssssdsissi", // Corrected type string
     $new_po_number,
     $username,
     $order_date,
@@ -119,10 +120,10 @@ $stmt_insert->bind_param(
     $orders_json, // Store the original JSON string
     $total_amount,
     $status,
-    $progress,
-    $company,
-    $special_instructions,
-    $driver_assigned_default
+    $progress, // Matches 'i'
+    $company, // Matches 's'
+    $special_instructions, // Matches 's'
+    $driver_assigned_default // Matches 'i'
 );
 
 if ($stmt_insert->execute()) {
