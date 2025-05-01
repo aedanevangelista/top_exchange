@@ -233,7 +233,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             // --- File Paths (Consistent with Add) ---
             $uploadBaseDir = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR;
             $userUploadDir = $uploadBaseDir . $username . DIRECTORY_SEPARATOR;
-            $userUploadUrl = '../../uploads/' . $username . '/';
+            $userUploadUrl = '/admin/uploads/' . $username . '/';
 
             // Decode existing proofs safely
             $final_business_proof_paths = json_decode($existing_business_proof_json, true);
