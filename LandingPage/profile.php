@@ -14,7 +14,7 @@ if (!isset($_SESSION['username'])) {
 // Database connection
 $servername = "127.0.0.1:3306";
 $username = "u701062148_top_exchange";
-$password = "Aedanpogi123"; 
+$password = "Aedanpogi123";
 $dbname = "u701062148_top_exchange";
 
 // Create connection
@@ -53,7 +53,7 @@ if ($result->num_rows > 0) {
     $balance = $clientData['balance'] ?? 0;
     $companyInfo = $clientData['company'] ?: 'Not provided';
     $contactInfo = $clientData['phone'] ?: 'Not provided';
-    
+
     // Process business proofs
     if ($clientData['business_proof'] && $clientData['business_proof'] != 'null') {
         $businessProofs = json_decode($clientData['business_proof'], true);
@@ -61,51 +61,51 @@ if ($result->num_rows > 0) {
             $businessProofs = [];
         }
     }
-    
+
     // Get order statistics
-    $orderQuery = "SELECT 
+    $orderQuery = "SELECT
                     COUNT(*) as total_orders,
                     SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending_orders,
                     SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed_orders,
                     SUM(total_amount) as total_spent
-                   FROM orders 
+                   FROM orders
                    WHERE username = ?";
     $orderStmt = $conn->prepare($orderQuery);
     $orderStmt->bind_param("s", $username);
     $orderStmt->execute();
     $orderResult = $orderStmt->get_result();
-    
+
     if ($orderResult->num_rows > 0) {
         $orderStats = $orderResult->fetch_assoc();
     }
-    
+
     // Get recent orders (limit to 3)
-    $recentOrderQuery = "SELECT po_number, order_date, delivery_date, total_amount, status 
-                         FROM orders 
-                         WHERE username = ? 
-                         ORDER BY order_date DESC 
+    $recentOrderQuery = "SELECT po_number, order_date, delivery_date, total_amount, status
+                         FROM orders
+                         WHERE username = ?
+                         ORDER BY order_date DESC
                          LIMIT 3";
     $recentOrderStmt = $conn->prepare($recentOrderQuery);
     $recentOrderStmt->bind_param("s", $username);
     $recentOrderStmt->execute();
     $recentOrderResult = $recentOrderStmt->get_result();
-    
+
     while ($row = $recentOrderResult->fetch_assoc()) {
         $recentOrders[] = $row;
     }
-    
+
     // Get current payment status
     $currentMonth = date('n');
     $currentYear = date('Y');
-    $paymentQuery = "SELECT payment_status 
-                     FROM monthly_payments 
-                     WHERE username = ? AND month = ? AND year = ? 
+    $paymentQuery = "SELECT payment_status
+                     FROM monthly_payments
+                     WHERE username = ? AND month = ? AND year = ?
                      LIMIT 1";
     $paymentStmt = $conn->prepare($paymentQuery);
     $paymentStmt->bind_param("sii", $username, $currentMonth, $currentYear);
     $paymentStmt->execute();
     $paymentResult = $paymentStmt->get_result();
-    
+
     if ($paymentResult->num_rows > 0) {
         $paymentData = $paymentResult->fetch_assoc();
         $paymentStatus = $paymentData['payment_status'] ?? 'Unpaid';
@@ -140,14 +140,14 @@ $conn->close();
             --transition: all 0.3s ease;
             --border-radius: 8px;
         }
-        
+
         body {
             background-color: #f8f9fa;
             font-family: 'Montserrat', sans-serif;
             color: #495057;
-            padding-top: 80px;
+            padding-top: 0;
         }
-        
+
         .profile-header {
             background: linear-gradient(135deg, #9a7432 0%, #c9a158 100%);
             color: white;
@@ -156,7 +156,7 @@ $conn->close();
             margin-bottom: 2.5rem;
             box-shadow: var(--box-shadow);
         }
-        
+
         .profile-card {
             background-color: white;
             border-radius: var(--border-radius);
@@ -166,12 +166,12 @@ $conn->close();
             transition: var(--transition);
             border: none;
         }
-        
+
         .profile-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
         }
-        
+
         .profile-card-header {
             background-color: var(--primary-color);
             color: white;
@@ -180,11 +180,11 @@ $conn->close();
             font-size: 1.1rem;
             border-bottom: none;
         }
-        
+
         .profile-card-body {
             padding: 1.75rem;
         }
-        
+
         .profile-avatar {
             width: 120px;
             height: 120px;
@@ -193,7 +193,7 @@ $conn->close();
             border: 5px solid rgba(255, 255, 255, 0.2);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
-        
+
         .stat-card {
             text-align: center;
             padding: 1.75rem 1rem;
@@ -204,25 +204,25 @@ $conn->close();
             margin-bottom: 1.5rem;
             border: none;
         }
-        
+
         .stat-card:hover {
             transform: translateY(-5px);
             background-color: #f8f9fa;
         }
-        
+
         .stat-icon {
             font-size: 2.25rem;
             color: var(--primary-color);
             margin-bottom: 1rem;
         }
-        
+
         .stat-number {
             font-size: 1.75rem;
             font-weight: 700;
             color: var(--secondary-color);
             margin-bottom: 0.5rem;
         }
-        
+
         .stat-label {
             color: #6c757d;
             font-size: 0.85rem;
@@ -230,34 +230,34 @@ $conn->close();
             letter-spacing: 1px;
             font-weight: 500;
         }
-        
+
         .order-status-badge {
             padding: 0.4em 0.7em;
             font-size: 0.75em;
             font-weight: 600;
             border-radius: 0.3rem;
         }
-        
+
         .badge-pending {
             background-color: #fff3cd;
             color: #856404;
         }
-        
+
         .badge-active {
             background-color: #d1e7ff;
             color: #084298;
         }
-        
+
         .badge-completed {
             background-color: #d1e7dd;
             color: #0f5132;
         }
-        
+
         .badge-for-delivery {
             background-color: #e2e3e5;
             color: #383d41;
         }
-        
+
         .proof-thumbnail {
             width: 100%;
             height: 160px;
@@ -267,12 +267,12 @@ $conn->close();
             transition: var(--transition);
             border: 1px solid #eee;
         }
-        
+
         .proof-thumbnail:hover {
             transform: scale(1.03);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
-        
+
         .payment-status {
             display: inline-block;
             padding: 0.5rem 1.25rem;
@@ -282,29 +282,29 @@ $conn->close();
             font-size: 0.8rem;
             letter-spacing: 1px;
         }
-        
+
         .status-paid {
             background-color: #d1e7dd;
             color: #0f5132;
         }
-        
+
         .status-unpaid {
             background-color: #f8d7da;
             color: #842029;
         }
-        
+
         .status-partial {
             background-color: #fff3cd;
             color: #664d03;
         }
-        
+
         .balance-display {
             font-size: 2.25rem;
             font-weight: 700;
             color: white;
             letter-spacing: 0.5px;
         }
-        
+
         .section-title {
             position: relative;
             padding-bottom: 0.75rem;
@@ -312,7 +312,7 @@ $conn->close();
             color: var(--secondary-color);
             font-weight: 600;
         }
-        
+
         .section-title:after {
             content: '';
             position: absolute;
@@ -322,7 +322,7 @@ $conn->close();
             height: 3px;
             background-color: var(--primary-color);
         }
-        
+
         .btn-primary {
             background-color: var(--primary-color);
             border-color: var(--primary-color);
@@ -330,58 +330,58 @@ $conn->close();
             letter-spacing: 0.5px;
             padding: 0.5rem 1.5rem;
         }
-        
+
         .btn-primary:hover {
             background-color: var(--primary-hover);
             border-color: var(--primary-hover);
         }
-        
+
         .btn-outline-primary {
             color: var(--primary-color);
             border-color: var(--primary-color);
             font-weight: 500;
         }
-        
+
         .btn-outline-primary:hover {
             background-color: var(--primary-color);
             border-color: var(--primary-color);
         }
-        
+
         .table th {
             font-weight: 600;
             color: #495057;
             border-top: none;
         }
-        
+
         .table td {
             vertical-align: middle;
         }
-        
+
         /* Modal for image preview */
         .modal-proof-img {
             max-width: 100%;
             max-height: 80vh;
             border-radius: 6px;
         }
-        
+
         .info-label {
             font-weight: 600;
             color: #495057;
             margin-bottom: 0.25rem;
         }
-        
+
         .info-value {
             font-size: 0.95rem;
             color: #6c757d;
             margin-bottom: 1rem;
         }
-        
+
         .client-name {
             font-weight: 600;
             letter-spacing: 0.5px;
             margin-bottom: 0.5rem;
         }
-        
+
         .client-contact {
             font-size: 0.95rem;
             opacity: 0.9;
@@ -391,7 +391,7 @@ $conn->close();
 <body>
     <!-- Include your header -->
     <?php include 'header.php'; ?>
-    
+
     <!-- Profile Header -->
     <div class="profile-header">
         <div class="container">
@@ -409,8 +409,8 @@ $conn->close();
                         <span class="text-white-50 mb-1" style="opacity: 0.8;">Account Balance</span>
                         <span class="balance-display">₱<?php echo number_format($balance, 2); ?></span>
                         <div class="mt-2">
-                            <span class="payment-status 
-                                <?php 
+                            <span class="payment-status
+                                <?php
                                 if ($paymentStatus === 'Fully Paid') echo 'status-paid';
                                 elseif ($paymentStatus === 'Partially Paid') echo 'status-partial';
                                 else echo 'status-unpaid';
@@ -423,7 +423,7 @@ $conn->close();
             </div>
         </div>
     </div>
-    
+
     <!-- Main Content -->
     <div class="container mb-5">
         <div class="row">
@@ -442,29 +442,29 @@ $conn->close();
                                 </span>
                             </div>
                         </div>
-                        
+
                         <div class="mb-3">
                             <div class="info-label">Company</div>
                             <div class="info-value"><?php echo htmlspecialchars($companyInfo); ?></div>
                         </div>
-                        
+
                         <div class="mb-3">
                             <div class="info-label">Location</div>
                             <div class="info-value">
-                                <?php echo htmlspecialchars($clientData['city'] ?? 'Not specified'); ?>, 
+                                <?php echo htmlspecialchars($clientData['city'] ?? 'Not specified'); ?>,
                                 <?php echo htmlspecialchars($clientData['region'] ?? 'Not specified'); ?>
                             </div>
                         </div>
-                        
+
                         <div class="mb-3">
                             <div class="info-label">Address</div>
                             <div class="info-value"><?php echo htmlspecialchars($clientData['company_address'] ?? 'Not provided'); ?></div>
                         </div>
-                        
+
                         <div class="mb-3">
                             <div class="info-label">Member Since</div>
                             <div class="info-value">
-                                <?php 
+                                <?php
                                 $createdAt = $clientData['created_at'] ?? '';
                                 echo $createdAt ? date('F j, Y', strtotime($createdAt)) : 'Not available';
                                 ?>
@@ -472,7 +472,7 @@ $conn->close();
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Business Proofs Card -->
                 <div class="profile-card">
                     <div class="profile-card-header">
@@ -485,11 +485,11 @@ $conn->close();
                                     <?php if (!empty($proof)): ?>
                                         <div class="col-6">
                                             <div class="border rounded p-2">
-                                                <img src="<?php echo htmlspecialchars($proof); ?>" 
-                                                     class="proof-thumbnail w-100" 
-                                                     alt="Business Proof" 
-                                                     data-bs-toggle="modal" 
-                                                     data-bs-target="#proofModal" 
+                                                <img src="<?php echo htmlspecialchars($proof); ?>"
+                                                     class="proof-thumbnail w-100"
+                                                     alt="Business Proof"
+                                                     data-bs-toggle="modal"
+                                                     data-bs-target="#proofModal"
                                                      data-proof-src="<?php echo htmlspecialchars($proof); ?>">
                                                 <div class="text-center mt-2">
                                                     <small class="text-muted">Proof Document</small>
@@ -509,7 +509,7 @@ $conn->close();
                     </div>
                 </div>
             </div>
-            
+
             <!-- Client Activity Section -->
             <div class="col-lg-8">
                 <!-- Stats Cards -->
@@ -542,7 +542,7 @@ $conn->close();
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Recent Orders -->
                 <div class="profile-card">
                     <div class="profile-card-header d-flex justify-content-between align-items-center">
@@ -569,7 +569,7 @@ $conn->close();
                                                 <td><?php echo date('M j, Y', strtotime($order['order_date'])); ?></td>
                                                 <td>₱<?php echo number_format($order['total_amount'], 2); ?></td>
                                                 <td>
-                                                    <?php 
+                                                    <?php
                                                     $statusClass = '';
                                                     if ($order['status'] === 'Pending') $statusClass = 'badge-pending';
                                                     elseif ($order['status'] === 'Active') $statusClass = 'badge-active';
@@ -581,7 +581,7 @@ $conn->close();
                                                     </span>
                                                 </td>
                                                 <td class="text-end">
-                                                    <a href="/LandingPage/order_details.php?po_number=<?php echo urlencode($order['po_number']); ?>" 
+                                                    <a href="/LandingPage/order_details.php?po_number=<?php echo urlencode($order['po_number']); ?>"
                                                        class="btn btn-sm btn-outline-primary">
                                                         Details
                                                     </a>
@@ -600,7 +600,7 @@ $conn->close();
                         <?php endif; ?>
                     </div>
                 </div>
-                
+
                 <!-- Financial Summary -->
                 <div class="profile-card mt-4">
                     <div class="profile-card-header">
@@ -630,8 +630,8 @@ $conn->close();
                         <div class="mt-3">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="text-muted small">Payment Status (<?php echo date('F Y'); ?>)</span>
-                                <span class="payment-status 
-                                    <?php 
+                                <span class="payment-status
+                                    <?php
                                     if ($paymentStatus === 'Fully Paid') echo 'status-paid';
                                     elseif ($paymentStatus === 'Partially Paid') echo 'status-partial';
                                     else echo 'status-unpaid';
@@ -645,7 +645,7 @@ $conn->close();
             </div>
         </div>
     </div>
-    
+
     <!-- Proof Modal -->
     <div class="modal fade" id="proofModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -666,7 +666,7 @@ $conn->close();
             </div>
         </div>
     </div>
-    
+
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
@@ -680,7 +680,7 @@ $conn->close();
                     var proofSrc = button.getAttribute('data-proof-src');
                     var modalImage = proofModal.querySelector('#modalProofImage');
                     var downloadLink = proofModal.querySelector('#downloadProofLink');
-                    
+
                     modalImage.src = proofSrc;
                     downloadLink.href = proofSrc;
                     downloadLink.setAttribute('download', proofSrc.split('/').pop());

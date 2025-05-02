@@ -274,7 +274,7 @@ $conn->close();
             background-color: #f8f9fa;
             font-family: 'Montserrat', sans-serif;
             color: #495057;
-            padding-top: 80px;
+            padding-top: 0;
         }
 
         .settings-header {

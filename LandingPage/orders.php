@@ -14,7 +14,7 @@ if (!isset($_SESSION['username'])) {
 // Database connection
 $servername = "127.0.0.1:3306";
 $username = "u701062148_top_exchange";
-$password = "Aedanpogi123"; 
+$password = "Aedanpogi123";
 $dbname = "u701062148_top_exchange";
 
 // Create connection
@@ -93,14 +93,14 @@ $result = $stmt->get_result();
 while ($row = $result->fetch_assoc()) {
     $orders[] = $row;
     $totalSpent += $row['total_amount'];
-    
+
     // Update stats
     $orderStats['all']++;
     $orderStats[strtolower($row['status'])]++;
 }
 
 // Get total order stats (without filters)
-$statsQuery = "SELECT 
+$statsQuery = "SELECT
     COUNT(*) as total,
     SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending,
     SUM(CASE WHEN status = 'Active' THEN 1 ELSE 0 END) as active,
@@ -142,14 +142,14 @@ $conn->close();
             --transition: all 0.3s ease;
             --border-radius: 8px;
         }
-        
+
         body {
             background-color: #f8f9fa;
             font-family: 'Montserrat', sans-serif;
             color: #495057;
-            padding-top: 80px;
+            padding-top: 0;
         }
-        
+
         .page-header {
             background: linear-gradient(135deg, #9a7432 0%, #c9a158 100%);
             color: white;
@@ -157,7 +157,7 @@ $conn->close();
             margin-bottom: 2rem;
             box-shadow: var(--box-shadow);
         }
-        
+
         .card {
             border: none;
             border-radius: var(--border-radius);
@@ -165,12 +165,12 @@ $conn->close();
             transition: var(--transition);
             margin-bottom: 2rem;
         }
-        
+
         .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
         }
-        
+
         .card-header {
             background-color: var(--primary-color);
             color: white;
@@ -178,116 +178,116 @@ $conn->close();
             border-bottom: none;
             padding: 1.25rem 1.75rem;
         }
-        
+
         .badge-pending {
             background-color: #fff3cd;
             color: #856404;
         }
-        
+
         .badge-active {
             background-color: #d1e7ff;
             color: #084298;
         }
-        
+
         .badge-completed {
             background-color: #d1e7dd;
             color: #0f5132;
         }
-        
+
         .badge-delivery {
             background-color: #e2e3e5;
             color: #383d41;
         }
-        
+
         .badge-rejected {
             background-color: #f8d7da;
             color: #842029;
         }
-        
+
         .status-filter {
             display: flex;
             gap: 0.5rem;
             flex-wrap: wrap;
             margin-bottom: 1.5rem;
         }
-        
+
         .status-filter .btn {
             border-radius: 50px;
             padding: 0.5rem 1.25rem;
             font-weight: 500;
             border: 1px solid #dee2e6;
         }
-        
+
         .status-filter .btn.active {
             background-color: var(--primary-color);
             color: white;
             border-color: var(--primary-color);
         }
-        
+
         .order-item {
             transition: var(--transition);
             border-left: 3px solid transparent;
         }
-        
+
         .order-item:hover {
             background-color: #f8f9fa;
         }
-        
+
         .order-item.pending {
             border-left-color: #ffc107;
         }
-        
+
         .order-item.active {
             border-left-color: #0d6efd;
         }
-        
+
         .order-item.completed {
             border-left-color: #198754;
         }
-        
+
         .order-item.delivery {
             border-left-color: #6c757d;
         }
-        
+
         .order-item.rejected {
             border-left-color: #dc3545;
         }
-        
+
         .order-id {
             font-weight: 600;
             color: var(--secondary-color);
         }
-        
+
         .order-date {
             color: #6c757d;
             font-size: 0.9rem;
         }
-        
+
         .order-amount {
             font-weight: 600;
             color: var(--secondary-color);
         }
-        
+
         .empty-state {
             text-align: center;
             padding: 3rem 0;
         }
-        
+
         .empty-state i {
             font-size: 3rem;
             color: #adb5bd;
             margin-bottom: 1rem;
         }
-        
+
         .pagination .page-item.active .page-link {
             background-color: var(--primary-color);
             border-color: var(--primary-color);
         }
-        
+
         .pagination .page-link {
             color: var(--primary-color);
         }
-        
+
         .date-filter {
             background-color: white;
             padding: 1rem;
@@ -295,7 +295,7 @@ $conn->close();
             box-shadow: var(--box-shadow);
             margin-bottom: 1.5rem;
         }
-        
+
         .stats-card {
             text-align: center;
             padding: 1.5rem;
@@ -305,33 +305,33 @@ $conn->close();
             transition: var(--transition);
             margin-bottom: 1.5rem;
         }
-        
+
         .stats-card .number {
             font-size: 1.75rem;
             font-weight: 700;
             color: var(--secondary-color);
         }
-        
+
         .stats-card .label {
             color: #6c757d;
             font-size: 0.85rem;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        
+
         .stats-card.total .number {
             color: var(--primary-color);
         }
-        
+
         @media (max-width: 768px) {
             .table-responsive {
                 border: none;
             }
-            
+
             .order-item {
                 padding: 1rem 0;
             }
-            
+
             .status-filter {
                 justify-content: center;
             }
@@ -341,7 +341,7 @@ $conn->close();
 <body>
     <!-- Include your header -->
     <?php include 'header.php'; ?>
-    
+
     <!-- Page Header -->
     <div class="page-header">
         <div class="container">
@@ -357,7 +357,7 @@ $conn->close();
             </div>
         </div>
     </div>
-    
+
     <!-- Main Content -->
     <div class="container mb-5">
         <!-- Order Stats -->
@@ -399,7 +399,7 @@ $conn->close();
                 </div>
             </div>
         </div>
-        
+
         <!-- Filters Card -->
         <div class="card mb-4">
             <div class="card-header">
@@ -411,19 +411,19 @@ $conn->close();
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Order Status</label>
                             <div class="status-filter">
-                                <a href="?status=all<?php echo !empty($dateFrom) ? '&from='.$dateFrom : ''; ?><?php echo !empty($dateTo) ? '&to='.$dateTo : ''; ?>" 
+                                <a href="?status=all<?php echo !empty($dateFrom) ? '&from='.$dateFrom : ''; ?><?php echo !empty($dateTo) ? '&to='.$dateTo : ''; ?>"
                                    class="btn btn-sm <?php echo $statusFilter === 'all' ? 'active' : ''; ?>">
                                     All Orders
                                 </a>
-                                <a href="?status=pending<?php echo !empty($dateFrom) ? '&from='.$dateFrom : ''; ?><?php echo !empty($dateTo) ? '&to='.$dateTo : ''; ?>" 
+                                <a href="?status=pending<?php echo !empty($dateFrom) ? '&from='.$dateFrom : ''; ?><?php echo !empty($dateTo) ? '&to='.$dateTo : ''; ?>"
                                    class="btn btn-sm <?php echo $statusFilter === 'pending' ? 'active' : ''; ?>">
                                     Pending
                                 </a>
-                                <a href="?status=active<?php echo !empty($dateFrom) ? '&from='.$dateFrom : ''; ?><?php echo !empty($dateTo) ? '&to='.$dateTo : ''; ?>" 
+                                <a href="?status=active<?php echo !empty($dateFrom) ? '&from='.$dateFrom : ''; ?><?php echo !empty($dateTo) ? '&to='.$dateTo : ''; ?>"
                                    class="btn btn-sm <?php echo $statusFilter === 'active' ? 'active' : ''; ?>">
                                     Processing
                                 </a>
-                                <a href="?status=completed<?php echo !empty($dateFrom) ? '&from='.$dateFrom : ''; ?><?php echo !empty($dateTo) ? '&to='.$dateTo : ''; ?>" 
+                                <a href="?status=completed<?php echo !empty($dateFrom) ? '&from='.$dateFrom : ''; ?><?php echo !empty($dateTo) ? '&to='.$dateTo : ''; ?>"
                                    class="btn btn-sm <?php echo $statusFilter === 'completed' ? 'active' : ''; ?>">
                                     Completed
                                 </a>
@@ -449,7 +449,7 @@ $conn->close();
                 </form>
             </div>
         </div>
-        
+
         <!-- Orders List -->
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -485,8 +485,8 @@ $conn->close();
                                         <td class="order-date"><?php echo date('M j, Y', strtotime($order['delivery_date'])); ?></td>
                                         <td class="order-amount">₱<?php echo number_format($order['total_amount'], 2); ?></td>
                                         <td>
-                                            <span class="badge rounded-pill 
-                                                <?php 
+                                            <span class="badge rounded-pill
+                                                <?php
                                                 if ($order['status'] === 'Pending') echo 'badge-pending';
                                                 elseif ($order['status'] === 'Active') echo 'badge-active';
                                                 elseif ($order['status'] === 'Completed') echo 'badge-completed';
@@ -497,7 +497,7 @@ $conn->close();
                                             </span>
                                         </td>
                                         <td>
-                                            <a href="order_details.php?po_number=<?php echo urlencode($order['po_number']); ?>" 
+                                            <a href="order_details.php?po_number=<?php echo urlencode($order['po_number']); ?>"
                                                class="btn btn-sm btn-outline-primary">
                                                 <i class="fas fa-eye me-1"></i> View
                                             </a>
@@ -532,7 +532,7 @@ $conn->close();
             <?php endif; ?>
         </div>
     </div>
-    
+
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
@@ -541,7 +541,7 @@ $conn->close();
         document.addEventListener('DOMContentLoaded', function() {
             const dateFrom = document.getElementById('dateFrom');
             const dateTo = document.getElementById('dateTo');
-            
+
             if (dateFrom && dateTo) {
                 dateFrom.addEventListener('change', function() {
                     if (this.value && !dateTo.value) {
