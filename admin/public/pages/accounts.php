@@ -282,7 +282,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             color: #aaa; /* Lighter color for icons */
         }
          .accounts-table th.sortable.active i {
-             color: #333; /* Darker color for active sort icon */
+             color: white; /* Darker color for active sort icon */
          }
         /* Default role label style */
         .role-label {
