@@ -274,7 +274,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             display: inline-block; /* Allows icon placement */
         }
 
-         .accounts-table th th:hover {
+         .accounts-table th:hover {
             color:rgb(71, 71, 71); /* Example hover color */
          }
         .accounts-table th.sortable i {
