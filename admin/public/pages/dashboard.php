@@ -135,40 +135,71 @@ $recentOrders = getRecentOrders($conn, 5);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-    <link rel="stylesheet" href="/css/sidebar.css"> <!-- Your sidebar CSS -->
-    <link rel="stylesheet" href="/css/dashboard.css"> <!-- Your dashboard CSS -->
 
-    <!-- Assuming Bootstrap 5 CSS is loaded globally (e.g., via sidebar.php or main layout) -->
-    <!-- REMOVED: <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"> -->
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
 
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        /* --- Base & Layout --- */
         body {
             background-color: #f8f9fa;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; /* Standard system fonts */
+            color: #212529;
+            line-height: 1.5;
         }
         .main-content {
             padding: 20px;
         }
         .overview-container h2 {
             margin-bottom: 1.5rem;
+            font-size: 1.75rem; /* Standard h2 size */
+            font-weight: 500;
         }
         .notification-badges {
-            margin-bottom: 1.5rem; /* Reduced gap */
+            margin-bottom: 1.5rem;
+            /* Add styles for notification badges if not in dashboard.css */
+        }
+        /* Generic container styling */
+        .data-container {
+            background-color: #fff;
+            padding: 1.25rem;
+            border-radius: 0.375rem;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            margin-bottom: 1.5rem;
+        }
+        .container-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .container-header h3 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #495057;
         }
 
-        /* --- KPI Cards Styling --- */
+        /* --- KPI Cards --- */
         .kpi-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1rem; /* Reduced gap */
-            margin-bottom: 1.5rem; /* Reduced gap */
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
         .kpi-card {
             background-color: #fff;
-            padding: 1rem 1.25rem; /* Slightly reduced padding */
-            border-radius: 0.375rem; /* Bootstrap default */
+            padding: 1rem 1.25rem;
+            border-radius: 0.375rem;
             border: 1px solid #dee2e6;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             display: flex;
@@ -180,20 +211,21 @@ $recentOrders = getRecentOrders($conn, 5);
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
         }
         .kpi-icon {
-            font-size: 1.5rem; /* Slightly smaller icon */
+            font-size: 1.5rem;
             padding: 0.7rem;
             border-radius: 50%;
             margin-right: 0.8rem;
             color: #fff;
-            width: 48px; /* Adjusted size */
-            height: 48px; /* Adjusted size */
+            width: 48px;
+            height: 48px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0; /* Prevent icon shrinking */
         }
-        .kpi-icon.bg-primary-soft { background-color: rgba(13, 110, 253, 0.2); color: #0d6efd; }
-        .kpi-icon.bg-success-soft { background-color: rgba(25, 135, 84, 0.2); color: #198754; }
-        .kpi-icon.bg-warning-soft { background-color: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .kpi-icon.icon-revenue { background-color: rgba(13, 110, 253, 0.2); color: #0d6efd; }
+        .kpi-icon.icon-orders { background-color: rgba(25, 135, 84, 0.2); color: #198754; }
+        .kpi-icon.icon-aov { background-color: rgba(255, 193, 7, 0.2); color: #ffc107; }
 
         .kpi-content h4 {
             margin: 0 0 0.2rem 0;
@@ -201,6 +233,7 @@ $recentOrders = getRecentOrders($conn, 5);
             color: #6c757d;
             text-transform: uppercase;
             font-weight: 600;
+            white-space: nowrap; /* Prevent title wrapping */
         }
         .kpi-content .kpi-value {
             font-size: 1.5rem;
@@ -210,121 +243,130 @@ $recentOrders = getRecentOrders($conn, 5);
             line-height: 1.2;
         }
 
-        /* --- Recent Orders Section Styling --- */
-        .recent-orders-container {
-            background-color: #fff;
-            padding: 1.25rem; /* Adjusted padding */
-            border-radius: 0.375rem;
-            border: 1px solid #dee2e6;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            margin-bottom: 1.5rem; /* Reduced gap */
-        }
-        .recent-orders-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .recent-orders-header h3 {
-            margin: 0;
-            font-size: 1.15rem; /* Adjusted size */
-            font-weight: 600;
-        }
-        .recent-orders-header .btn {
+        /* --- Recent Orders --- */
+        /* Uses .data-container and .container-header */
+        .view-all-button { /* Custom class for the button */
+            display: inline-block;
             font-weight: 500;
-            /* Uses btn-sm class now */
+            line-height: 1.5;
+            color: #0d6efd;
+            text-align: center;
+            text-decoration: none;
+            vertical-align: middle;
+            cursor: pointer;
+            user-select: none;
+            background-color: transparent;
+            border: 1px solid #0d6efd;
+            padding: 0.25rem 0.5rem; /* Smaller padding */
+            font-size: 0.875rem; /* Smaller font size */
+            border-radius: 0.25rem;
+            transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
         }
-        .recent-orders-header .btn i {
-            margin-right: 0.3rem; /* Smaller icon margin */
+        .view-all-button:hover {
+            color: #fff;
+            background-color: #0d6efd;
+            border-color: #0d6efd;
         }
-
-        /* Recent Orders Table Styling (Like accounts.php - using standard Bootstrap) */
+        .view-all-button i {
+            margin-right: 0.3rem;
+        }
+        /* Table Styling */
+        .table-wrapper {
+             overflow-x: auto; /* Enable horizontal scroll on small screens */
+        }
+        .recent-orders-table {
+            width: 100%;
+            border-collapse: collapse; /* Use collapse for clean borders */
+            margin-bottom: 1rem; /* Spacing below table */
+        }
         .recent-orders-table thead {
-             /* Use Bootstrap's thead-light or similar class for consistency */
-             /* Or define a specific background if needed: background-color: #e9ecef; */
+            background-color: #f8f9fa; /* Light grey header */
+        }
+        .recent-orders-table th,
+        .recent-orders-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid #dee2e6; /* Standard border */
+            text-align: left;
+            vertical-align: middle; /* Align cell content vertically */
         }
         .recent-orders-table th {
             font-weight: 600;
-            font-size: 0.85rem; /* Match typical admin table header size */
-            padding: 0.75rem 1rem; /* Standard padding */
+            font-size: 0.85rem;
             white-space: nowrap;
-            color: #495057; /* Darker gray */
-            border-bottom-width: 2px; /* Thicker bottom border */
+            color: #495057;
+            border-bottom-width: 2px;
         }
         .recent-orders-table td {
-            vertical-align: middle;
-            padding: 0.75rem 1rem; /* Standard padding */
-            font-size: 0.875rem; /* Standard body text size */
+             font-size: 0.875rem;
         }
-        .recent-orders-table .status-badge {
-            font-weight: 500;
+        .recent-orders-table tbody tr:hover {
+            background-color: #e9ecef; /* Hover effect */
         }
-        /* Ensure Bootstrap table-hover works */
-        .table-hover > tbody > tr:hover > * {
-           /* Standard Bootstrap hover color, or define your own */
-           /* color: var(--bs-table-hover-color); */
-           /* background-color: var(--bs-table-hover-bg); */
+        .text-align-right { /* Utility class for right alignment */
+            text-align: right;
+        }
+        .no-orders-message { /* Style for the 'no orders' text */
+             text-align: center;
+             padding: 1rem;
+             color: #6c757d;
+             background-color: #f8f9fa;
+             border: 1px solid #dee2e6;
+             border-radius: 0.375rem;
         }
 
         /* --- Chart/Stats Section --- */
         .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1rem; /* Reduced gap */
-            margin-bottom: 1.5rem; /* Reduced gap */
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
-        .stat-card {
-            background-color: #fff;
-            padding: 1.25rem;
-            border-radius: 0.375rem;
-            border: 1px solid #dee2e6;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        }
+        /* Uses .data-container styling */
         .chart-header, .packs-sold-header, .packs-comparison-row {
-            margin-bottom: 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 1rem;
         }
-        .stat-card h3 {
-            font-size: 0.9rem; /* Adjusted size */
+        .data-container h3 { /* Chart/Stat titles */
+            font-size: 0.9rem;
             font-weight: 600;
             margin: 0;
             text-transform: uppercase;
             color: #495057;
         }
-        .year-select, .packs-sold-dropdown {
+        .year-select, .packs-sold-dropdown { /* Basic select styling */
             padding: 0.25rem 0.5rem;
             border-radius: 0.25rem;
             border: 1px solid #ced4da;
             font-size: 0.875rem;
+            background-color: #fff; /* Ensure background */
+            max-width: 100px; /* Prevent excessive width */
         }
         .stat-card-content {
-            height: 300px;
+            height: 300px; /* Maintain chart height */
+            position: relative; /* Needed for chart.js responsiveness */
         }
         .packs-sold-count {
-            font-size: 1.8rem; /* Adjusted size */
+            font-size: 1.8rem;
             font-weight: 700;
             text-align: center;
             margin-bottom: 0.5rem;
+            color: #212529;
+        }
+        .packs-comparison-row {
+             justify-content: center; /* Center comparison items */
         }
         .packs-comparison {
              font-size: 0.9rem;
              color: #6c757d;
+             margin-right: 0.5rem; /* Space before dropdown */
         }
         .packs-comparison.positive { color: #198754; }
         .packs-comparison.negative { color: #dc3545; }
 
-        .sales-department-container {
-            background-color: #fff;
-            padding: 1.25rem;
-            border-radius: 0.375rem;
-            border: 1px solid #dee2e6;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            margin-bottom: 1.5rem; /* Reduced gap */
-        }
+        /* Sales Dept Chart */
+        /* Uses .data-container styling */
         .time-period-tabs .time-period-tab {
              background: none;
              border: none;
@@ -332,6 +374,7 @@ $recentOrders = getRecentOrders($conn, 5);
              color: #6c757d;
              font-weight: 500;
              border-bottom: 2px solid transparent;
+             cursor: pointer;
         }
         .time-period-tabs .time-period-tab.active {
              color: #0d6efd;
@@ -339,7 +382,7 @@ $recentOrders = getRecentOrders($conn, 5);
         }
 
         /* --- Status Badges --- */
-        .status-badge { padding: 0.25em 0.65em; border-radius: 50rem; font-size: 0.75em; font-weight: 600; display: inline-block; white-space: nowrap; vertical-align: baseline; }
+        .status-badge { padding: 0.25em 0.65em; border-radius: 50rem; font-size: 0.75em; font-weight: 600; display: inline-block; white-space: nowrap; vertical-align: baseline; line-height: 1; } /* Added line-height */
         .status-Pending { background-color: #ffc107; color: #000;}
         .status-Active, .status-Completed { background-color: #198754; color: #fff; }
         .status-Delivered { background-color: #0d6efd; color: #fff; }
@@ -367,21 +410,21 @@ $recentOrders = getRecentOrders($conn, 5);
 
         <div class="kpi-container">
             <div class="kpi-card">
-                <span class="kpi-icon bg-primary-soft"><i class="fas fa-dollar-sign"></i></span>
+                <span class="kpi-icon icon-revenue"><i class="fas fa-dollar-sign"></i></span>
                 <div class="kpi-content">
                     <h4>Revenue (This Month)</h4>
                     <p class="kpi-value">₱<?php echo number_format($totalRevenueThisMonth, 2); ?></p>
                 </div>
             </div>
             <div class="kpi-card">
-                <span class="kpi-icon bg-success-soft"><i class="fas fa-shopping-cart"></i></span>
+                <span class="kpi-icon icon-orders"><i class="fas fa-shopping-cart"></i></span>
                 <div class="kpi-content">
                     <h4>Total Orders (This Month)</h4>
                     <p class="kpi-value"><?php echo number_format($totalOrdersThisMonth); ?></p>
                 </div>
             </div>
             <div class="kpi-card">
-                 <span class="kpi-icon bg-warning-soft"><i class="fas fa-chart-line"></i></span>
+                 <span class="kpi-icon icon-aov"><i class="fas fa-chart-line"></i></span>
                 <div class="kpi-content">
                     <h4>Avg. Order Value (This Month)</h4>
                     <p class="kpi-value">₱<?php echo number_format($averageOrderValueThisMonth, 2); ?></p>
@@ -389,24 +432,23 @@ $recentOrders = getRecentOrders($conn, 5);
             </div>
         </div>
 
-        <div class="recent-orders-container">
-            <div class="recent-orders-header">
+        <div class="recent-orders-container data-container"> <!-- Added data-container class -->
+            <div class="container-header"> <!-- Used generic header class -->
                 <h3>Recent Orders</h3>
-                <a href="/public/pages/orders.php" class="btn btn-sm btn-primary"> <!-- Changed to btn-sm -->
+                <a href="/public/pages/orders.php" class="view-all-button"> <!-- Custom button class -->
                     <i class="fas fa-list"></i> View All Orders
                 </a>
             </div>
             <?php if (!empty($recentOrders)): ?>
-                <div class="table-responsive">
-                    <!-- Using standard Bootstrap table classes -->
-                    <table class="table table-hover table-bordered table-sm align-middle recent-orders-table">
-                        <thead class="table-light">
+                <div class="table-wrapper"> <!-- Wrapper for responsiveness -->
+                    <table class="recent-orders-table"> <!-- Custom table class -->
+                        <thead>
                             <tr>
                                 <th>PO Number</th>
                                 <th>Date</th>
                                 <th>Customer</th>
                                 <th>Status</th>
-                                <th class="text-end">Total</th>
+                                <th class="text-align-right">Total</th> <!-- Utility alignment class -->
                             </tr>
                         </thead>
                         <tbody>
@@ -419,43 +461,49 @@ $recentOrders = getRecentOrders($conn, 5);
                                     <td><?php echo htmlspecialchars(date('M d, Y', strtotime($order['order_date']))); ?></td>
                                     <td><?php echo htmlspecialchars($order['username'] ?? 'N/A'); ?></td>
                                     <td><span class="status-badge status-<?php echo $statusClass; ?>"><?php echo $statusDisplay; ?></span></td>
-                                    <td class="text-end">₱<?php echo number_format($order['total_amount'] ?? 0, 2); ?></td>
+                                    <td class="text-align-right">₱<?php echo number_format($order['total_amount'] ?? 0, 2); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
             <?php else: ?>
-                <div class="alert alert-secondary text-center" role="alert">
+                <div class="no-orders-message"> <!-- Custom class for message -->
                     No recent orders found.
                 </div>
             <?php endif; ?>
         </div>
 
         <div class="stats-container">
-            <div class="stat-card client-orders-card">
-                <div class="chart-header"><h3>CLIENT ORDERS (<?php echo htmlspecialchars($selectedYear); ?>)</h3><select id="year-select" class="form-select form-select-sm w-auto"><?php foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $selectedYear) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
+            <div class="client-orders-card data-container"> <!-- Added data-container class -->
+                <div class="chart-header"><h3>CLIENT ORDERS (<?php echo htmlspecialchars($selectedYear); ?>)</h3><select id="year-select" class="year-select"><?php foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $selectedYear) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
                 <div class="stat-card-content"><canvas id="clientOrdersChart"></canvas></div>
             </div>
-            <div class="stat-card packs-sold-card">
-                 <div class="packs-sold-header"><span>Orders sold in</span><select id="packs-sold-year" class="form-select form-select-sm w-auto"><?php foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == ($availableYears[0] ?? date('Y'))) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
+            <div class="packs-sold-card data-container"> <!-- Added data-container class -->
+                 <div class="packs-sold-header"><span>Orders sold in</span><select id="packs-sold-year" class="packs-sold-dropdown"><?php foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == ($availableYears[0] ?? date('Y'))) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
                  <div class="packs-sold-count" id="packs-sold-count">Loading...</div>
-                 <div class="packs-comparison-row justify-content-center"><span id="packs-sold-percentage" class="packs-comparison me-2">N/A since</span><select id="packs-sold-compare-year" class="form-select form-select-sm w-auto"><?php $compareYearDefault = count($availableYears) > 1 ? $availableYears[1] : ($availableYears[0] ?? date('Y')); foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $compareYearDefault) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
+                 <div class="packs-comparison-row"><span id="packs-sold-percentage" class="packs-comparison">N/A since</span><select id="packs-sold-compare-year" class="packs-sold-dropdown"><?php $compareYearDefault = count($availableYears) > 1 ? $availableYears[1] : ($availableYears[0] ?? date('Y')); foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $compareYearDefault) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
             </div>
         </div>
-        <div class="sales-department-container">
-            <div class="chart-header"><h3>SALES PER DEPARTMENT</h3><div class="time-period-tabs"><button class="time-period-tab active" data-period="weekly">Weekly</button><button class="time-period-tab" data-period="monthly">Monthly</button></div></div>
+        <div class="sales-department-container data-container"> <!-- Added data-container class -->
+            <div class="container-header"> <!-- Used generic header class -->
+                <h3>SALES PER DEPARTMENT</h3>
+                <div class="time-period-tabs">
+                    <button class="time-period-tab active" data-period="weekly">Weekly</button>
+                    <button class="time-period-tab" data-period="monthly">Monthly</button>
+                </div>
+            </div>
             <div class="stat-card-content"><canvas id="salesPerDepartmentChart"></canvas></div>
         </div>
 
     </div>
 
-    <!-- Assuming Bootstrap 5 JS is loaded globally -->
-    <!-- REMOVED: <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script> -->
+    <!-- Removed Bootstrap JS -->
     <script>
     document.addEventListener("DOMContentLoaded", function () {
         console.log("Dashboard JS Initializing...");
 
+        // --- Chart Initialization and AJAX calls (Unchanged) ---
         const chartColors = [
             'rgba(69, 160, 73, 0.85)', 'rgba(71, 120, 209, 0.85)', 'rgba(235, 137, 49, 0.85)',
             'rgba(165, 84, 184, 0.85)', 'rgba(214, 68, 68, 0.85)', 'rgba(60, 179, 163, 0.85)',
@@ -563,7 +611,7 @@ $recentOrders = getRecentOrders($conn, 5);
              }
             const selectedYear = ordersSoldYearSelect.value; const compareYear = ordersSoldCompareYearSelect.value;
             ordersSoldCountEl.textContent = 'Loading...'; ordersSoldPercentageEl.textContent = 'Calculating...';
-            ordersSoldPercentageEl.className = 'packs-comparison me-2';
+            ordersSoldPercentageEl.className = 'packs-comparison'; // Reset class
 
             try {
                 const [currentOrders, previousOrders] = await Promise.all([ getOrderCounts(selectedYear), getOrderCounts(compareYear) ]);
@@ -572,14 +620,14 @@ $recentOrders = getRecentOrders($conn, 5);
                 else if (previousOrders > 0) {
                     const change = (((currentOrders - previousOrders) / previousOrders) * 100);
                     ordersSoldPercentageEl.textContent = `${change >= 0 ? "+" : ""}${change.toFixed(1)}% since`;
-                    ordersSoldPercentageEl.className = `packs-comparison me-2 ${change >= 0 ? 'positive' : 'negative'}`;
+                    ordersSoldPercentageEl.className = `packs-comparison ${change >= 0 ? 'positive' : 'negative'}`;
                 } else if (currentOrders > 0) {
-                    ordersSoldPercentageEl.textContent = `+${currentOrders} orders (prev 0)`; ordersSoldPercentageEl.className = 'packs-comparison me-2 positive';
+                    ordersSoldPercentageEl.textContent = `+${currentOrders} orders (prev 0)`; ordersSoldPercentageEl.className = 'packs-comparison positive';
                 } else { ordersSoldPercentageEl.textContent = "N/A since"; }
             } catch (error) {
                  console.error("Error updating orders sold:", error);
                  ordersSoldCountEl.textContent = `Error`; ordersSoldPercentageEl.textContent = "Error";
-                 ordersSoldPercentageEl.className = 'packs-comparison me-2 negative';
+                 ordersSoldPercentageEl.className = 'packs-comparison negative';
             }
         }
 
