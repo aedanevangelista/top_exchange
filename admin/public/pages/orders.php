@@ -1,5 +1,5 @@
 <?php
-// Current Date: 2025-05-03 18:33:05 UTC
+// Current Date: 2025-05-03 18:38:31 UTC
 // Author: aedanevangelista
 
 session_start();
@@ -382,25 +382,29 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             top: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
+            overflow: auto; /* Allow scrolling on the modal background if content is very tall */
             background-color: rgba(0, 0, 0, 0.7);
         }
 
+        /* --- UPDATED CSS --- */
         .instructions-modal-content {
             background-color: #ffffff;
-            margin: 10% auto;
-            padding: 0;
-            border-radius: 8px;
-            width: 60%;
-            max-width: 600px;
-            position: relative;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            animation: modalFadeIn 0.3s ease-in-out;
-            overflow: hidden;
-            max-height: 90vh; /* 90% of the viewport height */
-            overflow-y: auto; /* Add scroll if content exceeds max height */
-            margin: 2vh auto; /* Center vertically with 5% top margin */
+            /* Adjusted margin: 5vh top/bottom for spacing, auto for horizontal centering */
+            margin: 5vh auto;
+            padding: 0; /* Keep padding reset */
+            border-radius: 8px; /* Keep rounded corners */
+            width: 60%; /* Keep desired width */
+            max-width: 600px; /* Keep max width */
+            position: relative; /* Keep for potential absolute children */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* Keep shadow */
+            animation: modalFadeIn 0.3s ease-in-out; /* Keep animation */
+            /* REMOVED max-height: 90vh; */
+            /* REMOVED overflow-y: auto; */
+            /* REMOVED overflow: hidden; (Let height adjust naturally) */
+            /* height: auto; is the default, no need to explicitly set */
         }
+        /* --- END UPDATED CSS --- */
+
 
         @keyframes modalFadeIn {
             from { opacity: 0; transform: translateY(-20px); }
@@ -428,8 +432,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
         .instructions-body {
             padding: 20px;
-            max-height: 300px;
-            overflow-y: auto;
+            /* Removed max-height and overflow-y to let it fit content */
             line-height: 1.6;
             white-space: pre-wrap;
             word-wrap: break-word;
