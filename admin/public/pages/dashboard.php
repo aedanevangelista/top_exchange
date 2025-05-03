@@ -68,31 +68,26 @@ function getDateRangeCondition($period) {
 
     switch ($period) {
         case 'this_month':
-            // Use placeholders for prepared statements if data comes from user input
-            // For internally defined periods like this, direct embedding is generally okay,
-            // but ensure proper casting/validation if $currentYear/$currentMonth could be manipulated.
             return "YEAR(order_date) = $currentYear AND MONTH(order_date) = $currentMonth";
         case 'this_year':
             return "YEAR(order_date) = $currentYear";
         case 'today':
              return "DATE(order_date) = '$today'";
-        // Add more periods like 'last_month', 'last_7_days' if needed
         default:
-            return "1=1"; // No filter for unknown period
+            return "1=1"; // No filter
     }
 }
 
-// Get Total Revenue for a period (Assuming 'Active', 'Completed', 'Delivered' status counts towards revenue)
+// Get Total Revenue for a period
 function getTotalRevenue($conn, $period = 'this_month') {
     $totalRevenue = 0;
     $dateCondition = getDateRangeCondition($period);
-    // IMPORTANT: Adjust the status check based on when an order is considered revenue-generating
-    // Ensure 'total_amount' is the correct column name for the order total.
-    $sql = "SELECT SUM(total_amount) as total_revenue FROM orders WHERE status IN ('Active', 'Completed', 'Delivered', 'For Delivery', 'In Transit') AND $dateCondition"; // Included more potentially revenue-generating statuses
-    $result = $conn->query($sql); // Use prepared statements if $period comes from user input
+    // Adjust statuses included in revenue calculation as needed
+    $sql = "SELECT SUM(total_amount) as total_revenue FROM orders WHERE status IN ('Active', 'Completed', 'Delivered', 'For Delivery', 'In Transit') AND $dateCondition";
+    $result = $conn->query($sql);
     if ($result && $result->num_rows > 0) {
         $row = $result->fetch_assoc();
-        $totalRevenue = $row['total_revenue'] ?? 0; // Use null coalescing operator
+        $totalRevenue = $row['total_revenue'] ?? 0;
     }
     return $totalRevenue;
 }
@@ -102,7 +97,7 @@ function getTotalOrdersCount($conn, $period = 'this_month') {
     $count = 0;
     $dateCondition = getDateRangeCondition($period);
     $sql = "SELECT COUNT(*) as total_orders FROM orders WHERE $dateCondition";
-    $result = $conn->query($sql); // Use prepared statements if $period comes from user input
+    $result = $conn->query($sql);
     if ($result && $result->num_rows > 0) {
         $row = $result->fetch_assoc();
         $count = $row['total_orders'] ?? 0;
@@ -118,20 +113,19 @@ function getAverageOrderValue($totalRevenue, $totalOrders) {
     return 0; // Avoid division by zero
 }
 
-// --- CORRECTED: Recent Orders Function ---
+// --- CORRECTED AGAIN: Recent Orders Function ---
 function getRecentOrders($conn, $limit = 5) {
     $orders = [];
 
     // Fetching client username by joining orders and clients_accounts on their username columns.
-    // We select ca.username just to ensure we get it from the client table if needed,
-    // but o.username should be the same based on this join condition.
-    $sql = "SELECT o.order_id, o.order_date, o.status, o.total_amount, ca.username
+    // Selecting o.id as the primary key for the order.
+    $sql = "SELECT o.id, o.order_date, o.status, o.total_amount, ca.username
             FROM orders o
-            LEFT JOIN clients_accounts ca ON o.username = ca.username -- Corrected JOIN
+            LEFT JOIN clients_accounts ca ON o.username = ca.username
             ORDER BY o.order_date DESC
             LIMIT ?";
 
-    $stmt = $conn->prepare($sql); // This line should no longer cause the "table doesn't exist" error
+    $stmt = $conn->prepare($sql); // Line 134 (approx) - This should now work
     if ($stmt) {
         $stmt->bind_param("i", $limit);
         $stmt->execute();
@@ -169,7 +163,7 @@ $totalOrdersThisMonth = getTotalOrdersCount($conn, $kpiPeriod);
 $averageOrderValueThisMonth = getAverageOrderValue($totalRevenueThisMonth, $totalOrdersThisMonth);
 
 // NEW: Fetch Recent Orders
-$recentOrders = getRecentOrders($conn, 5); // Get top 5
+$recentOrders = getRecentOrders($conn, 5); // Get top 5 (Line 172 approx)
 
 // NOTE: Connection $conn remains open as it might be used by AJAX calls triggered by JS below.
 // If not, consider closing it: $conn->close();
@@ -335,8 +329,8 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
         <div class="kpi-container">
             <div class="kpi-card">
                 <h4>Revenue (This Month)</h4>
-                <!-- Assuming currency is USD, adjust symbol if needed -->
-                <p class="kpi-value">$<?php echo number_format($totalRevenueThisMonth, 2); ?></p>
+                <!-- Assuming currency is PHP, adjust symbol if needed -->
+                <p class="kpi-value">₱<?php echo number_format($totalRevenueThisMonth, 2); ?></p>
                  <!-- Optional: Add comparison % later if needed -->
             </div>
             <div class="kpi-card">
@@ -346,7 +340,7 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
             </div>
             <div class="kpi-card">
                 <h4>Avg. Order Value (This Month)</h4>
-                <p class="kpi-value">$<?php echo number_format($averageOrderValueThisMonth, 2); ?></p>
+                <p class="kpi-value">₱<?php echo number_format($averageOrderValueThisMonth, 2); ?></p>
                  <!-- Optional: Add comparison % later if needed -->
             </div>
         </div>
@@ -420,7 +414,7 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                     <table class="recent-orders-table">
                         <thead>
                             <tr>
-                                <th>Order ID</th>
+                                <th>Order ID</th> <!-- Changed header text -->
                                 <th>Date</th>
                                 <th>Customer</th> <!-- This column depends on the JOIN working -->
                                 <th>Status</th>
@@ -436,8 +430,9 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                                 <tr>
                                     <td>
                                         <!-- Make this a link to the order details page - UPDATE PATH IF NEEDED -->
-                                        <a href="/public/pages/order_details.php?id=<?php echo htmlspecialchars($order['order_id']); ?>">
-                                            #<?php echo htmlspecialchars($order['order_id']); ?>
+                                        <!-- CORRECTED: Use $order['id'] here -->
+                                        <a href="/public/pages/order_details.php?id=<?php echo htmlspecialchars($order['id']); ?>">
+                                            #<?php echo htmlspecialchars($order['id']); // Display correct ID ?>
                                         </a>
                                     </td>
                                     <td><?php echo htmlspecialchars(date('M d, Y', strtotime($order['order_date']))); ?></td>
@@ -447,7 +442,7 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                                             <?php echo $statusDisplay; ?>
                                         </span>
                                     </td>
-                                    <td style="text-align: right;">$<?php echo number_format($order['total_amount'] ?? 0, 2); // Handle null total ?></td>
+                                    <td style="text-align: right;">₱<?php echo number_format($order['total_amount'] ?? 0, 2); // Handle null total and use PHP symbol ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -461,7 +456,7 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
 
     </div> <!-- End main-content -->
 
-    <!-- Complete JavaScript Block -->
+    <!-- Complete JavaScript Block (No changes needed in JS for this fix) -->
     <script>
     document.addEventListener("DOMContentLoaded", function () {
         console.log("Dashboard JS Initializing...");
@@ -528,10 +523,6 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                             labels: {
                                 boxWidth: 15,
                                 padding: 15,
-                                // Optional: Limit number of legend items shown directly
-                                // filter: function(legendItem, chartData) {
-                                //     return legendItem.index < 10; // Show only top 10 for example
-                                // }
                             }
                         },
                         title: {
@@ -557,11 +548,9 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
         }
 
         function loadClientOrders(year) {
-            // IMPORTANT: Update this URL path if your backend file structure changes
             const url = `/backend/get_client_orders.php?year=${year}`;
             console.log("Fetching client orders from:", url);
 
-             // Optional: Show loading state on chart
             if (ctxClientOrders) {
                  const chartContext = ctxClientOrders.getContext('2d');
                  chartContext.clearRect(0, 0, ctxClientOrders.width, ctxClientOrders.height);
@@ -569,7 +558,6 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                  chartContext.textAlign = 'center';
                  chartContext.fillText('Loading...', ctxClientOrders.width / 2, ctxClientOrders.height / 2);
             }
-
 
             fetch(url)
                 .then(response => {
@@ -580,20 +568,19 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                 })
                 .then(data => {
                     console.log("Client orders data received:", data);
-                    if (data.error) { // Check for backend error message
+                    if (data.error) {
                          console.error("Server error loading client orders:", data.message);
-                         initializeClientOrdersChart([]); // Pass empty array to show message
+                         initializeClientOrdersChart([]);
                     } else {
                          initializeClientOrdersChart(data);
                     }
                 })
                 .catch(error => {
                      console.error('Error loading client orders:', error);
-                     // Display error on chart
                      if (ctxClientOrders) {
                          const chartContext = ctxClientOrders.getContext('2d');
                          chartContext.clearRect(0, 0, ctxClientOrders.width, ctxClientOrders.height);
-                         chartContext.fillStyle = '#dc3545'; // Red color
+                         chartContext.fillStyle = '#dc3545';
                          chartContext.textAlign = 'center';
                          chartContext.fillText('Error loading chart data.', ctxClientOrders.width / 2, ctxClientOrders.height / 2);
                      }
@@ -604,13 +591,11 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
         if (yearSelect) {
             yearSelect.addEventListener('change', function() {
                 loadClientOrders(this.value);
-                // Update the H3 title dynamically if needed
                 const clientOrdersHeader = document.querySelector('.client-orders-card .chart-header h3');
                 if(clientOrdersHeader) {
                     clientOrdersHeader.textContent = `CLIENT ORDERS (${this.value})`;
                 }
             });
-            // Initial load based on the selected value in PHP
             if (yearSelect.value) {
                 loadClientOrders(yearSelect.value);
             }
@@ -628,8 +613,7 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
         const ordersSoldPercentageEl = document.getElementById("packs-sold-percentage");
 
         function getOrderCounts(year) {
-            if (!year) return Promise.resolve(0); // Return promise resolving to 0 if no year
-            // IMPORTANT: Update this URL path if your backend file structure changes
+            if (!year) return Promise.resolve(0);
             const url = `/backend/get_order_counts.php?year=${year}`;
             console.log("Fetching order counts from:", url);
             return fetch(url)
@@ -637,15 +621,12 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                     if (!response.ok) {
                         throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}`);
                     }
-                    // Check content type before parsing JSON
                     const contentType = response.headers.get("content-type");
                     if (contentType && contentType.indexOf("application/json") !== -1) {
                         return response.json();
                     } else {
-                        // Handle non-JSON response (e.g., plain number or error message)
                         return response.text().then(text => {
                              console.warn(`Received non-JSON response for order count (${year}):`, text);
-                             // Try to parse as number, default to 0
                              const count = Number(text);
                              return isNaN(count) ? 0 : count;
                         });
@@ -653,8 +634,6 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                 })
                 .then(data => {
                      console.log(`Order count for ${year}:`, data);
-                     // Ensure data is a number, default to 0 if not
-                     // If data is an object (e.g., {count: 10}), access the property
                      let count = 0;
                      if (typeof data === 'number') {
                          count = data;
@@ -667,15 +646,13 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                 })
                 .catch(error => {
                     console.error(`Error fetching order counts for ${year}:`, error);
-                    return 0; // Return 0 on error
+                    return 0;
                 });
         }
 
         async function updateOrdersSold() {
-             // Ensure all elements exist before proceeding
              if (!ordersSoldYearSelect || !ordersSoldCompareYearSelect || !ordersSoldCountEl || !ordersSoldPercentageEl) {
                  console.error("One or more Orders Sold elements not found. IDs: packs-sold-year, packs-sold-compare-year, packs-sold-count, packs-sold-percentage");
-                 // Optionally disable the widget or show an error message
                  if(ordersSoldCountEl) ordersSoldCountEl.textContent = 'Error';
                  if(ordersSoldPercentageEl) ordersSoldPercentageEl.textContent = 'Setup Error';
                  return;
@@ -683,12 +660,11 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
 
             const selectedYear = ordersSoldYearSelect.value;
             const compareYear = ordersSoldCompareYearSelect.value;
-            ordersSoldCountEl.textContent = 'Loading...'; // Show loading state
+            ordersSoldCountEl.textContent = 'Loading...';
             ordersSoldPercentageEl.textContent = 'Calculating...';
-            ordersSoldPercentageEl.className = 'packs-comparison'; // Reset class
+            ordersSoldPercentageEl.className = 'packs-comparison';
 
             try {
-                // Fetch counts concurrently
                 const [currentOrders, previousOrders] = await Promise.all([
                     getOrderCounts(selectedYear),
                     getOrderCounts(compareYear)
@@ -702,29 +678,24 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                     const percentageChange = (((currentOrders - previousOrders) / previousOrders) * 100);
                     const sign = percentageChange >= 0 ? "+" : "";
                     ordersSoldPercentageEl.textContent = `${sign}${percentageChange.toFixed(1)}% since`;
-                    // Add class for styling (e.g., green for positive, red for negative)
                     ordersSoldPercentageEl.className = 'packs-comparison ' + (percentageChange >= 0 ? 'positive' : 'negative');
                 } else if (currentOrders > 0) {
-                     // Previous year had 0 orders, current has some
                      ordersSoldPercentageEl.textContent = `+${currentOrders} orders (prev 0)`;
                      ordersSoldPercentageEl.className = 'packs-comparison positive';
                 } else {
-                    // Both years have 0 orders or previous was 0 and current is 0
-                    ordersSoldPercentageEl.textContent = "N/A since"; // Or "0% change"
+                    ordersSoldPercentageEl.textContent = "N/A since";
                 }
             } catch (error) {
                  console.error("Error updating orders sold widget:", error);
                  ordersSoldCountEl.textContent = `Error`;
                  ordersSoldPercentageEl.textContent = "Error loading data";
-                 ordersSoldPercentageEl.className = 'packs-comparison negative'; // Indicate error visually
+                 ordersSoldPercentageEl.className = 'packs-comparison negative';
             }
         }
 
-        // Add event listeners only if elements exist
         if (ordersSoldYearSelect) ordersSoldYearSelect.addEventListener("change", updateOrdersSold);
         if (ordersSoldCompareYearSelect) ordersSoldCompareYearSelect.addEventListener("change", updateOrdersSold);
 
-        // Initial update only if elements exist
         if (ordersSoldYearSelect && ordersSoldCompareYearSelect && ordersSoldCountEl && ordersSoldPercentageEl) {
              updateOrdersSold();
         }
@@ -743,11 +714,9 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                 return;
             }
             const chartContext = ctxSalesPerDepartment.getContext('2d');
-            // IMPORTANT: Update this URL path if your backend file structure changes
             const url = `/backend/get_sales_by_category.php?period=${timePeriod}`;
             console.log(`Fetching ${timePeriod} sales data from:`, url);
 
-            // Optional: Show loading state
             chartContext.clearRect(0, 0, ctxSalesPerDepartment.width, ctxSalesPerDepartment.height);
             chartContext.fillStyle = '#6c757d';
             chartContext.textAlign = 'center';
@@ -759,30 +728,25 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                     if (!response.ok) {
                         throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}`);
                     }
-                    // Get raw text first to help debug potential JSON issues
                     return response.text();
                 })
                 .then(text => {
-                    // console.log(`Raw ${timePeriod} sales data response:`, text); // Uncomment for debugging
                     try {
-                        const data = JSON.parse(text); // Attempt to parse the text as JSON
+                        const data = JSON.parse(text);
 
-                        // Check for a specific error structure from your backend
                         if (data.error) {
                             throw new Error(`Server Error: ${data.message || 'Unknown error'}`);
                         }
 
-                        // Validate expected data structure (basic check)
                         if (!data || !Array.isArray(data.categories) || !data.currentYear || !data.lastYear) {
                              throw new Error("Invalid data structure received from backend.");
                         }
 
 
                         if (salesPerDepartmentChart) {
-                             salesPerDepartmentChart.destroy(); // Destroy existing chart instance
+                             salesPerDepartmentChart.destroy();
                         }
 
-                         // Display a message if no data categories exist
                         if (data.categories.length === 0) {
                              chartContext.clearRect(0, 0, ctxSalesPerDepartment.width, ctxSalesPerDepartment.height);
                              chartContext.fillStyle = '#6c757d';
@@ -795,18 +759,18 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                         salesPerDepartmentChart = new Chart(chartContext, {
                             type: "bar",
                             data: {
-                                labels: data.categories, // Expecting an array of category names
+                                labels: data.categories,
                                 datasets: [
                                     {
-                                        label: `${data.currentYear.year || 'Current'} Sales`, // Expecting currentYear.year and currentYear.data
+                                        label: `${data.currentYear.year || 'Current'} Sales`,
                                         data: data.currentYear.data || [],
                                         backgroundColor: "rgba(74, 144, 226, 0.8)", // Blue
                                         borderColor: "rgba(74, 144, 226, 1)",
                                         borderWidth: 1,
-                                        borderRadius: 4 // Rounded corners for bars
+                                        borderRadius: 4
                                     },
                                     {
-                                        label: `${data.lastYear.year || 'Previous'} Sales`, // Expecting lastYear.year and lastYear.data
+                                        label: `${data.lastYear.year || 'Previous'} Sales`,
                                         data: data.lastYear.data || [],
                                         backgroundColor: "rgba(155, 155, 155, 0.7)", // Gray
                                         borderColor: "rgba(155, 155, 155, 1)",
@@ -817,77 +781,51 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                             },
                             options: {
                                 responsive: true,
-                                maintainAspectRatio: false, // Allow chart to resize freely
+                                maintainAspectRatio: false,
                                 plugins: {
-                                    legend: {
-                                        position: 'top' // Position legend at the top
-                                    },
-                                    title: {
-                                        display: false // Title handled by chart-header h3
-                                    },
-                                    tooltip: {
-                                        mode: 'index', // Show tooltips for both bars on hover
-                                        intersect: false,
-                                    }
+                                    legend: { position: 'top' },
+                                    title: { display: false },
+                                    tooltip: { mode: 'index', intersect: false, }
                                 },
                                 scales: {
                                     y: {
-                                        beginAtZero: true, // Start Y-axis at 0
-                                        title: {
-                                            display: true,
-                                            text: 'Number of Orders' // Y-axis label
-                                        }
+                                        beginAtZero: true,
+                                        title: { display: true, text: 'Number of Orders' }
                                     },
                                     x: {
-                                        title: {
-                                             display: true,
-                                             text: 'Department / Category' // X-axis label
-                                         },
-                                        ticks: {
-                                            autoSkip: false // Prevent labels from being skipped automatically
-                                            // Consider rotating labels if they overlap:
-                                            // maxRotation: 90,
-                                            // minRotation: 45
-                                        }
+                                        title: { display: true, text: 'Department / Category' },
+                                        ticks: { autoSkip: false }
                                     }
                                 }
                             }
                         });
                     } catch (e) {
-                        // Catch JSON parsing errors or other errors during processing
                         console.error(`Error processing ${timePeriod} sales data:`, e, "Raw text was:", text);
-                         // Display error message on the chart canvas
                          chartContext.clearRect(0, 0, ctxSalesPerDepartment.width, ctxSalesPerDepartment.height);
-                         chartContext.fillStyle = '#dc3545'; // Red color
+                         chartContext.fillStyle = '#dc3545';
                          chartContext.textAlign = 'center';
                          chartContext.fillText('Error loading chart data.', ctxSalesPerDepartment.width / 2, ctxSalesPerDepartment.height / 2);
                     }
                 })
                 .catch(error => {
-                     // Catch fetch errors (network issues, server errors)
                      console.error(`Error fetching ${timePeriod} sales data:`, error);
                      if (ctxSalesPerDepartment) {
                           const chartContext = ctxSalesPerDepartment.getContext('2d');
                           chartContext.clearRect(0, 0, ctxSalesPerDepartment.width, ctxSalesPerDepartment.height);
-                          chartContext.fillStyle = '#dc3545'; // Red color
+                          chartContext.fillStyle = '#dc3545';
                           chartContext.textAlign = 'center';
                           chartContext.fillText('Error loading chart data.', ctxSalesPerDepartment.width / 2, ctxSalesPerDepartment.height / 2);
                      }
                 });
         }
 
-        // Add event listeners to time period tabs
         const timePeriodTabs = document.querySelectorAll('.time-period-tab');
         if (timePeriodTabs.length > 0) {
             timePeriodTabs.forEach(tab => {
                 tab.addEventListener('click', function() {
-                    // Remove 'active' class from all tabs
                     timePeriodTabs.forEach(t => t.classList.remove('active'));
-                    // Add 'active' class to the clicked tab
                     this.classList.add('active');
-                    // Get the new time period
                     currentTimePeriod = this.getAttribute('data-period');
-                    // Load data for the new period
                     loadSalesByCategory(currentTimePeriod);
                 });
             });
@@ -896,13 +834,11 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
         }
 
 
-        // Initial load for the sales per department chart if canvas exists
         if (ctxSalesPerDepartment) {
-             // Load data based on the initially active tab
              const activeTab = document.querySelector('.time-period-tab.active');
              if (activeTab) {
                  currentTimePeriod = activeTab.getAttribute('data-period');
-             } // else defaults to 'weekly'
+             }
              loadSalesByCategory(currentTimePeriod);
         } else {
              console.error("Sales per Department canvas element (ID: salesPerDepartmentChart) not found on initial load.");
