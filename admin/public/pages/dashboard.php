@@ -137,40 +137,39 @@ $recentOrders = getRecentOrders($conn, 5);
     <title>Dashboard</title>
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="/css/dashboard.css">
-    
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         body {
-            background-color: #f8f9fa; /* Light background for the page */
+            background-color: #f8f9fa;
         }
         .main-content {
-            padding: 20px; /* Add padding around main content */
+            padding: 20px;
         }
         .overview-container h2 {
-            margin-bottom: 1.5rem; /* More space below title */
+            margin-bottom: 1.5rem;
         }
         .notification-badges {
-            margin-bottom: 2rem; /* More space below badges */
+            margin-bottom: 2rem;
         }
 
-        /* --- Improved KPI Cards --- */
         .kpi-container {
-            display: grid; /* Use grid for better alignment */
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* Responsive columns */
-            gap: 1.25rem; /* Spacing between cards */
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
             margin-bottom: 2rem;
         }
         .kpi-card {
             background-color: #fff;
             padding: 1.25rem 1.5rem;
-            border-radius: 0.5rem; /* Standard Bootstrap radius */
-            border: 1px solid #dee2e6; /* Subtle border */
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); /* Subtle shadow */
-            display: flex; /* Use flexbox for icon alignment */
-            align-items: center; /* Center items vertically */
+            border-radius: 0.5rem;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            display: flex;
+            align-items: center;
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }
         .kpi-card:hover {
@@ -178,37 +177,36 @@ $recentOrders = getRecentOrders($conn, 5);
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
         }
         .kpi-icon {
-            font-size: 1.75rem; /* Larger icon */
+            font-size: 1.75rem;
             padding: 0.8rem;
-            border-radius: 50%; /* Circular background */
-            margin-right: 1rem; /* Space between icon and text */
-            color: #fff; /* White icon color */
-            width: 55px; /* Fixed width */
-            height: 55px; /* Fixed height */
+            border-radius: 50%;
+            margin-right: 1rem;
+            color: #fff;
+            width: 55px;
+            height: 55px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
         }
-        .kpi-icon.bg-primary-soft { background-color: rgba(13, 110, 253, 0.2); color: #0d6efd; } /* Revenue */
-        .kpi-icon.bg-success-soft { background-color: rgba(25, 135, 84, 0.2); color: #198754; } /* Orders */
-        .kpi-icon.bg-warning-soft { background-color: rgba(255, 193, 7, 0.2); color: #ffc107; } /* AOV */
+        .kpi-icon.bg-primary-soft { background-color: rgba(13, 110, 253, 0.2); color: #0d6efd; }
+        .kpi-icon.bg-success-soft { background-color: rgba(25, 135, 84, 0.2); color: #198754; }
+        .kpi-icon.bg-warning-soft { background-color: rgba(255, 193, 7, 0.2); color: #ffc107; }
 
         .kpi-content h4 {
             margin: 0 0 0.25rem 0;
-            font-size: 0.85rem; /* Slightly smaller title */
-            color: #6c757d; /* Gray text */
+            font-size: 0.85rem;
+            color: #6c757d;
             text-transform: uppercase;
             font-weight: 600;
         }
         .kpi-content .kpi-value {
-            font-size: 1.75rem; /* Slightly smaller value */
+            font-size: 1.75rem;
             font-weight: 700;
-            color: #212529; /* Darker text */
+            color: #212529;
             margin: 0;
             line-height: 1.2;
         }
 
-        /* --- Recent Orders Section --- */
         .recent-orders-container {
             background-color: #fff;
             padding: 1.5rem;
@@ -223,35 +221,32 @@ $recentOrders = getRecentOrders($conn, 5);
             align-items: center;
             margin-bottom: 1rem;
             padding-bottom: 1rem;
-            border-bottom: 1px solid #dee2e6; /* Match card border */
+            border-bottom: 1px solid #dee2e6;
         }
         .recent-orders-header h3 {
             margin: 0;
-            font-size: 1.25rem; /* Standard heading size */
+            font-size: 1.25rem;
             font-weight: 600;
         }
-        /* Improved Button */
         .recent-orders-header .btn {
             font-weight: 500;
-            padding: 0.4rem 0.8rem; /* Adjust padding */
+            padding: 0.4rem 0.8rem;
         }
         .recent-orders-header .btn i {
             margin-right: 0.4rem;
         }
 
-        /* Table Styling using Bootstrap classes + small tweaks */
         .recent-orders-table th {
             font-weight: 600;
-            white-space: nowrap; /* Prevent header wrap */
+            white-space: nowrap;
         }
         .recent-orders-table td {
-            vertical-align: middle; /* Align content vertically */
+            vertical-align: middle;
         }
         .recent-orders-table .status-badge {
-            font-weight: 500; /* Make badge text slightly bolder */
+            font-weight: 500;
         }
 
-        /* Chart/Stats Section */
         .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -285,7 +280,7 @@ $recentOrders = getRecentOrders($conn, 5);
             font-size: 0.875rem;
         }
         .stat-card-content {
-            height: 300px; /* Ensure consistent height for charts */
+            height: 300px;
         }
         .packs-sold-count {
             font-size: 2rem;
@@ -321,7 +316,6 @@ $recentOrders = getRecentOrders($conn, 5);
              border-bottom-color: #0d6efd;
         }
 
-        /* Status Badges (already defined, just ensure consistency) */
         .status-badge { padding: 0.25em 0.65em; border-radius: 50rem; font-size: 0.75em; font-weight: 600; display: inline-block; white-space: nowrap; vertical-align: baseline; }
         .status-Pending { background-color: #ffc107; color: #000;}
         .status-Active, .status-Completed { background-color: #198754; color: #fff; }
@@ -546,7 +540,7 @@ $recentOrders = getRecentOrders($conn, 5);
              }
             const selectedYear = ordersSoldYearSelect.value; const compareYear = ordersSoldCompareYearSelect.value;
             ordersSoldCountEl.textContent = 'Loading...'; ordersSoldPercentageEl.textContent = 'Calculating...';
-            ordersSoldPercentageEl.className = 'packs-comparison me-2'; // Keep margin
+            ordersSoldPercentageEl.className = 'packs-comparison me-2';
 
             try {
                 const [currentOrders, previousOrders] = await Promise.all([ getOrderCounts(selectedYear), getOrderCounts(compareYear) ]);
