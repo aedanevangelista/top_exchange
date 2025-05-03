@@ -154,11 +154,8 @@ $recentOrders = getRecentOrders($conn, 5);
             color: #212529;
             line-height: 1.5;
         }
-        /* Ensure main content does not interfere with sidebar if sidebar.css uses fixed positioning */
         .main-content {
             padding: 20px;
-            /* If sidebar is fixed width, add margin-left: [sidebar-width]px; */
-            /* e.g., margin-left: 250px; */
         }
         .overview-container h2 {
             margin-bottom: 1.5rem;
@@ -170,7 +167,7 @@ $recentOrders = getRecentOrders($conn, 5);
         }
         .data-container {
             background-color: #fff;
-            padding: 1rem; /* Reduced padding */
+            padding: 1rem;
             border-radius: 0.375rem;
             border: 1px solid #dee2e6;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
@@ -287,7 +284,7 @@ $recentOrders = getRecentOrders($conn, 5);
             color: #ffffff;
         }
         .recent-orders-table th {
-            padding: 0.5rem 0.75rem; /* Reduced header padding */
+            padding: 0.5rem 0.75rem;
             text-align: left;
             font-weight: 600;
             font-size: 0.9rem;
@@ -296,19 +293,18 @@ $recentOrders = getRecentOrders($conn, 5);
             border-bottom-width: 2px;
         }
         .recent-orders-table td {
-            padding: 0.6rem 0.75rem; /* Adjusted cell padding */
+            padding: 0.6rem 0.75rem;
             border: none;
             border-bottom: 1px solid #dee2e6;
             font-size: 0.875rem;
-            text-align: left; /* Default align left */
+            text-align: left;
         }
         .recent-orders-table tbody tr:last-child td {
             border-bottom: none;
         }
-        .recent-orders-table tbody tr:hover { /* Re-enabled hover */
-            background-color: #f1f1f1; /* Slightly darker hover */
+        .recent-orders-table tbody tr:hover {
+            background-color: #f1f1f1;
         }
-        /* Removed .text-align-right utility class */
         .no-orders-message {
              text-align: center;
              padding: 1rem;
@@ -326,11 +322,30 @@ $recentOrders = getRecentOrders($conn, 5);
             margin-bottom: 1.5rem;
         }
         /* Uses .data-container styling */
-        .chart-header, .packs-sold-header, .packs-comparison-row {
+        .client-orders-card .stat-card-content { /* Keep chart content div */
+             height: 300px;
+             position: relative;
+        }
+        .packs-sold-card { /* Target this specific card for centering */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center vertically */
+            align-items: center; /* Center horizontally */
+            min-height: 300px; /* Give it a minimum height to allow centering */
+        }
+        .chart-header, .packs-sold-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
+            width: 100%; /* Ensure header takes full width */
+        }
+        .packs-comparison-row {
+             display: flex;
+             justify-content: center; /* Center comparison items */
+             align-items: center;
+             width: 100%; /* Ensure comparison row takes width */
+             margin-top: 0.5rem; /* Add space above comparison */
         }
         .data-container h3 {
             font-size: 0.9rem;
@@ -347,19 +362,14 @@ $recentOrders = getRecentOrders($conn, 5);
             background-color: #fff;
             max-width: 100px;
         }
-        .stat-card-content {
-            height: 300px;
-            position: relative;
-        }
+
         .packs-sold-count {
             font-size: 1.8rem;
             font-weight: 700;
             text-align: center;
+            margin-top: 0.5rem; /* Add some space above */
             margin-bottom: 0.5rem;
             color: #212529;
-        }
-        .packs-comparison-row {
-             justify-content: center;
         }
         .packs-comparison {
              font-size: 0.9rem;
@@ -370,7 +380,10 @@ $recentOrders = getRecentOrders($conn, 5);
         .packs-comparison.negative { color: #dc3545; }
 
         /* Sales Dept Chart */
-        /* Uses .data-container styling */
+        .sales-department-container .stat-card-content { /* Keep chart content div */
+             height: 300px;
+             position: relative;
+        }
         .time-period-tabs .time-period-tab {
              background: none;
              border: none;
@@ -385,17 +398,16 @@ $recentOrders = getRecentOrders($conn, 5);
              border-bottom-color: #0d6efd;
         }
 
-        /* --- Status Badges (Re-added) --- */
+        /* --- Status Badges --- */
         .status-badge { padding: 0.25em 0.65em; border-radius: 50rem; font-size: 0.75em; font-weight: 600; display: inline-block; white-space: nowrap; vertical-align: baseline; line-height: 1; }
-        .status-Pending { background-color: #ffc107; color: #000;}
-        .status-Active { background-color: #198754; color: #fff; } /* Green like accounts.php 'Active' */
-        .status-Completed { background-color: #198754; color: #fff; } /* Same as Active/Delivered for now */
+        .status-Pending { background-color: #ffc107; color: #fff;} /* White text */
+        .status-Active { background-color: #198754; color: #fff; }
+        .status-Completed { background-color: #198754; color: #fff; }
         .status-Delivered { background-color: #0d6efd; color: #fff; }
         .status-Rejected { background-color: #dc3545; color: #fff; }
         .status-Cancelled { background-color: #6c757d; color: #fff; }
-        .status-For\.Delivery { background-color: #0dcaf0; color: #000; } /* Escaped dot for CSS */
+        .status-For\.Delivery { background-color: #0dcaf0; color: #000; } /* Keep black for light cyan */
         .status-In\.Transit { background-color: #fd7e14; color: #fff; } /* Escaped dot for CSS */
-
 
     </style>
 </head>
@@ -454,26 +466,24 @@ $recentOrders = getRecentOrders($conn, 5);
                                 <th>Date</th>
                                 <th>Customer</th>
                                 <th>Status</th>
-                                <th>Total</th> <!-- Alignment handled by td rule -->
+                                <th>Total</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($recentOrders as $order):
                                 $statusDisplay = htmlspecialchars($order['status'] ?? 'Unknown');
-                                // Create class name for CSS: replace space with dot (e.g., "For Delivery" -> "For.Delivery")
-                                $statusClass = str_replace(' ', '\.', $statusDisplay); // Properly escape dot for CSS selector
+                                $statusClass = str_replace(' ', '\.', $statusDisplay); // Escape dot for CSS
                             ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($order['po_number'] ?? 'N/A'); ?></td>
                                     <td><?php echo htmlspecialchars(date('M d, Y', strtotime($order['order_date']))); ?></td>
                                     <td><?php echo htmlspecialchars($order['username'] ?? 'N/A'); ?></td>
                                     <td>
-                                        <!-- Reverted to status badge -->
                                         <span class="status-badge status-<?php echo $statusClass; ?>">
                                             <?php echo $statusDisplay; ?>
                                         </span>
                                     </td>
-                                    <td>₱<?php echo number_format($order['total_amount'] ?? 0, 2); ?></td> <!-- Alignment handled by td rule -->
+                                    <td>₱<?php echo number_format($order['total_amount'] ?? 0, 2); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -487,16 +497,19 @@ $recentOrders = getRecentOrders($conn, 5);
         </div>
 
         <div class="stats-container">
+             <!-- Client Orders Chart (Uses data-container) -->
             <div class="client-orders-card data-container">
                 <div class="chart-header"><h3>CLIENT ORDERS (<?php echo htmlspecialchars($selectedYear); ?>)</h3><select id="year-select" class="year-select"><?php foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $selectedYear) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
                 <div class="stat-card-content"><canvas id="clientOrdersChart"></canvas></div>
             </div>
+             <!-- Orders Sold Card (Uses data-container, now with flex centering) -->
             <div class="packs-sold-card data-container">
                  <div class="packs-sold-header"><span>Orders sold in</span><select id="packs-sold-year" class="packs-sold-dropdown"><?php foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == ($availableYears[0] ?? date('Y'))) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
                  <div class="packs-sold-count" id="packs-sold-count">Loading...</div>
                  <div class="packs-comparison-row"><span id="packs-sold-percentage" class="packs-comparison">N/A since</span><select id="packs-sold-compare-year" class="packs-sold-dropdown"><?php $compareYearDefault = count($availableYears) > 1 ? $availableYears[1] : ($availableYears[0] ?? date('Y')); foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $compareYearDefault) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
             </div>
         </div>
+         <!-- Sales Dept Chart (Uses data-container) -->
         <div class="sales-department-container data-container">
             <div class="container-header">
                 <h3>SALES PER DEPARTMENT</h3>
