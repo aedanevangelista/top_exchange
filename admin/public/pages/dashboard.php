@@ -325,12 +325,12 @@ $recentOrders = getRecentOrders($conn, 5);
              height: 300px;
              position: relative;
         }
-        .packs-sold-card { /* Centering styles */
+        .packs-sold-card {
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 300px; /* Match chart height */
+            min-height: 300px;
         }
         .chart-header, .packs-sold-header {
             display: flex;
@@ -399,11 +399,11 @@ $recentOrders = getRecentOrders($conn, 5);
         /* --- Status Badges --- */
         .status-badge { padding: 0.25em 0.65em; border-radius: 50rem; font-size: 0.75em; font-weight: 600; display: inline-block; white-space: nowrap; vertical-align: baseline; line-height: 1; }
         .status-Pending { background-color: #ffc107; color: #fff;} /* White text */
-        .status-Active { background-color: #198754; color: #fff; }
-        .status-Completed { background-color: #198754; color: #fff; }
-        .status-Delivered { background-color: #0d6efd; color: #fff; }
+        .status-Active { background-color: #198754; color: #fff; } /* Green */
+        .status-Completed { background-color: #198754; color: #fff; } /* Green */
+        .status-Delivered { background-color: #0d6efd; color: #fff; } /* Blue */
         .status-Rejected { background-color: #dc3545; color: #fff; } /* Red */
-        .status-Cancelled { background-color: #6c757d; color: #fff; } /* Grey */
+        /* Removed .status-Cancelled */
         .status-For\.Delivery { background-color: #0dcaf0; color: #000; } /* Cyan, Black text */
         .status-In\.Transit { background-color: #fd7e14; color: #fff; } /* Orange, White text */
 
