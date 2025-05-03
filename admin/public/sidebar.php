@@ -149,6 +149,14 @@ $allowedPages = array_map('trim', explode(',', $pages));
                 </div>
             <?php endif; ?>
 
+            <?php if (in_array('Reporting', $allowedPages)): ?>
+                <a href="/public/pages/reporting.php" class="menu-item">
+                    <div>
+                        <i class="fas fa-chart-line"></i> Reporting
+                    </div>
+                </a>
+            <?php endif; ?>
+
             <?php if (in_array('Sales Data', $allowedPages)): ?>
                 <a href="/public/pages/sales.php" class="menu-item">
                     <div>
