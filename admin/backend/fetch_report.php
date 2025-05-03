@@ -16,7 +16,8 @@ include_once __DIR__ . '/db_connection.php'; // Establishes $conn
 // Default error response function
 function sendError($message, $httpCode = 500) {
     http_response_code($httpCode);
-    echo "<div class='error-message' style='padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; border-radius: 4px; margin-top: 10px;'>" . htmlspecialchars($message) . "</div>";
+    // Using a more structured error message div
+    echo "<div class='report-error-message'>" . htmlspecialchars($message) . "</div>";
     if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
         $GLOBALS['conn']->close();
     }
@@ -133,14 +134,15 @@ function generateSalesSummary($conn, $startDate, $endDate) {
     elseif ($startDate) $dateRangeStr = " from " . htmlspecialchars($startDate) . " onwards";
     elseif ($endDate) $dateRangeStr = " up to " . htmlspecialchars($endDate);
 
-    echo "<h3>Sales Summary Report" . $dateRangeStr . "</h3>";
-    echo "<div class='report-summary-box' style='margin-bottom: 20px;'>";
-    echo "<table class='summary-table' style='width: auto; border: 1px solid #ddd; background-color: #f9f9f9; border-collapse: collapse;'>";
+    echo "<h3 class='report-title'>Sales Summary Report" . $dateRangeStr . "</h3>";
+    // Using CSS classes for potentially better styling control
+    echo "<div class='report-summary-box'>";
+    echo "<table class='summary-table'>"; // Consider adding a specific class like 'report-summary-table'
     echo "<tbody>";
-    echo "<tr><td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Total Completed Orders:</td><td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>" . number_format($totalOrders) . "</td></tr>";
-    echo "<tr><td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Total Sales Value:</td><td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>₱ " . number_format($totalSales, 2) . "</td></tr>";
-    echo "<tr><td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Average Order Value:</td><td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>₱ " . number_format($averageOrderValue, 2) . "</td></tr>";
-    echo "<tr><td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Unique Customers:</td><td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>" . number_format($uniqueCustomers) . "</td></tr>";
+    echo "<tr><th>Total Completed Orders:</th><td>" . number_format($totalOrders) . "</td></tr>";
+    echo "<tr><th>Total Sales Value:</th><td>₱ " . number_format($totalSales, 2) . "</td></tr>";
+    echo "<tr><th>Average Order Value:</th><td>₱ " . number_format($averageOrderValue, 2) . "</td></tr>";
+    echo "<tr><th>Unique Customers:</th><td>" . number_format($uniqueCustomers) . "</td></tr>";
     echo "</tbody></table></div>";
 
     // --- Optional: Daily Sales Breakdown ---
@@ -156,19 +158,19 @@ function generateSalesSummary($conn, $startDate, $endDate) {
         $resultDaily = $stmtDaily->get_result();
 
         if ($resultDaily->num_rows > 0) {
-            echo "<h4>Daily Sales Breakdown</h4>";
-            echo "<table class='accounts-table'>";
+            echo "<h4 class='report-subtitle'>Daily Sales Breakdown</h4>";
+            echo "<table class='accounts-table report-table'>"; // Use existing table class + specific report class
             echo "<thead><tr><th>Date</th><th>Orders</th><th>Sales Value</th></tr></thead>";
             echo "<tbody>";
             while ($row = $resultDaily->fetch_assoc()) {
                 echo "<tr>";
                 echo "<td>" . htmlspecialchars($row['sale_date']) . "</td>";
-                echo "<td>" . number_format($row['daily_orders']) . "</td>";
-                echo "<td style='text-align: right;'>₱ " . number_format($row['daily_sales'], 2) . "</td>";
+                echo "<td class='numeric'>" . number_format($row['daily_orders']) . "</td>"; // Class for alignment
+                echo "<td class='currency'>" . number_format($row['daily_sales'], 2) . "</td>"; // Class for alignment
                 echo "</tr>";
             }
             echo "</tbody></table>";
-        } else { echo "<p>No daily sales data found for the selected period.</p>"; }
+        } else { echo "<p class='no-data-message'>No daily sales data found for the selected period.</p>"; }
         $resultDaily->close();
         $stmtDaily->close();
     }
@@ -180,8 +182,8 @@ function generateSalesSummary($conn, $startDate, $endDate) {
  * Queries 'products' (Company Orders) and 'walkin_products' (Walk-in).
  */
 function generateInventoryStatus($conn) {
-    // *** CONFIGURABLE LOW STOCK THRESHOLD ***
-    $lowStockThreshold = 10; // Set your desired low stock level here
+    // *** UPDATED LOW STOCK THRESHOLD ***
+    $lowStockThreshold = 50; // Set your desired low stock level here
 
     $companyStockFound = false;
     $walkinStockFound = false;
@@ -196,13 +198,13 @@ function generateInventoryStatus($conn) {
     $stmtCompany = $conn->prepare($sqlCompany);
     if (!$stmtCompany) {
         error_log("DB prepare error (Company Inventory): " . $conn->error);
-        echo "<h3>Low Stock Report</h3><p style='color: red;'>Error preparing company stock query.</p>";
+        echo "<h3 class='report-title'>Low Stock Report</h3><div class='report-error-message'>Error preparing company stock query.</div>";
         $errorOccurred = true;
     } else {
         $stmtCompany->bind_param("i", $lowStockThreshold);
         if (!$stmtCompany->execute()) {
             error_log("DB execute error (Company Inventory): " . $stmtCompany->error);
-            echo "<h3>Low Stock Report</h3><p style='color: red;'>Error executing company stock query.</p>";
+             echo "<h3 class='report-title'>Low Stock Report</h3><div class='report-error-message'>Error executing company stock query.</div>";
             $errorOccurred = true;
         } else {
             $resultCompany = $stmtCompany->get_result();
@@ -219,13 +221,17 @@ function generateInventoryStatus($conn) {
     $stmtWalkin = $conn->prepare($sqlWalkin);
      if (!$stmtWalkin) {
         error_log("DB prepare error (Walkin Inventory): " . $conn->error);
-        echo "<h3>Low Stock Report</h3><p style='color: red;'>Error preparing walk-in stock query.</p>";
+        // Display title only if not already shown due to company error
+        if (!$errorOccurred) echo "<h3 class='report-title'>Low Stock Report</h3>";
+        echo "<div class='report-error-message'>Error preparing walk-in stock query.</div>";
         $errorOccurred = true; // Ensure we don't proceed if prepare fails
     } else {
         $stmtWalkin->bind_param("i", $lowStockThreshold);
         if (!$stmtWalkin->execute()) {
             error_log("DB execute error (Walkin Inventory): " . $stmtWalkin->error);
-            echo "<h3>Low Stock Report</h3><p style='color: red;'>Error executing walk-in stock query.</p>";
+             // Display title only if not already shown due to company error
+            if (!$errorOccurred) echo "<h3 class='report-title'>Low Stock Report</h3>";
+            echo "<div class='report-error-message'>Error executing walk-in stock query.</div>";
             $errorOccurred = true;
         } else {
             $resultWalkin = $stmtWalkin->get_result();
@@ -236,18 +242,19 @@ function generateInventoryStatus($conn) {
     // --- Display Results ---
     if ($errorOccurred) {
         // Error messages already displayed
-        if (isset($stmtCompany)) $stmtCompany->close();
-        if (isset($stmtWalkin)) $stmtWalkin->close();
+        if (isset($stmtCompany) && $stmtCompany instanceof mysqli_stmt) $stmtCompany->close();
+        if (isset($stmtWalkin) && $stmtWalkin instanceof mysqli_stmt) $stmtWalkin->close();
         return; // Stop execution if errors occurred
     }
 
-    echo "<h3>Low Inventory Stock Report (Threshold: " . htmlspecialchars($lowStockThreshold) . " or less)</h3>";
+    echo "<h3 class='report-title'>Low Inventory Stock Report (Threshold: " . htmlspecialchars($lowStockThreshold) . " or less)</h3>";
 
     // Display Company Order Low Stock
-    echo "<div class='inventory-section' style='margin-bottom: 30px;'>"; // Container for Company Stock
-    echo "<h4>Company Order Inventory</h4>";
+    // *** USING CSS CLASSES INSTEAD OF INLINE STYLE ***
+    echo "<div class='inventory-section company-inventory'>"; // Container for Company Stock
+    echo "<h4 class='report-subtitle'>Company Order Inventory</h4>";
     if ($companyStockFound) {
-        echo "<table class='accounts-table'>";
+        echo "<table class='accounts-table report-table'>"; // Use consistent table classes
         echo "<thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead>";
         echo "<tbody>";
         while ($row = $resultCompany->fetch_assoc()) {
@@ -255,13 +262,13 @@ function generateInventoryStatus($conn) {
             $stockQuantity = $row['stock_quantity'] ?? 0;
             echo "<tr>";
             echo "<td>" . htmlspecialchars($itemDescription) . "</td>";
-            // Apply style directly as all items here are low stock
-            echo "<td style='color: orange; font-weight: bold;'>" . htmlspecialchars($stockQuantity) . "</td>";
+            // *** USING CSS CLASS FOR HIGHLIGHTING ***
+            echo "<td class='low-stock-highlight numeric'>" . htmlspecialchars($stockQuantity) . "</td>";
             echo "</tr>";
         }
         echo "</tbody></table>";
     } else {
-        echo "<p>No low stock items found for Company Orders.</p>";
+        echo "<p class='no-data-message'>No low stock items found for Company Orders.</p>";
     }
     echo "</div>"; // End Company Stock container
     if (isset($resultCompany)) $resultCompany->close();
@@ -269,10 +276,11 @@ function generateInventoryStatus($conn) {
 
 
     // Display Walk-in Low Stock
-    echo "<div class='inventory-section'>"; // Container for Walk-in Stock
-    echo "<h4>Walk-in Inventory</h4>";
+     // *** USING CSS CLASSES INSTEAD OF INLINE STYLE ***
+    echo "<div class='inventory-section walkin-inventory'>"; // Container for Walk-in Stock
+    echo "<h4 class='report-subtitle'>Walk-in Inventory</h4>";
     if ($walkinStockFound) {
-        echo "<table class='accounts-table'>";
+        echo "<table class='accounts-table report-table'>"; // Use consistent table classes
         echo "<thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead>";
         echo "<tbody>";
         while ($row = $resultWalkin->fetch_assoc()) {
@@ -280,13 +288,13 @@ function generateInventoryStatus($conn) {
             $stockQuantity = $row['stock_quantity'] ?? 0;
             echo "<tr>";
             echo "<td>" . htmlspecialchars($itemDescription) . "</td>";
-            // Apply style directly as all items here are low stock
-            echo "<td style='color: orange; font-weight: bold;'>" . htmlspecialchars($stockQuantity) . "</td>";
+             // *** USING CSS CLASS FOR HIGHLIGHTING ***
+            echo "<td class='low-stock-highlight numeric'>" . htmlspecialchars($stockQuantity) . "</td>";
             echo "</tr>";
         }
         echo "</tbody></table>";
     } else {
-        echo "<p>No low stock items found for Walk-in.</p>";
+        echo "<p class='no-data-message'>No low stock items found for Walk-in.</p>";
     }
     echo "</div>"; // End Walk-in Stock container
     if (isset($resultWalkin)) $resultWalkin->close();
@@ -294,7 +302,7 @@ function generateInventoryStatus($conn) {
 
     // Overall message if nothing found
     if (!$companyStockFound && !$walkinStockFound) {
-         // echo "<p style='margin-top: 20px;'>No low stock items found in either inventory.</p>"; // Optional overall message
+         echo "<p class='no-data-message' style='margin-top: 20px;'>No low stock items found in either inventory below the threshold.</p>";
     }
 }
 
@@ -304,7 +312,7 @@ function generateInventoryStatus($conn) {
  * Uses 'orders' table: id, order_date, username, company, total_amount, status
  */
 function generateOrderTrends($conn, $startDate, $endDate) {
-    // ... (Order Trends code remains the same) ...
+    // ... (Order Trends code remains mostly the same, added some classes) ...
     $sql = "SELECT id, order_date, username, company, total_amount, status
             FROM orders WHERE 1=1";
 
@@ -326,9 +334,9 @@ function generateOrderTrends($conn, $startDate, $endDate) {
     elseif ($startDate) $dateRangeStr = " from " . htmlspecialchars($startDate) . " onwards";
     elseif ($endDate) $dateRangeStr = " up to " . htmlspecialchars($endDate);
 
-    echo "<h3>Order Listing" . $dateRangeStr . "</h3>";
+    echo "<h3 class='report-title'>Order Listing" . $dateRangeStr . "</h3>";
     if ($result->num_rows > 0) {
-        echo "<table class='accounts-table'>";
+        echo "<table class='accounts-table report-table'>"; // Use consistent table classes
         echo "<thead><tr><th>Order ID</th><th>Date</th><th>Username</th><th>Company</th><th>Total</th><th>Status</th></tr></thead>";
         echo "<tbody>";
         while ($row = $result->fetch_assoc()) {
@@ -338,13 +346,13 @@ function generateOrderTrends($conn, $startDate, $endDate) {
             echo "<td>" . htmlspecialchars(date('Y-m-d H:i', strtotime($row['order_date']))) . "</td>";
             echo "<td>" . htmlspecialchars($row['username'] ?? 'N/A') . "</td>";
             echo "<td>" . htmlspecialchars($row['company'] ?? 'N/A') . "</td>";
-            echo "<td style='text-align: right;'>₱ " . number_format($row['total_amount'] ?? 0, 2) . "</td>";
+            echo "<td class='currency'>" . number_format($row['total_amount'] ?? 0, 2) . "</td>"; // Class for alignment
             echo "<td class='" . htmlspecialchars($statusClass) . "'>" . htmlspecialchars($row['status']) . "</td>";
             echo "</tr>";
         }
         echo "</tbody>";
         echo "</table>";
-    } else { echo "<p>No orders found within the specified criteria.</p>"; }
+    } else { echo "<p class='no-data-message'>No orders found within the specified criteria.</p>"; }
     $result->close();
     $stmt->close();
 }
