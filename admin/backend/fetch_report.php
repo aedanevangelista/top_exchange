@@ -97,8 +97,6 @@ function generateSalesSummary($conn, $startDate, $endDate) {
         $paramTypes .= "s";
     }
     if ($endDate) {
-        // If end date is same as start date, ensure it covers the whole day if needed
-        // For DATE comparison, <= is usually sufficient.
         $dateCondition .= " AND DATE(order_date) <= ?";
         $params[] = $endDate;
         $paramTypes .= "s";
@@ -237,15 +235,22 @@ function generateSalesSummary($conn, $startDate, $endDate) {
 
 /**
  * Generates an Inventory Status Report (Low Stock Items).
- * NOTE: Requires an 'inventory' table. Adjust schema details if needed.
- * Assumes `inventory` table: `product_name`, `current_stock`, `reorder_level`, `status`
+ * NOTE: Uses 'products' table. Adjust column names if needed.
+ * Assumes `products` table: `product_name`, `current_stock`, `reorder_level`, `status`
  */
 function generateInventoryStatus($conn) {
-    $tableName = 'inventory'; // Define table name once
+    // ***** CHANGE TABLE NAME HERE *****
+    $tableName = 'products'; // Use 'products' instead of 'inventory'
+    // *********************************
 
     // Check if table exists first to avoid unnecessary query errors if it doesn't
     $checkTableSql = "SHOW TABLES LIKE '" . $conn->real_escape_string($tableName) . "'";
     $tableResult = $conn->query($checkTableSql);
+    if (!$tableResult) { // Handle potential error during SHOW TABLES itself
+        error_log("Error checking for table {$tableName}: " . $conn->error);
+        sendError("Error checking database structure.", 500);
+        return;
+    }
     if ($tableResult->num_rows == 0) {
         echo "<h3>Inventory Status Report</h3>";
         echo "<p>Note: The '{$tableName}' table was not found in the database. Cannot generate this report.</p>";
@@ -255,40 +260,56 @@ function generateInventoryStatus($conn) {
     $tableResult->close();
 
     // Proceed with the actual query if the table exists
+    // *** VERIFY THESE COLUMN NAMES match your 'products' table ***
     $sql = "SELECT product_name, current_stock, reorder_level
-            FROM " . $conn->real_escape_string($tableName) . "
-            WHERE current_stock < reorder_level AND status = 'Active' -- Example filter
-            ORDER BY product_name";
+            FROM `" . $conn->real_escape_string($tableName) . "`
+            WHERE current_stock < reorder_level AND status = 'Active' -- Example filter: Adjust 'current_stock', 'reorder_level', 'status' if needed
+            ORDER BY product_name"; // Adjust 'product_name' if needed
 
     $result = $conn->query($sql);
     // Check for errors *after* confirming the table exists
     if (!$result) {
         // Log the specific SQL error
-        error_log("DB query error (Inventory): " . $conn->error);
+        error_log("DB query error (Inventory/Products): " . $conn->error . " | SQL: " . $sql);
         // Show a generic error to the user
         echo "<h3>Inventory Status Report</h3>";
-        echo "<p style='color: red;'>Error retrieving inventory data.</p>";
+        // Provide more context if it's a column error (common after table name change)
+        if (strpos($conn->error, 'Unknown column') !== false) {
+             echo "<p style='color: red;'>Error retrieving inventory data. Please check if column names like 'product_name', 'current_stock', 'reorder_level', or 'status' are correct for the '{$tableName}' table.</p>";
+        } else {
+             echo "<p style='color: red;'>Error retrieving inventory data.</p>";
+        }
         return; // Exit function
     }
 
     echo "<h3>Inventory Status Report (Low Stock Items)</h3>";
     if ($result->num_rows > 0) {
         echo "<table class='accounts-table'>"; // Ensure this class styles tables correctly
-        echo "<thead><tr><th>Product Name</th><th>Current Stock</th><th>Reorder Level</th><th>Difference</th></tr></thead>";
+        echo "<thead><tr><th>Product Name</th><th>Current Stock</th><th>Reorder Level</th><th>Difference</th></tr></thead>"; // Adjust headers if needed
         echo "<tbody>";
         while ($row = $result->fetch_assoc()) {
-            $difference = $row['reorder_level'] - $row['current_stock'];
+            // Ensure keys exist before accessing, provides fallback if columns are missing/renamed
+            $productName = $row['product_name'] ?? 'N/A';
+            $currentStock = $row['current_stock'] ?? 0;
+            $reorderLevel = $row['reorder_level'] ?? 0;
+            $difference = $reorderLevel - $currentStock;
+
             echo "<tr>";
-            echo "<td>" . htmlspecialchars($row['product_name']) . "</td>";
-            echo "<td>" . htmlspecialchars($row['current_stock']) . "</td>";
-            echo "<td>" . htmlspecialchars($row['reorder_level']) . "</td>";
-            echo "<td style='color: red; font-weight: bold;'>" . htmlspecialchars($difference) . " below</td>";
+            echo "<td>" . htmlspecialchars($productName) . "</td>";
+            echo "<td>" . htmlspecialchars($currentStock) . "</td>";
+            echo "<td>" . htmlspecialchars($reorderLevel) . "</td>";
+            // Only show difference if reorder level is defined and stock is below it
+            if (isset($row['reorder_level']) && $difference > 0) {
+                 echo "<td style='color: red; font-weight: bold;'>" . htmlspecialchars($difference) . " below</td>";
+            } else {
+                 echo "<td>-</td>"; // Show dash if not applicable or reorder level missing
+            }
             echo "</tr>";
         }
         echo "</tbody>";
         echo "</table>";
     } else {
-        echo "<p>No active items are currently below their reorder level.</p>";
+        echo "<p>No active items are currently below their reorder level (or the required columns 'current_stock'/'reorder_level' are missing/named differently).</p>"; // Updated message
     }
     $result->close();
 }
