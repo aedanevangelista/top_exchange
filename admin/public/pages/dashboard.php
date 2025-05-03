@@ -82,13 +82,13 @@ function getDateRangeCondition($period) {
     }
 }
 
-// Get Total Revenue for a period (Assuming 'Active' or 'Completed' status counts towards revenue)
+// Get Total Revenue for a period (Assuming 'Active', 'Completed', 'Delivered' status counts towards revenue)
 function getTotalRevenue($conn, $period = 'this_month') {
     $totalRevenue = 0;
     $dateCondition = getDateRangeCondition($period);
     // IMPORTANT: Adjust the status check based on when an order is considered revenue-generating
     // Ensure 'total_amount' is the correct column name for the order total.
-    $sql = "SELECT SUM(total_amount) as total_revenue FROM orders WHERE status IN ('Active', 'Completed', 'Delivered') AND $dateCondition"; // Added 'Completed', 'Delivered' as examples
+    $sql = "SELECT SUM(total_amount) as total_revenue FROM orders WHERE status IN ('Active', 'Completed', 'Delivered', 'For Delivery', 'In Transit') AND $dateCondition"; // Included more potentially revenue-generating statuses
     $result = $conn->query($sql); // Use prepared statements if $period comes from user input
     if ($result && $result->num_rows > 0) {
         $row = $result->fetch_assoc();
@@ -118,22 +118,20 @@ function getAverageOrderValue($totalRevenue, $totalOrders) {
     return 0; // Avoid division by zero
 }
 
-// --- NEW: Recent Orders Function ---
+// --- CORRECTED: Recent Orders Function ---
 function getRecentOrders($conn, $limit = 5) {
     $orders = [];
 
-    // ******** IMPORTANT: FIX THIS QUERY BASED ON YOUR DATABASE SCHEMA ********
-    // The error "Table '...users' doesn't exist" means 'users' is the wrong table name,
-    // or 'client_id'/'user_id'/'username' are the wrong column names.
-    // Replace 'users', 'u.user_id', 'o.client_id', and 'u.username' with your actual table and column names.
-    $sql = "SELECT o.order_id, o.order_date, o.status, o.total_amount, u.username
+    // Fetching client username by joining orders and clients_accounts on their username columns.
+    // We select ca.username just to ensure we get it from the client table if needed,
+    // but o.username should be the same based on this join condition.
+    $sql = "SELECT o.order_id, o.order_date, o.status, o.total_amount, ca.username
             FROM orders o
-            LEFT JOIN users u ON o.client_id = u.user_id -- <<< FIX THIS LINE!
+            LEFT JOIN clients_accounts ca ON o.username = ca.username -- Corrected JOIN
             ORDER BY o.order_date DESC
             LIMIT ?";
-    // *************************************************************************
 
-    $stmt = $conn->prepare($sql); // This line caused the error because the table name was wrong
+    $stmt = $conn->prepare($sql); // This line should no longer cause the "table doesn't exist" error
     if ($stmt) {
         $stmt->bind_param("i", $limit);
         $stmt->execute();
@@ -443,7 +441,7 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                                         </a>
                                     </td>
                                     <td><?php echo htmlspecialchars(date('M d, Y', strtotime($order['order_date']))); ?></td>
-                                    <td><?php echo htmlspecialchars($order['username'] ?? 'N/A'); // Handle null username - THIS REQUIRES THE JOIN TO WORK ?></td>
+                                    <td><?php echo htmlspecialchars($order['username'] ?? 'N/A'); // Display username fetched from JOIN ?></td>
                                     <td>
                                         <span class="status-badge status-<?php echo $statusClass; ?>">
                                             <?php echo $statusDisplay; ?>
@@ -456,7 +454,7 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                     </table>
                 </div>
             <?php else: ?>
-                <p>No recent orders found (or error fetching orders).</p> <!-- Updated message -->
+                <p>No recent orders found.</p> <!-- Updated message -->
             <?php endif; ?>
         </div>
 
