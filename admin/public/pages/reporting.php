@@ -36,10 +36,7 @@ if ($role !== 'guest' && isset($conn)) {
 }
 
 if (!$isAllowed) {
-    // Redirect to dashboard or show access denied
-    // header('Location: /public/pages/dashboard.php?error=access_denied');
     echo "Access Denied. You do not have permission to view this page.";
-    // Consider including header/footer for consistency even on error pages
     exit;
 }
 // --- End Permission Check ---
@@ -54,15 +51,14 @@ $pageTitle = "Reporting"; // Set the page title
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($pageTitle) . ' - TopExchange'; ?></title>
-    <!-- Core CSS -->
-    <link rel="stylesheet" href="/public/css/reporting.css"> <!-- ** VERIFY THIS PATH ** -->
+    <!-- Core CSS - MAKE SURE THIS PATH IS CORRECT -->
+    <link rel="stylesheet" href="/public/css/styles.css"> <!-- <== VERIFY THIS PATH -->
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Any other global CSS -->
 
-    <!-- Page-specific CSS can go here -->
+    <!-- Page-specific CSS -->
     <style>
-        /* Add any styles specific to the reporting page here */
+        /* Styles specific to the reporting page controls/display */
         .report-controls {
             margin-bottom: 20px;
             padding: 15px;
@@ -82,16 +78,21 @@ $pageTitle = "Reporting"; // Set the page title
             padding: 15px;
             border: 1px solid #ddd;
             background-color: #fff;
-            min-height: 200px; /* Example */
+            min-height: 200px;
+        }
+        /* Basic loading spinner */
+        .fa-spinner {
+            margin-left: 5px;
         }
     </style>
 </head>
 <body>
+    <!-- This structure MUST match accounts.php and rely on styles.css -->
     <div class="main-container">
         <?php include __DIR__ . '/../sidebar.php'; // Include the sidebar ?>
 
         <div class="content-area">
-            <?php include __DIR__ . '/../header.php'; // Include the header ?>
+            <?php /* REMOVED Header Include Line */ ?>
 
             <div class="page-content">
                 <h1><?php echo htmlspecialchars($pageTitle); ?></h1>
@@ -108,7 +109,7 @@ $pageTitle = "Reporting"; // Set the page title
                         <!-- Add more report types -->
                     </select>
 
-                    <!-- Example Date Range Picker (add JS library if needed) -->
+                    <!-- Example Date Range Picker -->
                     <label for="start-date">From:</label>
                     <input type="date" id="start-date" name="start-date">
                     <label for="end-date">To:</label>
@@ -126,9 +127,8 @@ $pageTitle = "Reporting"; // Set the page title
         </div> <!-- End content-area -->
     </div> <!-- End main-container -->
 
-    <!-- Core JS -->
-    <script src="/public/js/script.js"></script> <!-- ** VERIFY THIS PATH ** -->
-    <!-- Any other global JS -->
+    <!-- Core JS - MAKE SURE THIS PATH IS CORRECT -->
+    <script src="/public/js/script.js"></script> <!-- <== VERIFY THIS PATH -->
 
     <!-- Page-specific JS -->
     <script>
@@ -145,26 +145,26 @@ $pageTitle = "Reporting"; // Set the page title
 
             displayArea.innerHTML = `<p>Generating ${reportType.replace(/_/g, ' ')} report... <i class="fas fa-spinner fa-spin"></i></p>`;
 
-            // Construct data to send to the backend
             const formData = new FormData();
             formData.append('report_type', reportType);
             formData.append('start_date', startDate);
             formData.append('end_date', endDate);
-            // Add any other parameters needed
 
-            // Use fetch to call a backend endpoint
-            fetch('/backend/fetch_report.php', { // ** CREATE THIS BACKEND FILE **
+            fetch('/backend/fetch_report.php', { // We will create this backend file
                 method: 'POST',
                 body: formData
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    // Try to get error text from response body
+                    return response.text().then(text => {
+                         throw new Error(`HTTP error ${response.status}: ${text || 'Server error'}`);
+                    });
                 }
-                return response.text(); // Or response.json() if backend returns JSON
+                return response.text(); // Expecting HTML content for the report
             })
             .then(html => {
-                displayArea.innerHTML = html; // Display the report HTML returned from backend
+                displayArea.innerHTML = html;
             })
             .catch(error => {
                 console.error('Error fetching report:', error);
