@@ -46,7 +46,8 @@ try {
             break;
 
         case 'inventory_status':
-            generateInventoryStatus($conn); // Changed function name conceptually
+            // This now calls the simpler function using only 'products' table
+            generateInventoryStatus($conn);
             break;
 
         case 'order_trends':
@@ -175,20 +176,20 @@ function generateSalesSummary($conn, $startDate, $endDate) {
 
 
 /**
- * Generates an Inventory Stock List Report.
+ * Generates an Inventory Stock List Report (Company Only).
  * Uses 'products' table: item_description, stock_quantity
  */
-function generateInventoryStatus($conn) { // Renamed conceptually, but keeping function name for consistency
-    $tableName = 'products';
+function generateInventoryStatus($conn) { // Note: Doesn't use walkin_products or inventory_source
+    $tableName = 'products'; // Hardcoded to 'products' (Company)
 
     // Check if table exists
     $checkTableSql = "SHOW TABLES LIKE '" . $conn->real_escape_string($tableName) . "'";
     $tableResult = $conn->query($checkTableSql);
     if (!$tableResult) { error_log("Error checking for table {$tableName}: " . $conn->error); sendError("Error checking database structure.", 500); return; }
-    if ($tableResult->num_rows == 0) { echo "<h3>Inventory Stock List</h3><p>Note: The '{$tableName}' table was not found.</p>"; $tableResult->close(); return; }
+    if ($tableResult->num_rows == 0) { echo "<h3>Inventory Stock List (Company)</h3><p>Note: The '{$tableName}' table was not found.</p>"; $tableResult->close(); return; }
     $tableResult->close();
 
-    // *** ADJUSTED SQL QUERY FOR 'products' TABLE ***
+    // SQL Query for 'products' table
     $sql = "SELECT item_description, stock_quantity
             FROM `" . $conn->real_escape_string($tableName) . "`
             ORDER BY item_description ASC"; // Order by item description
@@ -196,8 +197,7 @@ function generateInventoryStatus($conn) { // Renamed conceptually, but keeping f
     $result = $conn->query($sql);
     if (!$result) {
         error_log("DB query error (Inventory Stock): " . $conn->error . " | SQL: " . $sql);
-        echo "<h3>Inventory Stock List</h3>";
-        // Check for specific column error
+        echo "<h3>Inventory Stock List (Company)</h3>";
         if (strpos($conn->error, 'Unknown column') !== false) {
              echo "<p style='color: red;'>Error retrieving stock data. Please check if column names 'item_description' or 'stock_quantity' exist in the '{$tableName}' table.</p>";
         } else {
@@ -206,21 +206,22 @@ function generateInventoryStatus($conn) { // Renamed conceptually, but keeping f
         return;
     }
 
-    // *** ADJUSTED REPORT TITLE AND HEADERS ***
-    echo "<h3>Inventory Stock List</h3>";
+    // Display Report Title and Table
+    echo "<h3>Inventory Stock List (Company)</h3>"; // Explicitly mention Company
     if ($result->num_rows > 0) {
         echo "<table class='accounts-table'>"; // Use your standard table class
         echo "<thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead>"; // Updated headers
         echo "<tbody>";
         while ($row = $result->fetch_assoc()) {
-            // Use correct column names from the query
             $itemDescription = $row['item_description'] ?? 'N/A';
             $stockQuantity = $row['stock_quantity'] ?? 0;
+            $lowStockThreshold = 5; // Define threshold here if needed for styling
 
             echo "<tr>";
             echo "<td>" . htmlspecialchars($itemDescription) . "</td>";
-            // Highlight low stock (e.g., <= 5) if desired, otherwise just display
-            $stockStyle = ($stockQuantity <= 5) ? " style='color: orange; font-weight: bold;'" : ""; // Example: Highlight if stock is 5 or less
+            // Optional: Highlight low stock (e.g., <= 5)
+            $stockStyle = ($stockQuantity <= $lowStockThreshold && $stockQuantity > 0) ? " style='color: orange; font-weight: bold;'" : "";
+            if ($stockQuantity <= 0) $stockStyle = " style='color: red; font-weight: bold;'";
             echo "<td" . $stockStyle . ">" . htmlspecialchars($stockQuantity) . "</td>";
             echo "</tr>";
         }
