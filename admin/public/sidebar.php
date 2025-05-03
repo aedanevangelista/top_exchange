@@ -92,6 +92,21 @@ if ($role !== 'guest' && isset($conn)) {
     font-size: 0.8em;
     opacity: 0.7;
 }
+/* Style for top-level menu items (direct links) */
+a.menu-item {
+    display: block; /* Or flex if needed */
+    padding: 10px 15px; /* Example padding */
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 0.2s ease;
+}
+a.menu-item:hover {
+     background-color: rgba(0, 0, 0, 0.05); /* Subtle hover effect */
+}
+a.menu-item i {
+    margin-right: 10px; /* Space between icon and text */
+}
+
 </style>
 
 <div class="sidebar">
@@ -161,8 +176,8 @@ if ($role !== 'guest' && isset($conn)) {
                 </div>
             <?php endif; ?>
 
-            <!-- Payments Menu -->
-            <?php if (in_array('Payment History', $allowedPages) || in_array('Reporting', $allowedPages)): ?>
+            <!-- Payments Menu (Now only Payment History) -->
+            <?php if (in_array('Payment History', $allowedPages)): // Only check for Payment History now ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
@@ -171,18 +186,21 @@ if ($role !== 'guest' && isset($conn)) {
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
-                        <?php if (in_array('Payment History', $allowedPages)): ?>
-                            <a href="/public/pages/payment_history.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Payment History
-                            </a>
-                        <?php endif; ?>
-                        <?php if (in_array('Reporting', $allowedPages)): ?>
-                            <a href="/public/pages/reporting.php" class="submenu-item">
-                                <i class="fas fa-chart-line"></i> Reporting
-                            </a>
-                        <?php endif; ?>
+                        <a href="/public/pages/payment_history.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Payment History
+                        </a>
+                        <?php // Reporting link removed from here ?>
                     </div>
                 </div>
+            <?php endif; ?>
+
+            <!-- Reporting Menu (New Top-Level Item) -->
+            <?php if (in_array('Reporting', $allowedPages)): ?>
+                <a href="/public/pages/reporting.php" class="menu-item">
+                    <div>
+                        <i class="fas fa-chart-line"></i> Reporting
+                    </div>
+                </a>
             <?php endif; ?>
 
             <?php if (in_array('Sales Data', $allowedPages)): ?>
