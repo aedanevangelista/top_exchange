@@ -121,15 +121,19 @@ function getAverageOrderValue($totalRevenue, $totalOrders) {
 // --- NEW: Recent Orders Function ---
 function getRecentOrders($conn, $limit = 5) {
     $orders = [];
-    // Fetching client username requires a JOIN. Adjust table/column names as needed.
-    // Assuming 'users' table with 'user_id' and 'username' linked to 'orders.client_id'
-    // IMPORTANT: Verify 'users.user_id', 'orders.client_id', 'users.username', 'orders.total_amount' columns exist.
+
+    // ******** IMPORTANT: FIX THIS QUERY BASED ON YOUR DATABASE SCHEMA ********
+    // The error "Table '...users' doesn't exist" means 'users' is the wrong table name,
+    // or 'client_id'/'user_id'/'username' are the wrong column names.
+    // Replace 'users', 'u.user_id', 'o.client_id', and 'u.username' with your actual table and column names.
     $sql = "SELECT o.order_id, o.order_date, o.status, o.total_amount, u.username
             FROM orders o
-            LEFT JOIN users u ON o.client_id = u.user_id -- Adjust JOIN condition based on your schema
+            LEFT JOIN users u ON o.client_id = u.user_id -- <<< FIX THIS LINE!
             ORDER BY o.order_date DESC
             LIMIT ?";
-    $stmt = $conn->prepare($sql);
+    // *************************************************************************
+
+    $stmt = $conn->prepare($sql); // This line caused the error because the table name was wrong
     if ($stmt) {
         $stmt->bind_param("i", $limit);
         $stmt->execute();
@@ -277,7 +281,8 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
         /* Ensure consistent spacing and layout */
         .main-content > .dashboard-section,
         .main-content > .stats-container,
-        .main-content > .kpi-container {
+        .main-content > .kpi-container,
+        .main-content > .overview-container { /* Apply to overview too */
             margin-bottom: 25px; /* Add consistent bottom margin */
         }
 
@@ -419,7 +424,7 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                             <tr>
                                 <th>Order ID</th>
                                 <th>Date</th>
-                                <th>Customer</th>
+                                <th>Customer</th> <!-- This column depends on the JOIN working -->
                                 <th>Status</th>
                                 <th style="text-align: right;">Total</th> <!-- Align total right -->
                             </tr>
@@ -438,7 +443,7 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                                         </a>
                                     </td>
                                     <td><?php echo htmlspecialchars(date('M d, Y', strtotime($order['order_date']))); ?></td>
-                                    <td><?php echo htmlspecialchars($order['username'] ?? 'N/A'); // Handle null username ?></td>
+                                    <td><?php echo htmlspecialchars($order['username'] ?? 'N/A'); // Handle null username - THIS REQUIRES THE JOIN TO WORK ?></td>
                                     <td>
                                         <span class="status-badge status-<?php echo $statusClass; ?>">
                                             <?php echo $statusDisplay; ?>
@@ -451,7 +456,7 @@ $recentOrders = getRecentOrders($conn, 5); // Get top 5
                     </table>
                 </div>
             <?php else: ?>
-                <p>No recent orders found.</p>
+                <p>No recent orders found (or error fetching orders).</p> <!-- Updated message -->
             <?php endif; ?>
         </div>
 
