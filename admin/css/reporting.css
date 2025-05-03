@@ -96,8 +96,7 @@
    color: #0366d6; /* GitHub-like blue for heading */
 }
 
-/* Base Report Table Style (inherits from accounts.css but can be overridden) */
-/* Make report tables distinct */
+/* Base Report Table Style */
 .report-table {
    width: 100%;
    border-collapse: collapse;
@@ -113,6 +112,7 @@
    border: none; /* Remove default borders */
    border-bottom: 1px solid #e1e4e8; /* Horizontal lines */
    padding: 12px 15px; /* More padding */
+   /* --- Ensure Left Alignment --- */
    text-align: left;
    vertical-align: middle; /* Align vertically */
    font-size: 14px; /* Consistent font size */
@@ -129,18 +129,19 @@
    border-color: #d1d5da;
 }
 
-/* Alignment classes */
-.report-table td.numeric,
+/* --- REMOVED Alignment classes --- */
+/* .report-table td.numeric,
 .report-table td.currency {
-   text-align: right;
-   font-family: Consolas, monospace; /* Monospaced font for numbers */
-}
-.report-table td.currency::before {
-   content: "₱ ";
-   margin-right: 2px;
-   font-family: inherit; /* Use table font */
-}
+   text-align: right;  <== REMOVED
+   font-family: Consolas, monospace;
+} */
 
+/* --- REMOVED ::before rule causing double peso sign --- */
+/* .report-table td.currency::before {
+   content: "₱ "; <== REMOVED
+   margin-right: 2px;
+   font-family: inherit;
+} */
 
 /* --- Enhanced Inventory Section Styling --- */
 .inventory-section {
@@ -173,6 +174,8 @@
 .inventory-section .report-table td {
     border-bottom: 1px solid #eef0f2; /* Lighter lines within section */
     padding: 10px 8px;
+    /* Ensure left alignment here too if needed, but should inherit */
+    text-align: left;
 }
 .inventory-section .report-table tr:last-child td {
    border-bottom: none;
@@ -208,7 +211,7 @@
 .summary-table th,
 .summary-table td {
    padding: 8px 12px; /* Adjust padding */
-   text-align: left;
+   text-align: left; /* Ensure left alignment */
    border-bottom: 1px dotted #d1d5da;
    vertical-align: middle;
 }
@@ -218,7 +221,7 @@
    padding-right: 20px;
 }
 .summary-table td {
-    text-align: right;
+    /* text-align: right; <== REMOVED */
     font-weight: 500;
     font-size: 1.1em; /* Slightly larger summary values */
     color: #333;
@@ -251,7 +254,7 @@
    margin: 15px 0;
 }
 
-/* --- Status colors (add to your main CSS if used elsewhere) --- */
+/* --- Status colors --- */
 .status-pending { color: #f0ad4e; font-weight: bold; }
 .status-active { color: #5bc0de; font-weight: bold; }
 .status-for-delivery { color: #337ab7; font-weight: bold; }

@@ -4,11 +4,17 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // --- Pre-check: Verify get_result() is available ---
-if (!method_exists('mysqli_stmt', 'get_result')) {
-    error_log("CRITICAL WARNING: mysqli_stmt::get_result() method does not exist. The 'mysqlnd' driver is likely not installed or enabled in PHP. Reports requiring get_result() will fail.");
-    // You might want to send an error immediately if get_result is essential for all reports
-    // sendError("Server configuration error: Required database driver (mysqlnd) is missing.", 500);
+// This is crucial because if mysqlnd isn't installed, get_result() calls will cause fatal errors.
+if (!function_exists('mysqli_stmt_get_result')) { // Check function existence globally first
+    if (!method_exists('mysqli_stmt', 'get_result')) { // Fallback check on method existence
+        error_log("CRITICAL WARNING in fetch_report.php: mysqli_stmt::get_result() method does not exist. The 'mysqlnd' (MySQL Native Driver) is likely not installed or enabled in PHP. Reports requiring get_result() will fail.");
+        // Send error immediately as most reports likely need this
+        http_response_code(500);
+        echo "<div class='report-error-message'>Server configuration error: Required database driver (mysqlnd) is missing. Please contact the administrator.</div>";
+        exit;
+    }
 }
+
 
 // Basic security check - ensure user is logged in.
 $isLoggedIn = isset($_SESSION['admin_user_id']) || isset($_SESSION['client_user_id']) || isset($_SESSION['user_id']);
@@ -61,6 +67,7 @@ if (!isset($conn) || !($conn instanceof mysqli) || $conn->connect_error) {
 
 // Main try-catch block for report generation
 try {
+    error_log("--- Starting report generation for type: {$reportType} ---"); // Log start of request
     switch ($reportType) {
         case 'sales_summary':
             generateSalesSummary($conn, $startDate, $endDate);
@@ -76,9 +83,11 @@ try {
             break;
 
         default:
+            error_log("Invalid report type specified: {$reportType}");
             sendError("Invalid report type specified: " . htmlspecialchars($reportType), 400);
             break;
     }
+    error_log("--- Finished report generation for type: {$reportType} ---"); // Log successful completion
 } catch (mysqli_sql_exception $e) {
     // Log the detailed SQL error for the admin - THIS IS WHERE THE ERROR IS LIKELY CAUGHT
     error_log("!!! CAUGHT SQL Exception in fetch_report.php (Report: {$reportType}): " . $e->getMessage() . " | SQL State: " . $e->getSqlState() . " | Error Code: " . $e->getCode() . " | Trace: " . $e->getTraceAsString());
@@ -93,6 +102,9 @@ try {
     // Ensure the connection is closed if it's still open
     if (isset($conn) && $conn instanceof mysqli && $conn->ping()) {
         $conn->close();
+        error_log("Database connection closed.");
+    } else {
+        error_log("Database connection was already closed or invalid.");
     }
 }
 
@@ -142,8 +154,11 @@ function generateSalesSummary($conn, $startDate, $endDate) {
         // Use summary params/types
         $stmtSummary->bind_param($summaryParamTypes, ...$summaryParams);
          if ($stmtSummary->errno) {
-            error_log("!!! DB bind_param error (Summary): " . $stmtSummary->error);
-            throw new mysqli_sql_exception("DB bind_param error (Summary): " . $stmtSummary->error, $stmtSummary->errno);
+            $errorMsg = $stmtSummary->error;
+            $errorNo = $stmtSummary->errno;
+            error_log("!!! DB bind_param error (Summary): " . $errorMsg);
+            $stmtSummary->close(); // Close before throwing
+            throw new mysqli_sql_exception("DB bind_param error (Summary): " . $errorMsg, $errorNo);
          }
         error_log("Summary params bound.");
     }
@@ -165,9 +180,11 @@ function generateSalesSummary($conn, $startDate, $endDate) {
 
     $resultSummary = $stmtSummary->get_result();
      if ($stmtSummary->errno) {
-        error_log("!!! DB get_result error (Summary): " . $stmtSummary->error);
+        $errorMsg = $stmtSummary->error;
+        $errorNo = $stmtSummary->errno;
+        error_log("!!! DB get_result error (Summary): " . $errorMsg);
         $stmtSummary->close(); // Close before throwing
-        throw new mysqli_sql_exception("DB get_result error (Summary): " . $stmtSummary->error, $stmtSummary->errno);
+        throw new mysqli_sql_exception("DB get_result error (Summary): " . $errorMsg, $errorNo);
      }
     error_log("Summary result obtained.");
 
@@ -241,9 +258,11 @@ function generateSalesSummary($conn, $startDate, $endDate) {
              // Use the specifically built daily params/types
              $stmtDaily->bind_param($dailyParamTypes, ...$dailyParams);
              if ($stmtDaily->errno) {
-                error_log("!!! DB bind_param error (Daily Sales): " . $stmtDaily->error);
+                $errorMsg = $stmtDaily->error;
+                $errorNo = $stmtDaily->errno;
+                error_log("!!! DB bind_param error (Daily Sales): " . $errorMsg);
                  $stmtDaily->close(); // Close before throwing
-                throw new mysqli_sql_exception("DB bind_param error (Daily Sales): " . $stmtDaily->error, $stmtDaily->errno);
+                throw new mysqli_sql_exception("DB bind_param error (Daily Sales): " . $errorMsg, $errorNo);
              }
              error_log("Daily Sales params bound.");
         }
@@ -265,14 +284,16 @@ function generateSalesSummary($conn, $startDate, $endDate) {
 
         $resultDaily = $stmtDaily->get_result();
          if ($stmtDaily->errno) {
-            error_log("!!! DB get_result error (Daily Sales): " . $stmtDaily->error);
+            $errorMsg = $stmtDaily->error;
+            $errorNo = $stmtDaily->errno;
+            error_log("!!! DB get_result error (Daily Sales): " . $errorMsg);
             $stmtDaily->close(); // Close before throwing
-            throw new mysqli_sql_exception("DB get_result error (Daily Sales): " . $stmtDaily->error, $stmtDaily->errno);
+            throw new mysqli_sql_exception("DB get_result error (Daily Sales): " . $errorMsg, $errorNo);
          }
-        error_log("Daily Sales result obtained. Num rows: " . $resultDaily->num_rows);
+        error_log("Daily Sales result obtained. Num rows: " . ($resultDaily ? $resultDaily->num_rows : 'N/A'));
 
         // Output Daily Breakdown Table
-        if ($resultDaily->num_rows > 0) {
+        if ($resultDaily && $resultDaily->num_rows > 0) {
             echo "<h4 class='report-subtitle'>Daily Sales Breakdown</h4>";
             echo "<table class='accounts-table report-table'>";
             echo "<thead><tr><th>Date</th><th>Orders</th><th>Sales Value</th></tr></thead>";
@@ -294,7 +315,10 @@ function generateSalesSummary($conn, $startDate, $endDate) {
             echo "<p class='no-data-message'>No daily sales data found for the selected period.</p>";
             error_log("No daily sales data found message generated.");
         }
-        $resultDaily->close();
+        // Ensure result is closed even if there were no rows
+        if ($resultDaily) {
+            $resultDaily->close();
+        }
         $stmtDaily->close();
         error_log("--- Daily Sales Breakdown section completed. ---");
     } else {
@@ -318,6 +342,7 @@ function generateInventoryStatus($conn) {
     $walkinQueryError = false;
 
     // --- Query for Company Order Low Stock (products table) ---
+    // Ensure 'item_description' and 'stock_quantity' columns exist in 'products' table
     $sqlCompany = "SELECT item_description, stock_quantity FROM products WHERE stock_quantity <= ? ORDER BY item_description ASC";
     error_log("Company Inventory SQL: " . $sqlCompany);
     $stmtCompany = $conn->prepare($sqlCompany);
@@ -346,10 +371,12 @@ function generateInventoryStatus($conn) {
                 }
             }
         }
+        // Ensure statement is closed even if get_result failed
         $stmtCompany->close();
     }
 
     // --- Query for Walk-in Low Stock (walkin_products table) ---
+    // Ensure 'item_description' and 'stock_quantity' columns exist in 'walkin_products' table
     $sqlWalkin = "SELECT item_description, stock_quantity FROM walkin_products WHERE stock_quantity <= ? ORDER BY item_description ASC";
     error_log("Walkin Inventory SQL: " . $sqlWalkin);
     $stmtWalkin = $conn->prepare($sqlWalkin);
@@ -378,14 +405,15 @@ function generateInventoryStatus($conn) {
                 }
             }
         }
+        // Ensure statement is closed even if get_result failed
         $stmtWalkin->close();
     }
 
     // --- Display Results ---
     echo "<h3 class='report-title'>Low Inventory Stock Report (Threshold: " . htmlspecialchars($lowStockThreshold) . " or less)</h3>";
-    if ($companyQueryError) { echo "<div class='report-error-message'>Error retrieving Company Order stock data.</div>"; }
-    if ($walkinQueryError) { echo "<div class='report-error-message'>Error retrieving Walk-in stock data.</div>"; }
-    // Stop if core errors occurred
+    if ($companyQueryError) { echo "<div class='report-error-message'>Error retrieving Company Order stock data. Check error logs.</div>"; }
+    if ($walkinQueryError) { echo "<div class='report-error-message'>Error retrieving Walk-in stock data. Check error logs.</div>"; }
+    // Stop if core errors occurred that prevented data fetching
     if ($errorOccurred && ($companyQueryError || $walkinQueryError)) {
         error_log("Inventory report stopped due to query errors.");
         return;
@@ -451,9 +479,11 @@ function generateOrderTrends($conn, $startDate, $endDate) {
         error_log("Binding Order Trends params: Types=" . $paramTypes . ", Values=" . json_encode($params));
         $stmt->bind_param($paramTypes, ...$params);
          if ($stmt->errno) {
-            error_log("!!! DB bind_param error (Order Trends): " . $stmt->error);
+            $errorMsg = $stmt->error;
+            $errorNo = $stmt->errno;
+            error_log("!!! DB bind_param error (Order Trends): " . $errorMsg);
              $stmt->close();
-            throw new mysqli_sql_exception("DB bind_param error (Order Trends): " . $stmt->error, $stmt->errno);
+            throw new mysqli_sql_exception("DB bind_param error (Order Trends): " . $errorMsg, $errorNo);
          }
          error_log("Order Trends params bound.");
     }
@@ -475,11 +505,13 @@ function generateOrderTrends($conn, $startDate, $endDate) {
 
     $result = $stmt->get_result();
      if ($stmt->errno) {
-        error_log("!!! DB get_result error (Order Trends): " . $stmt->error);
+        $errorMsg = $stmt->error;
+        $errorNo = $stmt->errno;
+        error_log("!!! DB get_result error (Order Trends): " . $errorMsg);
         $stmt->close(); // Close before throwing
-        throw new mysqli_sql_exception("DB get_result error (Order Trends): " . $stmt->error, $stmt->errno);
+        throw new mysqli_sql_exception("DB get_result error (Order Trends): " . $errorMsg, $errorNo);
      }
-     error_log("Order Trends result obtained. Num rows: " . $result->num_rows);
+     error_log("Order Trends result obtained. Num rows: " . ($result ? $result->num_rows : 'N/A'));
 
     // Format and output results
     $dateRangeStr = '';
@@ -488,7 +520,7 @@ function generateOrderTrends($conn, $startDate, $endDate) {
     elseif ($endDate) $dateRangeStr = " up to " . htmlspecialchars($endDate);
 
     echo "<h3 class='report-title'>Order Listing" . $dateRangeStr . "</h3>";
-    if ($result->num_rows > 0) {
+    if ($result && $result->num_rows > 0) {
         echo "<table class='accounts-table report-table'><thead><tr><th>Order ID</th><th>PO Number</th><th>Date</th><th>Username</th><th>Company</th><th>Total</th><th>Status</th></tr></thead><tbody>";
         while ($row = $result->fetch_assoc()) {
              $statusClass = 'status-' . strtolower(preg_replace('/[^a-z0-9]+/', '-', $row['status'] ?? 'unknown'));
@@ -508,10 +540,13 @@ function generateOrderTrends($conn, $startDate, $endDate) {
         echo "<p class='no-data-message'>No orders found within the specified criteria.</p>";
          error_log("No order trends data found message generated.");
     }
-    $result->close();
+    // Ensure result is closed
+    if ($result) {
+        $result->close();
+    }
     $stmt->close();
     error_log("--- Finished generateOrderTrends ---");
 }
 
-// Make sure the closing PHP tag is present if this is the end of the file
+// Make sure the closing PHP tag is present
 ?>
