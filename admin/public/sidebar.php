@@ -36,47 +36,103 @@ if ($role !== 'guest' && isset($conn)) {
 ?>
 
 <style>
-.submenu-items {
+/* General Sidebar Styles */
+.sidebar {
+    /* Add any general sidebar container styles here if needed */
+}
+
+.menu-section {
+    margin-bottom: 15px; /* Space between sections */
+}
+
+.menu-title {
     display: block;
-    margin-left: 20px;
-    margin-top: 0;
-    overflow: hidden;
-    max-height: 0;
-    opacity: 0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: none;
+    padding: 10px 15px;
+    font-size: 0.8em;
+    color: #888; /* Lighter color for titles */
+    text-transform: uppercase;
 }
 
-.submenu-items.visible {
-    max-height: 300px;
-    opacity: 1;
-    margin-top: 5px;
-    pointer-events: all;
+hr {
+    border: 0;
+    height: 1px;
+    background-color: #eee;
+    margin: 5px 15px 10px 15px;
 }
 
-.menu-item .fa-chevron-down {
-    font-size: 13px;
+/* --- Menu Item Styling --- */
+
+/* Base style for all clickable items (links and submenu triggers) */
+.menu-item {
+    display: flex; /* Use flex for alignment */
+    align-items: center; /* Vertically center icon and text */
+    padding: 10px 15px;
+    text-decoration: none;
+    color: inherit; /* Use sidebar's text color */
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    width: 100%; /* Ensure full width for click/hover */
+    box-sizing: border-box; /* Include padding in width */
+}
+
+/* Hover effect specifically for ACTUAL LINKS (<a> tags) */
+a.menu-item:hover {
+    background-color: rgba(0, 0, 0, 0.05); /* Apply hover to the link */
+}
+
+/* Style for the icon within any menu item */
+.menu-item i.fas { /* Target FontAwesome icons */
+    margin-right: 10px; /* Space between icon and text */
+    width: 1.2em; /* Give icon fixed width for alignment */
+    text-align: center;
+}
+
+/* --- Submenu Specific Styling --- */
+
+/* Style for the SPAN that triggers the submenu */
+.submenu > span.menu-item {
+    justify-content: space-between; /* Push chevron to the right */
+}
+
+/* Chevron icon styling */
+.submenu > span.menu-item .fa-chevron-down {
+    font-size: 12px; /* Smaller chevron */
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    opacity: 0.8;
-    margin-left: auto;
+    opacity: 0.7;
+    margin-left: auto; /* Push to far right */
+    margin-right: 0; /* Remove margin if icon style adds it */
+    width: auto; /* Override fixed width if needed */
 }
 
-.menu-item.active .fa-chevron-down {
+.submenu > span.menu-item.active .fa-chevron-down {
     transform: rotate(180deg);
     opacity: 1;
 }
 
-.submenu > .menu-item {
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
+/* Container for submenu items */
+.submenu-items {
+    display: block;
+    padding-left: 25px; /* Indent submenu items more */
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0s; /* Smooth transition */
+    pointer-events: none; /* Prevent interaction when hidden */
 }
 
+.submenu-items.visible {
+    max-height: 400px; /* Adjust max height as needed */
+    opacity: 1;
+    pointer-events: all; /* Allow interaction when visible */
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+/* Individual links within a submenu */
 .submenu-item {
-    display: block;
-    padding: 8px 10px 8px 0;
+    display: flex; /* Use flex for alignment */
+    align-items: center;
+    padding: 8px 10px 8px 0; /* Adjust padding */
     color: inherit;
     text-decoration: none;
     font-size: 0.9em;
@@ -91,20 +147,32 @@ if ($role !== 'guest' && isset($conn)) {
     margin-right: 8px;
     font-size: 0.8em;
     opacity: 0.7;
+    width: 1em; /* Align with other icons */
+    text-align: center;
 }
-/* Style for top-level menu items (direct links) */
-a.menu-item {
-    display: block; /* Or flex if needed */
-    padding: 10px 15px; /* Example padding */
-    text-decoration: none;
-    color: inherit;
-    transition: background-color 0.2s ease;
+
+/* --- Account Section --- */
+.account-section {
+    /* Add styles if needed */
+    padding: 15px;
+    border-top: 1px solid #eee;
 }
-a.menu-item:hover {
-     background-color: rgba(0, 0, 0, 0.05); /* Subtle hover effect */
+.account-info {
+    font-size: 0.9em;
+    margin-bottom: 10px;
+    color: #555;
 }
-a.menu-item i {
-    margin-right: 10px; /* Space between icon and text */
+.logout-btn {
+     display: block;
+     /* Add styles for logout button */
+     color: #dc3545; /* Example danger color */
+     text-decoration: none;
+}
+.logout-btn:hover {
+    text-decoration: underline;
+}
+.logout-btn i {
+    margin-right: 5px;
 }
 
 </style>
@@ -116,20 +184,18 @@ a.menu-item i {
             <span class="menu-title"><b>MAIN MENU</b></span>
             <hr>
             <?php if (in_array('Dashboard', $allowedPages)): ?>
+                <!-- Use <a> tag directly with menu-item class -->
                 <a href="/public/pages/dashboard.php" class="menu-item">
-                    <div>
-                        <i class="fas fa-home"></i>Dashboard
-                    </div>
+                    <i class="fas fa-home"></i>Dashboard
                 </a>
             <?php endif; ?>
 
             <!-- Production Menu -->
             <?php if (in_array('Forecast', $allowedPages) || in_array('Department Forecast', $allowedPages)): ?>
                 <div class="submenu">
+                    <!-- Use <span> tag for submenu trigger -->
                     <span class="menu-item" onclick="toggleSubmenu(this)">
-                        <div>
-                            <i class="fas fa-industry"></i> Production
-                        </div>
+                        <span><i class="fas fa-industry"></i>Production</span>
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
@@ -151,9 +217,7 @@ a.menu-item i {
             <?php if (in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages) || in_array('Pending Orders', $allowedPages) || in_array('Deliverable Orders', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
-                        <div>
-                            <i class="fas fa-shopping-cart"></i> Ordering
-                        </div>
+                        <span><i class="fas fa-shopping-cart"></i>Ordering</span>
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
@@ -176,38 +240,31 @@ a.menu-item i {
                 </div>
             <?php endif; ?>
 
-            <!-- Payments Menu (Now only Payment History) -->
-            <?php if (in_array('Payment History', $allowedPages)): // Only check for Payment History now ?>
+            <!-- Payments Menu -->
+            <?php if (in_array('Payment History', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
-                        <div>
-                            <i class="fas fa-money-bill-wave"></i> Payments
-                        </div>
+                        <span><i class="fas fa-money-bill-wave"></i>Payments</span>
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
                         <a href="/public/pages/payment_history.php" class="submenu-item">
                             <i class="fas fa-arrow-right"></i> Payment History
                         </a>
-                        <?php // Reporting link removed from here ?>
                     </div>
                 </div>
             <?php endif; ?>
 
-            <!-- Reporting Menu (New Top-Level Item) -->
+            <!-- Reporting Menu -->
             <?php if (in_array('Reporting', $allowedPages)): ?>
                 <a href="/public/pages/reporting.php" class="menu-item">
-                    <div>
-                        <i class="fas fa-chart-line"></i>Reporting
-                    </div>
+                    <i class="fas fa-chart-line"></i>Reporting
                 </a>
             <?php endif; ?>
 
             <?php if (in_array('Sales Data', $allowedPages)): ?>
                 <a href="/public/pages/sales.php" class="menu-item">
-                    <div>
-                        <i class="fas fa-chart-bar"></i> Sales Data
-                    </div>
+                    <i class="fas fa-chart-bar"></i>Sales Data
                 </a>
             <?php endif; ?>
         </div>
@@ -219,13 +276,15 @@ a.menu-item i {
             <?php if (in_array('Staff', $allowedPages) || in_array('Drivers', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
-                        <div>
-                            <i class="fas fa-users-cog"></i> Staff
-                        </div>
+                        <span><i class="fas fa-users-cog"></i>Staff</span>
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
                          <?php if (in_array('Staff', $allowedPages)): ?>
+                            <!-- Assuming staff link goes somewhere -->
+                            <a href="/public/pages/staff.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> Staff List
+                            </a>
                          <?php endif; ?>
                         <?php if (in_array('Drivers', $allowedPages)): ?>
                             <a href="/public/pages/drivers.php" class="submenu-item">
@@ -239,9 +298,7 @@ a.menu-item i {
             <?php if (in_array('Accounts - Admin', $allowedPages) || in_array('Accounts - Clients', $allowedPages) || in_array('User Roles', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
-                        <div>
-                            <i class="fas fa-user"></i> Accounts
-                        </div>
+                        <span><i class="fas fa-user"></i>Accounts</span>
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
@@ -268,9 +325,7 @@ a.menu-item i {
             <?php if (in_array('Inventory', $allowedPages) || in_array('Raw Materials', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
-                        <div>
-                            <i class="fas fa-box"></i> Inventory
-                        </div>
+                        <span><i class="fas fa-box"></i>Inventory</span>
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
@@ -306,21 +361,48 @@ a.menu-item i {
 
 <script>
 function toggleSubmenu(element) {
+    // Find the parent .submenu element
+    const parentSubmenu = element.closest('.submenu');
+    if (!parentSubmenu) return; // Should not happen with current structure
+
+    const submenuItems = parentSubmenu.querySelector('.submenu-items');
+    const isActive = element.classList.contains('active');
+
+    // Close all other submenus first
     const allSubmenus = document.querySelectorAll('.sidebar .submenu');
-    const targetSubmenuItems = element.nextElementSibling;
-    const isOpening = !element.classList.contains('active');
-
     allSubmenus.forEach(submenu => {
-        const menuItem = submenu.querySelector('.menu-item');
-        const submenuItems = submenu.querySelector('.submenu-items');
-
-        if (menuItem !== element && menuItem.classList.contains('active')) {
-            menuItem.classList.remove('active');
-            submenuItems.classList.remove('visible');
+        const trigger = submenu.querySelector('span.menu-item');
+        const items = submenu.querySelector('.submenu-items');
+        if (trigger !== element && trigger.classList.contains('active')) {
+            trigger.classList.remove('active');
+            items.classList.remove('visible');
         }
     });
 
-    element.classList.toggle('active');
-    targetSubmenuItems.classList.toggle('visible');
+    // Toggle the current one
+    if (isActive) {
+        element.classList.remove('active');
+        submenuItems.classList.remove('visible');
+    } else {
+        element.classList.add('active');
+        submenuItems.classList.add('visible');
+    }
 }
+
+// Optional: Close submenus if clicking outside the sidebar
+// document.addEventListener('click', function(event) {
+//     const sidebar = document.querySelector('.sidebar');
+//     if (!sidebar.contains(event.target)) {
+//         const allSubmenus = document.querySelectorAll('.sidebar .submenu');
+//         allSubmenus.forEach(submenu => {
+//              const trigger = submenu.querySelector('span.menu-item');
+//              const items = submenu.querySelector('.submenu-items');
+//              if (trigger.classList.contains('active')) {
+//                  trigger.classList.remove('active');
+//                  items.classList.remove('visible');
+//              }
+//         });
+//     }
+// });
+
 </script>
