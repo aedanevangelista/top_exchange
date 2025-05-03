@@ -69,7 +69,7 @@ function getDateRangeCondition($period) {
 function getTotalRevenue($conn, $period = 'this_month') {
     $totalRevenue = 0;
     $dateCondition = getDateRangeCondition($period);
-    $sql = "SELECT SUM(total_amount) as total_revenue FROM orders WHERE status IN ('Active', 'Completed', 'Delivered', 'For Delivery', 'In Transit') AND $dateCondition";
+    $sql = "SELECT SUM(total_amount) as total_revenue FROM orders WHERE status IN ('Active', 'Completed', 'For Delivery', 'In Transit') AND $dateCondition"; // Removed 'Delivered'
     $result = $conn->query($sql);
     if ($result && $result->num_rows > 0) {
         $row = $result->fetch_assoc();
@@ -398,14 +398,13 @@ $recentOrders = getRecentOrders($conn, 5);
 
         /* --- Status Badges --- */
         .status-badge { padding: 0.25em 0.65em; border-radius: 50rem; font-size: 0.75em; font-weight: 600; display: inline-block; white-space: nowrap; vertical-align: baseline; line-height: 1; }
-        .status-Pending { background-color: #ffc107; color: #fff;} /* White text */
-        .status-Active { background-color: #198754; color: #fff; } /* Green */
-        .status-Completed { background-color: #198754; color: #fff; } /* Green */
-        .status-Delivered { background-color: #0d6efd; color: #fff; } /* Blue */
-        .status-Rejected { background-color: #dc3545; color: #fff; } /* Red */
-        /* Removed .status-Cancelled */
-        .status-For\.Delivery { background-color: #0dcaf0; color: #000; } /* Cyan, Black text */
-        .status-In\.Transit { background-color: #fd7e14; color: #fff; } /* Orange, White text */
+        .status-pending { background-color: #ffc107; color: #fff;} /* White text */
+        .status-active { background-color: #198754; color: #fff; } /* Green */
+        .status-completed { background-color: #198754; color: #fff; } /* Green */
+        /* Removed .status-delivered */
+        .status-rejected { background-color: #dc3545; color: #fff; } /* Red */
+        .status-for-delivery { background-color: #0dcaf0; color: #000; } /* Cyan, Black text */
+        .status-in-transit { background-color: #fd7e14; color: #fff; } /* Orange, White text */
 
     </style>
 </head>
@@ -470,14 +469,15 @@ $recentOrders = getRecentOrders($conn, 5);
                         <tbody>
                             <?php foreach ($recentOrders as $order):
                                 $statusDisplay = htmlspecialchars($order['status'] ?? 'Unknown');
-                                $statusClass = str_replace(' ', '\.', $statusDisplay); // Escape dot for CSS
+                                // Create CSS class - replace space with hyphen, make lowercase
+                                $statusClass = str_replace(' ', '-', strtolower($statusDisplay));
                             ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($order['po_number'] ?? 'N/A'); ?></td>
                                     <td><?php echo htmlspecialchars(date('M d, Y', strtotime($order['order_date']))); ?></td>
                                     <td><?php echo htmlspecialchars($order['username'] ?? 'N/A'); ?></td>
                                     <td>
-                                        <span class="status-badge status-<?php echo $statusClass; ?>">
+                                        <span class="status-badge status-<?php echo $statusClass; ?>" data-status="<?php echo htmlspecialchars($statusDisplay); ?>">
                                             <?php echo $statusDisplay; ?>
                                         </span>
                                     </td>
