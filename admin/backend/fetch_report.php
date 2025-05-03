@@ -3,17 +3,17 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Basic security check - ensure user is logged in.
+// Basic security check
 $isLoggedIn = isset($_SESSION['admin_user_id']) || isset($_SESSION['client_user_id']) || isset($_SESSION['user_id']);
 if (!$isLoggedIn) {
-    http_response_code(403); // Forbidden
+    http_response_code(403);
     echo "<p class='error-message' style='color: red;'>Access Denied. Please log in.</p>";
     exit;
 }
 
 include_once __DIR__ . '/db_connection.php'; // Establishes $conn
 
-// Default error response function
+// Error response function
 function sendError($message, $httpCode = 500) {
     http_response_code($httpCode);
     echo "<div class='error-message' style='padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; border-radius: 4px; margin-top: 10px;'>" . htmlspecialchars($message) . "</div>";
@@ -23,15 +23,17 @@ function sendError($message, $httpCode = 500) {
     exit;
 }
 
-// Check if it's a POST request and report_type is set
+// Validate request
 if ($_SERVER["REQUEST_METHOD"] !== "POST" || !isset($_POST['report_type'])) {
     sendError("Invalid request method or missing report type.", 400);
 }
 
-// --- Input Sanitization/Retrieval ---
+// --- Input Retrieval ---
 $reportType = trim($_POST['report_type']);
 $startDate = !empty(trim($_POST['start_date'])) ? trim($_POST['start_date']) : null;
 $endDate = !empty(trim($_POST['end_date'])) ? trim($_POST['end_date']) : null;
+// Get inventory source only if report type is inventory_status
+$inventorySource = ($reportType === 'inventory_status' && isset($_POST['inventory_source'])) ? trim($_POST['inventory_source']) : null;
 
 // --- Report Generation Logic ---
 
@@ -46,7 +48,11 @@ try {
             break;
 
         case 'inventory_status':
-            generateInventoryStatus($conn); // This now generates the combined report
+            // Validate inventory source selection
+            if (!$inventorySource || !in_array($inventorySource, ['company', 'walkin'])) {
+                 sendError("Invalid or missing inventory source specified. Please select 'Company' or 'Walk-in'.", 400);
+            }
+            generateInventoryStatus($conn, $inventorySource); // Pass source to function
             break;
 
         case 'order_trends':
@@ -72,61 +78,39 @@ try {
 // --- Report Generating Functions ---
 
 /**
- * Generates an Enhanced Sales Summary Report.
- * Uses 'orders' table: id, total_amount, order_date, status, username
+ * Generates Sales Summary Report.
  */
 function generateSalesSummary($conn, $startDate, $endDate) {
+    // ... (Sales Summary code remains the same as previous version) ...
     $dateCondition = "";
     $params = [];
     $paramTypes = "";
 
-    if ($startDate) {
-        $dateCondition .= " AND DATE(order_date) >= ?";
-        $params[] = $startDate;
-        $paramTypes .= "s";
-    }
-    if ($endDate) {
-        $dateCondition .= " AND DATE(order_date) <= ?";
-        $params[] = $endDate;
-        $paramTypes .= "s";
-    }
+    if ($startDate) { $dateCondition .= " AND DATE(order_date) >= ?"; $params[] = $startDate; $paramTypes .= "s"; }
+    if ($endDate) { $dateCondition .= " AND DATE(order_date) <= ?"; $params[] = $endDate; $paramTypes .= "s"; }
 
-    // 1. Get Total Orders and Sales Value for 'Completed' orders
-    $sqlSummary = "SELECT COUNT(id) as total_orders, SUM(total_amount) as total_sales_value
-                   FROM orders WHERE status = 'Completed' {$dateCondition}";
-
+    $sqlSummary = "SELECT COUNT(id) as total_orders, SUM(total_amount) as total_sales_value FROM orders WHERE status = 'Completed' {$dateCondition}";
     $stmtSummary = $conn->prepare($sqlSummary);
     if (!$stmtSummary) throw new mysqli_sql_exception("DB prepare error (Summary): " . $conn->error, $conn->errno);
     if (!empty($paramTypes)) $stmtSummary->bind_param($paramTypes, ...$params);
     if (!$stmtSummary->execute()) { $err = $stmtSummary->error; $errno = $stmtSummary->errno; $stmtSummary->close(); throw new mysqli_sql_exception("DB execute error (Summary): " . $err, $errno); }
     $resultSummary = $stmtSummary->get_result();
     $summary = $resultSummary->fetch_assoc();
-    $resultSummary->close();
-    $stmtSummary->close();
+    $resultSummary->close(); $stmtSummary->close();
 
-    // 2. Get Unique Customers ('username') for 'Completed' orders
     $uniqueCustomers = 0;
-    $sqlCustomers = "SELECT COUNT(DISTINCT username) as unique_customer_count
-                     FROM orders WHERE status = 'Completed' {$dateCondition}";
-
+    $sqlCustomers = "SELECT COUNT(DISTINCT username) as unique_customer_count FROM orders WHERE status = 'Completed' {$dateCondition}";
     $stmtCustomers = $conn->prepare($sqlCustomers);
     if ($stmtCustomers) {
          if (!empty($paramTypes)) $stmtCustomers->bind_param($paramTypes, ...$params);
          if ($stmtCustomers->execute()) {
-             $resultCustomers = $stmtCustomers->get_result();
-             $customerData = $resultCustomers->fetch_assoc();
-             $uniqueCustomers = $customerData['unique_customer_count'] ?? 0;
-             $resultCustomers->close();
+             $resultCustomers = $stmtCustomers->get_result(); $customerData = $resultCustomers->fetch_assoc(); $uniqueCustomers = $customerData['unique_customer_count'] ?? 0; $resultCustomers->close();
          } else { error_log("DB execute error (Customers): " . $stmtCustomers->error); }
          $stmtCustomers->close();
     } else { error_log("DB prepare error (Customers): " . $conn->error); }
 
-    // Calculate derived metrics
-    $totalOrders = $summary['total_orders'] ?? 0;
-    $totalSales = $summary['total_sales_value'] ?? 0;
-    $averageOrderValue = ($totalOrders > 0) ? ($totalSales / $totalOrders) : 0;
+    $totalOrders = $summary['total_orders'] ?? 0; $totalSales = $summary['total_sales_value'] ?? 0; $averageOrderValue = ($totalOrders > 0) ? ($totalSales / $totalOrders) : 0;
 
-    // Format output
     $dateRangeStr = '';
     if ($startDate && $endDate) $dateRangeStr = " from " . htmlspecialchars($startDate) . " to " . htmlspecialchars($endDate);
     elseif ($startDate) $dateRangeStr = " from " . htmlspecialchars($startDate) . " onwards";
@@ -134,160 +118,144 @@ function generateSalesSummary($conn, $startDate, $endDate) {
 
     echo "<h3>Sales Summary Report" . $dateRangeStr . "</h3>";
     echo "<div class='report-summary-box' style='margin-bottom: 20px;'>";
-    echo "<table class='summary-table' style='width: auto; border: 1px solid #ddd; background-color: #f9f9f9; border-collapse: collapse;'>";
-    echo "<tbody>";
+    echo "<table class='summary-table' style='width: auto; border: 1px solid #ddd; background-color: #f9f9f9; border-collapse: collapse;'><tbody>";
     echo "<tr><td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Total Completed Orders:</td><td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>" . number_format($totalOrders) . "</td></tr>";
     echo "<tr><td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Total Sales Value:</td><td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>₱ " . number_format($totalSales, 2) . "</td></tr>";
     echo "<tr><td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Average Order Value:</td><td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>₱ " . number_format($averageOrderValue, 2) . "</td></tr>";
     echo "<tr><td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Unique Customers:</td><td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>" . number_format($uniqueCustomers) . "</td></tr>";
     echo "</tbody></table></div>";
 
-    // --- Optional: Daily Sales Breakdown ---
     if ($startDate && $endDate) {
-        $sqlDaily = "SELECT DATE(order_date) as sale_date, COUNT(id) as daily_orders, SUM(total_amount) as daily_sales
-                     FROM orders WHERE status = 'Completed' {$dateCondition}
-                     GROUP BY DATE(order_date) ORDER BY sale_date ASC";
-
+        $sqlDaily = "SELECT DATE(order_date) as sale_date, COUNT(id) as daily_orders, SUM(total_amount) as daily_sales FROM orders WHERE status = 'Completed' {$dateCondition} GROUP BY DATE(order_date) ORDER BY sale_date ASC";
         $stmtDaily = $conn->prepare($sqlDaily);
         if (!$stmtDaily) throw new mysqli_sql_exception("DB prepare error (Daily): " . $conn->error, $conn->errno);
         if (!empty($paramTypes)) $stmtDaily->bind_param($paramTypes, ...$params);
         if (!$stmtDaily->execute()){ $err = $stmtDaily->error; $errno = $stmtDaily->errno; $stmtDaily->close(); throw new mysqli_sql_exception("DB execute error (Daily): " . $err, $errno); }
         $resultDaily = $stmtDaily->get_result();
-
         if ($resultDaily->num_rows > 0) {
-            echo "<h4>Daily Sales Breakdown</h4>";
-            echo "<table class='accounts-table'>";
-            echo "<thead><tr><th>Date</th><th>Orders</th><th>Sales Value</th></tr></thead>";
-            echo "<tbody>";
-            while ($row = $resultDaily->fetch_assoc()) {
-                echo "<tr>";
-                echo "<td>" . htmlspecialchars($row['sale_date']) . "</td>";
-                echo "<td>" . number_format($row['daily_orders']) . "</td>";
-                echo "<td style='text-align: right;'>₱ " . number_format($row['daily_sales'], 2) . "</td>";
-                echo "</tr>";
-            }
+            echo "<h4>Daily Sales Breakdown</h4><table class='accounts-table'><thead><tr><th>Date</th><th>Orders</th><th>Sales Value</th></tr></thead><tbody>";
+            while ($row = $resultDaily->fetch_assoc()) { echo "<tr><td>" . htmlspecialchars($row['sale_date']) . "</td><td>" . number_format($row['daily_orders']) . "</td><td style='text-align: right;'>₱ " . number_format($row['daily_sales'], 2) . "</td></tr>"; }
             echo "</tbody></table>";
         } else { echo "<p>No daily sales data found for the selected period.</p>"; }
-        $resultDaily->close();
-        $stmtDaily->close();
+        $resultDaily->close(); $stmtDaily->close();
     }
 }
 
 
 /**
- * Generates a Combined Inventory Stock Status Report.
- * Combines data from 'products' and 'walkin_products' tables.
- * Highlights low stock items (<= 5).
- * Assumes 'product_id' links the same item across both tables.
- * Required columns in both tables: product_id, item_description, stock_quantity
+ * Generates Inventory Status Report for a specific source (Company or Walk-in).
+ * Shows a separate section for low/depleted stock.
+ * @param mysqli $conn Database connection
+ * @param string $inventorySource Source identifier ('company' or 'walkin')
  */
-function generateInventoryStatus($conn) {
-    $companyTable = 'products';
-    $walkinTable = 'walkin_products';
-    $lowStockThreshold = 5; // Define what counts as "low stock"
+function generateInventoryStatus($conn, $inventorySource) {
+    // Determine table name based on source
+    $tableName = ($inventorySource === 'walkin') ? 'walkin_products' : 'products';
+    $sourceName = ($inventorySource === 'walkin') ? 'Walk-in' : 'Company';
+    $lowStockThreshold = 5; // Define low stock level
 
-    // --- Check if both tables exist ---
-    $tablesExist = true;
-    foreach ([$companyTable, $walkinTable] as $tableName) {
-        $checkTableSql = "SHOW TABLES LIKE '" . $conn->real_escape_string($tableName) . "'";
-        $tableResult = $conn->query($checkTableSql);
-        if (!$tableResult) {
-            error_log("Error checking for table {$tableName}: " . $conn->error);
-            sendError("Error checking database structure.", 500);
-            return;
-        }
-        if ($tableResult->num_rows == 0) {
-            echo "<h3>Combined Inventory Stock Status</h3>";
-            echo "<p>Note: The required table '{$tableName}' was not found. Cannot generate a complete report.</p>";
-            $tablesExist = false; // Mark that at least one table is missing
-        }
-        $tableResult->close();
-    }
-    // If either table is missing, don't proceed with the combined query
-    if (!$tablesExist) {
-        return;
-    }
+    // --- Check if selected table exists ---
+    $checkTableSql = "SHOW TABLES LIKE '" . $conn->real_escape_string($tableName) . "'";
+    $tableResult = $conn->query($checkTableSql);
+    if (!$tableResult) { error_log("Error checking for table {$tableName}: " . $conn->error); sendError("Error checking database structure.", 500); return; }
+    if ($tableResult->num_rows == 0) { echo "<h3>Inventory Status: {$sourceName}</h3><p>Note: The table '{$tableName}' was not found.</p>"; $tableResult->close(); return; }
+    $tableResult->close();
     // --- End Table Check ---
 
+    // --- Query 1: Get Low Stock / Depleted Items ---
+    $sqlLowStock = "SELECT item_description, stock_quantity
+                    FROM `" . $conn->real_escape_string($tableName) . "`
+                    WHERE stock_quantity <= " . intval($lowStockThreshold) . "
+                    ORDER BY stock_quantity ASC, item_description ASC";
 
-    // --- Combined Inventory Query ---
-    $sql = "SELECT
-                combined.item_description,
-                SUM(combined.stock_quantity) as total_stock_quantity
-            FROM (
-                SELECT product_id, item_description, stock_quantity FROM `" . $conn->real_escape_string($companyTable) . "`
-                UNION ALL
-                SELECT product_id, item_description, stock_quantity FROM `" . $conn->real_escape_string($walkinTable) . "`
-            ) as combined
-            GROUP BY combined.product_id, combined.item_description -- Group by ID, include description for SELECT
-            ORDER BY total_stock_quantity ASC, combined.item_description ASC"; // Order by lowest stock first
-
-    $result = $conn->query($sql);
-    if (!$result) {
-        error_log("DB query error (Combined Inventory): " . $conn->error . " | SQL: " . $sql);
-        echo "<h3>Combined Inventory Stock Status</h3>";
-        if (strpos($conn->error, 'Unknown column') !== false) {
-             echo "<p style='color: red;'>Error retrieving combined stock data. Please check if required columns ('product_id', 'item_description', 'stock_quantity') exist and are named correctly in both '{$companyTable}' and '{$walkinTable}' tables.</p>";
-        } else {
-             echo "<p style='color: red;'>Error retrieving combined stock data.</p>";
-        }
-        return;
+    $resultLowStock = $conn->query($sqlLowStock);
+    if (!$resultLowStock) {
+        error_log("DB query error (Low Stock): " . $conn->error . " | SQL: " . $sqlLowStock);
+        echo "<h3>Inventory Status: {$sourceName}</h3>";
+        echo "<p style='color: red;'>Error retrieving low stock data.</p>";
+        // Don't exit, try to show the full list anyway
     }
 
-    // --- Display Report ---
-    echo "<h3>Combined Inventory Stock Status</h3>";
-    if ($result->num_rows > 0) {
-        echo "<p>Showing combined stock from '{$companyTable}' and '{$walkinTable}'. Low stock (<= {$lowStockThreshold}) is highlighted.</p>";
+    // --- Display Low Stock Section ---
+    echo "<h3>Inventory Status: {$sourceName}</h3>"; // Main title for the selected source
+
+    if ($resultLowStock && $resultLowStock->num_rows > 0) {
+        echo "<div class='low-stock-section' style='margin-bottom: 25px; border: 2px solid #dc3545; padding: 15px; border-radius: 5px; background-color: #fdf2f2;'>"; // Container for low stock
+        echo "<h4><i class='fas fa-exclamation-triangle' style='color: #dc3545;'></i> Low Stock / Depleted Items (<= {$lowStockThreshold})</h4>"; // Clear heading
         echo "<table class='accounts-table'>"; // Use your standard table class
-        echo "<thead><tr><th>Item Description</th><th>Total Stock Quantity</th><th>Status</th></tr></thead>"; // Added Status column
+        echo "<thead><tr><th>Item Description</th><th>Stock Quantity</th><th>Status</th></tr></thead>";
         echo "<tbody>";
-        while ($row = $result->fetch_assoc()) {
+        while ($row = $resultLowStock->fetch_assoc()) {
             $itemDescription = $row['item_description'] ?? 'N/A';
-            $totalStock = $row['total_stock_quantity'] ?? 0;
-            $statusText = '';
-            $rowStyle = '';
-            $stockCellStyle = '';
+            $stockQuantity = $row['stock_quantity'] ?? 0;
+            $statusText = ($stockQuantity <= 0) ? 'Depleted' : 'Low Stock';
+            $stockCellStyle = ($stockQuantity <= 0) ? " style='color: red; font-weight: bold;'" : " style='color: orange; font-weight: bold;'";
 
-            // Determine status and apply styling
-            if ($totalStock <= 0) {
-                $statusText = 'Depleted';
-                $rowStyle = " style='background-color: #f8d7da;'"; // Light red background for row
-                $stockCellStyle = " style='color: red; font-weight: bold;'";
-            } elseif ($totalStock <= $lowStockThreshold) {
-                $statusText = 'Low Stock';
-                $rowStyle = " style='background-color: #fff3cd;'"; // Light yellow background for row
-                $stockCellStyle = " style='color: orange; font-weight: bold;'";
-            } else {
-                 $statusText = 'OK';
-                 // No special style for OK status
-            }
-
-            echo "<tr{$rowStyle}>";
+            echo "<tr>"; // No need for row background if section is already highlighted
             echo "<td>" . htmlspecialchars($itemDescription) . "</td>";
-            echo "<td{$stockCellStyle}>" . htmlspecialchars($totalStock) . "</td>";
-            echo "<td>" . htmlspecialchars($statusText) . "</td>";
+            echo "<td{$stockCellStyle}>" . htmlspecialchars($stockQuantity) . "</td>";
+            echo "<td{$stockCellStyle}>" . htmlspecialchars($statusText) . "</td>";
             echo "</tr>";
         }
-        echo "</tbody>";
-        echo "</table>";
-    } else {
-        echo "<p>No products found in either '{$companyTable}' or '{$walkinTable}' tables.</p>";
+        echo "</tbody></table></div>"; // Close low-stock-section div
+    } else if ($resultLowStock) {
+         // Only show this message if the query ran successfully but found nothing
+        echo "<div class='low-stock-section' style='margin-bottom: 25px; border: 1px solid #198754; padding: 10px; border-radius: 5px; background-color: #f2fdf5;' >";
+        echo "<p><i class='fas fa-check-circle' style='color: #198754;'></i> No items found at or below the low stock threshold ({$lowStockThreshold}).</p>";
+        echo "</div>";
     }
-    $result->close();
+     // Close the result set for low stock query if it exists
+    if ($resultLowStock) {
+        $resultLowStock->close();
+    }
+
+
+    // --- Query 2: Get Full Inventory List ---
+    $sqlFullList = "SELECT item_description, stock_quantity
+                    FROM `" . $conn->real_escape_string($tableName) . "`
+                    ORDER BY item_description ASC";
+
+    $resultFullList = $conn->query($sqlFullList);
+    if (!$resultFullList) {
+        error_log("DB query error (Full List): " . $conn->error . " | SQL: " . $sqlFullList);
+        echo "<h4>Full Inventory List</h4>"; // Still show title
+        echo "<p style='color: red;'>Error retrieving full inventory list.</p>";
+        return; // Exit if full list fails
+    }
+
+    // --- Display Full List Section ---
+    echo "<h4>Full Inventory List ({$sourceName})</h4>";
+    if ($resultFullList->num_rows > 0) {
+        echo "<table class='accounts-table'>";
+        echo "<thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead>";
+        echo "<tbody>";
+        while ($row = $resultFullList->fetch_assoc()) {
+            $itemDescription = $row['item_description'] ?? 'N/A';
+            $stockQuantity = $row['stock_quantity'] ?? 0;
+            // Optionally highlight low stock here too, or keep it plain
+            $stockStyle = ($stockQuantity <= $lowStockThreshold && $stockQuantity > 0) ? " style='color: orange;'" : "";
+             if($stockQuantity <= 0) $stockStyle = " style='color: red;'";
+
+            echo "<tr>";
+            echo "<td>" . htmlspecialchars($itemDescription) . "</td>";
+            echo "<td{$stockStyle}>" . htmlspecialchars($stockQuantity) . "</td>";
+            echo "</tr>";
+        }
+        echo "</tbody></table>";
+    } else {
+        echo "<p>No products found in the '{$tableName}' table.</p>";
+    }
+    $resultFullList->close();
 }
 
 
 /**
- * Generates an Order Listing Report.
- * Uses 'orders' table: id, order_date, username, company, total_amount, status
+ * Generates Order Listing Report.
  */
 function generateOrderTrends($conn, $startDate, $endDate) {
-    $sql = "SELECT id, order_date, username, company, total_amount, status
-            FROM orders WHERE 1=1";
-
-    $params = [];
-    $paramTypes = "";
-
+    // ... (Order Trends code remains the same as previous version) ...
+    $sql = "SELECT id, order_date, username, company, total_amount, status FROM orders WHERE 1=1";
+    $params = []; $paramTypes = "";
     if ($startDate) { $sql .= " AND DATE(order_date) >= ?"; $params[] = $startDate; $paramTypes .= "s"; }
     if ($endDate) { $sql .= " AND DATE(order_date) <= ?"; $params[] = $endDate; $paramTypes .= "s"; }
     $sql .= " ORDER BY order_date DESC";
@@ -305,25 +273,14 @@ function generateOrderTrends($conn, $startDate, $endDate) {
 
     echo "<h3>Order Listing" . $dateRangeStr . "</h3>";
     if ($result->num_rows > 0) {
-        echo "<table class='accounts-table'>";
-        echo "<thead><tr><th>Order ID</th><th>Date</th><th>Username</th><th>Company</th><th>Total</th><th>Status</th></tr></thead>";
-        echo "<tbody>";
+        echo "<table class='accounts-table'><thead><tr><th>Order ID</th><th>Date</th><th>Username</th><th>Company</th><th>Total</th><th>Status</th></tr></thead><tbody>";
         while ($row = $result->fetch_assoc()) {
              $statusClass = 'status-' . strtolower(preg_replace('/[^a-z0-9]+/', '-', $row['status'] ?? 'unknown'));
-            echo "<tr>";
-            echo "<td>" . htmlspecialchars($row['id']) . "</td>";
-            echo "<td>" . htmlspecialchars(date('Y-m-d H:i', strtotime($row['order_date']))) . "</td>";
-            echo "<td>" . htmlspecialchars($row['username'] ?? 'N/A') . "</td>";
-            echo "<td>" . htmlspecialchars($row['company'] ?? 'N/A') . "</td>";
-            echo "<td style='text-align: right;'>₱ " . number_format($row['total_amount'] ?? 0, 2) . "</td>";
-            echo "<td class='" . htmlspecialchars($statusClass) . "'>" . htmlspecialchars($row['status']) . "</td>";
-            echo "</tr>";
+            echo "<tr><td>" . htmlspecialchars($row['id']) . "</td><td>" . htmlspecialchars(date('Y-m-d H:i', strtotime($row['order_date']))) . "</td><td>" . htmlspecialchars($row['username'] ?? 'N/A') . "</td><td>" . htmlspecialchars($row['company'] ?? 'N/A') . "</td><td style='text-align: right;'>₱ " . number_format($row['total_amount'] ?? 0, 2) . "</td><td class='" . htmlspecialchars($statusClass) . "'>" . htmlspecialchars($row['status']) . "</td></tr>";
         }
-        echo "</tbody>";
-        echo "</table>";
+        echo "</tbody></table>";
     } else { echo "<p>No orders found within the specified criteria.</p>"; }
-    $result->close();
-    $stmt->close();
+    $result->close(); $stmt->close();
 }
 
 ?>
