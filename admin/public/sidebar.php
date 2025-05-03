@@ -118,7 +118,7 @@ a.menu-item i {
             <?php if (in_array('Dashboard', $allowedPages)): ?>
                 <a href="/public/pages/dashboard.php" class="menu-item">
                     <div>
-                        <i class="fas fa-home"></i> Dashboard
+                        <i class="fas fa-home"></i>Dashboard
                     </div>
                 </a>
             <?php endif; ?>
@@ -198,7 +198,7 @@ a.menu-item i {
             <?php if (in_array('Reporting', $allowedPages)): ?>
                 <a href="/public/pages/reporting.php" class="menu-item">
                     <div>
-                        <i class="fas fa-chart-line"></i> Reporting
+                        <i class="fas fa-chart-line"></i>Reporting
                     </div>
                 </a>
             <?php endif; ?>
