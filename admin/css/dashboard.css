@@ -6,7 +6,7 @@
     background-color: #eef0f4; /* Light background */
     display: flex;
     flex-direction: column;
-    gap: 25px; /* Consistent gap between sections */
+    gap: 16px; /* Consistent gap between sections */
     /* align-items: center; /* Removed - let sections take full width */
 }
 
