@@ -398,10 +398,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             position: relative; /* Keep for potential absolute children */
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* Keep shadow */
             animation: modalFadeIn 0.3s ease-in-out; /* Keep animation */
-            /* REMOVED max-height: 90vh; */
-            /* REMOVED overflow-y: auto; */
-            /* REMOVED overflow: hidden; (Let height adjust naturally) */
-            /* height: auto; is the default, no need to explicitly set */
+            max-height: 30vh;
         }
         /* --- END UPDATED CSS --- */
 
