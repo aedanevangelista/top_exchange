@@ -3,340 +3,378 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in (admin or client) - Adjust roles as needed
-if (!isset($_SESSION['admin_user_id']) && !isset($_SESSION['client_user_id']) && !isset($_SESSION['user_id'])) {
-    header("Location: login.php"); // Redirect to login if not logged in
+// Basic security check - ensure user is logged in.
+// Consider adding role-based access control similar to reporting.php if needed.
+$isLoggedIn = isset($_SESSION['admin_user_id']) || isset($_SESSION['client_user_id']) || isset($_SESSION['user_id']);
+if (!$isLoggedIn) {
+    http_response_code(403); // Forbidden
+    echo "<p class='error-message' style='color: red;'>Access Denied. Please log in.</p>"; // Use a class for styling errors
     exit;
 }
 
-// Include header or necessary setup files
-// include_once 'header.php'; // Example
+include_once __DIR__ . '/db_connection.php'; // Establishes $conn
+
+// Default error response function
+function sendError($message, $httpCode = 500) {
+    http_response_code($httpCode);
+    // Use a consistent error display, maybe match modal error styles if possible
+    echo "<div class='error-message' style='padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; border-radius: 4px; margin-top: 10px;'>" . htmlspecialchars($message) . "</div>";
+    // Ensure connection is closed if it exists before exiting
+    if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
+        $GLOBALS['conn']->close();
+    }
+    exit;
+}
+
+// Check if it's a POST request and report_type is set
+if ($_SERVER["REQUEST_METHOD"] !== "POST" || !isset($_POST['report_type'])) {
+    sendError("Invalid request method or missing report type.", 400);
+}
+
+// --- Input Sanitization/Retrieval ---
+$reportType = trim($_POST['report_type']);
+// Basic date validation can be added here if needed
+$startDate = !empty(trim($_POST['start_date'])) ? trim($_POST['start_date']) : null;
+$endDate = !empty(trim($_POST['end_date'])) ? trim($_POST['end_date']) : null;
+
+// --- Report Generation Logic ---
+
+// Ensure database connection is established
+if (!isset($conn) || !($conn instanceof mysqli) || $conn->connect_error) {
+     sendError("Database connection failed: " . ($conn->connect_error ?? 'Unknown error'), 500);
+}
+
+try {
+    switch ($reportType) {
+        case 'sales_summary':
+            generateSalesSummary($conn, $startDate, $endDate);
+            break;
+
+        case 'inventory_status':
+            generateInventoryStatus($conn);
+            break;
+
+        case 'order_trends':
+            generateOrderTrends($conn, $startDate, $endDate);
+            break;
+
+        // Add more report cases here
+
+        default:
+            sendError("Invalid report type specified: " . htmlspecialchars($reportType), 400);
+            break;
+    }
+} catch (mysqli_sql_exception $e) {
+    // Catch potential SQL errors during execution
+    error_log("SQL Exception in fetch_report.php: " . $e->getMessage()); // Log the detailed error
+    sendError("An unexpected database error occurred while generating the report.", 500);
+} catch (Exception $e) {
+    // Catch other general exceptions
+    error_log("General Exception in fetch_report.php: " . $e->getMessage()); // Log the detailed error
+    sendError("An unexpected error occurred.", 500);
+} finally {
+    // Ensure DB connection is closed if it's still open
+    if (isset($conn) && $conn instanceof mysqli && $conn->ping()) { // Check if connection is still alive
+        $conn->close();
+    }
+}
+
+// --- Report Generating Functions ---
+
+/**
+ * Generates an Enhanced Sales Summary Report.
+ * Uses 'orders' table with columns: id, total_amount, order_date, status, username
+ */
+function generateSalesSummary($conn, $startDate, $endDate) {
+    $dateCondition = "";
+    $params = [];
+    $paramTypes = "";
+
+    // Build date condition for prepared statements
+    if ($startDate) {
+        $dateCondition .= " AND DATE(order_date) >= ?";
+        $params[] = $startDate;
+        $paramTypes .= "s";
+    }
+    if ($endDate) {
+        $dateCondition .= " AND DATE(order_date) <= ?";
+        $params[] = $endDate;
+        $paramTypes .= "s";
+    }
+
+    // 1. Get Total Orders and Sales Value for 'Completed' orders
+    $sqlSummary = "SELECT
+                        COUNT(id) as total_orders,
+                        SUM(total_amount) as total_sales_value
+                    FROM orders
+                    WHERE status = 'Completed' {$dateCondition}";
+
+    $stmtSummary = $conn->prepare($sqlSummary);
+    if (!$stmtSummary) throw new mysqli_sql_exception("DB prepare error (Summary): " . $conn->error, $conn->errno);
+
+    if (!empty($paramTypes)) $stmtSummary->bind_param($paramTypes, ...$params);
+
+    if (!$stmtSummary->execute()) {
+        $err = $stmtSummary->error;
+        $errno = $stmtSummary->errno;
+        $stmtSummary->close();
+        throw new mysqli_sql_exception("DB execute error (Summary): " . $err, $errno);
+    }
+    $resultSummary = $stmtSummary->get_result();
+    $summary = $resultSummary->fetch_assoc();
+    $resultSummary->close(); // Close result set promptly
+    $stmtSummary->close();
+
+    // 2. Get Unique Customers (using 'username') for 'Completed' orders
+    $uniqueCustomers = 0; // Default to 0
+    $sqlCustomers = "SELECT COUNT(DISTINCT username) as unique_customer_count
+                     FROM orders
+                     WHERE status = 'Completed' {$dateCondition}"; // Use username
+
+    $stmtCustomers = $conn->prepare($sqlCustomers);
+    if ($stmtCustomers) {
+         if (!empty($paramTypes)) $stmtCustomers->bind_param($paramTypes, ...$params);
+         if ($stmtCustomers->execute()) {
+             $resultCustomers = $stmtCustomers->get_result();
+             $customerData = $resultCustomers->fetch_assoc();
+             $uniqueCustomers = $customerData['unique_customer_count'] ?? 0;
+             $resultCustomers->close();
+         } else {
+              error_log("DB execute error (Customers): " . $stmtCustomers->error); // Log non-fatal error
+         }
+         $stmtCustomers->close();
+    } else {
+         error_log("DB prepare error (Customers): " . $conn->error); // Log non-fatal error
+    }
+
+    // Calculate derived metrics
+    $totalOrders = $summary['total_orders'] ?? 0;
+    $totalSales = $summary['total_sales_value'] ?? 0;
+    $averageOrderValue = ($totalOrders > 0) ? ($totalSales / $totalOrders) : 0;
+
+    // Format the output using a table for the summary
+    $dateRangeStr = '';
+    if ($startDate && $endDate) $dateRangeStr = " from " . htmlspecialchars($startDate) . " to " . htmlspecialchars($endDate);
+    elseif ($startDate) $dateRangeStr = " from " . htmlspecialchars($startDate) . " onwards";
+    elseif ($endDate) $dateRangeStr = " up to " . htmlspecialchars($endDate);
+
+    echo "<h3>Sales Summary Report" . $dateRangeStr . "</h3>";
+    // Use a simple table for the summary box
+    echo "<div class='report-summary-box' style='margin-bottom: 20px;'>";
+    echo "<table class='summary-table' style='width: auto; border: 1px solid #ddd; background-color: #f9f9f9; border-collapse: collapse;'>";
+    echo "<tbody>";
+
+    echo "<tr>";
+    echo "<td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Total Completed Orders:</td>";
+    echo "<td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>" . number_format($totalOrders) . "</td>";
+    echo "</tr>";
+
+    echo "<tr>";
+    echo "<td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Total Sales Value:</td>";
+    echo "<td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>₱ " . number_format($totalSales, 2) . "</td>";
+    echo "</tr>";
+
+    echo "<tr>";
+    echo "<td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Average Order Value:</td>";
+    echo "<td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>₱ " . number_format($averageOrderValue, 2) . "</td>";
+    echo "</tr>";
+
+    // Display unique customers count
+    echo "<tr>";
+    echo "<td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Unique Customers:</td>";
+    echo "<td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>" . number_format($uniqueCustomers) . "</td>";
+    echo "</tr>";
+
+    echo "</tbody>";
+    echo "</table>";
+    echo "</div>"; // Close report-summary-box
+
+    // --- Optional: Daily Sales Breakdown table ---
+    if ($startDate && $endDate) { // Only show if a date range is specified
+        $sqlDaily = "SELECT DATE(order_date) as sale_date, COUNT(id) as daily_orders, SUM(total_amount) as daily_sales
+                     FROM orders
+                     WHERE status = 'Completed' {$dateCondition}
+                     GROUP BY DATE(order_date)
+                     ORDER BY sale_date ASC";
+
+        $stmtDaily = $conn->prepare($sqlDaily);
+        if (!$stmtDaily) throw new mysqli_sql_exception("DB prepare error (Daily): " . $conn->error, $conn->errno);
+
+        if (!empty($paramTypes)) $stmtDaily->bind_param($paramTypes, ...$params);
+
+        if (!$stmtDaily->execute()){
+             $err = $stmtDaily->error;
+             $errno = $stmtDaily->errno;
+             $stmtDaily->close();
+             throw new mysqli_sql_exception("DB execute error (Daily): " . $err, $errno);
+        }
+        $resultDaily = $stmtDaily->get_result();
+
+        if ($resultDaily->num_rows > 0) {
+            echo "<h4>Daily Sales Breakdown</h4>";
+            // Apply the same table class as used in accounts.php or reporting.php
+            echo "<table class='accounts-table'>"; // Ensure this class exists and styles tables correctly
+            echo "<thead><tr><th>Date</th><th>Orders</th><th>Sales Value</th></tr></thead>";
+            echo "<tbody>";
+            while ($row = $resultDaily->fetch_assoc()) {
+                echo "<tr>";
+                echo "<td>" . htmlspecialchars($row['sale_date']) . "</td>";
+                echo "<td>" . number_format($row['daily_orders']) . "</td>";
+                echo "<td style='text-align: right;'>₱ " . number_format($row['daily_sales'], 2) . "</td>";
+                echo "</tr>";
+            }
+            echo "</tbody></table>";
+        } else {
+             echo "<p>No daily sales data found for the selected period.</p>"; // Added message if no daily data
+        }
+        $resultDaily->close();
+        $stmtDaily->close();
+    } // End if ($startDate && $endDate)
+}
+
+
+/**
+ * Generates an Inventory Status Report (Low Stock Items).
+ * NOTE: Uses 'products' table. Adjust column names if needed.
+ * Assumes `products` table: `product_name`, `current_stock`, `reorder_level`, `status`
+ */
+function generateInventoryStatus($conn) {
+    // ***** CHANGE TABLE NAME HERE *****
+    $tableName = 'products'; // Use 'products' instead of 'inventory'
+    // *********************************
+
+    // Check if table exists first to avoid unnecessary query errors if it doesn't
+    $checkTableSql = "SHOW TABLES LIKE '" . $conn->real_escape_string($tableName) . "'";
+    $tableResult = $conn->query($checkTableSql);
+    if (!$tableResult) { // Handle potential error during SHOW TABLES itself
+        error_log("Error checking for table {$tableName}: " . $conn->error);
+        sendError("Error checking database structure.", 500);
+        return;
+    }
+    if ($tableResult->num_rows == 0) {
+        echo "<h3>Inventory Status Report</h3>";
+        echo "<p>Note: The '{$tableName}' table was not found in the database. Cannot generate this report.</p>";
+        $tableResult->close();
+        return; // Exit function
+    }
+    $tableResult->close();
+
+    // Proceed with the actual query if the table exists
+    // *** VERIFY THESE COLUMN NAMES match your 'products' table ***
+    $sql = "SELECT product_name, current_stock, reorder_level
+            FROM `" . $conn->real_escape_string($tableName) . "`
+            WHERE current_stock < reorder_level AND status = 'Active' -- Example filter: Adjust 'current_stock', 'reorder_level', 'status' if needed
+            ORDER BY product_name"; // Adjust 'product_name' if needed
+
+    $result = $conn->query($sql);
+    // Check for errors *after* confirming the table exists
+    if (!$result) {
+        // Log the specific SQL error
+        error_log("DB query error (Inventory/Products): " . $conn->error . " | SQL: " . $sql);
+        // Show a generic error to the user
+        echo "<h3>Inventory Status Report</h3>";
+        // Provide more context if it's a column error (common after table name change)
+        if (strpos($conn->error, 'Unknown column') !== false) {
+             echo "<p style='color: red;'>Error retrieving inventory data. Please check if column names like 'product_name', 'current_stock', 'reorder_level', or 'status' are correct for the '{$tableName}' table.</p>";
+        } else {
+             echo "<p style='color: red;'>Error retrieving inventory data.</p>";
+        }
+        return; // Exit function
+    }
+
+    echo "<h3>Inventory Status Report (Low Stock Items)</h3>";
+    if ($result->num_rows > 0) {
+        echo "<table class='accounts-table'>"; // Ensure this class styles tables correctly
+        echo "<thead><tr><th>Product Name</th><th>Current Stock</th><th>Reorder Level</th><th>Difference</th></tr></thead>"; // Adjust headers if needed
+        echo "<tbody>";
+        while ($row = $result->fetch_assoc()) {
+            // Ensure keys exist before accessing, provides fallback if columns are missing/renamed
+            $productName = $row['product_name'] ?? 'N/A';
+            $currentStock = $row['current_stock'] ?? 0;
+            $reorderLevel = $row['reorder_level'] ?? 0;
+            $difference = $reorderLevel - $currentStock;
+
+            echo "<tr>";
+            echo "<td>" . htmlspecialchars($productName) . "</td>";
+            echo "<td>" . htmlspecialchars($currentStock) . "</td>";
+            echo "<td>" . htmlspecialchars($reorderLevel) . "</td>";
+            // Only show difference if reorder level is defined and stock is below it
+            if (isset($row['reorder_level']) && $difference > 0) {
+                 echo "<td style='color: red; font-weight: bold;'>" . htmlspecialchars($difference) . " below</td>";
+            } else {
+                 echo "<td>-</td>"; // Show dash if not applicable or reorder level missing
+            }
+            echo "</tr>";
+        }
+        echo "</tbody>";
+        echo "</table>";
+    } else {
+        echo "<p>No active items are currently below their reorder level (or the required columns 'current_stock'/'reorder_level' are missing/named differently).</p>"; // Updated message
+    }
+    $result->close();
+}
+
+
+/**
+ * Generates an Order Listing Report.
+ * Uses 'orders' table: id, order_date, username, company, total_amount, status
+ */
+function generateOrderTrends($conn, $startDate, $endDate) {
+    $sql = "SELECT id, order_date, username, company, total_amount, status
+            FROM orders WHERE 1=1"; // Start with 1=1 for easy condition appending
+
+    $params = [];
+    $paramTypes = "";
+
+    // Append date conditions if provided
+    if ($startDate) { $sql .= " AND DATE(order_date) >= ?"; $params[] = $startDate; $paramTypes .= "s"; }
+    if ($endDate) { $sql .= " AND DATE(order_date) <= ?"; $params[] = $endDate; $paramTypes .= "s"; }
+    $sql .= " ORDER BY order_date DESC"; // Order by date descending
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) throw new mysqli_sql_exception("DB prepare error (Order Trends): " . $conn->error, $conn->errno);
+
+    if (!empty($paramTypes)) $stmt->bind_param($paramTypes, ...$params);
+
+    if (!$stmt->execute()){
+         $err = $stmt->error;
+         $errno = $stmt->errno;
+         $stmt->close();
+         throw new mysqli_sql_exception("DB execute error (Order Trends): " . $err, $errno);
+    }
+    $result = $stmt->get_result();
+
+    // Determine date range string for the heading
+    $dateRangeStr = '';
+    if ($startDate && $endDate) $dateRangeStr = " from " . htmlspecialchars($startDate) . " to " . htmlspecialchars($endDate);
+    elseif ($startDate) $dateRangeStr = " from " . htmlspecialchars($startDate) . " onwards";
+    elseif ($endDate) $dateRangeStr = " up to " . htmlspecialchars($endDate);
+
+    echo "<h3>Order Listing" . $dateRangeStr . "</h3>";
+    if ($result->num_rows > 0) {
+        echo "<table class='accounts-table'>"; // Ensure this class styles tables correctly
+        echo "<thead><tr><th>Order ID</th><th>Date</th><th>Username</th><th>Company</th><th>Total</th><th>Status</th></tr></thead>";
+        echo "<tbody>";
+        while ($row = $result->fetch_assoc()) {
+             // Generate status class for potential styling (e.g., status-completed, status-pending)
+             $statusClass = 'status-' . strtolower(preg_replace('/[^a-z0-9]+/', '-', $row['status'] ?? 'unknown')); // Make class CSS-friendly
+            echo "<tr>";
+            echo "<td>" . htmlspecialchars($row['id']) . "</td>";
+            echo "<td>" . htmlspecialchars(date('Y-m-d H:i', strtotime($row['order_date']))) . "</td>"; // Format date and time
+            echo "<td>" . htmlspecialchars($row['username'] ?? 'N/A') . "</td>";
+            echo "<td>" . htmlspecialchars($row['company'] ?? 'N/A') . "</td>"; // Display Company, handle NULLs
+            echo "<td style='text-align: right;'>₱ " . number_format($row['total_amount'] ?? 0, 2) . "</td>";
+            // Apply status class for styling consistency
+            echo "<td class='" . htmlspecialchars($statusClass) . "'>" . htmlspecialchars($row['status']) . "</td>";
+            echo "</tr>";
+        }
+        echo "</tbody>";
+        echo "</table>";
+    } else {
+        echo "<p>No orders found within the specified criteria.</p>";
+    }
+    $result->close(); // Close result set
+    $stmt->close(); // Close statement
+}
 
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generate Reports</title>
-    <!-- Link to your CSS file -->
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Optional: Link to Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        /* Basic styling for the report page */
-        body {
-            font-family: sans-serif;
-            margin: 20px;
-        }
-        .report-container {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-        }
-        .report-options label {
-            display: block;
-            margin-bottom: 10px;
-        }
-        .report-options input[type="date"],
-        .report-options button {
-            padding: 8px;
-            margin-right: 10px;
-        }
-        .report-options button {
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-        }
-        .report-options button:hover {
-            background-color: #0056b3;
-        }
-        #report-output {
-            margin-top: 20px;
-            border-top: 1px dashed #ccc;
-            padding-top: 20px;
-        }
-        #loading-indicator {
-            display: none; /* Hidden by default */
-            margin-top: 15px;
-            font-style: italic;
-            color: #555;
-        }
-        .error-message-frontend {
-             color: #dc3545; /* Red */
-             background-color: #f8d7da;
-             border: 1px solid #f5c6cb;
-             padding: 10px;
-             border-radius: 4px;
-             margin-top: 10px;
-        }
-        /* Style for the inventory source options */
-        #inventory-source-options {
-             margin-left: 20px;
-             padding-left: 15px;
-             border-left: 2px solid #eee;
-             margin-top: 5px;
-             margin-bottom: 10px;
-             display: none; /* Initially hidden */
-        }
-         #inventory-source-options label {
-             display: inline-block; /* Place labels side-by-side */
-             margin-right: 15px;
-             font-weight: normal;
-         }
-
-        /* Styling for tables generated by backend (ensure consistency) */
-        .accounts-table, .summary-table { /* Use classes from backend output */
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        .accounts-table th, .accounts-table td,
-        .summary-table th, .summary-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        .accounts-table th {
-            background-color: #f2f2f2;
-        }
-         .accounts-table td[style*="text-align: right;"],
-         .summary-table td[style*="text-align: right;"] {
-             text-align: right;
-         }
-        /* Add styles for status classes if needed (e.g., .status-completed) */
-         .status-completed { color: green; }
-         .status-pending { color: orange; }
-         .status-cancelled { color: red; }
-
-         /* Styling for low stock section from backend */
-         .low-stock-section {
-             margin-bottom: 25px;
-             border: 2px solid #dc3545; /* Red border */
-             padding: 15px;
-             border-radius: 5px;
-             background-color: #fdf2f2; /* Light red background */
-         }
-         .low-stock-section h4 {
-             margin-top: 0;
-             color: #dc3545; /* Red heading */
-         }
-         .low-stock-section p {
-             margin-top: 0;
-         }
-
-         /* Styling for OK low stock message */
-         .low-stock-section[style*="border: 1px solid #198754;"] {
-             border: 1px solid #198754; /* Green border */
-             background-color: #f2fdf5; /* Light green background */
-         }
-         .low-stock-section[style*="border: 1px solid #198754;"] p {
-             color: #198754; /* Green text */
-         }
-
-
-    </style>
-</head>
-<body>
-
-    <h1>Generate Reports</h1>
-
-    <div class="report-container">
-        <h2>Select Report Options</h2>
-        <form id="report-form" class="report-options">
-            <div>
-                <label for="start_date">Start Date:</label>
-                <input type="date" id="start_date" name="start_date">
-            </div>
-            <div>
-                <label for="end_date">End Date:</label>
-                <input type="date" id="end_date" name="end_date">
-                <small>(Leave dates blank if not applicable for the selected report)</small>
-            </div>
-
-            <hr>
-
-            <p><strong>Select Report Type:</strong></p>
-            <div>
-                <label>
-                    <input type="radio" name="report_type" value="sales_summary" required> Sales Summary
-                </label>
-            </div>
-             <div>
-                 <label>
-                     <input type="radio" name="report_type" value="order_trends" required> Order Listing
-                 </label>
-             </div>
-            <div>
-                <label>
-                    <input type="radio" name="report_type" value="inventory_status" required> Inventory Status
-                </label>
-                <!-- Inventory Source Options - Shown only when Inventory Status is selected -->
-                <div id="inventory-source-options">
-                     <label style="margin-right: 10px;">
-                         <input type="radio" name="inventory_source" value="company" checked> Company
-                     </label>
-                     <label>
-                         <input type="radio" name="inventory_source" value="walkin"> Walk-in
-                     </label>
-                </div>
-            </div>
-            <!-- Add more report types here as needed -->
-
-
-            <div style="margin-top: 20px;">
-                <button type="submit">Generate Report</button>
-            </div>
-        </form>
-
-        <div id="loading-indicator">
-            <i class="fas fa-spinner fa-spin"></i> Loading report...
-        </div>
-
-        <div id="report-output">
-            <!-- Report content will be loaded here -->
-            <p>Select report options and click "Generate Report".</p>
-        </div>
-    </div>
-
-    <script>
-        const reportForm = document.getElementById('report-form');
-        const reportOutput = document.getElementById('report-output');
-        const loadingIndicator = document.getElementById('loading-indicator');
-        const inventorySourceOptions = document.getElementById('inventory-source-options');
-
-        // --- Event Listener for Report Type Change ---
-        document.querySelectorAll('input[name="report_type"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                // Show/hide inventory source options based on selection
-                if (this.value === 'inventory_status') {
-                    inventorySourceOptions.style.display = 'block';
-                } else {
-                    inventorySourceOptions.style.display = 'none';
-                }
-
-                // Show/hide date inputs based on selection (optional enhancement)
-                const dateInputs = document.querySelectorAll('input[type="date"]');
-                 const requiresDates = ['sales_summary', 'order_trends'].includes(this.value);
-                 dateInputs.forEach(input => {
-                     input.closest('div').style.display = requiresDates ? 'block' : 'none';
-                 });
-                 // If dates not required, clear them to avoid sending unnecessary data
-                 if (!requiresDates) {
-                     document.getElementById('start_date').value = '';
-                     document.getElementById('end_date').value = '';
-                 }
-
-            });
-        });
-
-         // --- Initial Check on Page Load ---
-         function initializeFormState() {
-             const selectedReportType = document.querySelector('input[name="report_type"]:checked');
-             if (selectedReportType) {
-                 // Trigger change event to set initial visibility
-                 selectedReportType.dispatchEvent(new Event('change'));
-             } else {
-                 // If nothing is selected initially, hide date inputs and inventory options
-                 document.querySelectorAll('input[type="date"]').forEach(input => {
-                     input.closest('div').style.display = 'none';
-                 });
-                 inventorySourceOptions.style.display = 'none';
-             }
-         }
-         initializeFormState(); // Run on page load
-
-
-        // --- Form Submission Handler ---
-        reportForm.addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent default form submission
-            fetchReport();
-        });
-
-        // --- Function to Fetch and Display Report ---
-        function fetchReport() {
-            const selectedReportTypeInput = document.querySelector('input[name="report_type"]:checked');
-            if (!selectedReportTypeInput) {
-                reportOutput.innerHTML = `<div class="error-message-frontend">Please select a report type.</div>`;
-                return;
-            }
-            const reportType = selectedReportTypeInput.value;
-
-            let inventorySource = null;
-            if (reportType === 'inventory_status') {
-                 const selectedSourceInput = document.querySelector('input[name="inventory_source"]:checked');
-                 if (!selectedSourceInput) {
-                     // This alert should prevent the 400 error if user forgets to select
-                     alert('Please select an inventory source (Company or Walk-in) for the Inventory Status report.');
-                     reportOutput.innerHTML = `<div class="error-message-frontend">Inventory source selection is required.</div>`;
-                     return; // Stop execution
-                 }
-                 inventorySource = selectedSourceInput.value;
-            }
-
-            const startDate = document.getElementById('start_date').value;
-            const endDate = document.getElementById('end_date').value;
-
-            // Prepare form data
-            const formData = new FormData();
-            formData.append('report_type', reportType);
-
-             // Append dates only if they are selected and relevant for the report type
-             const requiresDates = ['sales_summary', 'order_trends'].includes(reportType);
-             if (requiresDates) {
-                  if (startDate) formData.append('start_date', startDate);
-                  if (endDate) formData.append('end_date', endDate);
-             }
-
-            // Append inventory source if applicable
-            if (inventorySource) {
-                formData.append('inventory_source', inventorySource);
-            }
-
-            // Show loading indicator, clear previous output
-            loadingIndicator.style.display = 'block';
-            reportOutput.innerHTML = '';
-
-            // Log data being sent for debugging
-            console.log("Sending data to backend:", Object.fromEntries(formData));
-
-
-            // --- AJAX Call ---
-            fetch('backend/fetch_report.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    // If response status is not 2xx, get the error message text
-                    return response.text().then(text => {
-                         // Throw an error that includes the HTTP status and the response text
-                         throw new Error(`HTTP error ${response.status}: ${text}`);
-                    });
-                }
-                return response.text(); // Get the HTML response body as text
-            })
-            .then(data => {
-                // Display the HTML report content from the backend
-                reportOutput.innerHTML = data;
-            })
-            .catch(error => {
-                console.error('Error fetching report:', error);
-                // Display a user-friendly error message, including details from the backend if available
-                // The error.message might already contain the formatted HTML error div from the backend
-                reportOutput.innerHTML = `<div class="error-message-frontend">Error loading report: ${error.message}</div>`;
-            })
-            .finally(() => {
-                // Hide loading indicator regardless of success or failure
-                loadingIndicator.style.display = 'none';
-            });
-        }
-
-    </script>
-
-</body>
-</html>
