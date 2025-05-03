@@ -199,7 +199,7 @@ $recentOrders = getRecentOrders($conn, 5);
         <div class="recent-orders-container">
             <div class="recent-orders-header">
                 <h3>Recent Orders</h3>
-                <a href="/admin/public/pages/orders.php" class="btn btn-sm btn-outline-primary">
+                <a href="/public/pages/orders.php" class="btn btn-sm btn-outline-primary">
                     <i class="fas fa-list"></i> View All Orders
                 </a>
             </div>
@@ -372,7 +372,7 @@ $recentOrders = getRecentOrders($conn, 5);
         }
 
         function loadClientOrders(year) {
-            const url = `/admin/backend/get_client_orders.php?year=${year}`;
+            const url = `/backend/get_client_orders.php?year=${year}`;
             console.log("Fetching client orders from:", url);
             if (ctxClientOrders) {
                  const ctx = ctxClientOrders.getContext('2d'); ctx.clearRect(0, 0, ctxClientOrders.width, ctxClientOrders.height);
@@ -406,7 +406,7 @@ $recentOrders = getRecentOrders($conn, 5);
 
         function getOrderCounts(year) {
              if (!year) return Promise.resolve(0);
-            const url = `/admin/backend/get_order_counts.php?year=${year}`;
+            const url = `/backend/get_order_counts.php?year=${year}`;
             console.log("Fetching order counts from:", url);
             return fetch(url)
                 .then(response => {
@@ -461,7 +461,7 @@ $recentOrders = getRecentOrders($conn, 5);
         function loadSalesByCategory(timePeriod) {
             if (!ctxSalesPerDepartment) { console.error("Sales chart canvas not found"); return; }
             const ctx = ctxSalesPerDepartment.getContext('2d');
-            const url = `/admin/backend/get_sales_by_category.php?period=${timePeriod}`;
+            const url = `/backend/get_sales_by_category.php?period=${timePeriod}`;
             console.log(`Fetching ${timePeriod} sales data:`, url);
             ctx.clearRect(0, 0, ctxSalesPerDepartment.width, ctxSalesPerDepartment.height);
             ctx.fillStyle = '#6c757d'; ctx.textAlign = 'center'; ctx.fillText(`Loading ${timePeriod} data...`, ctxSalesPerDepartment.width / 2, ctxSalesPerDepartment.height / 2);
@@ -559,7 +559,7 @@ $recentOrders = getRecentOrders($conn, 5);
                 downloadPoBtn.href = '#';
                 downloadPoBtn.removeAttribute('download');
 
-                const backendUrl = `/admin/backend/get_order_details_for_modal.php?id=${orderId}`;
+                const backendUrl = `/backend/get_order_details_for_modal.php?id=${orderId}`;
                 console.log("Fetching details from:", backendUrl);
 
                 fetch(backendUrl)
@@ -613,7 +613,7 @@ $recentOrders = getRecentOrders($conn, 5);
                         modalTotalAmount.textContent = `₱${parseFloat(details.total_amount || 0).toFixed(2)}`;
 
                         if (details.po_number) {
-                             downloadPoBtn.href = `/admin/backend/download_po.php?po_number=${encodeURIComponent(details.po_number)}`;
+                             downloadPoBtn.href = `/backend/download_po.php?po_number=${encodeURIComponent(details.po_number)}`;
                              downloadPoBtn.download = `PO_${details.po_number}.pdf`;
                         }
 
