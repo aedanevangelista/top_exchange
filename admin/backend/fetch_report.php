@@ -46,7 +46,7 @@ try {
             break;
 
         case 'inventory_status':
-            generateInventoryStatus($conn); // Changed function name conceptually
+            generateInventoryStatus($conn); // Function modified below
             break;
 
         case 'order_trends':
@@ -175,59 +175,58 @@ function generateSalesSummary($conn, $startDate, $endDate) {
 
 
 /**
- * Generates an Inventory Stock List Report.
- * Uses 'products' table: item_description, stock_quantity
+ * Generates a combined Inventory Stock List Report for Company and Walk-in products.
+ * Uses 'products' and 'walkin_products' tables: item_description, stock_quantity
  */
-function generateInventoryStatus($conn) { // Renamed conceptually, but keeping function name for consistency
-    $tableName = 'products';
-
-    // Check if table exists
-    $checkTableSql = "SHOW TABLES LIKE '" . $conn->real_escape_string($tableName) . "'";
-    $tableResult = $conn->query($checkTableSql);
-    if (!$tableResult) { error_log("Error checking for table {$tableName}: " . $conn->error); sendError("Error checking database structure.", 500); return; }
-    if ($tableResult->num_rows == 0) { echo "<h3>Inventory Stock List</h3><p>Note: The '{$tableName}' table was not found.</p>"; $tableResult->close(); return; }
-    $tableResult->close();
-
-    // *** ADJUSTED SQL QUERY FOR 'products' TABLE ***
-    $sql = "SELECT item_description, stock_quantity
-            FROM `" . $conn->real_escape_string($tableName) . "`
-            ORDER BY item_description ASC"; // Order by item description
+function generateInventoryStatus($conn) {
+    // *** MODIFIED SQL QUERY USING UNION ALL ***
+    $sql = "SELECT item_description, stock_quantity, 'Company Order' AS inventory_type
+            FROM products
+            UNION ALL
+            SELECT item_description, stock_quantity, 'Walk-in' AS inventory_type
+            FROM walkin_products
+            ORDER BY inventory_type ASC, item_description ASC"; // Order by type, then item description
 
     $result = $conn->query($sql);
     if (!$result) {
-        error_log("DB query error (Inventory Stock): " . $conn->error . " | SQL: " . $sql);
-        echo "<h3>Inventory Stock List</h3>";
-        // Check for specific column error
-        if (strpos($conn->error, 'Unknown column') !== false) {
-             echo "<p style='color: red;'>Error retrieving stock data. Please check if column names 'item_description' or 'stock_quantity' exist in the '{$tableName}' table.</p>";
+        error_log("DB query error (Combined Inventory Stock): " . $conn->error . " | SQL: " . $sql);
+        // Check for specific column/table errors if needed
+        if (strpos($conn->error, 'Unknown column') !== false || strpos($conn->error, 'Table') !== false && strpos($conn->error, 'doesn\'t exist') !== false) {
+             echo "<h3>Inventory Stock List</h3>";
+             echo "<p style='color: red;'>Error retrieving stock data. Please check if tables 'products' and 'walkin_products' exist and contain 'item_description' and 'stock_quantity' columns.</p>";
         } else {
+             echo "<h3>Inventory Stock List</h3>";
              echo "<p style='color: red;'>Error retrieving stock data.</p>";
         }
         return;
     }
 
     // *** ADJUSTED REPORT TITLE AND HEADERS ***
-    echo "<h3>Inventory Stock List</h3>";
+    echo "<h3>Inventory Stock List (Company & Walk-in)</h3>";
     if ($result->num_rows > 0) {
         echo "<table class='accounts-table'>"; // Use your standard table class
-        echo "<thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead>"; // Updated headers
+        // *** ADDED 'Inventory Type' HEADER ***
+        echo "<thead><tr><th>Inventory Type</th><th>Item Description</th><th>Stock Quantity</th></tr></thead>";
         echo "<tbody>";
         while ($row = $result->fetch_assoc()) {
             // Use correct column names from the query
+            $inventoryType = $row['inventory_type'] ?? 'N/A'; // Get the type
             $itemDescription = $row['item_description'] ?? 'N/A';
             $stockQuantity = $row['stock_quantity'] ?? 0;
 
             echo "<tr>";
+            // *** ADDED CELL FOR 'Inventory Type' ***
+            echo "<td>" . htmlspecialchars($inventoryType) . "</td>";
             echo "<td>" . htmlspecialchars($itemDescription) . "</td>";
-            // Highlight low stock (e.g., <= 5) if desired, otherwise just display
-            $stockStyle = ($stockQuantity <= 5) ? " style='color: orange; font-weight: bold;'" : ""; // Example: Highlight if stock is 5 or less
+            // Highlight low stock (e.g., <= 10) if desired, otherwise just display
+            $stockStyle = ($stockQuantity <= 10) ? " style='color: orange; font-weight: bold;'" : ""; // Example: Highlight if stock is 10 or less
             echo "<td" . $stockStyle . ">" . htmlspecialchars($stockQuantity) . "</td>";
             echo "</tr>";
         }
         echo "</tbody>";
         echo "</table>";
     } else {
-        echo "<p>No products found in the '{$tableName}' table.</p>";
+        echo "<p>No products found in either 'products' or 'walkin_products' tables.</p>";
     }
     $result->close();
 }
