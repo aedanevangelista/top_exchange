@@ -321,31 +321,30 @@ $recentOrders = getRecentOrders($conn, 5);
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
-        /* Uses .data-container styling */
-        .client-orders-card .stat-card-content { /* Keep chart content div */
+        .client-orders-card .stat-card-content {
              height: 300px;
              position: relative;
         }
-        .packs-sold-card { /* Target this specific card for centering */
+        .packs-sold-card { /* Centering styles */
             display: flex;
             flex-direction: column;
-            justify-content: center; /* Center vertically */
-            align-items: center; /* Center horizontally */
-            min-height: 300px; /* Give it a minimum height to allow centering */
+            justify-content: center;
+            align-items: center;
+            min-height: 300px; /* Match chart height */
         }
         .chart-header, .packs-sold-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
-            width: 100%; /* Ensure header takes full width */
+            width: 100%;
         }
         .packs-comparison-row {
              display: flex;
-             justify-content: center; /* Center comparison items */
+             justify-content: center;
              align-items: center;
-             width: 100%; /* Ensure comparison row takes width */
-             margin-top: 0.5rem; /* Add space above comparison */
+             width: 100%;
+             margin-top: 0.5rem;
         }
         .data-container h3 {
             font-size: 0.9rem;
@@ -362,12 +361,11 @@ $recentOrders = getRecentOrders($conn, 5);
             background-color: #fff;
             max-width: 100px;
         }
-
         .packs-sold-count {
             font-size: 1.8rem;
             font-weight: 700;
             text-align: center;
-            margin-top: 0.5rem; /* Add some space above */
+            margin-top: 0.5rem;
             margin-bottom: 0.5rem;
             color: #212529;
         }
@@ -380,7 +378,7 @@ $recentOrders = getRecentOrders($conn, 5);
         .packs-comparison.negative { color: #dc3545; }
 
         /* Sales Dept Chart */
-        .sales-department-container .stat-card-content { /* Keep chart content div */
+        .sales-department-container .stat-card-content {
              height: 300px;
              position: relative;
         }
@@ -404,10 +402,10 @@ $recentOrders = getRecentOrders($conn, 5);
         .status-Active { background-color: #198754; color: #fff; }
         .status-Completed { background-color: #198754; color: #fff; }
         .status-Delivered { background-color: #0d6efd; color: #fff; }
-        .status-Rejected { background-color: #dc3545; color: #fff; }
-        .status-Cancelled { background-color: #6c757d; color: #fff; }
-        .status-For\.Delivery { background-color: #0dcaf0; color: #000; } /* Keep black for light cyan */
-        .status-In\.Transit { background-color: #fd7e14; color: #fff; } /* Escaped dot for CSS */
+        .status-Rejected { background-color: #dc3545; color: #fff; } /* Red */
+        .status-Cancelled { background-color: #6c757d; color: #fff; } /* Grey */
+        .status-For\.Delivery { background-color: #0dcaf0; color: #000; } /* Cyan, Black text */
+        .status-In\.Transit { background-color: #fd7e14; color: #fff; } /* Orange, White text */
 
     </style>
 </head>
@@ -497,19 +495,19 @@ $recentOrders = getRecentOrders($conn, 5);
         </div>
 
         <div class="stats-container">
-             <!-- Client Orders Chart (Uses data-container) -->
+             <!-- Client Orders Chart -->
             <div class="client-orders-card data-container">
                 <div class="chart-header"><h3>CLIENT ORDERS (<?php echo htmlspecialchars($selectedYear); ?>)</h3><select id="year-select" class="year-select"><?php foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $selectedYear) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
                 <div class="stat-card-content"><canvas id="clientOrdersChart"></canvas></div>
             </div>
-             <!-- Orders Sold Card (Uses data-container, now with flex centering) -->
+             <!-- Orders Sold Card (Centered Content) -->
             <div class="packs-sold-card data-container">
                  <div class="packs-sold-header"><span>Orders sold in</span><select id="packs-sold-year" class="packs-sold-dropdown"><?php foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == ($availableYears[0] ?? date('Y'))) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
                  <div class="packs-sold-count" id="packs-sold-count">Loading...</div>
                  <div class="packs-comparison-row"><span id="packs-sold-percentage" class="packs-comparison">N/A since</span><select id="packs-sold-compare-year" class="packs-sold-dropdown"><?php $compareYearDefault = count($availableYears) > 1 ? $availableYears[1] : ($availableYears[0] ?? date('Y')); foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $compareYearDefault) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
             </div>
         </div>
-         <!-- Sales Dept Chart (Uses data-container) -->
+         <!-- Sales Dept Chart -->
         <div class="sales-department-container data-container">
             <div class="container-header">
                 <h3>SALES PER DEPARTMENT</h3>
