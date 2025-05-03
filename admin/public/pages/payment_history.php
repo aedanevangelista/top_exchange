@@ -660,7 +660,7 @@ if ($result && $row = $result->fetch_assoc()) {
                     <tr>
                         <th>Username</th>
                         <th>Remaining Credits</th>
-                        <th>Total Amount</th>
+                        <th>Remaining Balance</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
