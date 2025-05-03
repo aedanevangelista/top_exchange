@@ -151,7 +151,7 @@ $recentOrders = getRecentOrders($conn, 5);
         .overview-container h2 {
             margin-bottom: 1.5rem;
             font-size: 1.75rem;
-            font-weight: 500;
+            font-weight: 700;
         }
         .notification-badges {
             margin-bottom: 1.5rem;
