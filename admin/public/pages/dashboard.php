@@ -310,7 +310,6 @@ $recentOrders = getRecentOrders($conn, 5);
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 1rem;
-            margin-bottom: 1.5rem;
         }
         .client-orders-card .stat-card-content {
              height: 300px;
