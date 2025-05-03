@@ -128,33 +128,45 @@ function generateSalesSummary($conn, $startDate, $endDate) {
     $totalSales = $summary['total_sales_value'] ?? 0;
     $averageOrderValue = ($totalOrders > 0) ? ($totalSales / $totalOrders) : 0;
 
-    // Format the output using a definition list or styled divs for better appearance
+    // Format the output using a table for the summary
     $dateRangeStr = '';
     if ($startDate && $endDate) $dateRangeStr = " from " . htmlspecialchars($startDate) . " to " . htmlspecialchars($endDate);
     elseif ($startDate) $dateRangeStr = " from " . htmlspecialchars($startDate) . " onwards";
     elseif ($endDate) $dateRangeStr = " up to " . htmlspecialchars($endDate);
 
     echo "<h3>Sales Summary Report" . $dateRangeStr . "</h3>";
-    echo "<div class='report-summary-box' style='border: 1px solid #ddd; background-color: #f9f9f9; padding: 15px; border-radius: 4px; margin-bottom: 20px;'>"; // Added inline style for immediate effect
-    echo "<dl style='margin: 0;'>"; // Use definition list <dl> for key-value pairs
+    // Use a simple table for the summary box
+    echo "<div class='report-summary-box' style='margin-bottom: 20px;'>"; // Optional container div
+    echo "<table class='summary-table' style='width: auto; border: 1px solid #ddd; background-color: #f9f9f9; border-collapse: collapse;'>"; // Basic styling, adjust class/style as needed
+    echo "<tbody>"; // Use tbody for content
 
-    echo "<dt style='font-weight: bold; width: 180px; float: left; clear: left;'>Total Completed Orders:</dt>";
-    echo "<dd style='margin-left: 190px; margin-bottom: 5px;'>" . number_format($totalOrders) . "</dd>";
+    echo "<tr>";
+    echo "<td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Total Completed Orders:</td>"; // Added border
+    echo "<td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>" . number_format($totalOrders) . "</td>"; // Added border
+    echo "</tr>";
 
-    echo "<dt style='font-weight: bold; width: 180px; float: left; clear: left;'>Total Sales Value:</dt>";
-    echo "<dd style='margin-left: 190px; margin-bottom: 5px;'>₱ " . number_format($totalSales, 2) . "</dd>";
+    echo "<tr>";
+    echo "<td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Total Sales Value:</td>"; // Added border
+    echo "<td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>₱ " . number_format($totalSales, 2) . "</td>"; // Added border
+    echo "</tr>";
 
-    echo "<dt style='font-weight: bold; width: 180px; float: left; clear: left;'>Average Order Value:</dt>";
-    echo "<dd style='margin-left: 190px; margin-bottom: 5px;'>₱ " . number_format($averageOrderValue, 2) . "</dd>";
+    echo "<tr>";
+    echo "<td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Average Order Value:</td>"; // Added border
+    echo "<td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>₱ " . number_format($averageOrderValue, 2) . "</td>"; // Added border
+    echo "</tr>";
 
     // Only show unique customers if calculated
     if ($uniqueCustomers !== 'N/A') {
-        echo "<dt style='font-weight: bold; width: 180px; float: left; clear: left;'>Unique Customers:</dt>";
-        echo "<dd style='margin-left: 190px; margin-bottom: 5px;'>" . number_format($uniqueCustomers) . "</dd>";
+        echo "<tr>";
+        echo "<td style='padding: 5px 10px; font-weight: bold; text-align: left; border: 1px solid #ddd;'>Unique Customers:</td>"; // Added border
+        echo "<td style='padding: 5px 10px; text-align: right; border: 1px solid #ddd;'>" . number_format($uniqueCustomers) . "</td>"; // Added border
+        echo "</tr>";
     }
 
-    echo "</dl>";
-    echo "</div>";
+    echo "</tbody>";
+    echo "</table>";
+    echo "</div>"; // Close optional container div
+
 
     // --- Optional: Add a table breakdown by date (if useful) ---
     // This query groups sales by date within the range
