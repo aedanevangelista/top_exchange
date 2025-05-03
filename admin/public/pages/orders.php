@@ -390,7 +390,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .instructions-modal-content {
             background-color: #ffffff;
             /* Adjusted margin: 5vh top/bottom for spacing, auto for horizontal centering */
-            margin: 5vh auto;
+            margin: auto;
             padding: 0; /* Keep padding reset */
             border-radius: 8px; /* Keep rounded corners */
             width: 60%; /* Keep desired width */
