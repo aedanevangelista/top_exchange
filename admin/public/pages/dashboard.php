@@ -135,10 +135,12 @@ $recentOrders = getRecentOrders($conn, 5);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-    <link rel="stylesheet" href="/css/sidebar.css">
-    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/sidebar.css"> <!-- Your sidebar CSS -->
+    <link rel="stylesheet" href="/css/dashboard.css"> <!-- Your dashboard CSS -->
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Assuming Bootstrap 5 CSS is loaded globally (e.g., via sidebar.php or main layout) -->
+    <!-- REMOVED: <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"> -->
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -153,19 +155,20 @@ $recentOrders = getRecentOrders($conn, 5);
             margin-bottom: 1.5rem;
         }
         .notification-badges {
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem; /* Reduced gap */
         }
 
+        /* --- KPI Cards Styling --- */
         .kpi-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1.25rem;
-            margin-bottom: 2rem;
+            gap: 1rem; /* Reduced gap */
+            margin-bottom: 1.5rem; /* Reduced gap */
         }
         .kpi-card {
             background-color: #fff;
-            padding: 1.25rem 1.5rem;
-            border-radius: 0.5rem;
+            padding: 1rem 1.25rem; /* Slightly reduced padding */
+            border-radius: 0.375rem; /* Bootstrap default */
             border: 1px solid #dee2e6;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             display: flex;
@@ -177,13 +180,13 @@ $recentOrders = getRecentOrders($conn, 5);
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
         }
         .kpi-icon {
-            font-size: 1.75rem;
-            padding: 0.8rem;
+            font-size: 1.5rem; /* Slightly smaller icon */
+            padding: 0.7rem;
             border-radius: 50%;
-            margin-right: 1rem;
+            margin-right: 0.8rem;
             color: #fff;
-            width: 55px;
-            height: 55px;
+            width: 48px; /* Adjusted size */
+            height: 48px; /* Adjusted size */
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -193,27 +196,28 @@ $recentOrders = getRecentOrders($conn, 5);
         .kpi-icon.bg-warning-soft { background-color: rgba(255, 193, 7, 0.2); color: #ffc107; }
 
         .kpi-content h4 {
-            margin: 0 0 0.25rem 0;
-            font-size: 0.85rem;
+            margin: 0 0 0.2rem 0;
+            font-size: 0.8rem;
             color: #6c757d;
             text-transform: uppercase;
             font-weight: 600;
         }
         .kpi-content .kpi-value {
-            font-size: 1.75rem;
+            font-size: 1.5rem;
             font-weight: 700;
             color: #212529;
             margin: 0;
             line-height: 1.2;
         }
 
+        /* --- Recent Orders Section Styling --- */
         .recent-orders-container {
             background-color: #fff;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
+            padding: 1.25rem; /* Adjusted padding */
+            border-radius: 0.375rem;
             border: 1px solid #dee2e6;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem; /* Reduced gap */
         }
         .recent-orders-header {
             display: flex;
@@ -225,38 +229,56 @@ $recentOrders = getRecentOrders($conn, 5);
         }
         .recent-orders-header h3 {
             margin: 0;
-            font-size: 1.25rem;
+            font-size: 1.15rem; /* Adjusted size */
             font-weight: 600;
         }
         .recent-orders-header .btn {
             font-weight: 500;
-            padding: 0.4rem 0.8rem;
+            /* Uses btn-sm class now */
         }
         .recent-orders-header .btn i {
-            margin-right: 0.4rem;
+            margin-right: 0.3rem; /* Smaller icon margin */
         }
 
+        /* Recent Orders Table Styling (Like accounts.php - using standard Bootstrap) */
+        .recent-orders-table thead {
+             /* Use Bootstrap's thead-light or similar class for consistency */
+             /* Or define a specific background if needed: background-color: #e9ecef; */
+        }
         .recent-orders-table th {
             font-weight: 600;
+            font-size: 0.85rem; /* Match typical admin table header size */
+            padding: 0.75rem 1rem; /* Standard padding */
             white-space: nowrap;
+            color: #495057; /* Darker gray */
+            border-bottom-width: 2px; /* Thicker bottom border */
         }
         .recent-orders-table td {
             vertical-align: middle;
+            padding: 0.75rem 1rem; /* Standard padding */
+            font-size: 0.875rem; /* Standard body text size */
         }
         .recent-orders-table .status-badge {
             font-weight: 500;
         }
+        /* Ensure Bootstrap table-hover works */
+        .table-hover > tbody > tr:hover > * {
+           /* Standard Bootstrap hover color, or define your own */
+           /* color: var(--bs-table-hover-color); */
+           /* background-color: var(--bs-table-hover-bg); */
+        }
 
+        /* --- Chart/Stats Section --- */
         .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.25rem;
-            margin-bottom: 2rem;
+            gap: 1rem; /* Reduced gap */
+            margin-bottom: 1.5rem; /* Reduced gap */
         }
         .stat-card {
             background-color: #fff;
             padding: 1.25rem;
-            border-radius: 0.5rem;
+            border-radius: 0.375rem;
             border: 1px solid #dee2e6;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
@@ -267,7 +289,7 @@ $recentOrders = getRecentOrders($conn, 5);
             align-items: center;
         }
         .stat-card h3 {
-            font-size: 1rem;
+            font-size: 0.9rem; /* Adjusted size */
             font-weight: 600;
             margin: 0;
             text-transform: uppercase;
@@ -283,7 +305,7 @@ $recentOrders = getRecentOrders($conn, 5);
             height: 300px;
         }
         .packs-sold-count {
-            font-size: 2rem;
+            font-size: 1.8rem; /* Adjusted size */
             font-weight: 700;
             text-align: center;
             margin-bottom: 0.5rem;
@@ -298,10 +320,10 @@ $recentOrders = getRecentOrders($conn, 5);
         .sales-department-container {
             background-color: #fff;
             padding: 1.25rem;
-            border-radius: 0.5rem;
+            border-radius: 0.375rem;
             border: 1px solid #dee2e6;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem; /* Reduced gap */
         }
         .time-period-tabs .time-period-tab {
              background: none;
@@ -316,6 +338,7 @@ $recentOrders = getRecentOrders($conn, 5);
              border-bottom-color: #0d6efd;
         }
 
+        /* --- Status Badges --- */
         .status-badge { padding: 0.25em 0.65em; border-radius: 50rem; font-size: 0.75em; font-weight: 600; display: inline-block; white-space: nowrap; vertical-align: baseline; }
         .status-Pending { background-color: #ffc107; color: #000;}
         .status-Active, .status-Completed { background-color: #198754; color: #fff; }
@@ -369,13 +392,14 @@ $recentOrders = getRecentOrders($conn, 5);
         <div class="recent-orders-container">
             <div class="recent-orders-header">
                 <h3>Recent Orders</h3>
-                <a href="/public/pages/orders.php" class="btn btn-primary">
+                <a href="/public/pages/orders.php" class="btn btn-sm btn-primary"> <!-- Changed to btn-sm -->
                     <i class="fas fa-list"></i> View All Orders
                 </a>
             </div>
             <?php if (!empty($recentOrders)): ?>
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover table-sm align-middle recent-orders-table">
+                    <!-- Using standard Bootstrap table classes -->
+                    <table class="table table-hover table-bordered table-sm align-middle recent-orders-table">
                         <thead class="table-light">
                             <tr>
                                 <th>PO Number</th>
@@ -391,9 +415,7 @@ $recentOrders = getRecentOrders($conn, 5);
                                 $statusClass = str_replace(' ', '.', $statusDisplay);
                             ?>
                                 <tr>
-                                    <td>
-                                        <?php echo htmlspecialchars($order['po_number'] ?? 'N/A'); ?>
-                                    </td>
+                                    <td><?php echo htmlspecialchars($order['po_number'] ?? 'N/A'); ?></td>
                                     <td><?php echo htmlspecialchars(date('M d, Y', strtotime($order['order_date']))); ?></td>
                                     <td><?php echo htmlspecialchars($order['username'] ?? 'N/A'); ?></td>
                                     <td><span class="status-badge status-<?php echo $statusClass; ?>"><?php echo $statusDisplay; ?></span></td>
@@ -428,7 +450,8 @@ $recentOrders = getRecentOrders($conn, 5);
 
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Assuming Bootstrap 5 JS is loaded globally -->
+    <!-- REMOVED: <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script> -->
     <script>
     document.addEventListener("DOMContentLoaded", function () {
         console.log("Dashboard JS Initializing...");
