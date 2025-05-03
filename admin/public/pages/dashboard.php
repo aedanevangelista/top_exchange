@@ -116,26 +116,6 @@ function getRecentOrders($conn, $limit = 5) {
     return $orders;
 }
 
-// --- Helper function to get status color (similar to accounts.php logic if needed) ---
-function getStatusColor($status) {
-    // Based on the image, 'Active' has a gold/yellow color. Define others if necessary.
-    switch (strtolower($status)) {
-        case 'active':
-            return '#b8860b'; // DarkGoldenrod - adjust as needed
-        case 'pending':
-            return '#ffae42'; // Orange-Yellow
-        case 'rejected':
-        case 'cancelled':
-            return '#dc3545'; // Red
-        case 'completed':
-        case 'delivered':
-             return '#198754'; // Green
-        // Add other statuses as needed
-        default:
-            return '#6c757d'; // Gray for unknown/other
-    }
-}
-
 
 $selectedYear = $_GET['year'] ?? date('Y');
 $availableYears = getAvailableYears($conn);
@@ -158,8 +138,8 @@ $recentOrders = getRecentOrders($conn, 5);
     <title>Dashboard</title>
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/css/sidebar.css">
-    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/sidebar.css"> <!-- Your sidebar CSS -->
+    <link rel="stylesheet" href="/css/dashboard.css"> <!-- Your dashboard CSS -->
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
@@ -174,8 +154,11 @@ $recentOrders = getRecentOrders($conn, 5);
             color: #212529;
             line-height: 1.5;
         }
+        /* Ensure main content does not interfere with sidebar if sidebar.css uses fixed positioning */
         .main-content {
             padding: 20px;
+            /* If sidebar is fixed width, add margin-left: [sidebar-width]px; */
+            /* e.g., margin-left: 250px; */
         }
         .overview-container h2 {
             margin-bottom: 1.5rem;
@@ -187,7 +170,7 @@ $recentOrders = getRecentOrders($conn, 5);
         }
         .data-container {
             background-color: #fff;
-            padding: 1.25rem;
+            padding: 1rem; /* Reduced padding */
             border-radius: 0.375rem;
             border: 1px solid #dee2e6;
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
@@ -263,14 +246,13 @@ $recentOrders = getRecentOrders($conn, 5);
         }
 
         /* --- Recent Orders --- */
-        /* Uses .data-container and .container-header */
-        .view-all-button { /* Updated Button Style */
+        .view-all-button {
             display: inline-block;
             font-weight: 500;
             line-height: 1.5;
-            color: #ffffff; /* White text */
-            background-color: #0d6efd; /* Blue background */
-            border: 1px solid #0d6efd; /* Matching border */
+            color: #ffffff;
+            background-color: #0d6efd;
+            border: 1px solid #0d6efd;
             text-align: center;
             text-decoration: none;
             vertical-align: middle;
@@ -282,13 +264,13 @@ $recentOrders = getRecentOrders($conn, 5);
             transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
         }
         .view-all-button:hover {
-            background-color: #0b5ed7; /* Darker blue on hover */
+            background-color: #0b5ed7;
             border-color: #0a58ca;
         }
         .view-all-button i {
             margin-right: 0.3rem;
         }
-        /* Table Styling - Matching Image */
+        /* Table Styling */
         .table-wrapper {
              overflow-x: auto;
         }
@@ -297,44 +279,36 @@ $recentOrders = getRecentOrders($conn, 5);
             margin-bottom: 1rem;
             color: #212529;
             vertical-align: middle;
-            border-color: #dee2e6; /* Consistent border color */
-            border-collapse: collapse; /* Remove space between borders */
+            border-color: #dee2e6;
+            border-collapse: collapse;
         }
         .recent-orders-table thead {
-            background-color: #000000; /* Black header */
-            color: #ffffff; /* White text */
+            background-color: #000000;
+            color: #ffffff;
         }
         .recent-orders-table th {
-            padding: 0.75rem 1rem;
-            text-align: left; /* Align header text left */
+            padding: 0.5rem 0.75rem; /* Reduced header padding */
+            text-align: left;
             font-weight: 600;
-            font-size: 0.9rem; /* Slightly larger header font */
+            font-size: 0.9rem;
             white-space: nowrap;
-            border: 1px solid #454d55; /* Darker border for header cells */
-            border-bottom-width: 2px; /* Thicker bottom border for header */
+            border: 1px solid #454d55;
+            border-bottom-width: 2px;
         }
         .recent-orders-table td {
-            padding: 0.75rem 1rem;
-            border: none; /* Remove individual cell borders */
-            border-bottom: 1px solid #dee2e6; /* Row separator border */
+            padding: 0.6rem 0.75rem; /* Adjusted cell padding */
+            border: none;
+            border-bottom: 1px solid #dee2e6;
             font-size: 0.875rem;
-        }
-        .recent-orders-table tbody tr {
-            background-color: #fff; /* Ensure rows are white */
+            text-align: left; /* Default align left */
         }
         .recent-orders-table tbody tr:last-child td {
-            border-bottom: none; /* Remove border for the last row */
+            border-bottom: none;
         }
-        /* Remove hover effect if not desired */
-        /* .recent-orders-table tbody tr:hover {
-            background-color: #e9ecef;
-        } */
-        .text-align-right {
-            text-align: right;
+        .recent-orders-table tbody tr:hover { /* Re-enabled hover */
+            background-color: #f1f1f1; /* Slightly darker hover */
         }
-        .status-text { /* Class for the status text span */
-             font-weight: 500;
-        }
+        /* Removed .text-align-right utility class */
         .no-orders-message {
              text-align: center;
              padding: 1rem;
@@ -343,7 +317,6 @@ $recentOrders = getRecentOrders($conn, 5);
              border: 1px solid #dee2e6;
              border-radius: 0.375rem;
         }
-
 
         /* --- Chart/Stats Section --- */
         .stats-container {
@@ -412,8 +385,18 @@ $recentOrders = getRecentOrders($conn, 5);
              border-bottom-color: #0d6efd;
         }
 
-        /* --- Removed Status Badges --- */
-        /* Status text color is now applied via inline style */
+        /* --- Status Badges (Re-added) --- */
+        .status-badge { padding: 0.25em 0.65em; border-radius: 50rem; font-size: 0.75em; font-weight: 600; display: inline-block; white-space: nowrap; vertical-align: baseline; line-height: 1; }
+        .status-Pending { background-color: #ffc107; color: #000;}
+        .status-Active, .status-Completed { background-color: #198754; color: #fff; } /* Green like accounts.php */
+        .status-Delivered { background-color: #0d6efd; color: #fff; }
+        .status-Rejected { background-color: #dc3545; color: #fff; }
+        .status-Cancelled { background-color: #6c757d; color: #fff; }
+        .status-For.Delivery { background-color: #0dcaf0; color: #000; }
+        .status-In.Transit { background-color: #fd7e14; color: #fff; }
+        /* Add specific color for 'Active' if different from Completed/Delivered */
+        /* .status-Active { background-color: #your_active_color; color: #fff; } */
+
 
     </style>
 </head>
@@ -459,7 +442,7 @@ $recentOrders = getRecentOrders($conn, 5);
         <div class="recent-orders-container data-container">
             <div class="container-header">
                 <h3>Recent Orders</h3>
-                <a href="/public/pages/orders.php" class="view-all-button"> <!-- Updated class and style -->
+                <a href="/public/pages/orders.php" class="view-all-button">
                     <i class="fas fa-list"></i> View All Orders
                 </a>
             </div>
@@ -472,25 +455,26 @@ $recentOrders = getRecentOrders($conn, 5);
                                 <th>Date</th>
                                 <th>Customer</th>
                                 <th>Status</th>
-                                <th class="text-align-right">Total</th>
+                                <th>Total</th> <!-- Removed text-align-right class -->
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($recentOrders as $order):
                                 $statusDisplay = htmlspecialchars($order['status'] ?? 'Unknown');
-                                $statusColor = getStatusColor($statusDisplay); // Get color based on status
+                                // Create class name for CSS: replace space with dot (e.g., "For Delivery" -> "For.Delivery")
+                                $statusClass = str_replace(' ', '.', $statusDisplay);
                             ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($order['po_number'] ?? 'N/A'); ?></td>
                                     <td><?php echo htmlspecialchars(date('M d, Y', strtotime($order['order_date']))); ?></td>
                                     <td><?php echo htmlspecialchars($order['username'] ?? 'N/A'); ?></td>
                                     <td>
-                                        <!-- Apply color directly via inline style -->
-                                        <span class="status-text" style="color: <?php echo $statusColor; ?>;">
+                                        <!-- Reverted to status badge -->
+                                        <span class="status-badge status-<?php echo $statusClass; ?>">
                                             <?php echo $statusDisplay; ?>
                                         </span>
                                     </td>
-                                    <td class="text-align-right">₱<?php echo number_format($order['total_amount'] ?? 0, 2); ?></td>
+                                    <td>₱<?php echo number_format($order['total_amount'] ?? 0, 2); ?></td> <!-- Removed text-align-right class -->
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -640,7 +624,7 @@ $recentOrders = getRecentOrders($conn, 5);
              }
             const selectedYear = ordersSoldYearSelect.value; const compareYear = ordersSoldCompareYearSelect.value;
             ordersSoldCountEl.textContent = 'Loading...'; ordersSoldPercentageEl.textContent = 'Calculating...';
-            ordersSoldPercentageEl.className = 'packs-comparison'; // Reset class
+            ordersSoldPercentageEl.className = 'packs-comparison';
 
             try {
                 const [currentOrders, previousOrders] = await Promise.all([ getOrderCounts(selectedYear), getOrderCounts(compareYear) ]);
