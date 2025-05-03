@@ -3,213 +3,268 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in
-if (!isset($_SESSION['admin_user_id']) && !isset($_SESSION['client_user_id']) && !isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+// Use relative paths from the current file's directory for includes
+// Correct path from /public/pages/ to /backend/
+include_once __DIR__ . '/../../backend/check_role.php';
+include_once __DIR__ . '/../../backend/db_connection.php';
+
+// --- Permission Check ---
+$isLoggedIn = isset($_SESSION['admin_user_id']) || isset($_SESSION['client_user_id']) || isset($_SESSION['user_id']);
+if (!$isLoggedIn) {
+    header('Location: /public/index.php'); // Redirect to login page if not logged in
     exit;
 }
 
-// ***** START: Include Layout Files *****
-// Include your standard header file (adjust path if necessary)
-// This file usually includes <head>, opening <body>, top navigation etc.
-include_once 'header.php';
+$role = $_SESSION['admin_role'] ?? $_SESSION['client_role'] ?? $_SESSION['role'] ?? 'guest';
+$isAllowed = false;
 
-// Include your standard sidebar file (adjust path if necessary)
-include_once 'sidebar.php';
-// ***** END: Include Layout Files *****
+if ($role !== 'guest' && isset($conn)) {
+    $stmt = $conn->prepare("SELECT pages FROM roles WHERE role_name = ? AND status = 'active'");
+    if ($stmt) {
+        $stmt->bind_param("s", $role);
+        $stmt->execute();
+        $stmt->bind_result($pages);
+        if ($stmt->fetch()) {
+            $allowedPages = array_map('trim', explode(',', $pages ?? ''));
+            if (in_array('Reporting', $allowedPages)) {
+                $isAllowed = true;
+            }
+        }
+        $stmt->close();
+    } else {
+        error_log("Error preparing statement for role check: " . $conn->error);
+    }
+}
+
+if (!$isAllowed) {
+    echo "Access Denied. You do not have permission to view this page.";
+    // Consider including sidebar/footer for consistency even on error pages
+    if (isset($conn) && $conn instanceof mysqli) $conn->close(); // Close connection if exiting
+    exit;
+}
+// --- End Permission Check ---
+
+
+$pageTitle = "Reporting"; // Set the page title
 
 ?>
-<!DOCTYPE html> <!-- Header.php might already contain this -->
-<html lang="en"> <!-- Header.php might already contain this -->
-<head> <!-- Header.php likely contains meta, title, CSS links -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generate Reports</title> <!-- Title might be set in header.php -->
-    <!-- Ensure necessary CSS is linked (either here or in header.php) -->
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        /* Styles specific to the reporting page content area */
+    <title><?php echo htmlspecialchars($pageTitle) . ' - TopExchange'; ?></title>
 
-        /* Adjust container if your layout uses specific classes */
-        .main-content .report-container { /* Example: Target within a main content area */
+    <!-- CSS Includes copied from accounts.php -->
+    <!-- Assuming /css/ points to public_html/admin/public/css/ -->
+    <link rel="stylesheet" href="/css/accounts.css"> <!-- May contain general table/button styles -->
+    <link rel="stylesheet" href="/css/sidebar.css">  <!-- <== LIKELY CONTAINS LAYOUT RULES -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="/css/toast.css">
+
+    <!-- Page-specific CSS for Reporting -->
+    <style>
+        /* Styles specific to the reporting page controls/display */
+        .reporting-header { /* Mimic accounts-header */
+             display: flex;
+             justify-content: space-between; /* Or adjust as needed */
+             align-items: center;
+             margin-bottom: 20px;
+        }
+        .reporting-header h1 {
+             margin: 0; /* Remove default margin */
+             margin-right: auto; /* Push controls to the right */
+        }
+        .report-controls {
+            display: flex; /* Arrange controls inline */
+            align-items: center;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            /* Remove background/border if inheriting from accounts.css is enough */
+            /* margin-bottom: 20px; */
+            /* padding: 15px; */
+            /* background-color: #f9f9f9; */
+            /* border: 1px solid #eee; */
+            /* border-radius: 4px; */
+        }
+        .report-controls label,
+        .report-controls select,
+        .report-controls input,
+        .report-controls button {
+            margin-right: 10px;
+            margin-bottom: 10px; /* Spacing for wrapping */
+        }
+         /* Make button consistent */
+        .report-controls button {
+             padding: 8px 15px;
+             background-color: #2980b9; /* Match accounts.php style */
+             color: white;
+             border: none;
+             border-radius: 4px;
+             cursor: pointer;
+             transition: background-color 0.2s ease;
+         }
+         .report-controls button:hover {
+              background-color: #2471a3; /* Match accounts.php style */
+         }
+
+        #report-display-area {
             margin-top: 20px;
             padding: 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            background-color: #fff;
+            min-height: 200px;
+             overflow-x: auto; /* Add horizontal scroll if table is wide */
         }
-        /* ... (keep all the other specific styles for tabs, tables, etc.) ... */
-        .report-options label { display: block; margin-bottom: 5px; }
-        .report-options input[type="date"],
-        .report-options button { padding: 8px; margin-right: 10px; margin-top: 5px; }
-        .report-options button { cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; }
-        .report-options button:hover { background-color: #0056b3; }
-        #report-output { margin-top: 20px; border-top: 1px dashed #ccc; padding-top: 20px; }
-        #loading-indicator { display: none; margin-top: 15px; font-style: italic; color: #555; }
-        .error-message-frontend { color: #dc3545; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 4px; margin-top: 10px; }
-        .date-range-container { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
-        .report-type-selection label { margin-bottom: 10px; }
-        .inventory-tabs-container { display: none; margin-top: 10px; margin-bottom: 15px; padding-left: 20px; }
-        .inventory-tab { display: inline-block; padding: 8px 15px; border: 1px solid #ccc; border-bottom: none; cursor: pointer; background-color: #f1f1f1; margin-right: -1px; border-radius: 4px 4px 0 0; color: #007bff; }
-        .inventory-tab.active { background-color: #fff; border-color: #ccc; border-bottom: 1px solid #fff; font-weight: bold; color: #333; }
-        .inventory-tab i { margin-right: 5px; }
-        .accounts-table, .summary-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .accounts-table th, .accounts-table td,
-        .summary-table th, .summary-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        .accounts-table th { background-color: #f2f2f2; }
-        .accounts-table td[style*="text-align: right;"],
-        .summary-table td[style*="text-align: right;"] { text-align: right; }
-        .status-completed { color: green; } .status-pending { color: orange; } .status-cancelled { color: red; }
+        /* Basic loading spinner */
+        .fa-spinner {
+            margin-left: 5px;
+        }
 
+         /* Basic Table styling (if not fully covered by accounts.css) */
+         #report-display-area table {
+             width: 100%;
+             border-collapse: collapse;
+             margin-top: 15px;
+         }
+         #report-display-area th,
+         #report-display-area td {
+             border: 1px solid #ddd;
+             padding: 8px 12px;
+             text-align: left;
+         }
+         #report-display-area th {
+             background-color: #f2f2f2; /* Light grey header */
+         }
     </style>
 </head>
-<body> <!-- Header.php might already contain this -->
+<body>
+    <div id="toast-container"></div> <!-- For notifications -->
 
-<!-- Assumes header.php/sidebar.php setup creates a main content wrapper -->
-<div class="main-content"> <!-- Or whatever your main content wrapper class is -->
+    <?php
+    // Include the sidebar using the relative path from /public/pages/
+    // This goes up one level to /public/ where sidebar.php is assumed to be
+    include __DIR__ . '/../sidebar.php';
+    ?>
 
-    <h1>Generate Reports</h1>
+    <!-- Main Content Area (matches accounts.php structure) -->
+    <div class="main-content">
 
-    <div class="report-container">
-        <h2>Select Report Options</h2>
-        <form id="report-form" class="report-options">
+        <div class="reporting-header">
+             <h1><?php echo htmlspecialchars($pageTitle); ?></h1>
+             <!-- Reporting controls moved into the header div -->
+             <div class="report-controls">
+                <label for="report-type">Report:</label>
+                <select id="report-type" name="report-type">
+                    <option value="">-- Choose --</option>
+                    <option value="sales_summary">Sales Summary</option>
+                    <option value="inventory_status">Inventory Status</option>
+                    <option value="order_trends">Order Trends</option>
+                    <!-- Add more report types -->
+                </select>
 
-             <!-- Date Range Container - Initially hidden, shown by JS -->
-             <div class="date-range-container" id="date-range-container" style="display: none;">
-                 <div> <label for="start_date">Start Date:</label> <input type="date" id="start_date" name="start_date"> </div>
-                 <div> <label for="end_date">End Date:</label> <input type="date" id="end_date" name="end_date"> </div>
-             </div>
+                <label for="start-date">From:</label>
+                <input type="date" id="start-date" name="start-date">
+                <label for="end-date">To:</label>
+                <input type="date" id="end-date" name="end-date">
 
-            <p><strong>Select Report Type:</strong></p>
-            <div class="report-type-selection">
-                <!-- Standard Report Types -->
-                <div> <label> <input type="radio" name="report_type" value="sales_summary" required> Sales Summary </label> </div>
-                <div> <label> <input type="radio" name="report_type" value="order_trends" required> Order Listing </label> </div>
-                 <!-- Inventory Status -->
-                 <div>
-                     <label> <input type="radio" name="report_type" value="inventory_status" required> Inventory Status </label>
-                     <!-- Inventory Tabs Container -->
-                     <div class="inventory-tabs-container" id="inventory-tabs-container">
-                         <span class="inventory-tab active" data-source="company"> <i class="fas fa-building"></i> Company Orders </span>
-                         <span class="inventory-tab" data-source="walkin"> <i class="fas fa-walking"></i> Walk-in Customers </span>
-                         <input type="hidden" id="inventory_source" name="inventory_source" value="company">
-                     </div>
-                 </div>
+                <button onclick="generateReport()"><i class="fas fa-play"></i> Generate</button>
             </div>
+        </div>
 
-            <div style="margin-top: 20px;"> <button type="submit">Generate Report</button> </div>
-        </form>
+        <hr style="margin: 0 0 20px 0;"> <!-- Add a separator like in accounts.php -->
 
-        <div id="loading-indicator"> <i class="fas fa-spinner fa-spin"></i> Loading report... </div>
-        <div id="report-output"> <p>Select report options and click "Generate Report".</p> </div>
-    </div>
+        <!-- Area to display the selected report -->
+        <div id="report-display-area">
+            <p>Select a report type and date range, then click "Generate".</p>
+        </div>
 
-</div> <!-- End main-content wrapper -->
+    </div> <!-- End main-content -->
 
+    <!-- JS Includes copied from accounts.php -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <!-- Assuming /js/ points to public_html/admin/public/js/ -->
+    <script src="/js/toast.js"></script>
 
+    <!-- Page-specific JS for Reporting -->
     <script>
-        // --- Keep the same JavaScript as the previous version ---
-        const reportForm = document.getElementById('report-form');
-        const reportOutput = document.getElementById('report-output');
-        const loadingIndicator = document.getElementById('loading-indicator');
-        const inventoryTabsContainer = document.getElementById('inventory-tabs-container');
-        const inventoryTabs = document.querySelectorAll('.inventory-tab');
-        const hiddenInventorySourceInput = document.getElementById('inventory_source');
-        const dateRangeContainer = document.getElementById('date-range-container');
-        const reportTypeRadios = document.querySelectorAll('input[name="report_type"]');
+        // Ensure toastr options are set (copied from toast.js logic if needed)
+        // Or rely on toast.js to set them globally
+        // toastr.options = { ... };
 
-        function updateUIForReportType(selectedType) {
-            const requiresDates = ['sales_summary', 'order_trends'].includes(selectedType);
-            const isInventory = selectedType === 'inventory_status';
-            dateRangeContainer.style.display = requiresDates ? 'block' : 'none';
-            if (!requiresDates) {
-                 document.getElementById('start_date').value = '';
-                 document.getElementById('end_date').value = '';
+        function generateReport() {
+            const reportType = $('#report-type').val();
+            const startDate = $('#start-date').val();
+            const endDate = $('#end-date').val();
+            const displayArea = $('#report-display-area');
+
+            if (!reportType) {
+                showToast('Please select a report type.', 'warning'); // Use toastr
+                // displayArea.html('<p style="color: orange;">Please select a report type.</p>');
+                return;
             }
-            inventoryTabsContainer.style.display = isInventory ? 'block' : 'none';
-        }
 
-        reportTypeRadios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                updateUIForReportType(this.value);
-            });
-        });
-
-        inventoryTabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                const inventoryRadio = document.querySelector('input[name="report_type"][value="inventory_status"]');
-                if (inventoryRadio && !inventoryRadio.checked) {
-                    inventoryRadio.checked = true;
-                    updateUIForReportType('inventory_status');
-                }
-                inventoryTabs.forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                const source = this.getAttribute('data-source');
-                hiddenInventorySourceInput.value = source;
-                fetchReport(); // Fetch on tab click
-            });
-        });
-
-         function initializeFormState() {
-             const selectedReportTypeInput = document.querySelector('input[name="report_type"]:checked');
-             if (selectedReportTypeInput) {
-                 updateUIForReportType(selectedReportTypeInput.value);
-                 if (selectedReportTypeInput.value === 'inventory_status') {
-                     const activeTab = document.querySelector('.inventory-tab.active');
-                     if (activeTab) hiddenInventorySourceInput.value = activeTab.getAttribute('data-source');
-                 }
-             } else {
-                 dateRangeContainer.style.display = 'none';
-                 inventoryTabsContainer.style.display = 'none';
-             }
-         }
-         initializeFormState();
-
-        reportForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const selectedReportTypeInput = document.querySelector('input[name="report_type"]:checked');
-            if (selectedReportTypeInput && selectedReportTypeInput.value !== 'inventory_status') {
-                 fetchReport();
-            } else if (!selectedReportTypeInput) {
-                 reportOutput.innerHTML = `<div class="error-message-frontend">Please select a report type.</div>`;
-            } else if (selectedReportTypeInput.value === 'inventory_status') {
-                fetchReport(); // Fetch based on active tab if submit is clicked
+            // Basic date validation (optional but recommended)
+            if (startDate && endDate && startDate > endDate) {
+                 showToast('Start date cannot be after end date.', 'warning');
+                 return;
             }
-        });
 
-        function fetchReport() {
-            const selectedReportTypeInput = document.querySelector('input[name="report_type"]:checked');
-            if (!selectedReportTypeInput) { reportOutput.innerHTML = `<div class="error-message-frontend">Please select a report type.</div>`; return; }
-            const reportType = selectedReportTypeInput.value;
-            let inventorySource = null;
-            if (reportType === 'inventory_status') {
-                 inventorySource = hiddenInventorySourceInput.value;
-                 if (!inventorySource) { console.error("Inventory source hidden input is empty!"); reportOutput.innerHTML = `<div class="error-message-frontend">Internal error: Inventory source not selected.</div>`; return; }
-            }
-            const startDate = document.getElementById('start_date').value;
-            const endDate = document.getElementById('end_date').value;
+
+            displayArea.html(`<p>Generating ${reportType.replace(/_/g, ' ')} report... <i class="fas fa-spinner fa-spin"></i></p>`);
+
             const formData = new FormData();
             formData.append('report_type', reportType);
-            const requiresDates = ['sales_summary', 'order_trends'].includes(reportType);
-            if (requiresDates) { if (startDate) formData.append('start_date', startDate); if (endDate) formData.append('end_date', endDate); }
-            if (inventorySource) { formData.append('inventory_source', inventorySource); }
-            loadingIndicator.style.display = 'block'; reportOutput.innerHTML = ''; console.log("Sending data to backend:", Object.fromEntries(formData));
-            fetch('backend/fetch_report.php', { method: 'POST', body: formData })
-            .then(response => { if (!response.ok) { return response.text().then(text => { throw new Error(`HTTP error ${response.status}: ${text}`); }); } return response.text(); })
-            .then(data => { reportOutput.innerHTML = data; })
-            .catch(error => { console.error('Error fetching report:', error); reportOutput.innerHTML = `<div class="error-message-frontend">Error loading report: ${error.message}</div>`; })
-            .finally(() => { loadingIndicator.style.display = 'none'; });
+            formData.append('start_date', startDate);
+            formData.append('end_date', endDate);
+
+            // Use fetch API (jQuery $.ajax is also fine if you prefer)
+            fetch('/backend/fetch_report.php', { // We still need to create this backend file
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Try to get error text from response body for better feedback
+                    return response.text().then(text => {
+                         throw new Error(`HTTP error ${response.status}: ${text || 'Server error'}`);
+                    });
+                }
+                return response.text(); // Expecting HTML content for the report table/data
+            })
+            .then(html => {
+                displayArea.html(html); // Display the HTML returned from backend
+                // Optional: Initialize any JS needed for the loaded report content (e.g., datatables)
+            })
+            .catch(error => {
+                console.error('Error fetching report:', error);
+                displayArea.html(`<p style="color: red;">Error loading report: ${error.message}. Check console for details.</p>`);
+                showToast(`Error loading report: ${error.message}`, 'error'); // Show error in toast
+            });
         }
 
-    </script>
+        // Optional: Trigger report generation if parameters are in URL on page load
+        // $(document).ready(function() {
+        //     const urlParams = new URLSearchParams(window.location.search);
+        //     const reportType = urlParams.get('report_type');
+        //     const startDate = urlParams.get('start_date');
+        //     const endDate = urlParams.get('end_date');
+        //
+        //     if (reportType) {
+        //         $('#report-type').val(reportType);
+        //         if(startDate) $('#start-date').val(startDate);
+        //         if(endDate) $('#end-date').val(endDate);
+        //         generateReport();
+        //     }
+        // });
 
+    </script>
+</body>
+</html>
 <?php
-// ***** START: Include Footer File *****
-// Include your standard footer file (adjust path if necessary)
-// This file usually includes closing <body>, <html> tags, and maybe common JS
-// include_once 'footer.php';
-// ***** END: Include Footer File *****
+// Close DB connection at the very end
+if (isset($conn) && $conn instanceof mysqli) {
+    $conn->close();
+}
 ?>
-</body> <!-- Footer.php might already contain this -->
-</html> <!-- Footer.php might already contain this -->
