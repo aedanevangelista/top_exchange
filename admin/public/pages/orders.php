@@ -398,7 +398,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             position: relative; /* Keep for potential absolute children */
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* Keep shadow */
             animation: modalFadeIn 0.3s ease-in-out; /* Keep animation */
-            max-height: 20vh;
+            max-height: 30vh;
         }
         /* --- END UPDATED CSS --- */
 
@@ -429,7 +429,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
         .instructions-body {
             padding: 20px;
-            /* Removed max-height and overflow-y to let it fit content */
+            height: auto;
             line-height: 1.6;
             white-space: pre-wrap;
             word-wrap: break-word;
