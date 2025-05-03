@@ -76,6 +76,7 @@ try {
  * Uses 'orders' table: id, total_amount, order_date, status, username
  */
 function generateSalesSummary($conn, $startDate, $endDate) {
+    // ... (Sales Summary code remains the same) ...
     $dateCondition = "";
     $params = [];
     $paramTypes = "";
@@ -175,60 +176,126 @@ function generateSalesSummary($conn, $startDate, $endDate) {
 
 
 /**
- * Generates a combined Inventory Stock List Report for Company and Walk-in products.
- * Uses 'products' and 'walkin_products' tables: item_description, stock_quantity
+ * Generates a Low Inventory Stock Report, separated by type.
+ * Queries 'products' (Company Orders) and 'walkin_products' (Walk-in).
  */
 function generateInventoryStatus($conn) {
-    // *** MODIFIED SQL QUERY USING UNION ALL ***
-    $sql = "SELECT item_description, stock_quantity, 'Company Order' AS inventory_type
-            FROM products
-            UNION ALL
-            SELECT item_description, stock_quantity, 'Walk-in' AS inventory_type
-            FROM walkin_products
-            ORDER BY inventory_type ASC, item_description ASC"; // Order by type, then item description
+    // *** CONFIGURABLE LOW STOCK THRESHOLD ***
+    $lowStockThreshold = 10; // Set your desired low stock level here
 
-    $result = $conn->query($sql);
-    if (!$result) {
-        error_log("DB query error (Combined Inventory Stock): " . $conn->error . " | SQL: " . $sql);
-        // Check for specific column/table errors if needed
-        if (strpos($conn->error, 'Unknown column') !== false || strpos($conn->error, 'Table') !== false && strpos($conn->error, 'doesn\'t exist') !== false) {
-             echo "<h3>Inventory Stock List</h3>";
-             echo "<p style='color: red;'>Error retrieving stock data. Please check if tables 'products' and 'walkin_products' exist and contain 'item_description' and 'stock_quantity' columns.</p>";
+    $companyStockFound = false;
+    $walkinStockFound = false;
+    $errorOccurred = false;
+
+    // --- Query for Company Order Low Stock (products table) ---
+    $sqlCompany = "SELECT item_description, stock_quantity
+                   FROM products
+                   WHERE stock_quantity <= ?
+                   ORDER BY item_description ASC";
+
+    $stmtCompany = $conn->prepare($sqlCompany);
+    if (!$stmtCompany) {
+        error_log("DB prepare error (Company Inventory): " . $conn->error);
+        echo "<h3>Low Stock Report</h3><p style='color: red;'>Error preparing company stock query.</p>";
+        $errorOccurred = true;
+    } else {
+        $stmtCompany->bind_param("i", $lowStockThreshold);
+        if (!$stmtCompany->execute()) {
+            error_log("DB execute error (Company Inventory): " . $stmtCompany->error);
+            echo "<h3>Low Stock Report</h3><p style='color: red;'>Error executing company stock query.</p>";
+            $errorOccurred = true;
         } else {
-             echo "<h3>Inventory Stock List</h3>";
-             echo "<p style='color: red;'>Error retrieving stock data.</p>";
+            $resultCompany = $stmtCompany->get_result();
+            $companyStockFound = $resultCompany->num_rows > 0;
         }
-        return;
     }
 
-    // *** ADJUSTED REPORT TITLE AND HEADERS ***
-    echo "<h3>Inventory Stock List (Company & Walk-in)</h3>";
-    if ($result->num_rows > 0) {
-        echo "<table class='accounts-table'>"; // Use your standard table class
-        // *** ADDED 'Inventory Type' HEADER ***
-        echo "<thead><tr><th>Inventory Type</th><th>Item Description</th><th>Stock Quantity</th></tr></thead>";
+    // --- Query for Walk-in Low Stock (walkin_products table) ---
+    $sqlWalkin = "SELECT item_description, stock_quantity
+                  FROM walkin_products
+                  WHERE stock_quantity <= ?
+                  ORDER BY item_description ASC";
+
+    $stmtWalkin = $conn->prepare($sqlWalkin);
+     if (!$stmtWalkin) {
+        error_log("DB prepare error (Walkin Inventory): " . $conn->error);
+        echo "<h3>Low Stock Report</h3><p style='color: red;'>Error preparing walk-in stock query.</p>";
+        $errorOccurred = true; // Ensure we don't proceed if prepare fails
+    } else {
+        $stmtWalkin->bind_param("i", $lowStockThreshold);
+        if (!$stmtWalkin->execute()) {
+            error_log("DB execute error (Walkin Inventory): " . $stmtWalkin->error);
+            echo "<h3>Low Stock Report</h3><p style='color: red;'>Error executing walk-in stock query.</p>";
+            $errorOccurred = true;
+        } else {
+            $resultWalkin = $stmtWalkin->get_result();
+            $walkinStockFound = $resultWalkin->num_rows > 0;
+        }
+    }
+
+    // --- Display Results ---
+    if ($errorOccurred) {
+        // Error messages already displayed
+        if (isset($stmtCompany)) $stmtCompany->close();
+        if (isset($stmtWalkin)) $stmtWalkin->close();
+        return; // Stop execution if errors occurred
+    }
+
+    echo "<h3>Low Inventory Stock Report (Threshold: " . htmlspecialchars($lowStockThreshold) . " or less)</h3>";
+
+    // Display Company Order Low Stock
+    echo "<div class='inventory-section' style='margin-bottom: 30px;'>"; // Container for Company Stock
+    echo "<h4>Company Order Inventory</h4>";
+    if ($companyStockFound) {
+        echo "<table class='accounts-table'>";
+        echo "<thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead>";
         echo "<tbody>";
-        while ($row = $result->fetch_assoc()) {
-            // Use correct column names from the query
-            $inventoryType = $row['inventory_type'] ?? 'N/A'; // Get the type
+        while ($row = $resultCompany->fetch_assoc()) {
             $itemDescription = $row['item_description'] ?? 'N/A';
             $stockQuantity = $row['stock_quantity'] ?? 0;
-
             echo "<tr>";
-            // *** ADDED CELL FOR 'Inventory Type' ***
-            echo "<td>" . htmlspecialchars($inventoryType) . "</td>";
             echo "<td>" . htmlspecialchars($itemDescription) . "</td>";
-            // Highlight low stock (e.g., <= 10) if desired, otherwise just display
-            $stockStyle = ($stockQuantity <= 10) ? " style='color: orange; font-weight: bold;'" : ""; // Example: Highlight if stock is 10 or less
-            echo "<td" . $stockStyle . ">" . htmlspecialchars($stockQuantity) . "</td>";
+            // Apply style directly as all items here are low stock
+            echo "<td style='color: orange; font-weight: bold;'>" . htmlspecialchars($stockQuantity) . "</td>";
             echo "</tr>";
         }
-        echo "</tbody>";
-        echo "</table>";
+        echo "</tbody></table>";
     } else {
-        echo "<p>No products found in either 'products' or 'walkin_products' tables.</p>";
+        echo "<p>No low stock items found for Company Orders.</p>";
     }
-    $result->close();
+    echo "</div>"; // End Company Stock container
+    if (isset($resultCompany)) $resultCompany->close();
+    if (isset($stmtCompany)) $stmtCompany->close();
+
+
+    // Display Walk-in Low Stock
+    echo "<div class='inventory-section'>"; // Container for Walk-in Stock
+    echo "<h4>Walk-in Inventory</h4>";
+    if ($walkinStockFound) {
+        echo "<table class='accounts-table'>";
+        echo "<thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead>";
+        echo "<tbody>";
+        while ($row = $resultWalkin->fetch_assoc()) {
+            $itemDescription = $row['item_description'] ?? 'N/A';
+            $stockQuantity = $row['stock_quantity'] ?? 0;
+            echo "<tr>";
+            echo "<td>" . htmlspecialchars($itemDescription) . "</td>";
+            // Apply style directly as all items here are low stock
+            echo "<td style='color: orange; font-weight: bold;'>" . htmlspecialchars($stockQuantity) . "</td>";
+            echo "</tr>";
+        }
+        echo "</tbody></table>";
+    } else {
+        echo "<p>No low stock items found for Walk-in.</p>";
+    }
+    echo "</div>"; // End Walk-in Stock container
+    if (isset($resultWalkin)) $resultWalkin->close();
+    if (isset($stmtWalkin)) $stmtWalkin->close();
+
+    // Overall message if nothing found
+    if (!$companyStockFound && !$walkinStockFound) {
+         // echo "<p style='margin-top: 20px;'>No low stock items found in either inventory.</p>"; // Optional overall message
+    }
 }
 
 
@@ -237,6 +304,7 @@ function generateInventoryStatus($conn) {
  * Uses 'orders' table: id, order_date, username, company, total_amount, status
  */
 function generateOrderTrends($conn, $startDate, $endDate) {
+    // ... (Order Trends code remains the same) ...
     $sql = "SELECT id, order_date, username, company, total_amount, status
             FROM orders WHERE 1=1";
 
