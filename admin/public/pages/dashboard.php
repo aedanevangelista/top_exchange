@@ -19,14 +19,6 @@ function getPendingOrdersCount($conn) {
     return $count;
 }
 
-// function getRejectedOrdersCount($conn) { // Function definition kept but not called below
-//     $count = 0;
-//     $sql = "SELECT COUNT(*) as rejected_count FROM orders WHERE status = 'Rejected'";
-//     $result = $conn->query($sql);
-//     if ($result && $result->num_rows > 0) { $count = $result->fetch_assoc()['rejected_count']; }
-//     return $count;
-// }
-
 function getActiveOrdersCount($conn) {
     $count = 0;
     $sql = "SELECT COUNT(*) as active_count FROM orders WHERE status = 'Active'";
@@ -120,7 +112,6 @@ function getRecentOrders($conn, $limit = 5) {
 $selectedYear = $_GET['year'] ?? date('Y');
 $availableYears = getAvailableYears($conn);
 $pendingOrdersCount = getPendingOrdersCount($conn);
-// $rejectedOrdersCount = getRejectedOrdersCount($conn); // Variable not needed
 $activeOrdersCount = getActiveOrdersCount($conn);
 $deliverableOrdersCount = getDeliverableOrdersCount($conn);
 $kpiPeriod = 'this_month';
@@ -164,40 +155,7 @@ $recentOrders = getRecentOrders($conn, 5);
         }
         .notification-badges {
             margin-bottom: 1.5rem;
-             display: flex;
-             flex-wrap: wrap;
-             gap: 0.75rem;
         }
-         .notification-badge {
-             display: inline-flex;
-             align-items: center;
-             padding: 0.5rem 0.8rem;
-             border-radius: 50rem;
-             text-decoration: none;
-             font-size: 0.85rem;
-             font-weight: 500;
-             transition: transform 0.2s ease;
-         }
-         .notification-badge:hover {
-             transform: translateY(-2px);
-         }
-         .notification-icon {
-             margin-right: 0.4rem;
-             font-size: 0.9em;
-         }
-         .notification-count {
-             background-color: rgba(0, 0, 0, 0.2);
-             border-radius: 50%;
-             padding: 0.1em 0.4em;
-             font-size: 0.8em;
-             margin-right: 0.4rem;
-             min-width: 18px;
-             text-align: center;
-         }
-         .notification-badge.pending { background-color: #ffc107; color: #fff; }
-         .notification-badge.active { background-color: #198754; color: #fff; }
-         .notification-badge.deliverable { background-color: #0dcaf0; color: #fff; } /* Changed text to white */
-
         .data-container {
             background-color: #fff;
             padding: 1rem;
@@ -429,14 +387,15 @@ $recentOrders = getRecentOrders($conn, 5);
              border-bottom-color: #0d6efd;
         }
 
-        /* --- Status Badges (Final Version) --- */
+        /* --- Status Badges --- */
         .status-badge { padding: 0.25em 0.65em; border-radius: 50rem; font-size: 0.75em; font-weight: 600; display: inline-block; white-space: nowrap; vertical-align: baseline; line-height: 1; }
-        .status-pending { background-color: #ffc107; color: #fff;}
-        .status-active { background-color: #198754; color: #fff; }
-        .status-completed { background-color: #198754; color: #fff; }
-        .status-rejected { background-color: #dc3545; color: #fff; }
-        .status-for-delivery { background-color: #0dcaf0; color: #fff; } /* White text */
-        .status-in-transit { background-color: #fd7e14; color: #fff; }
+        .status-pending { background-color: #ffc107; color: #fff;} /* White text */
+        .status-active { background-color: #198754; color: #fff; } /* Green */
+        .status-completed { background-color: #198754; color: #fff; } /* Green */
+        /* Removed .status-delivered */
+        .status-rejected { background-color: #dc3545; color: #fff; } /* Red */
+        .status-for-delivery { background-color: #0dcaf0; color: #fff; } /* Cyan, White text */
+        .status-in-transit { background-color: #fd7e14; color: #fff; } /* Orange, White text */
 
     </style>
 </head>
@@ -449,15 +408,12 @@ $recentOrders = getRecentOrders($conn, 5);
             <h2>Dashboard</h2>
             <div class="notification-badges">
                  <?php if ($pendingOrdersCount > 0): ?><a href="/public/pages/orders.php?status=Pending" class="notification-badge pending"><i class="fas fa-clock notification-icon"></i><span class="notification-count"><?php echo $pendingOrdersCount; ?></span><span class="notification-label">Pending</span></a><?php endif; ?>
-                 <?php /* Rejected Badge Removed
                  <?php if ($rejectedOrdersCount > 0): ?><a href="/public/pages/orders.php?status=Rejected" class="notification-badge rejected"><i class="fas fa-times-circle notification-icon"></i><span class="notification-count"><?php echo $rejectedOrdersCount; ?></span><span class="notification-label">Rejected</span></a><?php endif; ?>
-                 */ ?>
                  <?php if ($activeOrdersCount > 0): ?><a href="/public/pages/orders.php?status=Active" class="notification-badge active"><i class="fas fa-check-circle notification-icon"></i><span class="notification-count"><?php echo $activeOrdersCount; ?></span><span class="notification-label">Active</span></a><?php endif; ?>
                  <?php if ($deliverableOrdersCount > 0): ?><a href="/public/pages/deliverable_orders.php" class="notification-badge deliverable"><i class="fas fa-truck notification-icon"></i><span class="notification-count"><?php echo $deliverableOrdersCount; ?></span><span class="notification-label">Deliverables</span></a><?php endif; ?>
             </div>
         </div>
 
-        <!-- Rest of the HTML remains the same -->
         <div class="kpi-container">
             <div class="kpi-card">
                 <span class="kpi-icon icon-revenue"><i class="fas fa-dollar-sign"></i></span>
@@ -504,6 +460,7 @@ $recentOrders = getRecentOrders($conn, 5);
                         <tbody>
                             <?php foreach ($recentOrders as $order):
                                 $statusDisplay = htmlspecialchars($order['status'] ?? 'Unknown');
+                                // Create CSS class - replace space with hyphen, make lowercase
                                 $statusClass = str_replace(' ', '-', strtolower($statusDisplay));
                             ?>
                                 <tr>
@@ -557,10 +514,10 @@ $recentOrders = getRecentOrders($conn, 5);
 
     <!-- No Bootstrap JS needed -->
     <script>
-    // Javascript remains the same
     document.addEventListener("DOMContentLoaded", function () {
         console.log("Dashboard JS Initializing...");
 
+        // --- Chart Initialization and AJAX calls (Unchanged) ---
         const chartColors = [
             'rgba(69, 160, 73, 0.85)', 'rgba(71, 120, 209, 0.85)', 'rgba(235, 137, 49, 0.85)',
             'rgba(165, 84, 184, 0.85)', 'rgba(214, 68, 68, 0.85)', 'rgba(60, 179, 163, 0.85)',
