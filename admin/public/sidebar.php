@@ -3,8 +3,9 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-include_once __DIR__ . '/../../backend/db_connection.php';
-include_once __DIR__ . '/../../backend/check_role.php';
+// CORRECTED PATHS: Changed ../../backend/ to ../backend/
+include_once __DIR__ . '/../backend/db_connection.php';
+include_once __DIR__ . '/../backend/check_role.php';
 
 if (isset($_SESSION['admin_user_id'])) {
     $username = $_SESSION['admin_username'] ?? 'Guest';
