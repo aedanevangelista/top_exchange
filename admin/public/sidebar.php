@@ -4,9 +4,8 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// *** USING ORIGINAL INCLUDE PATHS ***
-include_once __DIR__ . '/../../backend/db_connection.php';
-include_once __DIR__ . '/../../backend/check_role.php';
+include_once "../../backend/db_connection.php";
+include_once "../../backend/check_role.php";
 
 // Determine which session context we're in and get appropriate user info
 if (isset($_SESSION['admin_user_id'])) {
@@ -21,32 +20,16 @@ if (isset($_SESSION['admin_user_id'])) {
     $role = $_SESSION['role'] ?? 'guest';
 }
 
-$allowedPages = []; // Initialize to prevent errors if DB call fails
-if (isset($conn) && $role !== 'guest') {
-    // Fetch pages for the user role
-    $stmt = $conn->prepare("SELECT pages FROM roles WHERE role_name = ? AND status = 'active'");
-    if ($stmt) { // Check if prepare succeeded
-        $stmt->bind_param("s", $role);
-        $stmt->execute();
-        $stmt->bind_result($pages);
-        if ($stmt->fetch()) { // Check if a row was fetched
-             // Convert pages to an array and trim whitespace
-            $allowedPages = array_map('trim', explode(',', $pages ?? '')); // Use null coalescing for safety
-        }
-        $stmt->close();
-    } else {
-        // Optional: Log error if statement preparation failed
-        error_log("Failed to prepare statement to fetch roles: " . $conn->error);
-    }
-} else if ($role === 'guest') {
-     // Handle guest role if necessary, maybe assign default allowed pages?
-     $allowedPages = []; // Guests see nothing by default based on this logic
-} else {
-     // Optional: Log error if DB connection is missing
-     error_log("Database connection not available in sidebar.php");
-     $allowedPages = []; // Default to no pages if DB connection fails
-}
+// Fetch pages for the user role
+$stmt = $conn->prepare("SELECT pages FROM roles WHERE role_name = ? AND status = 'active'");
+$stmt->bind_param("s", $role);
+$stmt->execute();
+$stmt->bind_result($pages);
+$stmt->fetch();
+$stmt->close();
 
+// Convert pages to an array and trim whitespace
+$allowedPages = array_map('trim', explode(',', $pages));
 ?>
 
 <style>
@@ -74,7 +57,6 @@ if (isset($conn) && $role !== 'guest') {
     font-size: 13px; /* Increased by 1px from 12px */
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 0.8;
-    margin-left: auto; /* Push chevron to the right */
 }
 
 .menu-item.active .fa-chevron-down {
@@ -84,34 +66,7 @@ if (isset($conn) && $role !== 'guest') {
 
 .submenu > .menu-item {
     cursor: pointer;
-    display: flex; /* Needed to align chevron */
-    justify-content: space-between; /* Push chevron to the right */
-    align-items: center; /* Vertically align */
 }
-
-/* Basic hover for top-level links (add this if missing from global styles) */
-a.menu-item:hover {
-    background-color: rgba(0,0,0,0.05);
-}
-/* Ensure submenu links also get hover */
-a.submenu-item:hover {
-     background-color: rgba(0,0,0,0.05);
-}
-
-/* Style for the container div inside menu items */
-.menu-item > div {
-    display: flex;
-    align-items: center;
-}
-.menu-item > div > i {
-    margin-right: 8px; /* Space between icon and text */
-}
-
-/* Style for submenu item icons */
-.submenu-item i {
-     margin-right: 8px; /* Space between icon and text */
-}
-
 </style>
 
 <div class="sidebar">
@@ -127,13 +82,9 @@ a.submenu-item:hover {
                     </div>
                 </a>
             <?php endif; ?>
-
-            <!-- Production Menu -->
-            <?php
-               // Check if user has permission for *any* production page before showing the parent menu
-               $canSeeProduction = in_array('Forecast', $allowedPages) || in_array('Department Forecast', $allowedPages);
-            ?>
-            <?php if ($canSeeProduction): ?>
+            
+            <!-- Production Menu with Submenu for Delivery Calendar (formerly Forecast) -->
+            <?php if (in_array('Forecast', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
@@ -142,26 +93,18 @@ a.submenu-item:hover {
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
-                        <?php if (in_array('Forecast', $allowedPages)): ?>
-                            <a href="/public/pages/forecast.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Delivery Calendar
-                            </a>
-                        <?php endif; ?>
-                        <?php if (in_array('Department Forecast', $allowedPages)): ?>
-                             <a href="/public/pages/department_forecast.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Department Forecast
-                            </a>
-                        <?php endif; ?>
+                        <a href="/public/pages/forecast.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Delivery Calendar
+                        </a>
+                        <a href="/public/pages/department_forecast.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Department Forecast
+                        </a>
                     </div>
                 </div>
             <?php endif; ?>
 
-            <!-- Ordering Menu -->
-             <?php
-               // Check if user has permission for *any* ordering page
-               $canSeeOrdering = in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages) || in_array('Deliverable Orders', $allowedPages); // Removed Pending Orders check as it wasn't in the links
-            ?>
-            <?php if ($canSeeOrdering): ?>
+            <!-- Ordering Menu with Submenus -->
+            <?php if (in_array('Orders', $allowedPages) || in_array('Order History', $allowedPages) || in_array('Pending Orders', $allowedPages) || in_array('Deliverable Orders', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
@@ -189,7 +132,7 @@ a.submenu-item:hover {
                 </div>
             <?php endif; ?>
 
-            <!-- Payments Menu -->
+            <!-- Payments Menu with Submenu -->
             <?php if (in_array('Payment History', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
@@ -206,15 +149,6 @@ a.submenu-item:hover {
                 </div>
             <?php endif; ?>
 
-            <!-- Reporting Menu (Added Here) -->
-            <?php if (in_array('Reporting', $allowedPages)): ?>
-                <a href="/public/pages/reporting.php" class="menu-item">
-                    <div>
-                        <i class="fas fa-chart-line"></i> Reporting
-                    </div>
-                </a>
-            <?php endif; ?>
-
             <?php if (in_array('Sales Data', $allowedPages)): ?>
                 <a href="/public/pages/sales.php" class="menu-item">
                     <div>
@@ -228,11 +162,7 @@ a.submenu-item:hover {
         <div class="menu-section">
             <span class="menu-title"><b>DATA</b></span>
             <hr>
-             <?php
-               // Check if user has permission for *any* staff page
-               $canSeeStaffMenu = in_array('Staff', $allowedPages) || in_array('Drivers', $allowedPages);
-            ?>
-            <?php if ($canSeeStaffMenu): ?>
+            <?php if (in_array('Staff', $allowedPages) || in_array('Drivers', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
@@ -241,12 +171,6 @@ a.submenu-item:hover {
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
-                         <?php if (in_array('Staff', $allowedPages)): ?>
-                            <!-- Add link if Staff page exists -->
-                            <!-- <a href="/public/pages/staff.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Staff List
-                            </a> -->
-                         <?php endif; ?>
                         <?php if (in_array('Drivers', $allowedPages)): ?>
                             <a href="/public/pages/drivers.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Drivers
@@ -255,13 +179,8 @@ a.submenu-item:hover {
                     </div>
                 </div>
             <?php endif; ?>
-
-            <!-- Accounts Menu -->
-             <?php
-               // Check if user has permission for *any* account page
-               $canSeeAccounts = in_array('Accounts - Admin', $allowedPages) || in_array('Accounts - Clients', $allowedPages) || in_array('User Roles', $allowedPages);
-            ?>
-            <?php if ($canSeeAccounts): ?>
+            <!-- Accounts Menu with Submenus -->
+            <?php if (in_array('Accounts - Admin', $allowedPages) || in_array('Accounts - Clients', $allowedPages) || in_array('User Roles', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
@@ -289,12 +208,8 @@ a.submenu-item:hover {
                 </div>
             <?php endif; ?>
 
-            <!-- Inventory Menu -->
-             <?php
-               // Check if user has permission for *any* inventory page
-               $canSeeInventory = in_array('Inventory', $allowedPages) || in_array('Raw Materials', $allowedPages);
-            ?>
-            <?php if ($canSeeInventory): ?>
+            <!-- Inventory Menu with Submenus -->
+            <?php if (in_array('Inventory', $allowedPages)): ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
@@ -303,16 +218,12 @@ a.submenu-item:hover {
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
-                         <?php if (in_array('Inventory', $allowedPages)): ?>
-                            <a href="/public/pages/inventory.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Finished Products
-                            </a>
-                         <?php endif; ?>
-                         <?php if (in_array('Raw Materials', $allowedPages)): ?>
-                             <a href="/public/pages/raw_materials.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Raw Materials
-                            </a>
-                        <?php endif; ?>
+                        <a href="/public/pages/inventory.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Finished Products
+                        </a>
+                        <a href="/public/pages/raw_materials.php" class="submenu-item">
+                            <i class="fas fa-arrow-right"></i> Raw Materials
+                        </a>
                     </div>
                 </div>
             <?php endif; ?>
@@ -322,7 +233,7 @@ a.submenu-item:hover {
     <!-- Fixed Account & Logout Section -->
     <div class="account-section">
         <div class="account-info">
-            Logged in as:
+            Logged in as: 
             <strong>
                 <?php echo htmlspecialchars($username); ?>
             </strong> (<?= htmlspecialchars(ucfirst($role)) ?>)
@@ -336,32 +247,43 @@ a.submenu-item:hover {
 <script>
 // Updated toggle function with smoother animation handling
 function toggleSubmenu(element) {
-    // First, close all other open submenus that are not the parent of the clicked element
-    const allSubmenus = document.querySelectorAll('.sidebar .submenu');
-    const parentSubmenuDiv = element.closest('.submenu'); // Find the parent .submenu div
-    const targetSubmenuItems = parentSubmenuDiv ? parentSubmenuDiv.querySelector('.submenu-items') : null;
-
-    if (!targetSubmenuItems) return; // Exit if we couldn't find the items container
-
-    const isOpening = !element.classList.contains('active');
-
-    // Close others first
-    allSubmenus.forEach(submenu => {
-        const trigger = submenu.querySelector('span.menu-item');
-        const items = submenu.querySelector('.submenu-items');
-        if (trigger !== element && trigger.classList.contains('active')) {
-            trigger.classList.remove('active');
-            items.classList.remove('visible');
-        }
-    });
-
-    // Toggle the current one
+    // First, close all other open submenus
+    const allOpenSubmenus = document.querySelectorAll('.submenu-items.visible');
+    const allActiveMenuItems = document.querySelectorAll('.menu-item.active');
+    
+    // Get the submenu we're trying to toggle
+    const targetSubmenu = element.nextElementSibling;
+    
+    // Check if we're opening or closing this submenu
+    const isOpening = !targetSubmenu.classList.contains('visible');
+    
+    // If we're opening this one, close all others first
     if (isOpening) {
-        element.classList.add('active');
-        targetSubmenuItems.classList.add('visible');
-    } else {
-        element.classList.remove('active');
-        targetSubmenuItems.classList.remove('visible');
+        // Close all other open submenus
+        allOpenSubmenus.forEach(menu => {
+            if (menu !== targetSubmenu) {
+                menu.classList.remove('visible');
+            }
+        });
+        
+        // Reset all other active menu items
+        allActiveMenuItems.forEach(item => {
+            if (item !== element) {
+                item.classList.remove('active');
+            }
+        });
+    }
+    
+    // Toggle active class on the menu item
+    element.classList.toggle('active');
+    
+    // Toggle visibility of the submenu
+    if (targetSubmenu) {
+        if (isOpening) {
+            targetSubmenu.classList.add('visible');
+        } else {
+            targetSubmenu.classList.remove('visible');
+        }
     }
 }
 </script>
