@@ -132,12 +132,12 @@ if ($result && $row = $result->fetch_assoc()) {
 
         /* Total Balance Styling */
         .total-balance-positive {
-            color: #28a745;
+            color: #dc3545;
             font-weight: 600;
         }
 
         .total-balance-negative {
-            color: #dc3545;
+            color: #28a745;
             font-weight: 600;
         }
 
