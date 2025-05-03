@@ -46,7 +46,7 @@ try {
             break;
 
         case 'inventory_status':
-            generateInventoryStatus($conn); // Changed function name conceptually
+            generateInventoryStatus($conn); // This now generates the combined report
             break;
 
         case 'order_trends':
@@ -175,59 +175,103 @@ function generateSalesSummary($conn, $startDate, $endDate) {
 
 
 /**
- * Generates an Inventory Stock List Report.
- * Uses 'products' table: item_description, stock_quantity
+ * Generates a Combined Inventory Stock Status Report.
+ * Combines data from 'products' and 'walkin_products' tables.
+ * Highlights low stock items (<= 5).
+ * Assumes 'product_id' links the same item across both tables.
+ * Required columns in both tables: product_id, item_description, stock_quantity
  */
-function generateInventoryStatus($conn) { // Renamed conceptually, but keeping function name for consistency
-    $tableName = 'products';
+function generateInventoryStatus($conn) {
+    $companyTable = 'products';
+    $walkinTable = 'walkin_products';
+    $lowStockThreshold = 5; // Define what counts as "low stock"
 
-    // Check if table exists
-    $checkTableSql = "SHOW TABLES LIKE '" . $conn->real_escape_string($tableName) . "'";
-    $tableResult = $conn->query($checkTableSql);
-    if (!$tableResult) { error_log("Error checking for table {$tableName}: " . $conn->error); sendError("Error checking database structure.", 500); return; }
-    if ($tableResult->num_rows == 0) { echo "<h3>Inventory Stock List</h3><p>Note: The '{$tableName}' table was not found.</p>"; $tableResult->close(); return; }
-    $tableResult->close();
+    // --- Check if both tables exist ---
+    $tablesExist = true;
+    foreach ([$companyTable, $walkinTable] as $tableName) {
+        $checkTableSql = "SHOW TABLES LIKE '" . $conn->real_escape_string($tableName) . "'";
+        $tableResult = $conn->query($checkTableSql);
+        if (!$tableResult) {
+            error_log("Error checking for table {$tableName}: " . $conn->error);
+            sendError("Error checking database structure.", 500);
+            return;
+        }
+        if ($tableResult->num_rows == 0) {
+            echo "<h3>Combined Inventory Stock Status</h3>";
+            echo "<p>Note: The required table '{$tableName}' was not found. Cannot generate a complete report.</p>";
+            $tablesExist = false; // Mark that at least one table is missing
+        }
+        $tableResult->close();
+    }
+    // If either table is missing, don't proceed with the combined query
+    if (!$tablesExist) {
+        return;
+    }
+    // --- End Table Check ---
 
-    // *** ADJUSTED SQL QUERY FOR 'products' TABLE ***
-    $sql = "SELECT item_description, stock_quantity
-            FROM `" . $conn->real_escape_string($tableName) . "`
-            ORDER BY item_description ASC"; // Order by item description
+
+    // --- Combined Inventory Query ---
+    $sql = "SELECT
+                combined.item_description,
+                SUM(combined.stock_quantity) as total_stock_quantity
+            FROM (
+                SELECT product_id, item_description, stock_quantity FROM `" . $conn->real_escape_string($companyTable) . "`
+                UNION ALL
+                SELECT product_id, item_description, stock_quantity FROM `" . $conn->real_escape_string($walkinTable) . "`
+            ) as combined
+            GROUP BY combined.product_id, combined.item_description -- Group by ID, include description for SELECT
+            ORDER BY total_stock_quantity ASC, combined.item_description ASC"; // Order by lowest stock first
 
     $result = $conn->query($sql);
     if (!$result) {
-        error_log("DB query error (Inventory Stock): " . $conn->error . " | SQL: " . $sql);
-        echo "<h3>Inventory Stock List</h3>";
-        // Check for specific column error
+        error_log("DB query error (Combined Inventory): " . $conn->error . " | SQL: " . $sql);
+        echo "<h3>Combined Inventory Stock Status</h3>";
         if (strpos($conn->error, 'Unknown column') !== false) {
-             echo "<p style='color: red;'>Error retrieving stock data. Please check if column names 'item_description' or 'stock_quantity' exist in the '{$tableName}' table.</p>";
+             echo "<p style='color: red;'>Error retrieving combined stock data. Please check if required columns ('product_id', 'item_description', 'stock_quantity') exist and are named correctly in both '{$companyTable}' and '{$walkinTable}' tables.</p>";
         } else {
-             echo "<p style='color: red;'>Error retrieving stock data.</p>";
+             echo "<p style='color: red;'>Error retrieving combined stock data.</p>";
         }
         return;
     }
 
-    // *** ADJUSTED REPORT TITLE AND HEADERS ***
-    echo "<h3>Inventory Stock List</h3>";
+    // --- Display Report ---
+    echo "<h3>Combined Inventory Stock Status</h3>";
     if ($result->num_rows > 0) {
+        echo "<p>Showing combined stock from '{$companyTable}' and '{$walkinTable}'. Low stock (<= {$lowStockThreshold}) is highlighted.</p>";
         echo "<table class='accounts-table'>"; // Use your standard table class
-        echo "<thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead>"; // Updated headers
+        echo "<thead><tr><th>Item Description</th><th>Total Stock Quantity</th><th>Status</th></tr></thead>"; // Added Status column
         echo "<tbody>";
         while ($row = $result->fetch_assoc()) {
-            // Use correct column names from the query
             $itemDescription = $row['item_description'] ?? 'N/A';
-            $stockQuantity = $row['stock_quantity'] ?? 0;
+            $totalStock = $row['total_stock_quantity'] ?? 0;
+            $statusText = '';
+            $rowStyle = '';
+            $stockCellStyle = '';
 
-            echo "<tr>";
+            // Determine status and apply styling
+            if ($totalStock <= 0) {
+                $statusText = 'Depleted';
+                $rowStyle = " style='background-color: #f8d7da;'"; // Light red background for row
+                $stockCellStyle = " style='color: red; font-weight: bold;'";
+            } elseif ($totalStock <= $lowStockThreshold) {
+                $statusText = 'Low Stock';
+                $rowStyle = " style='background-color: #fff3cd;'"; // Light yellow background for row
+                $stockCellStyle = " style='color: orange; font-weight: bold;'";
+            } else {
+                 $statusText = 'OK';
+                 // No special style for OK status
+            }
+
+            echo "<tr{$rowStyle}>";
             echo "<td>" . htmlspecialchars($itemDescription) . "</td>";
-            // Highlight low stock (e.g., <= 5) if desired, otherwise just display
-            $stockStyle = ($stockQuantity <= 5) ? " style='color: orange; font-weight: bold;'" : ""; // Example: Highlight if stock is 5 or less
-            echo "<td" . $stockStyle . ">" . htmlspecialchars($stockQuantity) . "</td>";
+            echo "<td{$stockCellStyle}>" . htmlspecialchars($totalStock) . "</td>";
+            echo "<td>" . htmlspecialchars($statusText) . "</td>";
             echo "</tr>";
         }
         echo "</tbody>";
         echo "</table>";
     } else {
-        echo "<p>No products found in the '{$tableName}' table.</p>";
+        echo "<p>No products found in either '{$companyTable}' or '{$walkinTable}' tables.</p>";
     }
     $result->close();
 }
