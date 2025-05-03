@@ -3,17 +3,13 @@ session_start();
 include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
 
-// Check if the user is logged in as an admin
 if (!isset($_SESSION['admin_user_id'])) {
-    // Redirect to admin login page
     header("Location: ../login.php");
     exit();
 }
 
-// Check role permission for Dashboard
 checkRole('Dashboard');
 
-// --- Existing PHP Functions ---
 function getPendingOrdersCount($conn) {
     $count = 0;
     $sql = "SELECT COUNT(*) as pending_count FROM orders WHERE status = 'Pending'";
@@ -57,7 +53,6 @@ function getAvailableYears($conn) {
     return $years;
 }
 
-// --- KPI Functions ---
 function getDateRangeCondition($period) {
     $currentYear = date('Y');
     $currentMonth = date('m');
@@ -98,16 +93,13 @@ function getAverageOrderValue($totalRevenue, $totalOrders) {
     return ($totalOrders > 0) ? $totalRevenue / $totalOrders : 0;
 }
 
-// --- Recent Orders Function (MODIFIED SQL) ---
 function getRecentOrders($conn, $limit = 5) {
     $orders = [];
-    // Selecting o.id (for link), o.po_number (for display)
     $sql = "SELECT o.id, o.po_number, o.order_date, o.status, o.total_amount, ca.username
             FROM orders o
             LEFT JOIN clients_accounts ca ON o.username = ca.username
-            ORDER BY o.order_date DESC, o.id DESC -- Added secondary sort by id for consistency if dates are same
+            ORDER BY o.order_date DESC, o.id DESC
             LIMIT ?";
-
     $stmt = $conn->prepare($sql);
     if ($stmt) {
         $stmt->bind_param("i", $limit);
@@ -117,18 +109,12 @@ function getRecentOrders($conn, $limit = 5) {
             while ($row = $result->fetch_assoc()) {
                 $orders[] = $row;
             }
-        } else {
-             error_log("Error getting result for recent orders: " . $stmt->error);
-        }
+        } else { error_log("Error getRecentOrders result: " . $stmt->error); }
         $stmt->close();
-    } else {
-        error_log("Error preparing statement for recent orders: " . $conn->error);
-    }
+    } else { error_log("Error getRecentOrders prepare: " . $conn->error); }
     return $orders;
 }
 
-
-// --- Fetch Data ---
 $selectedYear = $_GET['year'] ?? date('Y');
 $availableYears = getAvailableYears($conn);
 $pendingOrdersCount = getPendingOrdersCount($conn);
@@ -150,44 +136,43 @@ $recentOrders = getRecentOrders($conn, 5);
     <title>Dashboard</title>
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="/css/dashboard.css">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
-        /* Basic styling - Refine in dashboard.css */
         .kpi-container { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
         .kpi-card { background-color: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex: 1; min-width: 180px; text-align: center; }
         .kpi-card h4 { margin: 0 0 5px 0; font-size: 0.9em; color: #555; text-transform: uppercase; }
         .kpi-card .kpi-value { font-size: 1.8em; font-weight: bold; color: #333; margin: 0; }
 
         .recent-orders-container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .recent-orders-container h3 { margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .recent-orders-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .recent-orders-header h3 { margin: 0; }
         .recent-orders-table { width: 100%; border-collapse: collapse; }
-        .recent-orders-table th, .recent-orders-table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 0.9em; vertical-align: middle; } /* Added vertical-align */
-        .recent-orders-table th { background-color: #f8f9fa; font-weight: bold; }
+        .recent-orders-table th, .recent-orders-table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 0.9em; vertical-align: middle; }
+        .recent-orders-table th { background-color: #f8f9fa; font-weight: 600; }
         .recent-orders-table tr:last-child td { border-bottom: none; }
-        .recent-orders-table td a { color: #007bff; text-decoration: none; }
+        .recent-orders-table td a { color: #0d6efd; text-decoration: none; }
         .recent-orders-table td a:hover { text-decoration: underline; }
+        .recent-orders-table tbody tr:hover { background-color: #f8f9fa; }
+
         .status-badge { padding: 3px 8px; border-radius: 12px; font-size: 0.8em; color: #fff; display: inline-block; white-space: nowrap; }
         .status-Pending { background-color: #ffc107; color: #333;}
-        .status-Active, .status-Completed { background-color: #28a745; }
-        .status-Delivered { background-color: #007bff; }
+        .status-Active, .status-Completed { background-color: #198754; }
+        .status-Delivered { background-color: #0d6efd; }
         .status-Rejected { background-color: #dc3545; }
         .status-Cancelled { background-color: #6c757d; }
-        .status-For.Delivery { background-color: #17a2b8; }
+        .status-For.Delivery { background-color: #0dcaf0; }
         .status-In.Transit { background-color: #fd7e14; }
 
-        /* Layout Consistency */
-        .main-content > .dashboard-section,
-        .main-content > .stats-container,
-        .main-content > .kpi-container,
-        .main-content > .overview-container,
-        .main-content > .recent-orders-container { /* Included recent-orders */
-             margin-bottom: 25px;
-        }
-        /* Adjustments for stats container layout if needed */
+        .main-content > .dashboard-section, .main-content > .stats-container, .main-content > .kpi-container, .main-content > .overview-container, .main-content > .recent-orders-container { margin-bottom: 25px; }
         .stats-container { display: flex; gap: 15px; flex-wrap: wrap; }
-        .stat-card { flex: 1; min-width: 300px; /* Adjust min-width as needed */ }
+        .stat-card { flex: 1; min-width: 300px; }
 
+        #orderDetailsModalTable { margin-top: 15px; }
+        #orderDetailsModalTable th { background-color: #f8f9fa; }
+        #modalLoadingIndicator { padding: 2rem 0; }
     </style>
 </head>
 <body>
@@ -197,7 +182,6 @@ $recentOrders = getRecentOrders($conn, 5);
     <div class="main-content">
         <div class="overview-container">
             <h2>Dashboard</h2>
-            <!-- Order Status Notification Badges -->
             <div class="notification-badges">
                  <?php if ($pendingOrdersCount > 0): ?><a href="/public/pages/orders.php?status=Pending" class="notification-badge pending"><i class="fas fa-clock notification-icon"></i><span class="notification-count"><?php echo $pendingOrdersCount; ?></span><span class="notification-label">Pending</span></a><?php endif; ?>
                  <?php if ($rejectedOrdersCount > 0): ?><a href="/public/pages/orders.php?status=Rejected" class="notification-badge rejected"><i class="fas fa-times-circle notification-icon"></i><span class="notification-count"><?php echo $rejectedOrdersCount; ?></span><span class="notification-label">Rejected</span></a><?php endif; ?>
@@ -206,28 +190,22 @@ $recentOrders = getRecentOrders($conn, 5);
             </div>
         </div>
 
-        <!-- KPI Section -->
         <div class="kpi-container">
-            <div class="kpi-card">
-                <h4>Revenue (This Month)</h4>
-                <p class="kpi-value">₱<?php echo number_format($totalRevenueThisMonth, 2); ?></p>
-            </div>
-            <div class="kpi-card">
-                <h4>Total Orders (This Month)</h4>
-                <p class="kpi-value"><?php echo number_format($totalOrdersThisMonth); ?></p>
-            </div>
-            <div class="kpi-card">
-                <h4>Avg. Order Value (This Month)</h4>
-                <p class="kpi-value">₱<?php echo number_format($averageOrderValueThisMonth, 2); ?></p>
-            </div>
+            <div class="kpi-card"><h4>Revenue (This Month)</h4><p class="kpi-value">₱<?php echo number_format($totalRevenueThisMonth, 2); ?></p></div>
+            <div class="kpi-card"><h4>Total Orders (This Month)</h4><p class="kpi-value"><?php echo number_format($totalOrdersThisMonth); ?></p></div>
+            <div class="kpi-card"><h4>Avg. Order Value (This Month)</h4><p class="kpi-value">₱<?php echo number_format($averageOrderValueThisMonth, 2); ?></p></div>
         </div>
 
-        <!-- Recent Orders Section (MOVED & MODIFIED) -->
         <div class="recent-orders-container">
-            <h3>Recent Orders</h3>
+            <div class="recent-orders-header">
+                <h3>Recent Orders</h3>
+                <a href="/admin/public/pages/orders.php" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-list"></i> View All Orders
+                </a>
+            </div>
             <?php if (!empty($recentOrders)): ?>
-                <div style="overflow-x:auto;"> <!-- Responsive wrapper for table -->
-                    <table class="recent-orders-table">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm recent-orders-table">
                         <thead>
                             <tr>
                                 <th>PO Number</th>
@@ -240,21 +218,21 @@ $recentOrders = getRecentOrders($conn, 5);
                         <tbody>
                             <?php foreach ($recentOrders as $order):
                                 $statusDisplay = htmlspecialchars($order['status'] ?? 'Unknown');
-                                $statusClass = str_replace(' ', '.', $statusDisplay); // Replace space for CSS class
+                                $statusClass = str_replace(' ', '.', $statusDisplay);
                             ?>
                                 <tr>
                                     <td>
-                                        <a href="/public/pages/order_details.php?id=<?php echo htmlspecialchars($order['id']); ?>" title="View Order #<?php echo htmlspecialchars($order['id']); ?>">
+                                        <a href="#"
+                                           data-bs-toggle="modal"
+                                           data-bs-target="#orderDetailsModal"
+                                           data-order-id="<?php echo htmlspecialchars($order['id']); ?>"
+                                           title="View Details for PO <?php echo htmlspecialchars($order['po_number'] ?? ''); ?>">
                                             <?php echo htmlspecialchars($order['po_number'] ?? 'N/A'); ?>
                                         </a>
                                     </td>
                                     <td><?php echo htmlspecialchars(date('M d, Y', strtotime($order['order_date']))); ?></td>
                                     <td><?php echo htmlspecialchars($order['username'] ?? 'N/A'); ?></td>
-                                    <td>
-                                        <span class="status-badge status-<?php echo $statusClass; ?>">
-                                            <?php echo $statusDisplay; ?>
-                                        </span>
-                                    </td>
+                                    <td><span class="status-badge status-<?php echo $statusClass; ?>"><?php echo $statusDisplay; ?></span></td>
                                     <td style="text-align: right;">₱<?php echo number_format($order['total_amount'] ?? 0, 2); ?></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -266,77 +244,85 @@ $recentOrders = getRecentOrders($conn, 5);
             <?php endif; ?>
         </div>
 
-        <!-- Existing Chart/Stats Sections -->
         <div class="stats-container">
-            <!-- Client Orders Pie Chart -->
             <div class="stat-card client-orders-card">
-                <div class="chart-header">
-                    <h3>CLIENT ORDERS (<?php echo htmlspecialchars($selectedYear); ?>)</h3>
-                    <select id="year-select" class="year-select">
-                        <?php foreach($availableYears as $year): ?>
-                            <option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $selectedYear) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($year); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="stat-card-content">
-                    <canvas id="clientOrdersChart"></canvas>
-                </div>
+                <div class="chart-header"><h3>CLIENT ORDERS (<?php echo htmlspecialchars($selectedYear); ?>)</h3><select id="year-select" class="year-select"><?php foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $selectedYear) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
+                <div class="stat-card-content"><canvas id="clientOrdersChart"></canvas></div>
             </div>
-
-            <!-- Orders Sold Comparison -->
             <div class="stat-card packs-sold-card">
-                 <div class="packs-sold-header">
-                    <span>Orders sold in</span>
-                    <select id="packs-sold-year" class="packs-sold-dropdown">
-                        <?php foreach($availableYears as $year): ?>
-                            <option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == ($availableYears[0] ?? date('Y'))) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($year); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="packs-sold-count" id="packs-sold-count">Loading...</div>
-                <div class="packs-comparison-row">
-                    <span id="packs-sold-percentage" class="packs-comparison">N/A since</span>
-                    <select id="packs-sold-compare-year" class="packs-sold-dropdown">
-                        <?php
-                        $compareYearDefault = count($availableYears) > 1 ? $availableYears[1] : ($availableYears[0] ?? date('Y'));
-                        foreach($availableYears as $year): ?>
-                            <option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $compareYearDefault) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($year); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+                 <div class="packs-sold-header"><span>Orders sold in</span><select id="packs-sold-year" class="packs-sold-dropdown"><?php foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == ($availableYears[0] ?? date('Y'))) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
+                 <div class="packs-sold-count" id="packs-sold-count">Loading...</div>
+                 <div class="packs-comparison-row"><span id="packs-sold-percentage" class="packs-comparison">N/A since</span><select id="packs-sold-compare-year" class="packs-sold-dropdown"><?php $compareYearDefault = count($availableYears) > 1 ? $availableYears[1] : ($availableYears[0] ?? date('Y')); foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $compareYearDefault) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
             </div>
         </div>
-
-        <!-- Sales Per Department Chart -->
         <div class="dashboard-section sales-department-container">
-            <div class="chart-header">
-                <h3>SALES PER DEPARTMENT</h3>
-                <div class="time-period-tabs">
-                    <button class="time-period-tab active" data-period="weekly">Weekly</button>
-                    <button class="time-period-tab" data-period="monthly">Monthly</button>
-                </div>
-            </div>
-            <div class="stat-card-content">
-                <canvas id="salesPerDepartmentChart"></canvas>
-            </div>
+            <div class="chart-header"><h3>SALES PER DEPARTMENT</h3><div class="time-period-tabs"><button class="time-period-tab active" data-period="weekly">Weekly</button><button class="time-period-tab" data-period="monthly">Monthly</button></div></div>
+            <div class="stat-card-content"><canvas id="salesPerDepartmentChart"></canvas></div>
         </div>
 
-    </div> <!-- End main-content -->
+    </div>
 
-    <!-- Complete JavaScript Block -->
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-labelledby="orderDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="orderDetailsModalLabel">Order Details</h5>
+                    <a href="#" id="downloadPoBtn" class="btn btn-sm btn-outline-success ms-auto" target="_blank" download>
+                        <i class="fas fa-download"></i> Download PO
+                    </a>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modalOrderDetailsContent">
+                        <div class="text-center" id="modalLoadingIndicator">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <div id="modalOrderData" style="display: none;">
+                            <p><strong>PO Number:</strong> <span id="modalPoNumber"></span></p>
+                            <p><strong>Customer:</strong> <span id="modalCustomer"></span></p>
+                            <p><strong>Order Date:</strong> <span id="modalOrderDate"></span></p>
+                            <p><strong>Delivery Date:</strong> <span id="modalDeliveryDate"></span></p>
+                            <p><strong>Status:</strong> <span id="modalStatus"></span></p>
+                            <p><strong>Delivery Address:</strong> <span id="modalDeliveryAddress"></span></p>
+                            <p><strong>Contact:</strong> <span id="modalContact"></span></p>
+                            <p><strong>Special Instructions:</strong> <span id="modalInstructions"></span></p>
+
+                            <h5>Order Items</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered" id="orderDetailsModalTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Category</th>
+                                            <th>Item</th>
+                                            <th>Packaging</th>
+                                            <th>Price</th>
+                                            <th>Qty</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="modalOrderItemsTbody">
+                                    </tbody>
+                                </table>
+                            </div>
+                             <p class="text-end mt-2"><strong>Subtotal:</strong> <span id="modalSubtotal"></span></p>
+                            <p class="text-end"><strong>Total Amount:</strong> <span id="modalTotalAmount"></span></p>
+                        </div>
+                        <div id="modalError" class="alert alert-danger" style="display: none;"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
     document.addEventListener("DOMContentLoaded", function () {
         console.log("Dashboard JS Initializing...");
 
-        /*** ===========================
-         *  CLIENT ORDERS PIE CHART
-         *  =========================== ***/
         const chartColors = [
             'rgba(69, 160, 73, 0.85)', 'rgba(71, 120, 209, 0.85)', 'rgba(235, 137, 49, 0.85)',
             'rgba(165, 84, 184, 0.85)', 'rgba(214, 68, 68, 0.85)', 'rgba(60, 179, 163, 0.85)',
@@ -386,7 +372,7 @@ $recentOrders = getRecentOrders($conn, 5);
         }
 
         function loadClientOrders(year) {
-            const url = `/backend/get_client_orders.php?year=${year}`;
+            const url = `/admin/backend/get_client_orders.php?year=${year}`;
             console.log("Fetching client orders from:", url);
             if (ctxClientOrders) {
                  const ctx = ctxClientOrders.getContext('2d'); ctx.clearRect(0, 0, ctxClientOrders.width, ctxClientOrders.height);
@@ -413,9 +399,6 @@ $recentOrders = getRecentOrders($conn, 5);
             if (yearSelect.value) loadClientOrders(yearSelect.value);
         } else { console.error("Year select dropdown ('year-select') not found"); }
 
-        /*** ===========================
-         *  ORDERS SOLD SECTION
-         *  =========================== ***/
         const ordersSoldYearSelect = document.getElementById("packs-sold-year");
         const ordersSoldCompareYearSelect = document.getElementById("packs-sold-compare-year");
         const ordersSoldCountEl = document.getElementById("packs-sold-count");
@@ -423,7 +406,7 @@ $recentOrders = getRecentOrders($conn, 5);
 
         function getOrderCounts(year) {
              if (!year) return Promise.resolve(0);
-            const url = `/backend/get_order_counts.php?year=${year}`;
+            const url = `/admin/backend/get_order_counts.php?year=${year}`;
             console.log("Fetching order counts from:", url);
             return fetch(url)
                 .then(response => {
@@ -471,9 +454,6 @@ $recentOrders = getRecentOrders($conn, 5);
         if (ordersSoldCompareYearSelect) ordersSoldCompareYearSelect.addEventListener("change", updateOrdersSold);
         if (ordersSoldYearSelect && ordersSoldCompareYearSelect && ordersSoldCountEl && ordersSoldPercentageEl) { updateOrdersSold(); }
 
-        /*** ===========================
-        *  SALES PER DEPARTMENT BAR CHART
-        *  =========================== ***/
         const ctxSalesPerDepartment = document.getElementById("salesPerDepartmentChart");
         let salesPerDepartmentChart = null;
         let currentTimePeriod = 'weekly';
@@ -481,7 +461,7 @@ $recentOrders = getRecentOrders($conn, 5);
         function loadSalesByCategory(timePeriod) {
             if (!ctxSalesPerDepartment) { console.error("Sales chart canvas not found"); return; }
             const ctx = ctxSalesPerDepartment.getContext('2d');
-            const url = `/backend/get_sales_by_category.php?period=${timePeriod}`;
+            const url = `/admin/backend/get_sales_by_category.php?period=${timePeriod}`;
             console.log(`Fetching ${timePeriod} sales data:`, url);
             ctx.clearRect(0, 0, ctxSalesPerDepartment.width, ctxSalesPerDepartment.height);
             ctx.fillStyle = '#6c757d'; ctx.textAlign = 'center'; ctx.fillText(`Loading ${timePeriod} data...`, ctxSalesPerDepartment.width / 2, ctxSalesPerDepartment.height / 2);
@@ -546,6 +526,114 @@ $recentOrders = getRecentOrders($conn, 5);
              if (activeTab) currentTimePeriod = activeTab.getAttribute('data-period');
              loadSalesByCategory(currentTimePeriod);
         } else { console.error("Sales chart canvas not found."); }
+
+
+        const orderDetailsModal = document.getElementById('orderDetailsModal');
+        const modalContent = document.getElementById('modalOrderDetailsContent');
+        const modalLoading = document.getElementById('modalLoadingIndicator');
+        const modalData = document.getElementById('modalOrderData');
+        const modalError = document.getElementById('modalError');
+        const modalPoNumber = document.getElementById('modalPoNumber');
+        const modalCustomer = document.getElementById('modalCustomer');
+        const modalOrderDate = document.getElementById('modalOrderDate');
+        const modalDeliveryDate = document.getElementById('modalDeliveryDate');
+        const modalStatus = document.getElementById('modalStatus');
+        const modalDeliveryAddress = document.getElementById('modalDeliveryAddress');
+        const modalContact = document.getElementById('modalContact');
+        const modalInstructions = document.getElementById('modalInstructions');
+        const modalOrderItemsTbody = document.getElementById('modalOrderItemsTbody');
+        const modalSubtotal = document.getElementById('modalSubtotal');
+        const modalTotalAmount = document.getElementById('modalTotalAmount');
+        const downloadPoBtn = document.getElementById('downloadPoBtn');
+
+        if (orderDetailsModal) {
+            orderDetailsModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const orderId = button.getAttribute('data-order-id');
+
+                modalLoading.style.display = 'block';
+                modalData.style.display = 'none';
+                modalError.style.display = 'none';
+                modalError.textContent = '';
+                modalOrderItemsTbody.innerHTML = '';
+                downloadPoBtn.href = '#';
+                downloadPoBtn.removeAttribute('download');
+
+                const backendUrl = `/admin/backend/get_order_details_for_modal.php?id=${orderId}`;
+                console.log("Fetching details from:", backendUrl);
+
+                fetch(backendUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Network response was not ok: ${response.statusText}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log("Modal data received:", data);
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        if (!data.details) {
+                             throw new Error("Order details not found in response.");
+                        }
+
+                        const details = data.details;
+                        const items = data.items || [];
+
+                        modalPoNumber.textContent = details.po_number || 'N/A';
+                        modalCustomer.textContent = details.username || 'N/A';
+                        modalOrderDate.textContent = details.order_date ? new Date(details.order_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
+                        modalDeliveryDate.textContent = details.delivery_date ? new Date(details.delivery_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
+                        modalStatus.textContent = details.status || 'N/A';
+                        modalDeliveryAddress.textContent = details.delivery_address || 'N/A';
+                        modalContact.textContent = details.contact_number || 'N/A';
+                        modalInstructions.textContent = details.special_instructions || 'None';
+
+                        modalOrderItemsTbody.innerHTML = '';
+                        if (items.length > 0) {
+                            items.forEach(item => {
+                                const row = modalOrderItemsTbody.insertRow();
+                                row.insertCell().textContent = item.category || 'N/A';
+                                row.insertCell().textContent = item.item_description || 'N/A';
+                                row.insertCell().textContent = item.packaging || 'N/A';
+                                row.insertCell().textContent = `₱${parseFloat(item.price || 0).toFixed(2)}`;
+                                row.insertCell().textContent = item.quantity || 0;
+                                row.insertCell().textContent = `₱${parseFloat(item.total || 0).toFixed(2)}`;
+                            });
+                        } else {
+                             const row = modalOrderItemsTbody.insertRow();
+                             const cell = row.insertCell();
+                             cell.colSpan = 6;
+                             cell.textContent = 'No items found for this order.';
+                             cell.style.textAlign = 'center';
+                        }
+
+                        modalSubtotal.textContent = `₱${parseFloat(details.subtotal || 0).toFixed(2)}`;
+                        modalTotalAmount.textContent = `₱${parseFloat(details.total_amount || 0).toFixed(2)}`;
+
+                        if (details.po_number) {
+                             downloadPoBtn.href = `/admin/backend/download_po.php?po_number=${encodeURIComponent(details.po_number)}`;
+                             downloadPoBtn.download = `PO_${details.po_number}.pdf`;
+                        }
+
+                        modalLoading.style.display = 'none';
+                        modalData.style.display = 'block';
+
+                    })
+                    .catch(error => {
+                        console.error('Error fetching order details for modal:', error);
+                        modalLoading.style.display = 'none';
+                        modalData.style.display = 'none';
+                        modalError.textContent = `Error loading order details: ${error.message}`;
+                        modalError.style.display = 'block';
+                        downloadPoBtn.href = '#';
+                        downloadPoBtn.removeAttribute('download');
+                    });
+            });
+        } else {
+            console.error("Order Details Modal element not found.");
+        }
 
         console.log("Dashboard JS Fully Initialized.");
     });
