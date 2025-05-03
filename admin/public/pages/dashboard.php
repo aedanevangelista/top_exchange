@@ -388,14 +388,13 @@ $recentOrders = getRecentOrders($conn, 5);
         /* --- Status Badges (Re-added) --- */
         .status-badge { padding: 0.25em 0.65em; border-radius: 50rem; font-size: 0.75em; font-weight: 600; display: inline-block; white-space: nowrap; vertical-align: baseline; line-height: 1; }
         .status-Pending { background-color: #ffc107; color: #000;}
-        .status-Active, .status-Completed { background-color: #198754; color: #fff; } /* Green like accounts.php */
+        .status-Active { background-color: #198754; color: #fff; } /* Green like accounts.php 'Active' */
+        .status-Completed { background-color: #198754; color: #fff; } /* Same as Active/Delivered for now */
         .status-Delivered { background-color: #0d6efd; color: #fff; }
         .status-Rejected { background-color: #dc3545; color: #fff; }
         .status-Cancelled { background-color: #6c757d; color: #fff; }
-        .status-For.Delivery { background-color: #0dcaf0; color: #000; }
-        .status-In.Transit { background-color: #fd7e14; color: #fff; }
-        /* Add specific color for 'Active' if different from Completed/Delivered */
-        /* .status-Active { background-color: #your_active_color; color: #fff; } */
+        .status-For\.Delivery { background-color: #0dcaf0; color: #000; } /* Escaped dot for CSS */
+        .status-In\.Transit { background-color: #fd7e14; color: #fff; } /* Escaped dot for CSS */
 
 
     </style>
@@ -455,14 +454,14 @@ $recentOrders = getRecentOrders($conn, 5);
                                 <th>Date</th>
                                 <th>Customer</th>
                                 <th>Status</th>
-                                <th>Total</th> <!-- Removed text-align-right class -->
+                                <th>Total</th> <!-- Alignment handled by td rule -->
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($recentOrders as $order):
                                 $statusDisplay = htmlspecialchars($order['status'] ?? 'Unknown');
                                 // Create class name for CSS: replace space with dot (e.g., "For Delivery" -> "For.Delivery")
-                                $statusClass = str_replace(' ', '.', $statusDisplay);
+                                $statusClass = str_replace(' ', '\.', $statusDisplay); // Properly escape dot for CSS selector
                             ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($order['po_number'] ?? 'N/A'); ?></td>
@@ -474,7 +473,7 @@ $recentOrders = getRecentOrders($conn, 5);
                                             <?php echo $statusDisplay; ?>
                                         </span>
                                     </td>
-                                    <td>₱<?php echo number_format($order['total_amount'] ?? 0, 2); ?></td> <!-- Removed text-align-right class -->
+                                    <td>₱<?php echo number_format($order['total_amount'] ?? 0, 2); ?></td> <!-- Alignment handled by td rule -->
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
