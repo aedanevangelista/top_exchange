@@ -69,7 +69,7 @@ function getDateRangeCondition($period) {
 function getTotalRevenue($conn, $period = 'this_month') {
     $totalRevenue = 0;
     $dateCondition = getDateRangeCondition($period);
-    $sql = "SELECT SUM(total_amount) as total_revenue FROM orders WHERE status IN ('Active', 'Completed', 'For Delivery', 'In Transit') AND $dateCondition"; // Removed 'Delivered'
+    $sql = "SELECT SUM(total_amount) as total_revenue FROM orders WHERE status IN ('Active', 'Completed', 'For Delivery', 'In Transit') AND $dateCondition";
     $result = $conn->query($sql);
     if ($result && $result->num_rows > 0) {
         $row = $result->fetch_assoc();
@@ -403,7 +403,7 @@ $recentOrders = getRecentOrders($conn, 5);
         .status-completed { background-color: #198754; color: #fff; } /* Green */
         /* Removed .status-delivered */
         .status-rejected { background-color: #dc3545; color: #fff; } /* Red */
-        .status-for-delivery { background-color: #0dcaf0; color: #000; } /* Cyan, Black text */
+        .status-for-delivery { background-color: #0dcaf0; color: #fff; } /* Cyan, White text */
         .status-in-transit { background-color: #fd7e14; color: #fff; } /* Orange, White text */
 
     </style>
