@@ -116,6 +116,27 @@ function getRecentOrders($conn, $limit = 5) {
     return $orders;
 }
 
+// --- Helper function to get status color (similar to accounts.php logic if needed) ---
+function getStatusColor($status) {
+    // Based on the image, 'Active' has a gold/yellow color. Define others if necessary.
+    switch (strtolower($status)) {
+        case 'active':
+            return '#b8860b'; // DarkGoldenrod - adjust as needed
+        case 'pending':
+            return '#ffae42'; // Orange-Yellow
+        case 'rejected':
+        case 'cancelled':
+            return '#dc3545'; // Red
+        case 'completed':
+        case 'delivered':
+             return '#198754'; // Green
+        // Add other statuses as needed
+        default:
+            return '#6c757d'; // Gray for unknown/other
+    }
+}
+
+
 $selectedYear = $_GET['year'] ?? date('Y');
 $availableYears = getAvailableYears($conn);
 $pendingOrdersCount = getPendingOrdersCount($conn);
@@ -149,7 +170,7 @@ $recentOrders = getRecentOrders($conn, 5);
         /* --- Base & Layout --- */
         body {
             background-color: #f8f9fa;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; /* Standard system fonts */
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
             color: #212529;
             line-height: 1.5;
         }
@@ -158,14 +179,12 @@ $recentOrders = getRecentOrders($conn, 5);
         }
         .overview-container h2 {
             margin-bottom: 1.5rem;
-            font-size: 1.75rem; /* Standard h2 size */
+            font-size: 1.75rem;
             font-weight: 500;
         }
         .notification-badges {
             margin-bottom: 1.5rem;
-            /* Add styles for notification badges if not in dashboard.css */
         }
-        /* Generic container styling */
         .data-container {
             background-color: #fff;
             padding: 1.25rem;
@@ -221,7 +240,7 @@ $recentOrders = getRecentOrders($conn, 5);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0; /* Prevent icon shrinking */
+            flex-shrink: 0;
         }
         .kpi-icon.icon-revenue { background-color: rgba(13, 110, 253, 0.2); color: #0d6efd; }
         .kpi-icon.icon-orders { background-color: rgba(25, 135, 84, 0.2); color: #198754; }
@@ -233,7 +252,7 @@ $recentOrders = getRecentOrders($conn, 5);
             color: #6c757d;
             text-transform: uppercase;
             font-weight: 600;
-            white-space: nowrap; /* Prevent title wrapping */
+            white-space: nowrap;
         }
         .kpi-content .kpi-value {
             font-size: 1.5rem;
@@ -245,67 +264,78 @@ $recentOrders = getRecentOrders($conn, 5);
 
         /* --- Recent Orders --- */
         /* Uses .data-container and .container-header */
-        .view-all-button { /* Custom class for the button */
+        .view-all-button { /* Updated Button Style */
             display: inline-block;
             font-weight: 500;
             line-height: 1.5;
-            color: #0d6efd;
+            color: #ffffff; /* White text */
+            background-color: #0d6efd; /* Blue background */
+            border: 1px solid #0d6efd; /* Matching border */
             text-align: center;
             text-decoration: none;
             vertical-align: middle;
             cursor: pointer;
             user-select: none;
-            background-color: transparent;
-            border: 1px solid #0d6efd;
-            padding: 0.25rem 0.5rem; /* Smaller padding */
-            font-size: 0.875rem; /* Smaller font size */
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
             border-radius: 0.25rem;
-            transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
         }
         .view-all-button:hover {
-            color: #fff;
-            background-color: #0d6efd;
-            border-color: #0d6efd;
+            background-color: #0b5ed7; /* Darker blue on hover */
+            border-color: #0a58ca;
         }
         .view-all-button i {
             margin-right: 0.3rem;
         }
-        /* Table Styling */
+        /* Table Styling - Matching Image */
         .table-wrapper {
-             overflow-x: auto; /* Enable horizontal scroll on small screens */
+             overflow-x: auto;
         }
         .recent-orders-table {
             width: 100%;
-            border-collapse: collapse; /* Use collapse for clean borders */
-            margin-bottom: 1rem; /* Spacing below table */
+            margin-bottom: 1rem;
+            color: #212529;
+            vertical-align: middle;
+            border-color: #dee2e6; /* Consistent border color */
+            border-collapse: collapse; /* Remove space between borders */
         }
         .recent-orders-table thead {
-            background-color: #f8f9fa; /* Light grey header */
-        }
-        .recent-orders-table th,
-        .recent-orders-table td {
-            padding: 0.75rem 1rem;
-            border: 1px solid #dee2e6; /* Standard border */
-            text-align: left;
-            vertical-align: middle; /* Align cell content vertically */
+            background-color: #000000; /* Black header */
+            color: #ffffff; /* White text */
         }
         .recent-orders-table th {
+            padding: 0.75rem 1rem;
+            text-align: left; /* Align header text left */
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.9rem; /* Slightly larger header font */
             white-space: nowrap;
-            color: #495057;
-            border-bottom-width: 2px;
+            border: 1px solid #454d55; /* Darker border for header cells */
+            border-bottom-width: 2px; /* Thicker bottom border for header */
         }
         .recent-orders-table td {
-             font-size: 0.875rem;
+            padding: 0.75rem 1rem;
+            border: none; /* Remove individual cell borders */
+            border-bottom: 1px solid #dee2e6; /* Row separator border */
+            font-size: 0.875rem;
         }
-        .recent-orders-table tbody tr:hover {
-            background-color: #e9ecef; /* Hover effect */
+        .recent-orders-table tbody tr {
+            background-color: #fff; /* Ensure rows are white */
         }
-        .text-align-right { /* Utility class for right alignment */
+        .recent-orders-table tbody tr:last-child td {
+            border-bottom: none; /* Remove border for the last row */
+        }
+        /* Remove hover effect if not desired */
+        /* .recent-orders-table tbody tr:hover {
+            background-color: #e9ecef;
+        } */
+        .text-align-right {
             text-align: right;
         }
-        .no-orders-message { /* Style for the 'no orders' text */
+        .status-text { /* Class for the status text span */
+             font-weight: 500;
+        }
+        .no-orders-message {
              text-align: center;
              padding: 1rem;
              color: #6c757d;
@@ -313,6 +343,7 @@ $recentOrders = getRecentOrders($conn, 5);
              border: 1px solid #dee2e6;
              border-radius: 0.375rem;
         }
+
 
         /* --- Chart/Stats Section --- */
         .stats-container {
@@ -328,24 +359,24 @@ $recentOrders = getRecentOrders($conn, 5);
             align-items: center;
             margin-bottom: 1rem;
         }
-        .data-container h3 { /* Chart/Stat titles */
+        .data-container h3 {
             font-size: 0.9rem;
             font-weight: 600;
             margin: 0;
             text-transform: uppercase;
             color: #495057;
         }
-        .year-select, .packs-sold-dropdown { /* Basic select styling */
+        .year-select, .packs-sold-dropdown {
             padding: 0.25rem 0.5rem;
             border-radius: 0.25rem;
             border: 1px solid #ced4da;
             font-size: 0.875rem;
-            background-color: #fff; /* Ensure background */
-            max-width: 100px; /* Prevent excessive width */
+            background-color: #fff;
+            max-width: 100px;
         }
         .stat-card-content {
-            height: 300px; /* Maintain chart height */
-            position: relative; /* Needed for chart.js responsiveness */
+            height: 300px;
+            position: relative;
         }
         .packs-sold-count {
             font-size: 1.8rem;
@@ -355,12 +386,12 @@ $recentOrders = getRecentOrders($conn, 5);
             color: #212529;
         }
         .packs-comparison-row {
-             justify-content: center; /* Center comparison items */
+             justify-content: center;
         }
         .packs-comparison {
              font-size: 0.9rem;
              color: #6c757d;
-             margin-right: 0.5rem; /* Space before dropdown */
+             margin-right: 0.5rem;
         }
         .packs-comparison.positive { color: #198754; }
         .packs-comparison.negative { color: #dc3545; }
@@ -381,15 +412,8 @@ $recentOrders = getRecentOrders($conn, 5);
              border-bottom-color: #0d6efd;
         }
 
-        /* --- Status Badges --- */
-        .status-badge { padding: 0.25em 0.65em; border-radius: 50rem; font-size: 0.75em; font-weight: 600; display: inline-block; white-space: nowrap; vertical-align: baseline; line-height: 1; } /* Added line-height */
-        .status-Pending { background-color: #ffc107; color: #000;}
-        .status-Active, .status-Completed { background-color: #198754; color: #fff; }
-        .status-Delivered { background-color: #0d6efd; color: #fff; }
-        .status-Rejected { background-color: #dc3545; color: #fff; }
-        .status-Cancelled { background-color: #6c757d; color: #fff; }
-        .status-For.Delivery { background-color: #0dcaf0; color: #000; }
-        .status-In.Transit { background-color: #fd7e14; color: #fff; }
+        /* --- Removed Status Badges --- */
+        /* Status text color is now applied via inline style */
 
     </style>
 </head>
@@ -432,35 +456,40 @@ $recentOrders = getRecentOrders($conn, 5);
             </div>
         </div>
 
-        <div class="recent-orders-container data-container"> <!-- Added data-container class -->
-            <div class="container-header"> <!-- Used generic header class -->
+        <div class="recent-orders-container data-container">
+            <div class="container-header">
                 <h3>Recent Orders</h3>
-                <a href="/public/pages/orders.php" class="view-all-button"> <!-- Custom button class -->
+                <a href="/public/pages/orders.php" class="view-all-button"> <!-- Updated class and style -->
                     <i class="fas fa-list"></i> View All Orders
                 </a>
             </div>
             <?php if (!empty($recentOrders)): ?>
-                <div class="table-wrapper"> <!-- Wrapper for responsiveness -->
-                    <table class="recent-orders-table"> <!-- Custom table class -->
+                <div class="table-wrapper">
+                    <table class="recent-orders-table">
                         <thead>
                             <tr>
                                 <th>PO Number</th>
                                 <th>Date</th>
                                 <th>Customer</th>
                                 <th>Status</th>
-                                <th class="text-align-right">Total</th> <!-- Utility alignment class -->
+                                <th class="text-align-right">Total</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($recentOrders as $order):
                                 $statusDisplay = htmlspecialchars($order['status'] ?? 'Unknown');
-                                $statusClass = str_replace(' ', '.', $statusDisplay);
+                                $statusColor = getStatusColor($statusDisplay); // Get color based on status
                             ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($order['po_number'] ?? 'N/A'); ?></td>
                                     <td><?php echo htmlspecialchars(date('M d, Y', strtotime($order['order_date']))); ?></td>
                                     <td><?php echo htmlspecialchars($order['username'] ?? 'N/A'); ?></td>
-                                    <td><span class="status-badge status-<?php echo $statusClass; ?>"><?php echo $statusDisplay; ?></span></td>
+                                    <td>
+                                        <!-- Apply color directly via inline style -->
+                                        <span class="status-text" style="color: <?php echo $statusColor; ?>;">
+                                            <?php echo $statusDisplay; ?>
+                                        </span>
+                                    </td>
                                     <td class="text-align-right">₱<?php echo number_format($order['total_amount'] ?? 0, 2); ?></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -468,25 +497,25 @@ $recentOrders = getRecentOrders($conn, 5);
                     </table>
                 </div>
             <?php else: ?>
-                <div class="no-orders-message"> <!-- Custom class for message -->
+                <div class="no-orders-message">
                     No recent orders found.
                 </div>
             <?php endif; ?>
         </div>
 
         <div class="stats-container">
-            <div class="client-orders-card data-container"> <!-- Added data-container class -->
+            <div class="client-orders-card data-container">
                 <div class="chart-header"><h3>CLIENT ORDERS (<?php echo htmlspecialchars($selectedYear); ?>)</h3><select id="year-select" class="year-select"><?php foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $selectedYear) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
                 <div class="stat-card-content"><canvas id="clientOrdersChart"></canvas></div>
             </div>
-            <div class="packs-sold-card data-container"> <!-- Added data-container class -->
+            <div class="packs-sold-card data-container">
                  <div class="packs-sold-header"><span>Orders sold in</span><select id="packs-sold-year" class="packs-sold-dropdown"><?php foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == ($availableYears[0] ?? date('Y'))) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
                  <div class="packs-sold-count" id="packs-sold-count">Loading...</div>
                  <div class="packs-comparison-row"><span id="packs-sold-percentage" class="packs-comparison">N/A since</span><select id="packs-sold-compare-year" class="packs-sold-dropdown"><?php $compareYearDefault = count($availableYears) > 1 ? $availableYears[1] : ($availableYears[0] ?? date('Y')); foreach($availableYears as $year): ?><option value="<?php echo htmlspecialchars($year); ?>" <?php echo ($year == $compareYearDefault) ? 'selected' : ''; ?>><?php echo htmlspecialchars($year); ?></option><?php endforeach; ?></select></div>
             </div>
         </div>
-        <div class="sales-department-container data-container"> <!-- Added data-container class -->
-            <div class="container-header"> <!-- Used generic header class -->
+        <div class="sales-department-container data-container">
+            <div class="container-header">
                 <h3>SALES PER DEPARTMENT</h3>
                 <div class="time-period-tabs">
                     <button class="time-period-tab active" data-period="weekly">Weekly</button>
@@ -498,7 +527,7 @@ $recentOrders = getRecentOrders($conn, 5);
 
     </div>
 
-    <!-- Removed Bootstrap JS -->
+    <!-- No Bootstrap JS needed -->
     <script>
     document.addEventListener("DOMContentLoaded", function () {
         console.log("Dashboard JS Initializing...");
