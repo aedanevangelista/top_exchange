@@ -136,10 +136,10 @@ $recentOrders = getRecentOrders($conn, 5);
     <title>Dashboard</title>
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="/css/dashboard.css">
-    
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+
     <style>
         .kpi-container { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
         .kpi-card { background-color: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex: 1; min-width: 180px; text-align: center; }
@@ -372,7 +372,7 @@ $recentOrders = getRecentOrders($conn, 5);
         }
 
         function loadClientOrders(year) {
-            const url = `/backend/get_client_orders.php?year=${year}`;
+            const url = `../../backend/get_client_orders.php?year=${year}`; // Relative Path
             console.log("Fetching client orders from:", url);
             if (ctxClientOrders) {
                  const ctx = ctxClientOrders.getContext('2d'); ctx.clearRect(0, 0, ctxClientOrders.width, ctxClientOrders.height);
@@ -406,7 +406,7 @@ $recentOrders = getRecentOrders($conn, 5);
 
         function getOrderCounts(year) {
              if (!year) return Promise.resolve(0);
-            const url = `/backend/get_order_counts.php?year=${year}`;
+            const url = `../../backend/get_order_counts.php?year=${year}`; // Relative Path
             console.log("Fetching order counts from:", url);
             return fetch(url)
                 .then(response => {
@@ -461,7 +461,7 @@ $recentOrders = getRecentOrders($conn, 5);
         function loadSalesByCategory(timePeriod) {
             if (!ctxSalesPerDepartment) { console.error("Sales chart canvas not found"); return; }
             const ctx = ctxSalesPerDepartment.getContext('2d');
-            const url = `/backend/get_sales_by_category.php?period=${timePeriod}`;
+            const url = `../../backend/get_sales_by_category.php?period=${timePeriod}`; // Relative Path
             console.log(`Fetching ${timePeriod} sales data:`, url);
             ctx.clearRect(0, 0, ctxSalesPerDepartment.width, ctxSalesPerDepartment.height);
             ctx.fillStyle = '#6c757d'; ctx.textAlign = 'center'; ctx.fillText(`Loading ${timePeriod} data...`, ctxSalesPerDepartment.width / 2, ctxSalesPerDepartment.height / 2);
@@ -559,7 +559,7 @@ $recentOrders = getRecentOrders($conn, 5);
                 downloadPoBtn.href = '#';
                 downloadPoBtn.removeAttribute('download');
 
-                const backendUrl = `/backend/get_order_details_for_modal.php?id=${orderId}`;
+                const backendUrl = `../../backend/get_order_details_for_modal.php?id=${orderId}`; // Relative Path
                 console.log("Fetching details from:", backendUrl);
 
                 fetch(backendUrl)
@@ -613,7 +613,7 @@ $recentOrders = getRecentOrders($conn, 5);
                         modalTotalAmount.textContent = `₱${parseFloat(details.total_amount || 0).toFixed(2)}`;
 
                         if (details.po_number) {
-                             downloadPoBtn.href = `/backend/download_po.php?po_number=${encodeURIComponent(details.po_number)}`;
+                             downloadPoBtn.href = `../../backend/download_po.php?po_number=${encodeURIComponent(details.po_number)}`; // Relative Path
                              downloadPoBtn.download = `PO_${details.po_number}.pdf`;
                         }
 
