@@ -64,8 +64,8 @@ if (isset($conn) && $conn instanceof mysqli) {
  * Generates an Enhanced Sales Summary Report.
  */
 function generateSalesSummary($conn, $startDate, $endDate) {
-    // --- Adjust schema assumptions as needed ---
-    // `orders` table: id, total_amount, order_date, status, customer_id (or similar for unique customers)
+    // --- Schema assumptions based on provided 'orders' table ---
+    // `orders` table: id, total_amount, order_date, status, username
 
     $dateCondition = "";
     $params = [];
@@ -92,32 +92,34 @@ function generateSalesSummary($conn, $startDate, $endDate) {
     $stmtSummary = $conn->prepare($sqlSummary);
     if (!$stmtSummary) sendError("DB error (Summary): " . $conn->error);
     if (!empty($paramTypes)) $stmtSummary->bind_param($paramTypes, ...$params);
-    if (!$stmtSummary->execute()) sendError("DB execute error (Summary): " . $stmtSummary->error);
+    if (!$stmtSummary->execute()) {
+        $err = $stmtSummary->error;
+        $stmtSummary->close(); // Close statement before sending error
+        sendError("DB execute error (Summary): " . $err);
+    }
     $resultSummary = $stmtSummary->get_result();
     $summary = $resultSummary->fetch_assoc();
     $stmtSummary->close();
 
-    // 2. Get Unique Customers (Requires customer identifier in orders table, e.g., customer_id)
-    //    Adjust 'customer_id' if your column name is different. If no such column, skip this part.
+    // 2. Get Unique Customers (Using 'username' column)
     $uniqueCustomers = 'N/A'; // Default
-    if (true) { // Replace 'true' with check if customer_id column exists if needed
-        $sqlCustomers = "SELECT COUNT(DISTINCT customer_id) as unique_customer_count
-                         FROM orders
-                         WHERE status = 'Completed' {$dateCondition}";
-        $stmtCustomers = $conn->prepare($sqlCustomers);
-        if ($stmtCustomers) { // Only proceed if prepare succeeded
-             if (!empty($paramTypes)) $stmtCustomers->bind_param($paramTypes, ...$params);
-             if ($stmtCustomers->execute()) {
-                 $resultCustomers = $stmtCustomers->get_result();
-                 $customerData = $resultCustomers->fetch_assoc();
-                 $uniqueCustomers = $customerData['unique_customer_count'] ?? 0;
-             } else {
-                  error_log("DB execute error (Customers): " . $stmtCustomers->error); // Log error, don't stop report
-             }
-             $stmtCustomers->close();
-        } else {
-             error_log("DB prepare error (Customers): " . $conn->error); // Log error
-        }
+    $sqlCustomers = "SELECT COUNT(DISTINCT username) as unique_customer_count
+                     FROM orders
+                     WHERE status = 'Completed' {$dateCondition}"; // *** Use username ***
+    $stmtCustomers = $conn->prepare($sqlCustomers);
+    if ($stmtCustomers) { // Only proceed if prepare succeeded
+         if (!empty($paramTypes)) $stmtCustomers->bind_param($paramTypes, ...$params);
+         if ($stmtCustomers->execute()) {
+             $resultCustomers = $stmtCustomers->get_result();
+             $customerData = $resultCustomers->fetch_assoc();
+             $uniqueCustomers = $customerData['unique_customer_count'] ?? 0;
+             $resultCustomers->close(); // Close result set
+         } else {
+              error_log("DB execute error (Customers): " . $stmtCustomers->error); // Log error, don't stop report
+         }
+         $stmtCustomers->close();
+    } else {
+         error_log("DB prepare error (Customers): " . $conn->error); // Log error
     }
 
 
@@ -167,7 +169,11 @@ function generateSalesSummary($conn, $startDate, $endDate) {
          if (!$stmtDaily) sendError("DB error (Daily): " . $conn->error);
          // Parameters ($params) are already set from the main date condition
          if (!empty($paramTypes)) $stmtDaily->bind_param($paramTypes, ...$params);
-         if (!$stmtDaily->execute()) sendError("DB execute error (Daily): " . $stmtDaily->error);
+         if (!$stmtDaily->execute()){
+              $err = $stmtDaily->error;
+              $stmtDaily->close();
+              sendError("DB execute error (Daily): " . $err);
+         }
          $resultDaily = $stmtDaily->get_result();
 
          if ($resultDaily->num_rows > 0) {
@@ -185,6 +191,7 @@ function generateSalesSummary($conn, $startDate, $endDate) {
              }
              echo "</tbody></table>";
          }
+         $resultDaily->close(); // Close result set
          $stmtDaily->close();
     }
 }
@@ -192,17 +199,30 @@ function generateSalesSummary($conn, $startDate, $endDate) {
 
 /**
  * Generates an Inventory Status Report (Low Stock Items).
+ * NOTE: Requires an 'inventory' table. Adjust schema details below.
  */
 function generateInventoryStatus($conn) {
-    // --- Adjust schema: `inventory` table: `product_name`, `current_stock`, `reorder_level` ---
+    // --- Adjust schema: Assumes `inventory` table: `product_name`, `current_stock`, `reorder_level`, `status` ---
 
     $sql = "SELECT product_name, current_stock, reorder_level
-            FROM inventory
+            FROM inventory -- *** ADJUST TABLE NAME IF NEEDED ***
             WHERE current_stock < reorder_level AND status = 'Active' -- Example: only show active products
             ORDER BY product_name";
 
     $result = $conn->query($sql);
-    if (!$result) sendError("DB error (Inventory): " . $conn->error);
+    // Check if query execution failed
+    if (!$result) {
+        // Check if the error is because the table doesn't exist
+        if ($conn->errno === 1146) { // Error code for "Table doesn't exist"
+             echo "<h3>Inventory Status Report</h3>";
+             echo "<p>Note: The 'inventory' table was not found in the database. Cannot generate this report.</p>";
+             return; // Exit the function gracefully
+        } else {
+             // For other SQL errors
+             sendError("DB error (Inventory): " . $conn->error);
+        }
+    }
+
 
     echo "<h3>Inventory Status Report (Low Stock Items)</h3>";
     if ($result->num_rows > 0) {
@@ -225,7 +245,7 @@ function generateInventoryStatus($conn) {
     } else {
         echo "<p>No active items are currently below their reorder level.</p>";
     }
-    $result->close();
+    $result->close(); // Close result set
 }
 
 
@@ -233,9 +253,10 @@ function generateInventoryStatus($conn) {
  * Generates an Order Listing Report.
  */
 function generateOrderTrends($conn, $startDate, $endDate) {
-    // --- Adjust schema: `orders` table: `id`, `order_date`, `customer_name`, `total_amount`, `status` ---
+    // --- Schema from provided 'orders' table: `id`, `order_date`, `username`, `company`, `total_amount`, `status` ---
 
-    $sql = "SELECT id, order_date, customer_name, total_amount, status
+    // Include 'company' in the select list
+    $sql = "SELECT id, order_date, username, company, total_amount, status
             FROM orders WHERE 1=1";
 
     $params = [];
@@ -248,7 +269,11 @@ function generateOrderTrends($conn, $startDate, $endDate) {
     $stmt = $conn->prepare($sql);
     if (!$stmt) sendError("DB error (Order Trends): " . $conn->error);
     if (!empty($paramTypes)) $stmt->bind_param($paramTypes, ...$params);
-    if (!$stmt->execute()) sendError("DB execute error (Order Trends): " . $stmt->error);
+    if (!$stmt->execute()){
+         $err = $stmt->error;
+         $stmt->close();
+         sendError("DB execute error (Order Trends): " . $err);
+    }
     $result = $stmt->get_result();
 
     $dateRangeStr = '';
@@ -259,15 +284,18 @@ function generateOrderTrends($conn, $startDate, $endDate) {
     if ($result->num_rows > 0) {
         // Apply the same table class as used in accounts.php
         echo "<table class='accounts-table'>"; // <--- USE YOUR TABLE CLASS
-        echo "<thead><tr><th>Order ID</th><th>Date</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead>";
+        // Add 'Company' column to header
+        echo "<thead><tr><th>Order ID</th><th>Date</th><th>Username</th><th>Company</th><th>Total</th><th>Status</th></tr></thead>";
         echo "<tbody>";
         while ($row = $result->fetch_assoc()) {
              // Get status class similar to accounts.php if applicable
              $statusClass = 'status-' . strtolower($row['status'] ?? 'unknown');
             echo "<tr>";
             echo "<td>" . htmlspecialchars($row['id']) . "</td>";
-            echo "<td>" . htmlspecialchars(date('Y-m-d H:i', strtotime($row['order_date']))) . "</td>"; // Show time too?
-            echo "<td>" . htmlspecialchars($row['customer_name'] ?? 'N/A') . "</td>";
+            echo "<td>" . htmlspecialchars(date('Y-m-d H:i', strtotime($row['order_date']))) . "</td>"; // Format date
+            echo "<td>" . htmlspecialchars($row['username'] ?? 'N/A') . "</td>";
+            // Display Company, handle NULLs
+            echo "<td>" . htmlspecialchars($row['company'] ?? 'N/A') . "</td>";
             echo "<td style='text-align: right;'>₱ " . number_format($row['total_amount'] ?? 0, 2) . "</td>";
             // Apply status class for potential styling from accounts.css
             echo "<td class='" . htmlspecialchars($statusClass) . "'>" . htmlspecialchars($row['status']) . "</td>";
@@ -278,6 +306,7 @@ function generateOrderTrends($conn, $startDate, $endDate) {
     } else {
         echo "<p>No orders found within the specified criteria.</p>";
     }
+    $result->close(); // Close result set
     $stmt->close();
 }
 
