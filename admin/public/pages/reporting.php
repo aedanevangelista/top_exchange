@@ -52,7 +52,7 @@ $pageTitle = "Reporting"; // Set the page title
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($pageTitle) . ' - TopExchange'; ?></title>
     <!-- Core CSS - MAKE SURE THIS PATH IS CORRECT -->
-    <link rel="stylesheet" href="/css/reporting.css.css"> <!-- <== VERIFY THIS PATH -->
+    <link rel="stylesheet" href="/css/reporting.css"> <!-- <== VERIFY THIS PATH -->
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
