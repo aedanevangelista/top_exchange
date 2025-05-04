@@ -1,8 +1,0 @@
-{
-    "name": "aedanevangelista/top_exchange",
-    "description": "Capstone 2",
-    "type": "project",
-    "require": {
-        "php": ">=7.4"
-    }
-}
