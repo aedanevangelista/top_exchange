@@ -191,7 +191,7 @@ $pageTitle = "Reporting";
 
             // --- !!! UPDATED FETCH URL !!! ---
             // Assumes fetch_report.php was moved to public/api/
-            const fetchUrl = '/backend/fetch_report.php';
+            const fetchUrl = '/admin/backend/fetch_report.php';
 
             fetch(fetchUrl, {
                 method: 'POST',
