@@ -128,6 +128,7 @@ if (!$stmtMain) { die("Error preparing driver list."); } if (!empty($types)) { i
             border: none;
             cursor: pointer;
             font-size: 14px;
+            color: white;
             transition: background-color 0.3s, box-shadow 0.3s;
             vertical-align: middle; /* Align icons and text */
             display: inline-flex; /* Help align icon and text */
