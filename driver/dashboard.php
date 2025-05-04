@@ -1,0 +1,323 @@
+<?php
+session_start();
+// Adjust the path based on the final location of db_connection.php relative to driver/dashboard.php
+require_once __DIR__ . '/../../backend/db_connection.php';
+
+// Check if driver is logged in, otherwise redirect to login page
+if (!isset($_SESSION['driver_id']) || !isset($_SESSION['driver_logged_in']) || $_SESSION['driver_logged_in'] !== true) {
+    header("Location: login.php");
+    exit();
+}
+
+$driver_id = $_SESSION['driver_id'];
+$driver_name = $_SESSION['driver_name'] ?? 'Driver'; // Fallback name
+
+// --- Handle Order Status Update (AJAX) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] == 'update_status') {
+    if (!headers_sent()) { header('Content-Type: application/json'); }
+
+    $po_number = $_POST['po_number'] ?? null;
+    $new_status = $_POST['new_status'] ?? null;
+    $allowed_statuses = ['For Delivery', 'In Transit', 'Completed']; // Driver-updatable statuses
+
+    // Basic validation
+    if (empty($po_number) || empty($new_status) || !in_array($new_status, $allowed_statuses)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid data provided.']);
+        exit;
+    }
+
+    // Security Check: Verify this driver is assigned to this PO number
+    $checkStmt = $conn->prepare("SELECT da.driver_id FROM driver_assignments da JOIN orders o ON da.po_number = o.po_number WHERE da.driver_id = ? AND da.po_number = ? AND o.status NOT IN ('Completed', 'Rejected')"); // Ensure order is actionable by this driver
+    if (!$checkStmt) {
+         error_log("Dashboard Status Update - Check Prepare Error: " . $conn->error);
+         echo json_encode(['success' => false, 'message' => 'Database error (check).']); exit;
+    }
+    $checkStmt->bind_param("is", $driver_id, $po_number);
+    $checkStmt->execute();
+    $checkResult = $checkStmt->get_result();
+
+    if ($checkResult->num_rows !== 1) {
+        $checkStmt->close();
+        echo json_encode(['success' => false, 'message' => 'Order not found or not assigned to you.']);
+        exit;
+    }
+    $checkStmt->close();
+
+    // Proceed with update
+    $updateStmt = $conn->prepare("UPDATE orders SET status = ? WHERE po_number = ?");
+     if (!$updateStmt) {
+         error_log("Dashboard Status Update - Update Prepare Error: " . $conn->error);
+         echo json_encode(['success' => false, 'message' => 'Database error (update).']); exit;
+    }
+    $updateStmt->bind_param("ss", $new_status, $po_number);
+
+    if ($updateStmt->execute()) {
+        // Optionally: Log the status change
+        // log_activity($conn, $driver_id, 'driver', "Updated order $po_number status to $new_status");
+        echo json_encode(['success' => true, 'message' => "Order $po_number status updated to $new_status."]);
+    } else {
+        error_log("Dashboard Status Update - Update Execute Error: " . $updateStmt->error);
+        echo json_encode(['success' => false, 'message' => 'Failed to update order status.']);
+    }
+    $updateStmt->close();
+    $conn->close();
+    exit; // Important to exit after AJAX handling
+}
+
+
+// --- Fetch Assigned Orders for Display ---
+$orders = [];
+// Select orders assigned to this driver that are in actionable states
+$stmt = $conn->prepare("
+    SELECT o.po_number, o.username, o.orders, o.delivery_date, o.delivery_address, o.status
+    FROM orders o
+    JOIN driver_assignments da ON o.po_number = da.po_number
+    WHERE da.driver_id = ? AND o.status IN ('Active', 'For Delivery', 'In Transit')
+    ORDER BY FIELD(o.status, 'Active', 'For Delivery', 'In Transit'), o.delivery_date ASC, o.po_number ASC
+");
+
+if ($stmt) {
+    $stmt->bind_param("i", $driver_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $order_items = json_decode($row['orders'], true);
+        // Add basic error handling for JSON decode
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log("Driver Dashboard - JSON Decode Error for PO {$row['po_number']}: " . json_last_error_msg());
+            $order_items = []; // Set to empty array on error
+        }
+        $row['items'] = $order_items ?? []; // Ensure 'items' key exists
+        $orders[] = $row;
+    }
+    $stmt->close();
+} else {
+    error_log("Driver Dashboard - Fetch Orders Prepare Error: " . $conn->error);
+    // Handle error display if needed, e.g., set an error flag
+}
+$conn->close();
+
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Dashboard - Top Exchange</title>
+    <link rel="stylesheet" href="css/driver_dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Link to the shared toast CSS if it's outside this folder -->
+    <link rel="stylesheet" href="../css/toast.css">
+</head>
+<body>
+    <div id="toast-container"></div>
+    <header class="dashboard-header">
+        <h1>Driver Dashboard</h1>
+        <div class="driver-info">
+            <span>Welcome, <?= htmlspecialchars($driver_name) ?>!</span>
+            <a href="logout.php" class="logout-button"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </header>
+
+    <main class="dashboard-content">
+        <h2>Your Assigned Deliveries</h2>
+
+        <?php if (empty($orders)): ?>
+            <p class="no-orders">You have no active deliveries assigned.</p>
+        <?php else: ?>
+            <div class="orders-list">
+                <?php foreach ($orders as $order):
+                    $status_class = 'status-' . strtolower(str_replace(' ', '-', $order['status']));
+                ?>
+                    <div class="order-card" id="order-<?= htmlspecialchars($order['po_number']) ?>">
+                        <div class="order-header">
+                            <span class="po-number">PO: <?= htmlspecialchars($order['po_number']) ?></span>
+                            <span class="order-date">Date: <?= htmlspecialchars(date('M d, Y', strtotime($order['delivery_date']))) ?></span>
+                            <span class="order-status <?= $status_class ?>"><?= htmlspecialchars($order['status']) ?></span>
+                        </div>
+                        <div class="order-body">
+                            <p><strong>Customer:</strong> <?= htmlspecialchars($order['username']) ?></p>
+                            <p><strong>Address:</strong> <?= htmlspecialchars($order['delivery_address']) ?></p>
+                            <div class="order-items-summary">
+                                <p><strong>Items:</strong></p>
+                                <ul>
+                                    <?php if (!empty($order['items']) && is_array($order['items'])): ?>
+                                        <?php foreach ($order['items'] as $item): ?>
+                                            <li><?= htmlspecialchars($item['quantity'] ?? 0) ?> x <?= htmlspecialchars($item['item_description'] ?? 'N/A') ?> (<?= htmlspecialchars($item['packaging'] ?? 'N/A') ?>)</li>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <li>Item details not available.</li>
+                                    <?php endif; ?>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="order-actions">
+                            <label for="status-<?= htmlspecialchars($order['po_number']) ?>">Update Status:</label>
+                            <select id="status-<?= htmlspecialchars($order['po_number']) ?>" name="new_status" class="status-select" data-po="<?= htmlspecialchars($order['po_number']) ?>">
+                                <!-- Show current status and next logical steps -->
+                                <?php if ($order['status'] == 'Active'): ?>
+                                     <option value="Active" selected>Active (Pending Pickup)</option>
+                                     <option value="For Delivery">For Delivery</option>
+                                <?php elseif ($order['status'] == 'For Delivery'): ?>
+                                     <option value="For Delivery" selected>For Delivery</option>
+                                     <option value="In Transit">In Transit</option>
+                                     <option value="Completed">Completed</option>
+                                <?php elseif ($order['status'] == 'In Transit'): ?>
+                                    <option value="In Transit" selected>In Transit</option>
+                                    <option value="Completed">Completed</option>
+                                <?php else: ?>
+                                    <!-- Fallback for unexpected statuses, might need adjustment -->
+                                    <option value="<?= htmlspecialchars($order['status']) ?>" selected><?= htmlspecialchars($order['status']) ?></option>
+                                <?php endif; ?>
+                                <!-- Always allow marking as completed if actionable -->
+                                <?php if ($order['status'] != 'Completed' && in_array($order['status'], ['For Delivery', 'In Transit'])): ?>
+                                     <!-- <option value="Completed">Completed</option> -->
+                                <?php endif; ?>
+                            </select>
+                            <button class="update-status-btn" data-po="<?= htmlspecialchars($order['po_number']) ?>">
+                                <i class="fas fa-sync-alt"></i> Update
+                            </button>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <!-- Link to the shared toast JS if it's outside this folder -->
+    <script src="../js/toast.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Initialize toastr (ensure toast.js does this or do it here)
+             if (typeof toastr !== 'undefined') {
+                 toastr.options = {
+                     "closeButton": true,
+                     "debug": false,
+                     "newestOnTop": true,
+                     "progressBar": true,
+                     "positionClass": "toast-top-right",
+                     "preventDuplicates": false,
+                     "onclick": null,
+                     "showDuration": "300",
+                     "hideDuration": "1000",
+                     "timeOut": "5000",
+                     "extendedTimeOut": "1000",
+                     "showEasing": "swing",
+                     "hideEasing": "linear",
+                     "showMethod": "fadeIn",
+                     "hideMethod": "fadeOut"
+                 };
+             } else {
+                 console.error("Toastr library not loaded correctly.");
+             }
+
+
+            $('.update-status-btn').on('click', function() {
+                const button = $(this);
+                const po_number = button.data('po');
+                const statusSelect = $(`#status-${po_number}`);
+                const new_status = statusSelect.val();
+                const orderCard = button.closest('.order-card');
+                const currentStatusSpan = orderCard.find('.order-status');
+
+                // Optional: Add confirmation?
+                // if (!confirm(`Update order ${po_number} to status "${new_status}"?`)) {
+                //     return;
+                // }
+
+                button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...'); // Disable button and show spinner
+
+                $.ajax({
+                    url: 'dashboard.php', // Post back to the same file
+                    type: 'POST',
+                    data: {
+                        action: 'update_status',
+                        po_number: po_number,
+                        new_status: new_status
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                           if(typeof showToast === 'function') {
+                                showToast(response.message, 'success');
+                           } else {
+                                alert(response.message); // Fallback alert
+                           }
+
+                            // Update status display dynamically
+                            currentStatusSpan.text(new_status);
+                            // Update status class for color
+                            currentStatusSpan.removeClass (function (index, className) {
+                                return (className.match (/(^|\s)status-\S+/g) || []).join(' ');
+                            }).addClass('status-' + new_status.toLowerCase().replace(' ', '-'));
+
+                            // If status is 'Completed', maybe hide the card or move it after a short delay
+                            if (new_status === 'Completed') {
+                                orderCard.addClass('order-completed-visual'); // Add class for styling fade/strike-through
+                                setTimeout(() => {
+                                    // Option 1: Remove the card
+                                     orderCard.fadeOut(500, function() { $(this).remove(); });
+                                    // Option 2: Keep it but disable controls
+                                    // statusSelect.prop('disabled', true);
+                                    // button.remove(); // Remove the update button
+                                }, 1500); // Delay before removing/disabling
+                            } else {
+                                // Re-enable button for non-completed updates
+                                button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update');
+                                // Refresh the select options based on the new status
+                                updateStatusOptions(statusSelect, new_status);
+                            }
+
+                        } else {
+                            if(typeof showToast === 'function') {
+                                showToast(response.message || 'Failed to update status.', 'error');
+                            } else {
+                                alert(response.message || 'Failed to update status.'); // Fallback alert
+                            }
+                            button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update'); // Re-enable button on failure
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("AJAX Error:", status, error, xhr.responseText);
+                         if(typeof showToast === 'function') {
+                            showToast('An error occurred while communicating with the server.', 'error');
+                         } else {
+                             alert('An error occurred. Please check console.'); // Fallback alert
+                         }
+                        button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update'); // Re-enable button on error
+                    }
+                });
+            });
+
+            // Function to update the dropdown options based on the current status
+            function updateStatusOptions(selectElement, currentStatus) {
+                selectElement.empty(); // Clear existing options
+
+                if (currentStatus === 'Active') {
+                    selectElement.append($('<option>', { value: 'Active', text: 'Active (Pending Pickup)', selected: true }));
+                    selectElement.append($('<option>', { value: 'For Delivery', text: 'For Delivery' }));
+                } else if (currentStatus === 'For Delivery') {
+                     selectElement.append($('<option>', { value: 'For Delivery', text: 'For Delivery', selected: true }));
+                     selectElement.append($('<option>', { value: 'In Transit', text: 'In Transit' }));
+                     selectElement.append($('<option>', { value: 'Completed', text: 'Completed' }));
+                } else if (currentStatus === 'In Transit') {
+                    selectElement.append($('<option>', { value: 'In Transit', text: 'In Transit', selected: true }));
+                    selectElement.append($('<option>', { value: 'Completed', text: 'Completed' }));
+                }
+                // No options needed if already 'Completed' (though completed orders are removed/disabled)
+            }
+
+             // Initial setup of dropdowns based on current status on page load
+            $('.status-select').each(function() {
+                const currentStatus = $(this).closest('.order-card').find('.order-status').text().trim();
+                updateStatusOptions($(this), currentStatus);
+            });
+
+        });
+    </script>
+</body>
+</html>
