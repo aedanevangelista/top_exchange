@@ -13,6 +13,8 @@ include "../../backend/check_role.php"; // Assumes this handles unauthorized acc
 // Ensure checkRole exits if not authorized
 checkRole('Accounts - Clients');
 
+
+// --- Function to validate unique username/email ---
 function validateUnique($conn, $username, $email, $id = null) {
     $result = ['exists' => false, 'field' => null, 'message' => ''];
     // Use prepared statements consistently
@@ -124,7 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $uploadBaseDir = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR;
             $userUploadDir = $uploadBaseDir . $username . DIRECTORY_SEPARATOR;
             // URL path always uses forward slashes
-            $userUploadUrl = '/admin/uploads/' . $username . '/';
+            $userUploadUrl = '../../uploads/' . $username . '/';
 
             // Create directory
             if (!is_dir($userUploadDir) && !mkdir($userUploadDir, 0775, true) && !is_dir($userUploadDir)) { // Use 0775 typically
@@ -153,7 +155,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
                         $urlPath = $userUploadUrl . $safeFilename; // Path to store in DB
 
                         if (move_uploaded_file($tmp_name, $filesystemTargetPath)) {
-                            $business_proof_paths[] = $urlPath; // Store the URL path with proper format
+                            $formattedUrlPath = '/admin/uploads/' . $username . '/' . $safeFilename;
+                            $business_proof_paths[] = $formattedUrlPath; // Store the standardized URL path
                             $uploaded_count++;
                         } else {
                              throw new Exception('Failed to move uploaded file: ' . htmlspecialchars($originalFilename));
@@ -167,8 +170,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
 
             // Encode paths and insert into DB
             $business_proof_json = json_encode($business_proof_paths);
-            // Changed from 'Pending' to 'Active' by default
-            $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')");
+            $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
             $stmt->bind_param("ssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json);
 
             if ($stmt->execute()) {
@@ -327,7 +329,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $status = $_POST['status'] ?? '';
             if (empty($id)) { throw new Exception("Invalid account ID."); }
 
-            $allowed_statuses = ['Active', 'Rejected', 'Inactive'];
+            $allowed_statuses = ['Active', 'Rejected', 'Pending', 'Inactive'];
             if (!in_array($status, $allowed_statuses)) { throw new Exception('Invalid status value provided.'); }
 
             $stmt = $conn->prepare("UPDATE clients_accounts SET status = ? WHERE id = ?");
@@ -354,6 +356,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
 
 } // End POST AJAX Handling
 
+
 // --- GET ACCOUNTS FOR TABLE DISPLAY ---
 $accounts_data = [];
 $error_message = null;
@@ -364,7 +367,7 @@ try {
     $types = "";
 
     if (!empty($status_filter)) {
-        $allowed_filters = ['Active', 'Rejected', 'Inactive'];
+        $allowed_filters = ['Pending', 'Active', 'Rejected', 'Inactive'];
          if (in_array($status_filter, $allowed_filters)) {
             $sql .= " AND status = ?";
             $params[] = $status_filter;
@@ -373,7 +376,7 @@ try {
              $status_filter = ''; // Ignore invalid filter
          }
     }
-    $sql .= " ORDER BY CASE status WHEN 'Active' THEN 1 WHEN 'Rejected' THEN 2 WHEN 'Inactive' THEN 3 ELSE 4 END, created_at DESC";
+    $sql .= " ORDER BY CASE status WHEN 'Pending' THEN 1 WHEN 'Active' THEN 2 WHEN 'Rejected' THEN 3 WHEN 'Inactive' THEN 4 ELSE 5 END, created_at DESC";
 
     $stmt = $conn->prepare($sql);
     if (!empty($types)) {
@@ -403,11 +406,13 @@ function truncate($text, $max = 15) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client Accounts</title>
+    <!-- Links removed for brevity, assume they are correct -->
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" href="/css/accounts_clients.css">
     <link rel="stylesheet" href="/css/toast.css">
+    <!-- Assume other CSS files are linked -->
     <style>
         /* Keep existing CSS from previous version */
         #myModal { display: none; position: fixed; z-index: 9999; padding-top: 100px; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.9); }
@@ -422,7 +427,7 @@ function truncate($text, $max = 15) {
         .form-column { display: flex; flex-direction: column; }
         .form-full-width { grid-column: 1 / span 2; }
         .required { color: #ff0000; font-weight: bold; }
-        .overlay-content { max-width: 800px; width: 90%; max-height: 95vh; display: flex; flex-direction: column; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; }
+        .overlay-content { max-width: 800px; width: 90%; max-height: 95vh; display: flex; flex-direction: column; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; } /* Adjusted for status modal */
         .two-column-form input, .two-column-form textarea, .two-column-form select { width: 100%; box-sizing: border-box; }
         textarea#company_address, textarea#edit-company_address, textarea#bill_to_address, textarea#edit-bill_to_address { height: 60px; padding: 8px; font-size: 14px; resize: vertical; min-height: 60px; }
         input, textarea, select { border: 1px solid #ccc; border-radius: 4px; padding: 6px 10px; transition: border-color 0.3s; outline: none; font-size: 14px; margin-bottom: 10px; }
@@ -430,9 +435,9 @@ function truncate($text, $max = 15) {
         input::placeholder, textarea::placeholder { color: #aaa; padding: 4px; font-style: italic; }
         .view-address-btn, .view-contact-btn { background-color: #4a90e2; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 12px; transition: all 0.3s; }
         .view-address-btn:hover, .view-contact-btn:hover { background-color: #357abf; }
-        #addressInfoModal, #contactInfoModal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(0,0,0,0.7); }
-        .info-modal-content { background-color: #ffffff; margin: 0; padding: 0; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); width: 90%; max-width: 700px; max-height: 80vh; animation: modalFadeIn 0.3s; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; }
-        @keyframes modalFadeIn { from {opacity: 0; transform: translate(-50%, -50%) scale(0.95);} to {opacity: 1; transform: translate(-50%, -50%) scale(1);} }
+        #addressInfoModal, #contactInfoModal { display: none; /* Hidden */ position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center; }
+        .info-modal-content { background-color: #ffffff; margin: 0; padding: 0; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); width: 90%; max-width: 700px; max-height: 80vh; animation: modalFadeIn 0.3s; display: flex; flex-direction: column; /* Removed absolute positioning */ }
+        @keyframes modalFadeIn { from {opacity: 0; transform: scale(0.95);} to {opacity: 1; transform: scale(1);} }
         .info-modal-header { background-color: #4a90e2; color: #fff; padding: 15px 25px; position: relative; display: flex; align-items: center; border-radius: 10px 10px 0 0; }
         .info-modal-header h2 { margin: 0; font-size: 20px; flex: 1; font-weight: 500; }
         .info-modal-header h2 i { margin-right: 10px; }
@@ -453,7 +458,7 @@ function truncate($text, $max = 15) {
         .contact-value { font-weight: bold; color: #333; font-size: 14px; word-break: break-all; }
         .contact-label { font-size: 13px; color: #777; display: block; margin-top: 5px; }
         .overlay {
-            display: none;
+            display: none; /* This is the crucial line - makes it hidden by default */
             position: fixed;
             width: 100%;
             height: 100%;
@@ -461,45 +466,47 @@ function truncate($text, $max = 15) {
             left: 0;
             background-color: rgba(0, 0, 0, 0.7);
             z-index: 1000;
-            justify-content: center;
-            align-items: center;
+            /* display: flex; */ /* REMOVE or COMMENT OUT this line if present */
+            justify-content: center; /* Keep these */
+            align-items: center;     /* Keep these */
             backdrop-filter: blur(3px);
             overflow-y: auto;
             padding: 20px 0;
         }
         .address-group { border: 1px solid #eee; padding: 12px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; }
         .address-group h3 { margin-top: 0; color: #4a90e2; font-size: 15px; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
-        .modal-header { background-color: #ffffff; padding: 15px 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 1px solid #ddd; position: relative; }
-        .modal-header h2 { margin: 0; padding: 0; font-size: 18px; font-weight: 600; }
+        .modal-header { background-color: #ffffff; padding: 15px 20px; /* Adjusted padding */ text-align: center; border-radius: 8px 8px 0 0; border-bottom: 1px solid #ddd; /* Lighter border */ position: sticky; top: 0; z-index: 10; }
+        .modal-header h2 { margin: 0; padding: 0; font-size: 18px; font-weight: 600; } /* Adjusted font */
         .modal-footer { background-color: #f7f7f7; /* Lighter footer */ padding: 12px 20px; border-top: 1px solid #ddd; text-align: center; border-radius: 0 0 8px 8px; position: sticky; bottom: 0; z-index: 10; display: flex; justify-content: flex-end; /* Align buttons right */ gap: 10px; margin-top: auto; }
-        .modal-body { padding: 20px; overflow-y: auto; max-height: calc(85vh - 120px); height: auto; }
-        .form-modal-content { display: flex; flex-direction: column; max-height: 85vh; height: auto; width: 90%; max-width: 650px; background-color: #fff; border-radius: 8px; overflow: hidden; }
-        label { display: block; font-size: 14px; margin-bottom: 5px; font-weight: 500; }
-        .error-message { color: #D8000C; background-color: #FFD2D2; padding: 10px 15px; border-radius: 4px; border: 1px solid #FFB8B8; margin-top: 5px; margin-bottom: 15px; display: none; font-size: 14px; }
-        .modal-footer button { padding: 8px 16px; font-size: 14px; min-width: 100px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; border: none; margin: 0 5px; }
+        .modal-body { padding: 20px; overflow-y: auto; max-height: calc(85vh - 120px); /* Adjusted calc */ height: auto; }
+        .form-modal-content { display: flex; flex-direction: column; max-height: 85vh; height: auto; width: 90%; /* More responsive */ max-width: 650px; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; position: relative; top: auto; left: auto; transform: none; box-shadow: 0 5px 15px rgba(0,0,0,0.2); /* Added shadow */ }
+        label { display: block; font-size: 14px; margin-bottom: 5px; /* Slightly more space */ font-weight: 500; }
+        .error-message { color: #D8000C; background-color: #FFD2D2; padding: 10px 15px; border-radius: 4px; border: 1px solid #FFB8B8; margin-top: 5px; margin-bottom: 15px; display: none; font-size: 13px; line-height: 1.4; }
+        .modal-footer button { padding: 8px 16px; font-size: 14px; min-width: 100px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; border: none; margin: 0; font-weight: 500; }
         .save-btn { background-color: #4a90e2; color: white; }
         .save-btn:hover { background-color: #357abf; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .cancel-btn { background-color: #f1f1f1; color: #333; border: 1px solid #ccc; }
         .cancel-btn:hover { background-color: #e1e1e1; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .status-active { color: #28a745; font-weight: bold; }
+        .status-pending { color: #ffc107; font-weight: bold; }
         .status-rejected { color: #dc3545; font-weight: bold; }
         .status-inactive { color: #6c757d; font-weight: bold; }
-        .password-note { font-size: 12px; color: #666; margin-top: 4px; margin-bottom: 10px; font-style: italic; }
+        .password-note { font-size: 12px; color: #666; margin-top: 4px; margin-bottom: 10px; /* Added bottom margin */ font-style: italic; }
         .auto-generated { background-color: #f8f8f8; color: #888; cursor: not-allowed; }
         .password-container { position: relative; width: 100%; margin-bottom: 10px; }
-        .toggle-password { position: absolute; right: 1px; top: 1px; bottom: 1px; display: flex; align-items: center; padding: 0 10px; cursor: pointer; color: #666; background: linear-gradient(90deg, transparent, #f8f8f8, #f8f8f8); }
+        .toggle-password { position: absolute; right: 1px; top: 1px; bottom: 1px; /* Align with input border */ display: flex; align-items: center; padding: 0 10px; cursor: pointer; color: #666; background-color: #fff; border-left: 1px solid #ccc; border-radius: 0 4px 4px 0; }
         .toggle-password:hover { color: #333; }
         .switch-container { display: flex; align-items: center; margin-top: 8px; margin-bottom: 12px; }
         .switch-label { font-size: 13px; margin-left: 8px; color: #555; cursor: pointer; }
         .switch { position: relative; display: inline-block; width: 50px; height: 24px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
         input:checked + .slider { background-color: #4a90e2; }
         input:focus + .slider { box-shadow: 0 0 1px #4a90e2; }
         input:checked + .slider:before { transform: translateX(26px); }
         .confirmation-modal {
-            display: none;
+            display: none; /* This is the crucial line */
             position: fixed;
             z-index: 1100;
             left: 0;
@@ -508,21 +515,22 @@ function truncate($text, $max = 15) {
             height: 100%;
             background-color: rgba(0, 0, 0, 0.6);
             overflow: hidden;
-            align-items: center;
-            justify-content: center;
+            /* display: flex; */ /* REMOVE or COMMENT OUT this line if present */
+            align-items: center;     /* Keep these */
+            justify-content: center; /* Keep these */
         }        
-        .confirmation-content { background-color: #fefefe; padding: 25px 30px; border-radius: 8px; width: 380px; max-width: 90%; text-align: center; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); animation: modalPopIn 0.3s ease-out; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-        @keyframes modalPopIn { from {transform: translate(-50%, -50%) scale(0.8); opacity: 0;} to {transform: translate(-50%, -50%) scale(1); opacity: 1;} }
+        .confirmation-content { background-color: #fefefe; padding: 25px 30px; border-radius: 8px; width: 380px; max-width: 90%; text-align: center; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); animation: modalPopIn 0.3s ease-out; }
+        @keyframes modalPopIn { from {transform: scale(0.8) translateY(20px); opacity: 0;} to {transform: scale(1) translateY(0); opacity: 1;} }
         .confirmation-title { font-size: 20px; margin-bottom: 15px; color: #333; font-weight: 600; }
         .confirmation-message { margin-bottom: 25px; color: #555; font-size: 14px; line-height: 1.5; }
         .confirmation-buttons { display: flex; justify-content: center; gap: 15px; }
-        .confirm-yes, .confirm-no { padding: 10px 25px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background-color 0.2s, box-shadow 0.2s; border: none; font-size: 14px; min-width: 100px; }
+        .confirm-yes, .confirm-no { padding: 10px 25px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background-color 0.2s, box-shadow 0.2s; border: none; font-size: 14px; }
         .confirm-yes { background-color: #4a90e2; color: white; }
         .confirm-yes:hover { background-color: #357abf; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .confirm-no { background-color: #f1f1f1; color: #333; border: 1px solid #ccc; }
         .confirm-no:hover { background-color: #e1e1e1; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         #toast-container .toast-close-button { display: none; }
-        #edit-business-proof-container { margin-bottom: 10px; padding: 10px; background-color: #f9f9f9; border: 1px dashed #ddd; border-radius: 4px; min-height: 50px; display: flex; flex-wrap: wrap; justify-content: flex-start; align-items: center; }
+        #edit-business-proof-container { margin-bottom: 10px; padding: 10px; background-color: #f9f9f9; border: 1px dashed #ddd; border-radius: 4px; min-height: 50px; display: flex; flex-wrap: wrap; align-items: center; }
         #edit-business-proof-container img { margin: 5px; border: 1px solid #ccc; padding: 2px; max-width: 60px; height: auto; background: #fff; border-radius: 3px; cursor: pointer; }
         #edit-business-proof-container h4 { width: 100%; margin-bottom: 5px; font-size: 14px; color: #555; font-weight: 500; }
         #edit-business-proof-container p { width: 100%; font-size: 13px; color: #888; margin: 5px 0; }
@@ -530,116 +538,16 @@ function truncate($text, $max = 15) {
         #statusModal h2 { margin-bottom: 15px; font-weight: 600; }
         #statusModal p { margin-bottom: 25px; color: #555; font-size: 15px; }
         #statusModal .modal-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        #statusModal .modal-buttons button { flex-grow: 1; padding: 10px 15px; cursor: pointer; border: none; border-radius: 4px; transition: background-color 0.2s, box-shadow 0.2s; color: white; font-weight: 500; }
+        #statusModal .modal-buttons button { flex-grow: 1; padding: 10px 15px; cursor: pointer; border: none; border-radius: 4px; transition: background-color 0.2s, box-shadow 0.2s; color: white; font-weight: 500; font-size: 14px; min-width: 100px; }
         #statusModal .approve-btn { background-color: #28a745; } #statusModal .approve-btn:hover { background-color: #218838; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
         #statusModal .reject-btn { background-color: #dc3545; } #statusModal .reject-btn:hover { background-color: #c82333; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+        #statusModal .pending-btn { background-color: #ffc107; color: #333; } #statusModal .pending-btn:hover { background-color: #e0a800; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
         #statusModal .inactive-btn { background-color: #6c757d; } #statusModal .inactive-btn:hover { background-color: #5a6268; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
         #statusModal .single-button { text-align: center; margin-top: 10px; }
         #statusModal .single-button button { width: auto; min-width: 120px; }
-
-        /* Status Confirmation Modal styles */
-        #statusConfirmationModal {
-            display: none;
-            position: fixed;
-            z-index: 1200;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.6);
-            overflow: auto;
-        }
-        
-        .status-confirmation-content {
-            position: relative;
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 25px;
-            width: 400px;
-            max-width: 90%;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            animation: statusModalEnter 0.3s;
-        }
-        
-        @keyframes statusModalEnter {
-            from {transform: scale(0.8); opacity: 0;}
-            to {transform: scale(1); opacity: 1;}
-        }
-        
-        .status-confirmation-content h3 {
-            margin-top: 0;
-            font-size: 1.4rem;
-            color: #333;
-            text-align: center;
-        }
-        
-        .status-confirmation-content p {
-            color: #555;
-            font-size: 1.1rem;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .status-confirmation-content .status-label {
-            font-weight: bold;
-            padding: 4px 8px;
-            border-radius: 4px;
-            display: inline-block;
-            margin: 0 3px;
-        }
-        
-        .status-label.active {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        
-        .status-label.rejected {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        
-        .status-label.inactive {
-            background-color: #e2e3e5;
-            color: #383d41;
-        }
-        
-        .status-confirmation-buttons {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-            gap: 15px;
-        }
-        
-        .status-confirmation-buttons button {
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            border: none;
-            font-weight: 500;
-            min-width: 100px;
-        }
-        
-        .status-confirm-btn {
-            background-color: #4a90e2;
-            color: white;
-        }
-        
-        .status-confirm-btn:hover {
-            background-color: #357abf;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .status-cancel-btn {
-            background-color: #f1f1f1;
-            color: #333;
-            border: 1px solid #ccc;
-        }
-        
-        .status-cancel-btn:hover {
-            background-color: #e1e1e1;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+        /* Add spinner styles if using */
+        /* .spinner { ... } */
+        /* .loading { pointer-events: none; opacity: 0.7; } */
     </style>
 </head>
 <body>
@@ -652,11 +560,13 @@ function truncate($text, $max = 15) {
                 <label for="statusFilter">Filter by Status:</label>
                 <select id="statusFilter" onchange="filterByStatus()">
                     <option value="">All</option>
+                    <option value="Pending" <?= ($status_filter ?? '') == 'Pending' ? 'selected' : '' ?>>Pending</option>
                     <option value="Active" <?= ($status_filter ?? '') == 'Active' ? 'selected' : '' ?>>Active</option>
                     <option value="Rejected" <?= ($status_filter ?? '') == 'Rejected' ? 'selected' : '' ?>>Rejected</option>
-                    <option value="Inactive" <?= ($status_filter ?? '') == 'Inactive' ? 'selected' : '' ?>>Archive</option>
+                    <option value="Inactive" <?= ($status_filter ?? '') == 'Inactive' ? 'selected' : '' ?>>Inactive</option>
                 </select>
             </div>
+            <!-- Corrected button call -->
             <button onclick="openAddAccountForm()" class="add-account-btn">
                 <i class="fas fa-user-plus"></i> Add New Account
             </button>
@@ -720,7 +630,7 @@ function truncate($text, $max = 15) {
                                     }
                                     ?>
                                 </td>
-                                <td class="<?= 'status-' . strtolower(htmlspecialchars($row['status'] ?? 'active')) ?>"><?= htmlspecialchars($row['status'] ?? 'Active') ?></td>
+                                <td class="<?= 'status-' . strtolower(htmlspecialchars($row['status'] ?? 'pending')) ?>"><?= htmlspecialchars($row['status'] ?? 'Pending') ?></td>
                                 <td class="action-buttons">
                                     <?php
                                     // Pass the raw (but potentially null) proof string to htmlspecialchars
@@ -894,6 +804,7 @@ function truncate($text, $max = 15) {
                                  <label for="edit-manual-password">New Password: <span class="required">*</span></label>
                                  <div class="password-container">
                                      <input type="password" id="edit-manual-password" name="manual_password" placeholder="Enter new password" minlength="6">
+                                     <!-- Corrected onclick call -->
                                      <span class="toggle-password" onclick="togglePasswordVisibility('edit-manual-password')"><i class="fas fa-eye"></i></span>
                                  </div>
                                  <div class="password-note">Min 6 characters.</div>
@@ -913,7 +824,7 @@ function truncate($text, $max = 15) {
                              <div class="address-group">
                                  <h3><i class="fas fa-building"></i> Company Address</h3>
                                  <label for="edit-company_address">Ship to Address: <span class="required">*</span></label>
-                                                                  <textarea id="edit-company_address" name="company_address" required maxlength="100" placeholder="e.g., 123 Main St, Brgy, City"></textarea>
+                                 <textarea id="edit-company_address" name="company_address" required maxlength="100" placeholder="e.g., 123 Main St, Brgy, City"></textarea>
                                  <label for="edit-bill_to_address">Bill To Address: <span class="required">*</span></label>
                                  <textarea id="edit-bill_to_address" name="bill_to_address" required maxlength="100" placeholder="e.g., 456 Billing St, Brgy, City"></textarea>
                              </div>
@@ -949,7 +860,8 @@ function truncate($text, $max = 15) {
              <div class="modal-buttons">
                  <button class="approve-btn" onclick="changeStatus('Active')"><i class="fas fa-check"></i> Active</button>
                  <button class="reject-btn" onclick="changeStatus('Rejected')"><i class="fas fa-times"></i> Reject</button>
-                 <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-archive"></i> Archive</button>
+                 <button class="pending-btn" onclick="changeStatus('Pending')"><i class="fas fa-hourglass-half"></i> Pending</button>
+                 <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Archive</button>
              </div>
              <div class="modal-buttons single-button">
                  <button class="cancel-btn" onclick="closeStatusModal()"><i class="fas fa-times"></i> Cancel</button>
@@ -962,18 +874,7 @@ function truncate($text, $max = 15) {
          <img class="modal-content" id="img01">
          <div id="caption"></div>
      </div>
-     
-     <!-- Status Confirmation Modal -->
-     <div id="statusConfirmationModal" class="confirmation-modal">
-         <div class="status-confirmation-content">
-             <h3><i class="fas fa-question-circle"></i> Confirm Status Change</h3>
-             <p>Are you sure you want to change the status to <span id="confirmStatusText" class="status-label"></span>?</p>
-             <div class="status-confirmation-buttons">
-                 <button class="status-cancel-btn" onclick="closeStatusConfirmModal()"><i class="fas fa-times"></i> Cancel</button>
-                 <button class="status-confirm-btn" onclick="executeStatusChange()"><i class="fas fa-check"></i> Confirm</button>
-             </div>
-         </div>
-     </div>
+
 
     <!-- SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -983,7 +884,6 @@ function truncate($text, $max = 15) {
         // --- Global Vars ---
         let currentAccountId = 0;
         let regionCityMap = new Map();
-        let pendingStatusChange = '';
 
         // --- Utility Functions ---
         function showError(elementId, message) {
@@ -1007,7 +907,7 @@ function truncate($text, $max = 15) {
         }
 
         // --- Modal Functions ---
-        function openModal(imgElement) {
+        function openModal(imgElement) { /* Unchanged */
             const modal = document.getElementById("myModal");
             const modalImg = document.getElementById("img01");
             const captionText = document.getElementById("caption");
@@ -1017,30 +917,31 @@ function truncate($text, $max = 15) {
                 captionText.innerHTML = imgElement.alt || 'Business Proof';
             }
         }
-        function closeModal() {
+        function closeModal() { /* Unchanged */
             const modal = document.getElementById("myModal");
             if (modal) modal.style.display = "none";
         }
-        function showContactInfo(email, phone) {
+        function showContactInfo(email, phone) { /* Unchanged */
             document.getElementById("modalEmail").textContent = email || 'N/A';
             document.getElementById("modalPhone").textContent = phone || 'N/A';
-            $('#contactInfoModal').css('display', 'flex');
+            $('#contactInfoModal').css('display', 'flex'); // Use jQuery for consistency
         }
-        function closeContactInfoModal() {
+        function closeContactInfoModal() { /* Unchanged */
              $('#contactInfoModal').hide();
         }
-        function showAddressInfo(companyAddress, region, city, billToAddress) {
+        function showAddressInfo(companyAddress, region, city, billToAddress) { /* Unchanged */
             document.getElementById("modalCompanyAddress").textContent = companyAddress || 'N/A';
             document.getElementById("modalBillToAddress").textContent = billToAddress || 'N/A';
-            document.getElementById("modalRegion").textContent = region || 'N/A';
+            document.getElementById("modalRegion").textContent = region || 'N/A'; // Consider mapping code to name if needed
             document.getElementById("modalCity").textContent = city || 'N/A';
             $('#addressInfoModal').css('display', 'flex');
         }
-        function closeAddressInfoModal() {
+        function closeAddressInfoModal() { /* Unchanged */
             $('#addressInfoModal').hide();
         }
 
         // --- Password Toggle ---
+        // Now accepts the field ID as an argument
         function togglePasswordVisibility(fieldId) {
             const passwordField = document.getElementById(fieldId);
             const icon = passwordField ? passwordField.parentElement.querySelector('.toggle-password i') : null;
@@ -1056,6 +957,7 @@ function truncate($text, $max = 15) {
         async function loadPhilippinesRegions(selectElementId = 'region', selectedRegionCode = null) {
              const select = document.getElementById(selectElementId);
              if (!select) return;
+             // console.log(`Loading regions for ${selectElementId}, selected: ${selectedRegionCode}`);
              try {
                  const response = await fetch('https://psgc.gitlab.io/api/regions/');
                  if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -1084,6 +986,7 @@ function truncate($text, $max = 15) {
          async function loadCities(regionCode, citySelectId, selectedCityName = null) {
              const citySelect = document.getElementById(citySelectId);
              if (!citySelect) return;
+             // console.log(`Loading cities for ${citySelectId}, region: ${regionCode}, selected: ${selectedCityName}`);
 
              citySelect.disabled = true;
              citySelect.length = 1; // Clear existing options
@@ -1132,7 +1035,7 @@ function truncate($text, $max = 15) {
              }
         }
         function closeAddAccountForm() { $('#addAccountOverlay').hide(); }
-        function confirmAddAccount() {
+        function confirmAddAccount() { /* Unchanged, uses submitAddAccount */
             resetErrors();
             const form = document.getElementById('addAccountForm');
             if (!form || !form.checkValidity()) {
@@ -1143,14 +1046,16 @@ function truncate($text, $max = 15) {
             $('#addConfirmationModal').css('display', 'flex');
         }
         function closeAddConfirmation() { $('#addConfirmationModal').hide(); }
-        function submitAddAccount() {
+        function submitAddAccount() { /* Unchanged */
             closeAddConfirmation();
             const form = document.getElementById('addAccountForm');
             const formData = new FormData(form);
             formData.append('ajax', true);
+            // showLoadingIndicator(); // Optional
             $.ajax({
                 url: window.location.pathname, type: 'POST', data: formData, contentType: false, processData: false, dataType: 'json',
                 success: function(response) {
+                    // hideLoadingIndicator(); // Optional
                     if (response && response.success) {
                         showToast('Account added successfully!', 'success');
                         closeAddAccountForm();
@@ -1160,7 +1065,8 @@ function truncate($text, $max = 15) {
                         showToast(response?.message || 'Error adding account.', 'error');
                     }
                 },
-                error: function(xhr, status, error) {
+                error: function(xhr, status, error) { /* Unchanged */
+                    // hideLoadingIndicator(); // Optional
                     console.error("Add Account AJAX Error:", status, error, xhr.responseText);
                     showError('addAccountError', 'Server error. Please try again.');
                     showToast('Server error occurred.', 'error');
@@ -1169,155 +1075,157 @@ function truncate($text, $max = 15) {
         }
 
         function openEditAccountForm(id, username, email, phone, regionCode, cityName, company, companyAddress, billToAddress, businessProofEncoded) {
-            const overlay = document.getElementById("editAccountOverlay");
-            const form = document.getElementById("editAccountForm");
-            if (!overlay || !form) return;
+    const overlay = document.getElementById("editAccountOverlay");
+    const form = document.getElementById("editAccountForm");
+    if (!overlay || !form) return;
 
-            form.reset();
-            resetErrors();
-            console.log("Opening edit form for ID:", id, "Region:", regionCode, "City:", cityName);
+    form.reset();
+    resetErrors();
+    console.log("Opening edit form for ID:", id, "Region:", regionCode, "City:", cityName); // Debug log
 
-            // Populate basic fields
-            $('#edit-id').val(id);
-            $('#edit-username').val(username);
-            $('#edit-email').val(email);
-            $('#edit-phone').val(phone);
-            $('#edit-company').val(company);
-            $('#edit-company_address').val(companyAddress);
-            $('#edit-bill_to_address').val(billToAddress);
+    // Populate basic fields
+    $('#edit-id').val(id);
+    $('#edit-username').val(username);
+    $('#edit-email').val(email);
+    $('#edit-phone').val(phone);
+    $('#edit-company').val(company);
+    $('#edit-company_address').val(companyAddress);
+    $('#edit-bill_to_address').val(billToAddress);
 
-            // Reset password fields
-            $('#edit-password-toggle').prop('checked', false).trigger('change');
-            $('#edit-manual-password').val('');
+    // Reset password fields
+    $('#edit-password-toggle').prop('checked', false).trigger('change');
+    $('#edit-manual-password').val('');
 
-            // --- Handle Business Proof ---
-            const proofContainer = $('#edit-business-proof-container');
-            const existingProofInput = $('#existing-business-proof');
-            proofContainer.empty().append('<h4>Current Business Proof:</h4>');
-            
-            // Default to empty array
-            existingProofInput.val('[]');
+    // --- Handle Business Proof ---
+    const proofContainer = $('#edit-business-proof-container');
+    const existingProofInput = $('#existing-business-proof');
+    proofContainer.empty().append('<h4>Current Business Proof:</h4>'); // Clear and add header
+    
+    // Default to empty array
+    existingProofInput.val('[]');
 
-            // First log the raw businessProofEncoded to see what we're getting
-            console.log("Raw businessProofEncoded:", businessProofEncoded);
+    // First log the raw businessProofEncoded to see what we're getting
+    console.log("Raw businessProofEncoded:", businessProofEncoded);
 
-            if (businessProofEncoded && businessProofEncoded !== 'null') {
+    if (businessProofEncoded && businessProofEncoded !== 'null') {
+        try {
+            // Check if it's already a proper array
+            if (Array.isArray(businessProofEncoded)) {
+                // It's already a JavaScript array, use JSON.stringify to convert it
+                existingProofInput.val(JSON.stringify(businessProofEncoded));
+                console.log("Array processed:", JSON.stringify(businessProofEncoded));
+            } else {
+                // Try to parse as JSON
+                let proofArray;
+                
                 try {
-                    // Check if it's already a proper array
-                    if (Array.isArray(businessProofEncoded)) {
-                        // It's already a JavaScript array, use JSON.stringify to convert it
-                        existingProofInput.val(JSON.stringify(businessProofEncoded));
-                        console.log("Array processed:", JSON.stringify(businessProofEncoded));
-                    } else {
-                        // Try to parse as JSON
-                        let proofArray;
+                    proofArray = JSON.parse(businessProofEncoded);
+                } catch (jsonError) {
+                    // If parsing fails, it might be because data is HTML encoded or paths with backslashes
+                    console.log("Initial JSON parse failed, trying to clean up the input:", jsonError);
+                    
+                    // If the input looks like a string representing a JSON array with paths
+                    if (typeof businessProofEncoded === 'string' && 
+                        (businessProofEncoded.includes('../../') || 
+                         businessProofEncoded.includes('/admin/') || 
+                         businessProofEncoded.startsWith('["'))) {
+                        
+                        // Clean up common issues
+                        let cleanedJson = businessProofEncoded
+                            .replace(/\\\\/g, '\\') // Double backslashes to single
+                            .replace(/\\"/g, '"');  // Escaped quotes to regular quotes
                         
                         try {
-                            proofArray = JSON.parse(businessProofEncoded);
-                        } catch (jsonError) {
-                            // If parsing fails, it might be because data is HTML encoded or paths with backslashes
-                            console.log("Initial JSON parse failed, trying to clean up the input:", jsonError);
+                            proofArray = JSON.parse(cleanedJson);
+                        } catch (e) {
+                            // If still fails, try to manually extract paths
+                            console.log("Cleaned JSON parse failed:", e);
                             
-                            // If the input looks like a string representing a JSON array with paths
-                            if (typeof businessProofEncoded === 'string' && 
-                                (businessProofEncoded.includes('../../') || 
-                                businessProofEncoded.includes('/admin/') || 
-                                businessProofEncoded.startsWith('["'))) {
-                                
-                                // Clean up common issues
-                                let cleanedJson = businessProofEncoded
-                                    .replace(/\\\\/g, '\\') // Double backslashes to single
-                                    .replace(/\\"/g, '"');  // Escaped quotes to regular quotes
-                                
-                                try {
-                                    proofArray = JSON.parse(cleanedJson);
-                                } catch (e) {
-                                    // If still fails, try to manually extract paths
-                                    console.log("Cleaned JSON parse failed:", e);
-                                    
-                                    // Extract what looks like file paths between quotes
-                                    const pathMatches = businessProofEncoded.match(/["']([^"']+\.(?:jpg|jpeg|png))["']/g);
-                                    if (pathMatches) {
-                                        proofArray = pathMatches.map(match => 
-                                            match.replace(/^["']|["']$/g, '')
-                                        );
-                                    } else {
-                                        throw new Error("Could not extract valid paths");
-                                    }
-                                }
+                            // Extract what looks like file paths between quotes
+                            const pathMatches = businessProofEncoded.match(/["']([^"']+\.(?:jpg|jpeg|png))["']/g);
+                            if (pathMatches) {
+                                proofArray = pathMatches.map(match => 
+                                    match.replace(/^["']|["']$/g, '')
+                                );
                             } else {
-                                throw jsonError; // Re-throw if none of our fix attempts worked
+                                throw new Error("Could not extract valid paths");
                             }
                         }
-                        
-                        if (Array.isArray(proofArray)) {
-                            existingProofInput.val(JSON.stringify(proofArray));
-                            console.log("Processed proofs JSON:", JSON.stringify(proofArray));
-                        } else {
-                            throw new Error("Parsed value is not an array");
-                        }
+                    } else {
+                        throw jsonError; // Re-throw if none of our fix attempts worked
                     }
-                } catch (e) {
-                    console.error("Error processing business proofs:", e, "Input:", businessProofEncoded);
-                    proofContainer.append('<p style="color: red;">Error loading current proofs.</p>');
-                    existingProofInput.val('[]'); // Fallback to empty array
                 }
-            }
-
-            // Display current images from the processed JSON
-            try {
-                const proofs = JSON.parse(existingProofInput.val());
-                if (Array.isArray(proofs) && proofs.length > 0) {
-                    proofs.forEach(proof => {
-                        if (typeof proof === 'string') {
-                            // Ensure path starts with / if relative
-                            let imagePath = proof;
-                            if (proof.startsWith('..')) {
-                                imagePath = proof.replace('../../', '/admin/');
-                            } else if (!proof.startsWith('/')) {
-                                imagePath = '/admin/uploads/' + proof;
-                            }
-                            
-                            // Create the image element
-                            $('<img>', {
-                                src: imagePath,
-                                alt: 'Business Proof',
-                                width: 50,
-                                css: { margin: '3px', border: '1px solid #ccc', padding: '1px', cursor: 'pointer', backgroundColor: '#fff', borderRadius: '3px' },
-                                click: function() { openModal(this); }
-                            }).appendTo(proofContainer);
-                        } else {
-                            console.warn('Skipping invalid proof item for display:', proof);
-                        }
-                    });
+                
+                if (Array.isArray(proofArray)) {
+                    existingProofInput.val(JSON.stringify(proofArray));
+                    console.log("Processed proofs JSON:", JSON.stringify(proofArray));
                 } else {
-                    proofContainer.append('<p>No business proof images on record.</p>');
+                    throw new Error("Parsed value is not an array");
                 }
-            } catch (e) {
-                console.error("Error displaying proofs from JSON:", e, "JSON:", existingProofInput.val());
-                proofContainer.append('<p style="color: red;">Error displaying proofs.</p>');
             }
+        } catch (e) {
+            console.error("Error processing business proofs:", e, "Input:", businessProofEncoded);
+            proofContainer.append('<p style="color: red;">Error loading current proofs.</p>');
+            existingProofInput.val('[]'); // Fallback to empty array
+        }
+    }
 
-            // Clear the file input
-            $('#edit-business_proof').val(null);
-
-            // --- Handle Region/City ---
-            loadPhilippinesRegions('edit-region', regionCode).then(() => {
-                if (cityName && $('#edit-region').val() === regionCode) {
-                    // In case the change event didn't fire correctly
-                    setTimeout(() => {
-                        if ($('#edit-city option').length <= 1) {
-                            loadCities(regionCode, 'edit-city', cityName);
-                        }
-                    }, 500);
+    // Display current images from the processed JSON
+    try {
+        const proofs = JSON.parse(existingProofInput.val());
+        if (Array.isArray(proofs) && proofs.length > 0) {
+            proofs.forEach(proof => {
+                if (typeof proof === 'string') {
+                    // Ensure path starts with / if relative
+                    let imagePath = proof;
+                    if (proof.startsWith('..')) {
+                        imagePath = proof.replace('../../', '/admin/');
+                    } else if (!proof.startsWith('/')) {
+                        imagePath = '/admin/uploads/' + proof;
+                    }
+                    
+                    // Create the image element
+                    $('<img>', {
+                        src: imagePath,
+                        alt: 'Business Proof', 
+                        width: 50,
+                        css: { margin: '3px', border: '1px solid #ccc', padding: '1px', cursor: 'pointer', backgroundColor: '#fff', borderRadius: '3px' },
+                        click: function() { openModal(this); }
+                    }).appendTo(proofContainer);
+                } else {
+                    console.warn('Skipping invalid proof item for display:', proof);
                 }
             });
-
-            $(overlay).css('display', 'flex'); // Show modal
+        } else {
+            proofContainer.append('<p>No business proof images on record.</p>');
         }
+    } catch (e) {
+        console.error("Error displaying proofs from JSON:", e, "JSON:", existingProofInput.val());
+        proofContainer.append('<p style="color: red;">Error displaying proofs.</p>');
+    }
+
+    // Clear the file input
+    $('#edit-business_proof').val(null);
+
+    // --- Handle Region/City ---
+    // Load regions, then pre-select and trigger city loading via the callback mechanism in loadPhilippinesRegions
+    loadPhilippinesRegions('edit-region', regionCode).then(() => {
+        // The change event triggered inside loadPhilippinesRegions should handle city loading
+        if (cityName && $('#edit-region').val() === regionCode) {
+            // In case the change event didn't fire correctly
+            setTimeout(() => {
+                if ($('#edit-city option').length <= 1) {
+                    loadCities(regionCode, 'edit-city', cityName);
+                }
+            }, 500);
+        }
+    });
+
+    $(overlay).css('display', 'flex'); // Show modal
+}
 
         function closeEditAccountForm() { $('#editAccountOverlay').hide(); }
-        function confirmEditAccount() {
+        function confirmEditAccount() { /* Unchanged, uses submitEditAccount */
             resetErrors();
             const form = document.getElementById('editAccountForm');
             const passwordToggle = document.getElementById('edit-password-toggle');
@@ -1335,14 +1243,16 @@ function truncate($text, $max = 15) {
             $('#editConfirmationModal').css('display', 'flex');
         }
         function closeEditConfirmation() { $('#editConfirmationModal').hide(); }
-        function submitEditAccount() {
+        function submitEditAccount() { /* Unchanged */
             closeEditConfirmation();
             const form = document.getElementById('editAccountForm');
             const formData = new FormData(form);
             formData.append('ajax', true);
+            // showLoadingIndicator(); // Optional
             $.ajax({
                 url: window.location.pathname, type: 'POST', data: formData, contentType: false, processData: false, dataType: 'json',
                 success: function(response) {
+                    // hideLoadingIndicator(); // Optional
                     if (response && response.success) {
                         showToast('Account updated successfully!', 'success');
                         closeEditAccountForm();
@@ -1352,7 +1262,8 @@ function truncate($text, $max = 15) {
                         showToast(response?.message || 'Error updating account.', 'error');
                     }
                 },
-                error: function(xhr, status, error) {
+                error: function(xhr, status, error) { /* Unchanged */
+                    // hideLoadingIndicator(); // Optional
                     console.error("Edit Account AJAX Error:", status, error, xhr.responseText);
                     showError('editAccountError', 'Server error. Please try again.');
                     showToast('Server error occurred.', 'error');
@@ -1360,8 +1271,8 @@ function truncate($text, $max = 15) {
             });
         }
 
-        // --- Status Change with Confirmation ---
-        function openStatusModal(id, username, email) {
+        // --- Status Change ---
+        function openStatusModal(id, username, email) { /* Unchanged */
             const modal = document.getElementById("statusModal");
             const messageEl = document.getElementById("statusMessage");
             if (modal && messageEl) {
@@ -1370,74 +1281,36 @@ function truncate($text, $max = 15) {
                 $(modal).css('display', 'flex');
             }
         }
-        
-        function closeStatusModal() {
+        function closeStatusModal() { /* Unchanged */
             $('#statusModal').hide();
             currentAccountId = 0;
         }
-        
-        // Open confirmation modal before changing status
-        function changeStatus(newStatus) {
+        function changeStatus(newStatus) { /* Unchanged */
             if (!currentAccountId) return;
-            
-            closeStatusModal();
-            pendingStatusChange = newStatus;
-            
-            // Update confirmation dialog with selected status
-            const statusSpan = document.getElementById('confirmStatusText');
-            if (statusSpan) {
-                statusSpan.textContent = newStatus;
-                statusSpan.className = 'status-label ' + newStatus.toLowerCase();
-            }
-            
-            // Show the confirmation modal
-            $('#statusConfirmationModal').css('display', 'flex');
-        }
-        
-        // Close status confirmation modal
-        function closeStatusConfirmModal() {
-            $('#statusConfirmationModal').hide();
-            pendingStatusChange = '';
-        }
-        
-        // Execute the status change after confirmation
-        function executeStatusChange() {
-            if (!currentAccountId || !pendingStatusChange) {
-                closeStatusConfirmModal();
-                return;
-            }
-            
-            const newStatus = pendingStatusChange;
-            
+            // showLoadingIndicator(); // Optional
             $.ajax({
-                url: window.location.pathname, 
-                type: 'POST', 
-                data: { 
-                    ajax: true, 
-                    formType: 'status', 
-                    id: currentAccountId, 
-                    status: newStatus 
-                }, 
-                dataType: 'json',
+                url: window.location.pathname, type: 'POST', data: { ajax: true, formType: 'status', id: currentAccountId, status: newStatus }, dataType: 'json',
                 success: function(response) {
+                    // hideLoadingIndicator(); // Optional
                     if (response && response.success) {
                         showToast(`Status changed to ${newStatus}!`, 'success');
+                        closeStatusModal();
                         setTimeout(() => window.location.reload(), 1500);
                     } else {
                         showToast(response?.message || 'Error changing status.', 'error');
                     }
-                    closeStatusConfirmModal();
                 },
-                error: function(xhr, status, error) {
+                error: function(xhr, status, error) { /* Unchanged */
+                    // hideLoadingIndicator(); // Optional
                     console.error("Change Status AJAX Error:", status, error, xhr.responseText);
                     showToast('Server error occurred.', 'error');
-                    closeStatusConfirmModal();
+                    closeStatusModal();
                 }
             });
         }
 
         // --- Table Filtering ---
-        function filterByStatus() {
+        function filterByStatus() { /* Unchanged */
             var status = document.getElementById("statusFilter").value;
             const url = new URL(window.location.href);
             if (status) { url.searchParams.set('status', status); }
@@ -1446,7 +1319,7 @@ function truncate($text, $max = 15) {
         }
 
         // --- Initial Setup ---
-        $(document).ready(function() {
+        $(document).ready(function() { // Use jQuery's ready for consistency
              // Initial load of regions for Add form (Edit form regions loaded in openEditAccountForm)
              loadPhilippinesRegions('region');
 
@@ -1469,14 +1342,15 @@ function truncate($text, $max = 15) {
                  }).trigger('change'); // Initial trigger to set correct state
              }
 
-             // Global click listener for modals
+             // Global click listener for info modals (can refine if needed)
              $(window).on('click', function(event) {
                  if ($(event.target).is('#addressInfoModal')) closeAddressInfoModal();
                  if ($(event.target).is('#contactInfoModal')) closeContactInfoModal();
                  if ($(event.target).is('#myModal')) closeModal();
-                 if ($(event.target).is('#statusConfirmationModal')) closeStatusConfirmModal();
              });
         });
+
     </script>
+
 </body>
 </html>
