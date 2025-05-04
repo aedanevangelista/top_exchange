@@ -420,7 +420,7 @@ require_once 'header.php';
     .banner_section .carousel-indicators li {
         box-sizing: content-box;
         flex: 0 1 auto;
-        width: 10px;  /* Consistent size */
+        width: 24px;  /* Consistent size */
         height: 10px; /* Consistent size */
         margin: 0 5px;
         text-indent: -999px;
