@@ -329,7 +329,20 @@ if ($main_list_result === false) {
     <link rel="stylesheet" href="/css/toast.css">
     <style>
         /* --- Minimal Styles Needed for Functionality --- */
-        .overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; padding: 20px; }
+        .overlay {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center; /* This was likely missing or incomplete in your code */
+        }        
+        
         .overlay-content { background-color: #fefefe; margin: auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .overlay-content h2 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; font-size: 1.5rem; }
         .close-btn { color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer; }
@@ -358,7 +371,18 @@ if ($main_list_result === false) {
         .status-not-available { color: #721c24; font-weight: bold; } /* From your original */
 
         /* Deliveries Modal Specific */
-        .deliveries-modal-content { max-width: 900px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
+        .deliveries-modal-content {
+            max-width: 900px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            margin: auto; /* Make sure this is present */
+            position: relative; /* Ensure proper positioning */
+            top: 0; /* Reset any top positioning */
+            left: 0; /* Reset any left positioning */
+        }        
+        
         .deliveries-table-container { overflow-y: auto; flex-grow: 1; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
         .deliveries-table { width: 100%; border-collapse: collapse; }
         .deliveries-table th, .deliveries-table td { padding: 8px 10px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
