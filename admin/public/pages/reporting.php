@@ -86,7 +86,8 @@ $pageTitle = "Reporting";
         .summary-table th { width: 30%; } /* Adjust summary table layout */
         .numeric { text-align: right; }
         .currency { text-align: right; }
-        .low-stock-highlight { color: orange; font-weight: bold; } /* Style for low stock numbers */
+        /* Use a class for low stock highlight instead of inline style */
+        .low-stock-highlight { color: orange; font-weight: bold; }
         .inventory-section { margin-bottom: 25px; }
         /* Add more specific styles as needed in reporting.css */
     </style>
@@ -190,10 +191,12 @@ $pageTitle = "Reporting";
                             const doc = parser.parseFromString(text, "text/html");
                             const errorElement = doc.querySelector('.report-error-message');
                             if (errorElement && errorElement.textContent.trim()) {
+                                // Throw the specific error message found in the HTML
                                 throw new Error(errorElement.textContent.trim());
                             }
-                         } catch (parseError) { /* Ignore */ }
-                         throw new Error(`HTTP error ${response.status}: ${text || response.statusText || 'Server error'}`); // Fallback
+                         } catch (parseError) { /* Ignore parsing errors, fallback below */ }
+                         // Fallback if parsing failed or no specific message found
+                         throw new Error(`HTTP error ${response.status}: Server error occurred. Check server logs for details.`);
                     });
                 }
                 return response.text(); // Expecting HTML content
@@ -203,13 +206,25 @@ $pageTitle = "Reporting";
             })
             .catch(error => {
                 console.error('Error fetching report:', error);
-                 displayArea.html(`<div class=\"report-error-message\">Error loading report: ${error.message}. Check console for details.</div>`);
-                 if (typeof showToast === 'function') { showToast(`Error loading report: ${error.message}`, 'error'); }
-                 else { alert(`Error loading report: ${error.message}`); }
+                 // Display the specific error message from the exception
+                 displayArea.html(`<div class=\"report-error-message\">Error loading report: ${escapeHtml(error.message)}.</div>`);
+                 if (typeof showToast === 'function') { showToast(`Error loading report: ${escapeHtml(error.message)}`, 'error'); }
+                 else { alert(`Error loading report: ${escapeHtml(error.message)}`); }
             })
             .finally(() => {
                  generateButton.prop('disabled', false).html('<i class=\"fas fa-play\"></i> Generate');
             });
+        }
+
+         // Helper function to prevent basic XSS (remains useful if displaying JS-generated errors)
+        function escapeHtml(unsafe) {
+            if (unsafe === null || unsafe === undefined) return '';
+            return String(unsafe)
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
         }
     </script>
 </body>

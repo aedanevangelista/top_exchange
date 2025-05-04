@@ -27,6 +27,7 @@ include_once __DIR__ . '/db_connection.php';
 // Default error response function
 function sendError($message, $httpCode = 500) {
     http_response_code($httpCode);
+    // Ensure the class name matches CSS in reporting.php
     echo "<div class='report-error-message'>" . htmlspecialchars($message) . "</div>";
     if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
         $GLOBALS['conn']->close();
@@ -75,7 +76,7 @@ try {
             break;
 
         case 'inventory_status':
-            // --- MODIFIED: This function now handles finished products AND raw materials ---
+            // --- This function now handles finished products AND raw materials ---
             generateInventoryStatus($conn);
             break;
 
@@ -98,7 +99,9 @@ try {
     }
     error_log("--- Finished report generation for type: {$reportType} ---");
 } catch (mysqli_sql_exception $e) {
+    // Log the detailed SQL error
     error_log("!!! CAUGHT SQL Exception in fetch_report.php (Report: {$reportType}): " . $e->getMessage() . " | SQL State: " . $e->getSqlState() . " | Error Code: " . $e->getCode());
+    // Send a generic error to the user
     sendError("An unexpected database error occurred while generating the report.", 500);
 } catch (JsonException $e) { // Catch JSON decoding errors specifically
     error_log("!!! CAUGHT JSON Exception in fetch_report.php (Report: {$reportType}): " . $e->getMessage());
@@ -245,39 +248,76 @@ function generateInventoryStatus($conn) {
         $stmtWalkin->close();
     }
 
-    // --- ADDED: Raw Materials Stock ('raw_materials') ---
+    // --- Raw Materials Stock ('raw_materials') ---
+    // Ensure table and column names match your database exactly
     $sqlRaw = "SELECT material_name, current_stock_grams FROM raw_materials WHERE current_stock_grams < ? AND status = 'active' ORDER BY material_name ASC"; // Added status check example
     $stmtRaw = $conn->prepare($sqlRaw);
-    if (!$stmtRaw) { error_log("!!! DB prepare error (Raw Materials Inventory): " . $conn->error); $rawMaterialQueryError = true; $errorOccurred = true; }
+    if (!$stmtRaw) {
+        // This is the most likely place for the exception if the error log isn't checked
+        error_log("!!! DB prepare error (Raw Materials Inventory): " . $conn->error);
+        $rawMaterialQueryError = true;
+        $errorOccurred = true;
+        // IMPORTANT: Throw the exception so the main catch block handles it
+        throw new mysqli_sql_exception("DB prepare error (Raw Materials Inventory): " . $conn->error, $conn->errno);
+    }
     else {
         $stmtRaw->bind_param("d", $rawMaterialThresholdGrams); // Use 'd' for double
-        if (!$stmtRaw->execute()) { error_log("!!! DB execute error (Raw Materials Inventory): " . $stmtRaw->error); $rawMaterialQueryError = true; $errorOccurred = true; }
+         if ($stmtRaw->errno) { // Check for bind_param errors
+             $err = $stmtRaw->error; $errno = $stmtRaw->errno; $stmtRaw->close(); throw new mysqli_sql_exception("DB bind_param error (Raw Materials): " . $err, $errno);
+         }
+        if (!$stmtRaw->execute()) {
+            error_log("!!! DB execute error (Raw Materials Inventory): " . $stmtRaw->error);
+            $rawMaterialQueryError = true;
+            $errorOccurred = true;
+            // IMPORTANT: Throw the exception
+             $err = $stmtRaw->error; $errno = $stmtRaw->errno; $stmtRaw->close(); throw new mysqli_sql_exception("DB execute error (Raw Materials): " . $err, $errno);
+        }
         else {
-            if (!method_exists($stmtRaw, 'get_result')) { error_log("!!! CRITICAL: get_result() failed for Raw Materials."); $rawMaterialQueryError = true; $errorOccurred = true; }
+            if (!method_exists($stmtRaw, 'get_result')) {
+                error_log("!!! CRITICAL: get_result() failed for Raw Materials.");
+                $rawMaterialQueryError = true;
+                $errorOccurred = true;
+                // IMPORTANT: Throw the exception
+                $stmtRaw->close(); throw new Exception("Server configuration error: get_result missing for Raw Materials.");
+            }
             else {
                 $resultRaw = $stmtRaw->get_result();
-                if ($stmtRaw->errno) { error_log("!!! DB get_result error (Raw Materials): " . $stmtRaw->error); $rawMaterialQueryError = true; $errorOccurred = true; }
-                else { while ($row = $resultRaw->fetch_assoc()) { $rawMaterialData[] = $row; } $resultRaw->close(); }
+                if ($stmtRaw->errno) {
+                    error_log("!!! DB get_result error (Raw Materials): " . $stmtRaw->error);
+                    $rawMaterialQueryError = true;
+                    $errorOccurred = true;
+                    // IMPORTANT: Throw the exception
+                    $err = $stmtRaw->error; $errno = $stmtRaw->errno; $resultRaw->close(); $stmtRaw->close(); throw new mysqli_sql_exception("DB get_result error (Raw Materials): " . $err, $errno);
+                }
+                else {
+                    while ($row = $resultRaw->fetch_assoc()) {
+                        $rawMaterialData[] = $row;
+                    }
+                    $resultRaw->close();
+                }
             }
         }
         $stmtRaw->close();
     }
-    // --- END ADDED ---
+    // --- END Raw Materials Section ---
 
 
     // --- HTML Output ---
+    // Ensure class names match reporting.php CSS
     echo "<h3 class='report-title'>Inventory Status Report</h3>";
 
     // Company Section
     echo "<div class='inventory-section company-inventory'><h4 class='report-subtitle'>Low Company Order Stock (Threshold: " . htmlspecialchars($lowStockThreshold) . " or less)</h4>";
     if ($companyQueryError) { echo "<div class='report-error-message'>Error retrieving Company Order stock data. Check logs.</div>"; }
     elseif (!empty($companyStockData)) {
-        echo "<table class='accounts-table report-table'><thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead><tbody>";
+        // Use consistent table class
+        echo "<table class='report-table'><thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead><tbody>";
         foreach ($companyStockData as $row) {
             $itemDesc = htmlspecialchars($row['item_description'] ?? 'N/A');
             $stockQty = htmlspecialchars($row['stock_quantity'] ?? 0);
-            $style = ($row['stock_quantity'] <= 0) ? 'color:red; font-weight:bold;' : (($row['stock_quantity'] <= $lowStockThreshold) ? 'color:orange;' : '');
-            echo "<tr style='{$style}'><td>{$itemDesc}</td><td class='numeric'>{$stockQty}</td></tr>";
+            // Use CSS class for styling low stock
+            $lowStockClass = ($row['stock_quantity'] <= 0) ? 'low-stock-highlight' : (($row['stock_quantity'] <= $lowStockThreshold) ? 'low-stock-highlight' : '');
+            echo "<tr><td>{$itemDesc}</td><td class='numeric {$lowStockClass}'>{$stockQty}</td></tr>";
         } echo "</tbody></table>";
     } else { echo "<p class='no-data-message'>No low stock items found for Company Orders.</p>"; }
     echo "</div>";
@@ -286,35 +326,37 @@ function generateInventoryStatus($conn) {
     echo "<div class='inventory-section walkin-inventory'><h4 class='report-subtitle'>Low Walk-in Stock (Threshold: " . htmlspecialchars($lowStockThreshold) . " or less)</h4>";
     if ($walkinQueryError) { echo "<div class='report-error-message'>Error retrieving Walk-in stock data. Check logs (verify table/columns exist).</div>"; }
     elseif (!empty($walkinStockData)) {
-        echo "<table class='accounts-table report-table'><thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead><tbody>";
+        echo "<table class='report-table'><thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead><tbody>";
         foreach ($walkinStockData as $row) {
             $itemDesc = htmlspecialchars($row['item_description'] ?? 'N/A');
             $stockQty = htmlspecialchars($row['stock_quantity'] ?? 0);
-            $style = ($row['stock_quantity'] <= 0) ? 'color:red; font-weight:bold;' : (($row['stock_quantity'] <= $lowStockThreshold) ? 'color:orange;' : '');
-            echo "<tr style='{$style}'><td>{$itemDesc}</td><td class='numeric'>{$stockQty}</td></tr>";
+            $lowStockClass = ($row['stock_quantity'] <= 0) ? 'low-stock-highlight' : (($row['stock_quantity'] <= $lowStockThreshold) ? 'low-stock-highlight' : '');
+            echo "<tr><td>{$itemDesc}</td><td class='numeric {$lowStockClass}'>{$stockQty}</td></tr>";
         } echo "</tbody></table>";
     } else { if (!$walkinQueryError) { echo "<p class='no-data-message'>No low stock items found for Walk-in.</p>"; } }
     echo "</div>";
 
-    // --- ADDED: Raw Materials Section ---
+    // --- Raw Materials Section Output ---
     echo "<div class='inventory-section raw-materials-inventory'><h4 class='report-subtitle'>Low Raw Materials (Threshold: &lt; 5 kg)</h4>";
+    // Check the specific error flag for raw materials
     if ($rawMaterialQueryError) { echo "<div class='report-error-message'>Error retrieving Raw Materials stock data. Check logs.</div>"; }
     elseif (!empty($rawMaterialData)) {
-        echo "<table class='accounts-table report-table'><thead><tr><th>Material Name</th><th>Current Stock</th></tr></thead><tbody>";
+        echo "<table class='report-table'><thead><tr><th>Material Name</th><th>Current Stock</th></tr></thead><tbody>";
         foreach ($rawMaterialData as $row) {
             $materialName = htmlspecialchars($row['material_name'] ?? 'N/A');
             $stockFormatted = formatWeight($row['current_stock_grams'] ?? null); // Use helper function
-            // Apply styling based on grams value
-            $gramsValue = $row['current_stock_grams'] ?? -1; // Default to -1 if null
-            $style = ($gramsValue <= 0) ? 'color:red; font-weight:bold;' : (($gramsValue < $rawMaterialThresholdGrams) ? 'color:orange;' : ''); // Orange/Red for low
-            echo "<tr style='{$style}'><td>{$materialName}</td><td class='numeric'>{$stockFormatted}</td></tr>";
+            $gramsValue = $row['current_stock_grams'] ?? -1;
+            // Use CSS class for styling
+            $lowStockClass = ($gramsValue <= 0) ? 'low-stock-highlight' : (($gramsValue < $rawMaterialThresholdGrams) ? 'low-stock-highlight' : '');
+            echo "<tr><td>{$materialName}</td><td class='numeric {$lowStockClass}'>{$stockFormatted}</td></tr>";
         } echo "</tbody></table>";
     } else { echo "<p class='no-data-message'>No raw materials found below the 5 kg threshold.</p>"; }
     echo "</div>";
-    // --- END ADDED ---
+    // --- END Raw Materials Output ---
 
     error_log("--- Finished generateInventoryStatus ---");
 }
+
 
 /**
  * Generates an Order Listing Report.
@@ -393,7 +435,8 @@ function generateSalesByClient($conn, $startDate, $endDate) {
 
     echo "<h3 class='report-title'>Sales by Client Report" . $dateRangeStr . "</h3>";
     if ($result && $result->num_rows > 0) {
-        echo "<table class='accounts-table report-table'><thead><tr><th>Client Username</th><th>Total Orders</th><th>Total Revenue (PHP)</th></tr></thead><tbody>";
+        // Use consistent table class
+        echo "<table class='report-table'><thead><tr><th>Client Username</th><th>Total Orders</th><th>Total Revenue (PHP)</th></tr></thead><tbody>";
         while ($row = $result->fetch_assoc()) {
             $client = htmlspecialchars($row['username'] ?? 'N/A');
             $orders = number_format($row['order_count'] ?? 0);
@@ -517,7 +560,8 @@ function generateSalesByProduct($conn, $startDate, $endDate) {
     echo "<h3 class='report-title'>Sales by Product Report" . $dateRangeStr . "</h3>";
 
     if (!empty($productSalesData)) {
-        echo "<table class='accounts-table report-table'>"; // Use your table class
+         // Use consistent table class
+        echo "<table class='report-table'>";
         echo "<thead><tr><th>Category</th><th>Product Description</th><th>Packaging</th><th>Total Qty Sold</th><th>Total Revenue (PHP)</th></tr></thead>";
         echo "<tbody>";
         foreach ($productSalesData as $productId => $data) {
