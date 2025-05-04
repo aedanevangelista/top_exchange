@@ -174,7 +174,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
         /* Special Instructions Modal */
         .instructions-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.7); }
-        .instructions-modal-content { background-color: #ffffff; margin: 10% auto; padding: 0; border-radius: 8px; width: 60%; max-width: 600px; position: relative; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); animation: modalFadeIn 0.3s ease-in-out; overflow: hidden; max-height: 20vh; overflow-y: auto; margin: 2vh auto; }
+        .instructions-modal-content { background-color: #ffffff; margin: 10% auto; padding: 0; border-radius: 8px; width: 60%; max-width: 600px; position: relative; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); animation: modalFadeIn 0.3s ease-in-out; overflow: hidden; max-height: 32vh; overflow-y: auto; margin: 2vh auto; }
         @keyframes modalFadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         .instructions-header { background-color: #2980b9; color: white; padding: 15px 20px; position: relative; }
         .instructions-header h3 { margin: 0; font-size: 16px; font-weight: 600; }
