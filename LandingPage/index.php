@@ -12,12 +12,12 @@ if (!isset($_SESSION['cart'])) {
 }
 
 // Include the header
-require_once 'header.php';
+require_once 'header.php'; // ** Ensure Font Awesome 5 Free (Solid) is linked here! **
 ?>
 
 <!-- Added CSS Styles -->
 <style>
-    /* --- Product Card Uniform Height & Hierarchy (UPDATED) --- */
+    /* --- Product Card Uniform Height & Hierarchy --- */
     .cream_section .row {
         display: flex;
         flex-wrap: wrap;
@@ -44,34 +44,28 @@ require_once 'header.php';
     .product-card:hover {
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
-
-    /* UPDATED: Image container styling */
     .product-img {
         position: relative; /* Crucial for badge positioning */
-        height: 250px; /* ** NEW: Set a fixed height for the image area ** */
+        height: 250px; /* Set a fixed height for the image area */
         display: flex; /* Use flex to center the image inside */
         align-items: center; /* Vertical centering */
         justify-content: center; /* Horizontal centering */
-        overflow: hidden; /* Hide parts of image if needed (though contain shouldn't need it) */
+        overflow: hidden;
         padding: 10px; /* Add some padding around the image */
         background-color: #f8f9fa; /* Light background for image area */
     }
-
-    /* UPDATED: Image styling */
     .product-img img {
         max-width: 100%;
         max-height: 100%; /* Ensure image doesn't exceed container height */
         height: auto; /* Maintain aspect ratio */
         width: auto; /* Maintain aspect ratio */
-        object-fit: contain; /* ** NEW: Scale image down to fit, preserving aspect ratio ** */
+        object-fit: contain; /* Scale image down to fit, preserving aspect ratio */
         display: block;
     }
-
-    /* UPDATED: Badge styling */
     .product-badge {
         position: absolute; /* Position relative to .product-img */
-        top: 10px; /* ** NEW: Consistent top position ** */
-        left: 10px; /* ** NEW: Consistent left position ** */
+        top: 10px; /* Consistent top position */
+        left: 10px; /* Consistent left position */
         background-color: rgba(0, 123, 255, 0.8); /* Example blue badge color */
         color: white;
         padding: 3px 8px;
@@ -81,7 +75,6 @@ require_once 'header.php';
         z-index: 1; /* Ensure badge is above image */
         text-transform: uppercase;
     }
-    /* Specific badge colors (Optional - add classes to HTML) */
     .product-badge.bestseller {
          background-color: rgba(220, 53, 69, 0.8); /* Red for bestseller */
     }
@@ -92,10 +85,8 @@ require_once 'header.php';
     .product-badge.new {
          background-color: rgba(40, 167, 69, 0.8); /* Green for new */
     }
-
-
     .product-body {
-        padding: 20px; /* ** ADJUSTED: Slightly increased padding ** */
+        padding: 20px; /* Slightly increased padding */
         display: flex;
         flex-direction: column;
         flex-grow: 1; /* Takes remaining vertical space */
@@ -118,7 +109,7 @@ require_once 'header.php';
         color: #666;
         line-height: 1.5; /* Adjusted line height */
         margin-bottom: 15px; /* Adjusted spacing */
-        flex-grow: 1; /* ** Crucial: Pushes rating/button down ** */
+        flex-grow: 1; /* Crucial: Pushes rating/button down */
     }
     .product-rating {
         margin-bottom: 15px;
@@ -151,7 +142,7 @@ require_once 'header.php';
         text-decoration: none;
     }
 
-    /* --- Testimonial Card Uniform Height & Styling --- */
+    /* --- Testimonial Card Uniform Height & Styling (UPDATED for Font Awesome) --- */
     .testimonial-section .row {
         display: flex;
         flex-wrap: wrap;
@@ -176,16 +167,18 @@ require_once 'header.php';
         position: relative;
         border-left: 5px solid #007bff; /* Adjust color */
     }
+    /* UPDATED: Ensure Font Awesome 5 Free Solid is loaded */
     .testimonial-card::before {
-        content: '\\f10d'; /* FontAwesome quote-left */
-        font-family: 'Font Awesome 5 Free'; /* Ensure FontAwesome 5 is loaded */
-        font-weight: 900;
+        content: '\\f10d'; /* FontAwesome quote-left icon */
+        font-family: 'Font Awesome 5 Free'; /* ** Crucial: Make sure FA5 Free is loaded ** */
+        font-weight: 900; /* ** Crucial: Use the solid style weight ** */
         font-size: 2rem;
         color: #007bff; /* Adjust color */
-        opacity: 0.2;
+        opacity: 0.15; /* Slightly adjusted opacity */
         position: absolute;
         top: 15px;
-        left: 15px;
+        left: 20px; /* Adjusted position slightly */
+        z-index: 0;
     }
     .testimonial-text {
         font-style: italic;
@@ -193,17 +186,23 @@ require_once 'header.php';
         margin-bottom: 15px;
         flex-grow: 1;
         line-height: 1.6;
-        padding-top: 20px; /* Space for quote icon */
+        padding-top: 25px; /* Adjusted padding to ensure space from icon */
+        position: relative; /* Ensure text is above the pseudo-element if overlap occurs */
+        z-index: 1;
     }
     .testimonial-author {
         font-weight: bold;
         color: #333;
         margin-top: auto; /* Push author info down */
         margin-bottom: 2px;
+        position: relative;
+        z-index: 1;
     }
     .testimonial-position {
         font-size: 0.9em;
         color: #777;
+        position: relative;
+        z-index: 1;
     }
 
     /* --- Back to Top Button --- */
@@ -282,33 +281,54 @@ require_once 'header.php';
         font-size: 0.95rem;
     }
 
-    /* --- Newsletter Section Styling (Example Refinement) --- */
+    /* --- Newsletter Section Styling (UPDATED) --- */
     .newsletter-section {
         background-color: #343a40; /* Dark background */
         color: #fff;
-        padding: 60px 0;
+        padding: 70px 0; /* Increased padding */
+    }
+    /* Center content vertically in the row */
+    .newsletter-section .align-items-center {
+        align-items: center !important;
     }
     .newsletter-title {
-        font-size: 2rem;
+        font-size: 2.2rem; /* Slightly larger */
         font-weight: 600;
         margin-bottom: 10px;
+        line-height: 1.3;
     }
     .newsletter-text {
         color: #ccc;
         margin-bottom: 20px; /* Space below text on mobile */
+        font-size: 1rem;
+    }
+    .newsletter-form .input-group {
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Add subtle shadow */
+        border-radius: 30px; /* Apply rounding to the group */
+        overflow: hidden; /* Hide overflow for rounding */
     }
     .newsletter-form .form-control {
-        height: 50px;
-        border-radius: 25px 0 0 25px; /* Rounded left */
+        height: 55px; /* Slightly taller */
+        border-radius: 30px 0 0 30px !important; /* Match group rounding (important needed for Bootstrap override) */
+        border: none;
+        font-size: 1rem;
+        padding-left: 20px;
+    }
+    .newsletter-form .form-control:focus {
+        box-shadow: none; /* Remove default focus glow */
         border: none;
     }
     .newsletter-form .btn {
-        height: 50px;
-        border-radius: 0 25px 25px 0; /* Rounded right */
+        height: 55px; /* Match input height */
+        border-radius: 0 30px 30px 0 !important; /* Match group rounding */
         background-color: #007bff; /* Adjust color */
         color: white;
         border: none;
-        padding: 0 25px;
+        padding: 0 30px; /* More padding */
+        font-weight: 500;
+        text-transform: uppercase; /* Uppercase text */
+        letter-spacing: 0.5px;
+        transition: background-color 0.3s ease;
     }
     .newsletter-form .btn:hover {
         background-color: #0056b3; /* Adjust color */
@@ -390,7 +410,7 @@ require_once 'header.php';
 <!-- banner section end -->
 
 <!-- Features Section -->
-<div class="about_section layout_padding" style="background-color: #f8f9fa;"> <!-- Removed inline padding, rely on layout_padding class -->
+<div class="about_section layout_padding" style="background-color: #f8f9fa;">
     <div class="container">
         <div class="row mb-5">
             <div class="col-md-12 text-center">
@@ -398,7 +418,7 @@ require_once 'header.php';
                 <p class="section-subtitle" data-aos="fade-up" data-aos-delay="200">Quality, tradition, and excellence since 1998</p>
             </div>
         </div>
-        <div class="row"> <!-- This row doesn't need flex typically, columns handle layout -->
+        <div class="row">
             <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
                 <div class="feature-box">
                     <div class="feature-icon">
@@ -431,7 +451,7 @@ require_once 'header.php';
 </div>
 
 <!-- About Section -->
-<div class="about_section layout_padding" style="background-color: #fff;"> <!-- Removed inline padding -->
+<div class="about_section layout_padding" style="background-color: #fff;">
     <div class="container">
         <div class="row">
             <div class="col-md-6" data-aos="fade-right">
@@ -448,8 +468,7 @@ require_once 'header.php';
 </div>
 
 <!-- Products Section -->
-<!-- Applied flex styles via CSS classes -->
-<div class="cream_section layout_padding" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);"> <!-- Removed inline padding -->
+<div class="cream_section layout_padding" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
     <div class="container">
         <div class="row mb-5">
             <div class="col-md-12 text-center">
@@ -457,24 +476,19 @@ require_once 'header.php';
                 <p class="section-subtitle" data-aos="fade-up" data-aos-delay="200">Customer favorites that never disappoint</p>
             </div>
         </div>
-        <div class="row"> <!-- Flex applied via .cream_section .row CSS -->
-            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200"> <!-- Flex applied via .cream_section .col-md-4 CSS -->
-                <div class="product-card"> <!-- Flex applied via .product-card CSS -->
+        <div class="row">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="product-card">
                     <div class="product-img">
                         <img src="/LandingPage/images/Sioma1.png" alt="Premium Pork Siomai">
-                        <!-- Add class="bestseller" for specific styling -->
                         <span class="product-badge bestseller">BESTSELLER</span>
                     </div>
-                    <div class="product-body"> <!-- Flex applied via .product-body CSS -->
+                    <div class="product-body">
                         <div class="product-price">₱280</div>
                         <h5 class="product-title">Premium Pork Siomai</h5>
                         <p class="product-description">1kg pack (approx. 50 pieces) of our signature pork siomai with special seasonings.</p>
                         <div class="product-rating">
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
                             <span class="ml-2">(128 reviews)</span>
                         </div>
                         <a href="<?php echo isset($_SESSION['username']) ? '/LandingPage/ordering.php' : '/LandingPage/login.php'; ?>" class="product-btn">Add to Cart</a>
@@ -485,7 +499,6 @@ require_once 'header.php';
                  <div class="product-card">
                     <div class="product-img">
                         <img src="/LandingPage/images/dumpling.png" alt="Special Sharksfin Dumpling">
-                        <!-- Add class="popular" for specific styling -->
                         <span class="product-badge popular">POPULAR</span>
                     </div>
                     <div class="product-body">
@@ -493,11 +506,7 @@ require_once 'header.php';
                         <h5 class="product-title">Special Sharksfin Dumpling</h5>
                         <p class="product-description">1kg pack (approx. 45 pieces) of our premium sharksfin dumplings.</p>
                         <div class="product-rating">
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star-half-alt"></i>
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
                             <span class="ml-2">(96 reviews)</span>
                         </div>
                         <a href="<?php echo isset($_SESSION['username']) ? '/LandingPage/ordering.php' : '/LandingPage/login.php'; ?>" class="product-btn">Add to Cart</a>
@@ -508,18 +517,13 @@ require_once 'header.php';
                  <div class="product-card">
                     <div class="product-img">
                         <img src="/LandingPage/images/wanton.png" alt="Wanton Regular">
-                        <!-- No badge shown in example image, but could add one -->
                     </div>
                     <div class="product-body">
                         <div class="product-price">₱315</div>
                         <h5 class="product-title">Wanton Regular</h5>
                         <p class="product-description">1kg pack (approx. 60 pieces) of our classic wanton dumplings.</p>
                         <div class="product-rating">
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="far fa-star"></i>
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="far fa-star"></i>
                             <span class="ml-2">(87 reviews)</span>
                         </div>
                         <a href="<?php echo isset($_SESSION['username']) ? '/LandingPage/ordering.php' : '/LandingPage/login.php'; ?>" class="product-btn">Add to Cart</a>
@@ -527,7 +531,7 @@ require_once 'header.php';
                 </div>
             </div>
         </div>
-        <div class="row mt-4"> <!-- Flex applied via .cream_section .row CSS -->
+        <div class="row mt-4">
             <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
                  <div class="product-card">
                     <div class="product-img">
@@ -538,11 +542,7 @@ require_once 'header.php';
                         <h5 class="product-title">Dried Egg Noodles</h5>
                         <p class="product-description">500g pack (serves 4-5 people) of our premium dried egg noodles.</p>
                         <div class="product-rating">
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star-half-alt"></i>
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
                             <span class="ml-2">(112 reviews)</span>
                         </div>
                         <a href="<?php echo isset($_SESSION['username']) ? '/LandingPage/ordering.php' : '/LandingPage/login.php'; ?>" class="product-btn">Add to Cart</a>
@@ -553,7 +553,6 @@ require_once 'header.php';
                  <div class="product-card">
                     <div class="product-img">
                         <img src="/LandingPage/images/pancitcanton.png" alt="Pancit Canton">
-                         <!-- Add class="new" for specific styling -->
                         <span class="product-badge new">NEW</span>
                     </div>
                     <div class="product-body">
@@ -561,11 +560,7 @@ require_once 'header.php';
                         <h5 class="product-title">Pancit Canton</h5>
                         <p class="product-description">1kg pack (serves 8-10 people) of our premium pancit canton noodles.</p>
                         <div class="product-rating">
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
                             <span class="ml-2">(64 reviews)</span>
                         </div>
                         <a href="<?php echo isset($_SESSION['username']) ? '/LandingPage/ordering.php' : '/LandingPage/login.php'; ?>" class="product-btn">Add to Cart</a>
@@ -582,11 +577,7 @@ require_once 'header.php';
                         <h5 class="product-title">Asado Siopao</h5>
                         <p class="product-description">10 pieces pack (regular size) of our classic asado-filled siopao.</p>
                         <div class="product-rating">
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="fas fa-star"></i>
-                            <i class="far fa-star"></i>
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="far fa-star"></i>
                             <span class="ml-2">(143 reviews)</span>
                         </div>
                         <a href="<?php echo isset($_SESSION['username']) ? '/LandingPage/ordering.php' : '/LandingPage/login.php'; ?>" class="product-btn">Add to Cart</a>
@@ -599,8 +590,7 @@ require_once 'header.php';
 </div>
 
 <!-- Testimonials Section -->
-<!-- Applied flex styles via CSS classes -->
-<div class="testimonial-section layout_padding" style="background-color: #f8f9fa;"> <!-- Removed inline padding -->
+<div class="testimonial-section layout_padding" style="background-color: #f8f9fa;">
     <div class="container">
         <div class="row mb-5">
             <div class="col-md-12 text-center">
@@ -608,9 +598,9 @@ require_once 'header.php';
                 <p class="section-subtitle" data-aos="fade-up" data-aos-delay="200">Trusted by restaurants and food businesses nationwide</p>
             </div>
         </div>
-        <div class="row"> <!-- Flex applied via .testimonial-section .row CSS -->
-            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200"> <!-- Flex applied via .testimonial-section .col-md-4 CSS -->
-                <div class="testimonial-card"> <!-- Flex applied via .testimonial-card CSS -->
+        <div class="row">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="testimonial-card">
                     <p class="testimonial-text">"Top Food Exchange Corp. has been our reliable supplier for over 5 years. Their siomai quality is consistently excellent, and our customers love it!"</p>
                     <div class="testimonial-author">Maria Santos</div>
                     <div class="testimonial-position">Owner, Mila's Carinderia</div>
@@ -637,6 +627,7 @@ require_once 'header.php';
 <!-- Newsletter Section -->
 <div class="newsletter-section"> <!-- Styling applied via CSS -->
     <div class="container">
+        <!-- Added align-items-center here -->
         <div class="row align-items-center">
             <div class="col-md-6" data-aos="fade-right">
                 <h2 class="newsletter-title">Join Our Newsletter</h2>
