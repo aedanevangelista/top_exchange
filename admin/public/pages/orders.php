@@ -924,7 +924,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .progress-text { position: absolute; width: 100%; text-align: center; line-height: 20px; color: #000; font-size: 12px; font-weight: bold; }
         .order-details-table { width: 100%; border-collapse: collapse; }
         .order-details-table th, .order-details-table td { padding: 8px; text-align: left; border: 1px solid #ddd; }
-        .order-details-table thead th { background-color: #f8f9fa; }
+        .order-details-table thead th { background-color:rgb(29, 29, 29); }
         .overlay { display: none; position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; outline: 0; background-color: rgba(0, 0, 0, 0.5); }
         .overlay-content { position: relative; margin: 10% auto; padding: 20px; background: #fff; border-radius: 8px; width: 80%; max-width: 800px; max-height: 80vh; overflow-y: auto; }
         .modal { display: none; position: fixed; z-index: 1060; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; outline: 0; background-color: rgba(0, 0, 0, 0.5); }
