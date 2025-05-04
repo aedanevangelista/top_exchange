@@ -1,6 +1,6 @@
 <?php
-// Current Date: 2025-05-04 11:42:49 UTC
-// Author: aedanevangelista
+// Based on commit: e801e509bf62bd6fdb304d4fb4a20d6b43b2ecb6
+// Modifications: Removed driver logic, implemented 100% progress -> For Delivery status change, implemented quantity limit 100.
 
 session_start();
 include "../../backend/db_connection.php";
@@ -11,7 +11,7 @@ checkRole('Orders'); // Ensure the user has access to the Orders page
 $sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'id';
 $sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'DESC';
 
-// --- Allowed columns (Removed driver-related fields if they were sortable) ---
+// --- Allowed columns (Removed driver-related fields) ---
 $allowed_columns = ['id', 'po_number', 'username', 'order_date', 'delivery_date', 'progress', 'total_amount', 'status']; // Added 'status'
 if (!in_array($sort_column, $allowed_columns)) {
     $sort_column = 'id'; // Default sort column if invalid input
@@ -39,7 +39,9 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Query to show Pending, Rejected, and Active orders *under* 100% progress
+// REMOVED: Fetch all drivers PHP block
+
+// Query to show Pending, Rejected, and Active orders *under* 100% progress (REMOVED driver joins)
 $orders = [];
 $sql = "SELECT o.id, o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress,
         o.company, o.special_instructions
@@ -96,8 +98,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        /* --- Keep all existing styles --- */
-        /* Styles exactly as provided previously */
+        /* --- Styles exactly as provided in commit e801e50... --- */
         /* Main styles for the Order Summary table */
         .order-summary {
             margin-top: 20px;
@@ -524,6 +525,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             color: #0f5132;
         }
 
+        /* REMOVED driver-badge.driver-not-allowed style */
+
         .btn-info {
             font-size: 10px;
             opacity: 0.8;
@@ -898,6 +901,82 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
              max-height: 85vh;
              overflow-y: auto;
         }
+
+        /* --- Keep remaining styles from commit e801e50... --- */
+        .main-content { padding: 20px; margin-left: 250px; /* Adjust if sidebar width changes */ transition: margin-left 0.3s; }
+        .orders-table-container { width: 100%; overflow-x: auto; }
+        .orders-table { width: 100%; min-width: 1200px; /* Ensure minimum width */ border-collapse: collapse; }
+        .orders-table th, .orders-table td { padding: 10px 12px; border: 1px solid #dee2e6; text-align: left; font-size: 13px; vertical-align: middle; white-space: nowrap; }
+        .orders-table thead th { background-color: #f8f9fa; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+        .orders-table tbody tr:hover { background-color: #f1f3f5; }
+        .orders-table th.sortable a { color: inherit; text-decoration: none; display: flex; justify-content: space-between; align-items: center; }
+        .orders-table th.sortable a i { margin-left: 5px; color: #adb5bd; }
+        .orders-table th.sortable a:hover i { color: #343a40; }
+        .action-buttons { display: flex; gap: 5px; justify-content: center; }
+        /* REMOVED driver-btn from shared styles */
+        .action-buttons button, .view-orders-btn { padding: 5px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 3px; }
+        .view-orders-btn { background-color: #0dcaf0; color: white; }
+        .view-orders-btn:hover { background-color: #0aa3bf; }
+        .status-btn { background-color: #ffc107; color: black; }
+        .status-btn:hover { background-color: #e0a800; }
+        /* REMOVED driver-btn specific styles */
+        /* REMOVED driver-badge styles */
+        .progress-bar-container { width: 100%; background-color: #e9ecef; border-radius: 0.25rem; overflow: hidden; position: relative; height: 20px; }
+        .progress-bar { background-color: #0d6efd; height: 100%; line-height: 20px; color: white; text-align: center; white-space: nowrap; transition: width .6s ease; }
+        .progress-text { position: absolute; width: 100%; text-align: center; line-height: 20px; color: #000; font-size: 12px; font-weight: bold; }
+        .order-details-table { width: 100%; border-collapse: collapse; }
+        .order-details-table th, .order-details-table td { padding: 8px; text-align: left; border: 1px solid #ddd; }
+        .order-details-table thead th { background-color: #f8f9fa; }
+        .overlay { display: none; position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; outline: 0; background-color: rgba(0, 0, 0, 0.5); }
+        .overlay-content { position: relative; margin: 10% auto; padding: 20px; background: #fff; border-radius: 8px; width: 80%; max-width: 800px; max-height: 80vh; overflow-y: auto; }
+        .modal { display: none; position: fixed; z-index: 1060; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; outline: 0; background-color: rgba(0, 0, 0, 0.5); }
+        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: relative; display: flex; flex-direction: column; }
+        .modal-footer { padding-top: 15px; text-align: right; border-top: 1px solid #e5e5e5; margin-top: 15px; }
+        .modal-cancel-btn { background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .modal-status-btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; margin: 5px; flex-grow: 1; text-align: center; }
+        .modal-status-btn.delivery { background-color: #0dcaf0; color: white; }
+        .modal-status-btn.pending { background-color: #ffc107; color: black; }
+        .modal-status-btn.rejected { background-color: #dc3545; color: white; }
+        .modal-status-btn.active { background-color: #198754; color: white; }
+        .modal-status-btn:disabled { background-color: #e9ecef; color: #6c757d; cursor: not-allowed; }
+        .status-buttons { display: flex; justify-content: space-around; margin-top: 15px; }
+        /* REMOVED driver-modal-content styles */
+        /* REMOVED driver-selection styles */
+        /* REMOVED driver-modal-buttons styles */
+        .no-orders td { text-align: center; padding: 20px; color: #6c757d; font-style: italic; }
+        .item-progress-bar-container { width: 100%; background-color: #e9ecef; border-radius: 4px; overflow: hidden; height: 16px; margin-top: 5px; position: relative; }
+        .item-progress-bar { background-color: #198754; height: 100%; transition: width .3s ease; }
+        .item-progress-text { position: absolute; width: 100%; text-align: center; line-height: 16px; color: #000; font-size: 10px; font-weight: bold; }
+        .item-contribution-text { font-size: 9px; color: #6c757d; text-align: center; margin-top: 2px; }
+        .status-cell { vertical-align: middle; }
+        .completed-item { background-color: #f0fff0 !important; }
+        .completed { background-color: #e0ffe0 !important; }
+        .expand-units-btn { background: none; border: none; cursor: pointer; color: #0d6efd; padding: 0 5px; }
+        .unit-row td { font-size: 0.9em; padding: 4px 8px 4px 30px; background-color: #fdfdfd; }
+        .unit-action-row td { text-align: right; padding: 10px; background-color: #f8f9fa; }
+        .unit-action-row button { font-size: 0.8em; padding: 3px 6px; margin-left: 5px; }
+        .units-divider td { border: none; padding: 2px 0; background-color: #e9ecef; height: 2px; }
+        .overlay-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #dee2e6; padding-bottom: 10px; }
+        .overlay-title { margin: 0; font-size: 1.5rem; }
+        .cart-btn { background-color: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+        .cart-btn i { margin-right: 5px; }
+        .cart-table-container { max-height: 400px; overflow-y: auto; margin-bottom: 15px; }
+        .cart-table { width: 100%; border-collapse: collapse; }
+        .cart-table th, .cart-table td { padding: 8px; text-align: left; border: 1px solid #ddd; }
+        .cart-table th { background-color: #f8f9fa; }
+        .form-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .cancel-btn, .back-btn { background-color: #6c757d; color: white; }
+        .save-btn, .confirm-btn { background-color: #4a90e2; color: white; }
+        .cancel-btn, .back-btn, .save-btn, .confirm-btn { border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 5px; }
+        .cancel-btn:hover, .back-btn:hover { background-color: #5a6268; }
+        .save-btn:hover, .confirm-btn:hover { background-color: #357abf; }
+        .order-form .left-section { width: 100%; }
+        .order-form label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        .order-form input[type="text"], .order-form select, .order-form textarea { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        .order-form input[readonly] { background-color: #e9ecef; cursor: not-allowed; }
+        .centered-button { text-align: center; margin-bottom: 15px; }
+        .open-inventory-btn { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .open-inventory-btn:hover { background-color: #218838; }
     </style>
 </head>
 <body>
@@ -994,7 +1073,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <!-- Adjust colspan to account for removed column -->
-                        <tr><td colspan="10" class="no-orders">No orders found.</td></tr>
+                        <tr><td colspan="10" class="no-orders">No orders found matching criteria.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -1076,6 +1155,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
+    <!-- REMOVED Driver Assignment Modal HTML -->
+
     <!-- Add New Order Overlay (Keep as is) -->
     <div id="addOrderOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
@@ -1114,7 +1195,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
     <!-- Confirmation modals (Keep as is, except driver confirmation) -->
     <div id="addConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Add Order</div><div class="confirmation-message">Add this new order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeAddConfirmation()">No</button><button class="confirm-yes" onclick="submitAddOrder()">Yes</button></div></div></div>
-    <!-- REMOVED Driver Confirmation Modal -->
+    <!-- REMOVED Driver Confirmation Modal HTML -->
     <div id="saveProgressConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Save Progress</div><div class="confirmation-message">Save the current progress for this order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeSaveProgressConfirmation()">No</button><button class="confirm-yes" onclick="saveProgressChanges()">Yes</button></div></div></div>
     <div id="statusConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Status Change</div><div class="confirmation-message" id="statusConfirmationMessage">Are you sure?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeStatusConfirmation()">No</button><button class="confirm-yes" onclick="executeStatusChange()">Yes</button></div></div></div>
     <div id="downloadConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Download</div><div class="confirmation-message">Download the PO PDF?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeDownloadConfirmation()">No</button><button class="confirm-yes" onclick="downloadPODirectly()">Yes</button></div></div></div>
@@ -1140,7 +1221,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     </div>
 
     <script>
-        // --- Keep all existing JavaScript EXCEPT the driver-related functions ---
         // --- Global Variables (Removed currentDriverId) ---\
         let currentPoNumber = '';
         let currentOrderOriginalStatus = '';
@@ -1223,6 +1303,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             let confirmationMsg = `Are you sure you want to change the status to ${selectedStatus}?`;
             if (selectedStatus === 'Active') { confirmationMsg += ' This will deduct required stock from inventory.'; }
             else if (currentOrderOriginalStatus === 'Active' && (selectedStatus === 'Pending' || selectedStatus === 'Rejected')) { confirmationMsg += ' This will attempt to return deducted stock to inventory.'; }
+            // REMOVED 'For Delivery' check here, handled by saveProgressChanges
             $('#statusConfirmationMessage').text(confirmationMsg);
             $('#statusConfirmationModal').css('display', 'block');
             $('#statusModal, #pendingStatusModal, #rejectedStatusModal').css('display', 'none');
@@ -1234,21 +1315,38 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
              else if (currentOrderOriginalStatus === 'Active') $('#statusModal').css('display', 'flex');
              selectedStatus = '';
         }
+        // Modified to remove 'For Delivery' check here
         function executeStatusChange() {
             $('#statusConfirmationModal').css('display', 'none');
             let deductMaterials = (selectedStatus === 'Active');
             let returnMaterials = (currentOrderOriginalStatus === 'Active' && (selectedStatus === 'Pending' || selectedStatus === 'Rejected'));
+            // Directly call updateOrderStatus for Pending/Rejected/Active changes
             updateOrderStatus(selectedStatus, deductMaterials, returnMaterials);
         }
+        // --- CORRECTED updateOrderStatus (Sends progress=100 for 'For Delivery') ---
         function updateOrderStatus(status, deductMaterials, returnMaterials) {
             const formData = new FormData();
             formData.append('po_number', currentPoNumber);
             formData.append('status', status);
             formData.append('deduct_materials', deductMaterials ? '1' : '0');
             formData.append('return_materials', returnMaterials ? '1' : '0');
-            console.log("Sending status update:", { po_number: currentPoNumber, status: status, deduct: deductMaterials, return: returnMaterials });
+
+            // If updating TO 'For Delivery', explicitly send progress=100
+            // This relies on the backend handling this parameter
+            if (status === 'For Delivery') {
+                 formData.append('progress', '100');
+            }
+
+            console.log("Sending status update:", Object.fromEntries(formData)); // Log form data
+
             fetch('/backend/update_order_status.php', { method: 'POST', body: formData })
-            .then(response => response.text().then(text => { try { const jsonData = JSON.parse(text); if (!response.ok) throw new Error(jsonData.message || jsonData.error || `Server error: ${response.status}`); return jsonData; } catch (e) { console.error('Invalid JSON:', text); throw new Error('Invalid server response.'); } }))
+            .then(response => response.text().then(text => { // Get text first
+                 try {
+                     const jsonData = JSON.parse(text);
+                     if (!response.ok) throw new Error(jsonData.message || jsonData.error || `Server error: ${response.status}`);
+                     return jsonData;
+                 } catch (e) { console.error('Invalid JSON:', text); throw new Error('Invalid server response.'); }
+            }))
             .then(data => {
                 console.log("Status update response:", data);
                 if (data.success) {
@@ -1256,12 +1354,18 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     if (deductMaterials) message += '. Inventory deduction initiated.';
                     if (returnMaterials) message += '. Inventory return initiated.';
                     showToast(message, 'success');
+                    // Reload page to reflect changes (order might disappear or status changes)
                     setTimeout(() => { window.location.reload(); }, 1500);
                 } else { throw new Error(data.message || 'Unknown error updating status.'); }
             })
-            .catch(error => { console.error("Update status fetch error:", error); showToast('Error updating status: ' + error.message, 'error'); })
-            .finally(() => { closeRelevantStatusModals(); });
+            .catch(error => {
+                console.error("Update status fetch error:", error);
+                showToast('Error updating status: ' + error.message, 'error');
+            })
+            .finally(() => { closeRelevantStatusModals(); }); // Close modals and clear state
         }
+        // --- END CORRECTED updateOrderStatus ---
+
 
         // --- Modal Closing Helpers (Keep as is) ---\
         function closeStatusModal() { $('#statusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; }
@@ -1362,7 +1466,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function viewOrderInfo(ordersJson, orderStatus) {
              try {
                  const orderDetails = JSON.parse(ordersJson); const body = $('#orderDetailsBody').empty(); $('#status-header-cell').hide(); $('#orderStatus').text(orderStatus); let total = 0;
-                 orderDetails.forEach(p => { total += parseFloat(p.price) * parseInt(p.quantity); body.append(`<tr><td>${p.category||''}</td><td>${p.item_description}</td><td>${p.packaging||''}</td><td>PHP ${parseFloat(p.price).toFixed(2)}</td><td>${p.quantity}</td></tr>`); }); // Removed status cell
+                 orderDetails.forEach(p => { total += parseFloat(p.price) * parseInt(p.quantity); body.append(`<tr><td>${p.category||''}</td><td>${p.item_description}</td><td>${p.packaging||''}</td><td>PHP ${parseFloat(p.price).toFixed(2)}</td><td>${p.quantity}</td></tr>`); });
                  $('#orderTotalAmount').text(`PHP ${total.toFixed(2)}`); $('#overall-progress-info, .save-progress-btn').hide(); $('#orderDetailsModal').css('display', 'flex');
              } catch (e) { console.error('Parse error:', e); showToast('Error displaying info', 'error'); }
         }
@@ -1410,12 +1514,49 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function closeOrderDetailsModal() { $('#orderDetailsModal').css('display', 'none'); }
         function confirmSaveProgress() { $('#saveProgressConfirmationModal').css('display', 'block'); }
         function closeSaveProgressConfirmation() { $('#saveProgressConfirmationModal').css('display', 'none'); }
+
+        // --- CORRECTED saveProgressChanges (Handles 100% progress status change) ---
         function saveProgressChanges() {
-            $('#saveProgressConfirmationModal').hide(); const finalProgress = updateOverallProgress();
-            fetch('/backend/update_order_progress.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ po_number: currentPoNumber, completed_items: completedItems, quantity_progress: quantityProgressData, overall_progress: finalProgress }) })
-            .then(response => response.json()).then(data => { if (data.success) { showToast('Progress updated', 'success'); setTimeout(() => { window.location.reload(); }, 1000); } else { showToast('Error saving: ' + (data.message || 'Unknown error'), 'error'); } })
-            .catch(error => { showToast('Error saving: ' + error, 'error'); console.error('Save progress error:', error); });
+            $('#saveProgressConfirmationModal').hide();
+            const finalProgress = updateOverallProgress(); // Calculate final progress percentage
+
+            if (finalProgress === 100) {
+                // If progress is 100%, trigger status update to 'For Delivery'
+                showToast('Progress reached 100%. Updating status to For Delivery...', 'info');
+                // Call updateOrderStatus directly - no material changes needed Active -> For Delivery
+                // The backend update_order_status.php must also set progress=100
+                updateOrderStatus('For Delivery', false, false);
+            } else {
+                // If progress is less than 100%, just update the progress details via the dedicated endpoint
+                fetch('/backend/update_order_progress.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        po_number: currentPoNumber,
+                        completed_items: completedItems,
+                        quantity_progress: quantityProgressData,
+                        overall_progress: finalProgress // Send the calculated progress
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Progress updated successfully', 'success');
+                        // Reload to reflect the updated progress bar in the main table
+                        setTimeout(() => { window.location.reload(); }, 1000);
+                    } else {
+                        showToast('Error saving progress: ' + (data.message || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('Network error saving progress: ' + error, 'error');
+                    console.error('Save progress error:', error);
+                });
+            }
         }
+        // --- END CORRECTED saveProgressChanges ---
+
+        // --- REMOVED Driver Assignment Modal Functions ---
 
         // --- PDF Download Functions (Keep as is) ---\
         function confirmDownloadPO(...args) {
@@ -1445,7 +1586,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function viewSpecialInstructions(poNumber, instructions) { $('#instructionsPoNumber').text('PO: ' + poNumber); const content = $('#instructionsContent'); if (instructions && instructions.trim()) { content.text(instructions).removeClass('empty'); } else { content.text('No special instructions provided.').addClass('empty'); } $('#specialInstructionsModal').css('display', 'flex'); }
         function closeSpecialInstructions() { $('#specialInstructionsModal').hide(); }
 
-        // --- Add New Order Form Functions (Keep as is) ---\
+        // --- Add New Order Form Functions (Keep as is, except quantity limits) ---\
         function initializeDeliveryDatePicker() { if ($.datepicker) { $("#delivery_date").datepicker("destroy"); $("#delivery_date").datepicker({ dateFormat: 'yy-mm-dd', minDate: 1, beforeShowDay: function(date) { const day = date.getDay(); const isSelectable = (day === 1 || day === 3 || day === 5); return [isSelectable, isSelectable ? "" : "ui-state-disabled", isSelectable ? "" : "Not available"]; } }); } else { console.error("jQuery UI Datepicker not loaded."); } }
         function openAddOrderForm() { $('#addOrderForm')[0].reset(); cartItems = []; updateOrderSummary(); updateCartItemCount(); const today = new Date(); const fmtDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`; $('#order_date').val(fmtDate); $('#delivery_date').val(''); initializeDeliveryDatePicker(); toggleDeliveryAddress(); generatePONumber(); $('#addOrderOverlay').css('display', 'flex'); }
         function closeAddOrderForm() { $('#addOrderOverlay').hide(); }
@@ -1457,26 +1598,133 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function closeAddConfirmation() { $('#addConfirmationModal').hide(); }
         function submitAddOrder() { $('#addConfirmationModal').hide(); const form = document.getElementById('addOrderForm'); const fd = new FormData(form); console.log("Submitting FormData - Company Hidden:", fd.get('company_hidden')); console.log("Submitting FormData - Orders:", fd.get('orders')); fetch('/backend/add_order.php', { method: 'POST', body: fd }).then(r => r.json()).then(d => { if (d.success) { showToast('Order added!', 'success'); closeAddOrderForm(); setTimeout(() => { window.location.reload(); }, 1500); } else { showToast('Error: ' + (d.message || 'Failed to add order'), 'error'); } }).catch(e => { console.error("Add order error:", e); showToast('Network error adding order.', 'error'); }); }
 
-        // --- Inventory Overlay and Cart Functions (Keep as is) ---\
+        // --- Inventory Overlay and Cart Functions (Added Quantity Limits) ---
         function openInventoryOverlay() { $('#inventoryOverlay').css('display', 'flex'); const body = $('.inventory').html('<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading inventory...</td></tr>'); fetch('/backend/get_inventory.php').then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text().then(t => { try { return JSON.parse(t); } catch (e) { console.error("Inv JSON Parse Error:", e, "Response:", t); throw new Error("Invalid inventory data format received."); } }); }).then(data => { console.log("Received Inventory data:", data); if (Array.isArray(data)) { const cats = [...new Set(data.map(i => i.category).filter(c => c))]; populateInventory(data); populateCategories(cats); filterInventory(); } else { throw new Error("Unexpected data format"); } }).catch(e => { console.error('Inv fetch:', e); showToast('Inv fetch error: ' + e.message, 'error'); body.html(`<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Error loading inventory. Check console.</td></tr>`); }); }
-        function populateInventory(inventory) { const body = $('.inventory').empty(); if (!inventory || inventory.length === 0) { body.html('<tr><td colspan="6" style="text-align:center;padding:20px;">No items</td></tr>'); return; } inventory.forEach(item => { const price = parseFloat(item.price); if (isNaN(price) || item.product_id === undefined || item.product_id === null) { console.warn("Skipping item due to invalid price or missing product_id:", item); return; } body.append(`<tr><td>${item.category||'Uncategorized'}</td><td>${item.item_description}</td><td>${item.packaging||'N/A'}</td><td>PHP ${price.toFixed(2)}</td><td><input type="number" class="inventory-quantity" value="1" min="1" max="1000"></td><td><button class="add-to-cart-btn" onclick="addToCart(this, ${item.product_id}, '${item.category||''}', '${item.item_description}', '${item.packaging||''}', ${price})"><i class="fas fa-plus"></i> Add</button></td></tr>`); }); }
+        // --- CORRECTED populateInventory (Added max="100") ---
+        function populateInventory(inventory) {
+            const body = $('.inventory').empty(); if (!inventory || inventory.length === 0) { body.html('<tr><td colspan="6" style="text-align:center;padding:20px;">No items</td></tr>'); return; }
+            inventory.forEach(item => {
+                const price = parseFloat(item.price);
+                if (isNaN(price) || item.product_id === undefined || item.product_id === null) {
+                    console.warn("Skipping item due to invalid price or missing product_id:", item);
+                    return;
+                }
+                // Added max="100" to the input field
+                body.append(`<tr><td>${item.category||'Uncategorized'}</td><td>${item.item_description}</td><td>${item.packaging||'N/A'}</td><td>PHP ${price.toFixed(2)}</td><td><input type="number" class="inventory-quantity" value="1" min="1" max="100"></td><td><button class="add-to-cart-btn" onclick="addToCart(this, ${item.product_id}, '${item.category||''}', '${item.item_description}', '${item.packaging||''}', ${price})"><i class="fas fa-plus"></i> Add</button></td></tr>`);
+             });
+        }
+        // --- END CORRECTED populateInventory ---
         function populateCategories(categories) { const sel = $('#inventoryFilter'); sel.find('option:not(:first-child)').remove(); if (!categories || categories.length === 0) return; categories.sort().forEach(c => { if (c) sel.append(`<option value="${c}">${c}</option>`); }); sel.off('change', filterInventory).on('change', filterInventory); }
         function filterInventory() { const cat = $('#inventoryFilter').val(); const search = $('#inventorySearch').val().toLowerCase(); $('.inventory tr').each(function() { const row = $(this); if (row.find('th').length > 0 || (row.find('td').length === 1 && row.find('td').attr('colspan') === '6')) return; const cCell = row.find('td:first-child').text(); const text = row.text().toLowerCase(); const catMatch = (cat === 'all' || cCell === cat); const searchMatch = (text.includes(search)); row.toggle(catMatch && searchMatch); }); }
         $('#inventorySearch').off('input', filterInventory).on('input', filterInventory);
         function closeInventoryOverlay() { $('#inventoryOverlay').hide(); }
-        function addToCart(button, productId, category, itemDesc, packaging, price) { const qtyInput = $(button).closest('tr').find('.inventory-quantity'); const qty = parseInt(qtyInput.val()); if (isNaN(qty) || qty < 1 || qty > 1000) { showToast('Quantity must be between 1 and 1000.', 'error'); qtyInput.val(1); return; } const idx = cartItems.findIndex(i => i.product_id === productId && i.packaging === packaging); if (idx >= 0) { cartItems[idx].quantity += qty; } else { cartItems.push({ product_id: productId, category, item_description: itemDesc, packaging, price, quantity: qty }); } console.log("Cart Items after add:", cartItems); showToast(`Added ${qty} x ${itemDesc}`, 'success'); qtyInput.val(1); updateOrderSummary(); updateCartItemCount(); }
-        function updateOrderSummary() { const body = $('#summaryBody').empty(); let total = 0; if (cartItems.length === 0) { body.html('<tr><td colspan="6" style="text-align:center; padding: 10px; color: #6c757d;">No products</td></tr>'); } else { cartItems.forEach((item, index) => { total += item.price * item.quantity; body.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>PHP ${item.price.toFixed(2)}</td><td><input type="number" class="cart-quantity summary-quantity" value="${item.quantity}" min="1" max="1000" data-index="${index}" onchange="updateSummaryItemQuantity(this)"></td><td><button class="remove-item-btn" onclick="removeSummaryItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`); }); } $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`); }
-        function updateSummaryItemQuantity(input) { const idx = parseInt($(input).data('index')); const qty = parseInt($(input).val()); if (isNaN(qty) || qty < 1 || qty > 1000) { showToast('Qty 1-1000', 'error'); $(input).val(cartItems[idx].quantity); return; } cartItems[idx].quantity = qty; updateOrderSummary(); updateCartItemCount(); updateCartDisplay(); }
+        // --- CORRECTED addToCart (Enforces 100 limit) ---
+        function addToCart(button, productId, category, itemDesc, packaging, price) {
+            const qtyInput = $(button).closest('tr').find('.inventory-quantity');
+            let qty = parseInt(qtyInput.val()); // Use let to allow modification
+
+            // --- ADDED: Check if quantity exceeds 100 ---
+            if (qty > 100) {
+                showToast('Quantity cannot exceed 100.', 'error');
+                qty = 100; // Correct the quantity to 100
+                qtyInput.val(100); // Update the input field visually
+            }
+            // --- END ADDED Check ---
+
+            if (isNaN(qty) || qty < 1) { // Check if qty is valid *after* potential correction
+                showToast('Quantity must be at least 1.', 'error');
+                qtyInput.val(1); return;
+            }
+
+            const idx = cartItems.findIndex(i => i.product_id === productId && i.packaging === packaging);
+
+            if (idx >= 0) {
+                 // Item exists, increase quantity, but check combined total doesn't exceed 100
+                 let newQty = cartItems[idx].quantity + qty;
+                 if (newQty > 100) {
+                     showToast(`Cannot add ${qty}. Total quantity for ${itemDesc} would exceed 100. Setting total to 100.`, 'warning');
+                     cartItems[idx].quantity = 100; // Cap at 100
+                 } else {
+                     cartItems[idx].quantity = newQty;
+                 }
+            } else {
+                // Item does not exist, add new item (already capped qty at 100 above)
+                cartItems.push({ product_id: productId, category, item_description: itemDesc, packaging, price, quantity: qty });
+            }
+
+            console.log("Cart Items after add:", cartItems);
+            // Show updated total in cart
+            showToast(`Added ${itemDesc} (Total in cart: ${cartItems.find(i => i.product_id === productId && i.packaging === packaging)?.quantity || qty})`, 'success');
+            qtyInput.val(1); // Reset quantity input in inventory list
+            updateOrderSummary();
+            updateCartItemCount();
+        }
+        // --- END CORRECTED addToCart ---
+        // --- CORRECTED updateOrderSummary (Added max="100") ---
+        function updateOrderSummary() {
+            const body = $('#summaryBody').empty(); let total = 0;
+            if (cartItems.length === 0) { body.html('<tr><td colspan="6" style="text-align:center; padding: 10px; color: #6c757d;">No products</td></tr>'); }
+            else { cartItems.forEach((item, index) => {
+                total += item.price * item.quantity;
+                // Added max="100" to the input field
+                body.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>PHP ${item.price.toFixed(2)}</td><td><input type="number" class="cart-quantity summary-quantity" value="${item.quantity}" min="1" max="100" data-index="${index}" onchange="updateSummaryItemQuantity(this)"></td><td><button class="remove-item-btn" onclick="removeSummaryItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`);
+             }); }
+            $('.summary-total-amount').text(`PHP ${total.toFixed(2)}`);
+        }
+        // --- CORRECTED updateSummaryItemQuantity (Enforces 100 limit) ---
+        function updateSummaryItemQuantity(input) {
+            const idx = parseInt($(input).data('index'));
+            let qty = parseInt($(input).val()); // Use let
+
+            // --- ADDED: Check if quantity exceeds 100 ---
+            if (qty > 100) {
+                showToast('Quantity cannot exceed 100.', 'error');
+                qty = 100; // Correct the quantity
+                $(input).val(100); // Update the input field visually
+            }
+            // --- END ADDED Check ---
+
+            if (isNaN(qty) || qty < 1) { // Check if valid *after* potential correction
+                showToast('Quantity must be at least 1.', 'error');
+                $(input).val(cartItems[idx].quantity); // Revert to original cart quantity if invalid
+                return;
+            }
+            cartItems[idx].quantity = qty; // Update cart item with corrected quantity
+            updateOrderSummary(); // Refresh summary table (will use corrected value)
+            updateCartItemCount();
+            updateCartDisplay(); // Update cart modal too if open
+        }
+        // --- END CORRECTED updateSummaryItemQuantity ---
         function removeSummaryItem(index) { if (index >= 0 && index < cartItems.length) { const removed = cartItems.splice(index, 1)[0]; showToast(`Removed ${removed.item_description}`, 'info'); updateOrderSummary(); updateCartItemCount(); updateCartDisplay(); } }
         function updateCartItemCount() { $('#cartItemCount').text(cartItems.length); }
         window.openCartModal = function() { $('#cartModal').css('display', 'flex'); updateCartDisplay(); }
         function closeCartModal() { $('#cartModal').hide(); }
-        function updateCartDisplay() { const body = $('.cart').empty(); const msg = $('.no-products'); const totalEl = $('.total-amount'); let total = 0; if (cartItems.length === 0) { msg.show(); totalEl.text('PHP 0.00'); return; } msg.hide(); cartItems.forEach((item, index) => { total += item.price * item.quantity; body.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>PHP ${item.price.toFixed(2)}</td><td><input type="number" class="cart-quantity" value="${item.quantity}" min="1" max="1000" data-index="${index}" onchange="updateCartItemQuantity(this)"></td><td><button class="remove-item-btn" onclick="removeCartItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`); }); totalEl.text(`PHP ${total.toFixed(2)}`); }
-        function updateCartItemQuantity(input) { const idx = parseInt($(input).data('index')); const qty = parseInt($(input).val()); if (isNaN(qty) || qty < 1 || qty > 1000) { showToast('Qty 1-1000', 'error'); $(input).val(cartItems[idx].quantity); return; } cartItems[idx].quantity = qty; updateCartDisplay(); }
-        function removeCartItem(index) { if (index >= 0 && index < cartItems.length) { const removed = cartItems.splice(index, 1)[0]; showToast(`Removed ${removed.item_description}`, 'info'); updateCartDisplay(); updateCartItemCount(); } }
+        function updateCartDisplay() { const body = $('.cart').empty(); const msg = $('.no-products'); const totalEl = $('.total-amount'); let total = 0; if (cartItems.length === 0) { msg.show(); totalEl.text('PHP 0.00'); return; } msg.hide(); cartItems.forEach((item, index) => { total += item.price * item.quantity; body.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>PHP ${item.price.toFixed(2)}</td><td><input type="number" class="cart-quantity" value="${item.quantity}" min="1" max="100" data-index="${index}" onchange="updateCartItemQuantity(this)"></td><td><button class="remove-item-btn" onclick="removeCartItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`); }); totalEl.text(`PHP ${total.toFixed(2)}`); }
+        // --- CORRECTED updateCartItemQuantity (Enforces 100 limit in Cart Modal) ---
+        function updateCartItemQuantity(input) {
+            const idx = parseInt($(input).data('index'));
+            let qty = parseInt($(input).val()); // Use let
+
+            if (qty > 100) {
+                showToast('Quantity cannot exceed 100.', 'error');
+                qty = 100; // Correct the quantity
+                $(input).val(100); // Update the input field visually
+            }
+
+            if (isNaN(qty) || qty < 1) {
+                showToast('Quantity must be 1-100.', 'error'); // Corrected message
+                $(input).val(cartItems[idx].quantity); // Revert to original cart quantity if invalid
+                return;
+            }
+            cartItems[idx].quantity = qty;
+            updateCartDisplay(); // Update total in cart modal
+            updateOrderSummary(); // Also update summary in main form
+        }
+        // --- END CORRECTED updateCartItemQuantity ---
+        function removeCartItem(index) { if (index >= 0 && index < cartItems.length) { const removed = cartItems.splice(index, 1)[0]; showToast(`Removed ${removed.item_description}`, 'info'); updateCartDisplay(); updateCartItemCount(); updateOrderSummary();} }
         function saveCartChanges() { updateOrderSummary(); closeCartModal(); }
 
-        // --- Document Ready (Keep as is) ---\
+        // --- Document Ready (Removed driver modal event listener) ---\
         $(document).ready(function() {
             $("#searchInput").on("input", function() { const search = $(this).val().toLowerCase().trim(); $(".orders-table tbody tr").each(function() { $(this).toggle($(this).text().toLowerCase().includes(search)); }); });
             $(".search-btn").on("click", () => $("#searchInput").trigger("input"));
@@ -1485,10 +1733,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             generatePONumber();
             window.addEventListener('click', function(event) {
                  if ($(event.target).hasClass('instructions-modal')) closeSpecialInstructions();
-                 if ($(event.target).hasClass('confirmation-modal')) { $(event.target).hide(); if (event.target.id === 'statusConfirmationModal') closeStatusConfirmation(); /* Removed driver confirmation check */ if (event.target.id === 'saveProgressConfirmationModal') closeSaveProgressConfirmation(); if (event.target.id === 'addConfirmationModal') closeAddConfirmation(); if (event.target.id === 'downloadConfirmationModal') closeDownloadConfirmation(); }
+                 if ($(event.target).hasClass('confirmation-modal')) { $(event.target).hide(); if (event.target.id === 'statusConfirmationModal') closeStatusConfirmation(); /* Removed driver confirmation close */ if (event.target.id === 'saveProgressConfirmationModal') closeSaveProgressConfirmation(); if (event.target.id === 'addConfirmationModal') closeAddConfirmation(); if (event.target.id === 'downloadConfirmationModal') closeDownloadConfirmation(); }
                  if ($(event.target).hasClass('overlay')) {
                      const id = event.target.id;
-                     if (id === 'addOrderOverlay') closeAddOrderForm(); else if (id === 'inventoryOverlay') closeInventoryOverlay(); else if (id === 'cartModal') closeCartModal(); /* Removed driverModal check */ else if (id === 'orderDetailsModal') closeOrderDetailsModal();
+                     if (id === 'addOrderOverlay') closeAddOrderForm(); else if (id === 'inventoryOverlay') closeInventoryOverlay(); else if (id === 'cartModal') closeCartModal(); /* Removed driverModal close */ else if (id === 'orderDetailsModal') closeOrderDetailsModal();
                  }
                  if ($(event.target).hasClass('modal') && !$(event.target).closest('.modal-content').length) {
                     if (event.target.id === 'statusModal') closeStatusModal();
