@@ -22,6 +22,57 @@ require_once 'header.php';
         overflow-x: hidden;
     }
 
+    /* --- Navbar Mobile Fixes --- */
+    .navbar .container,
+    .navbar .container-fluid {
+        padding-left: 15px;
+        padding-right: 15px;
+        width: 100%;
+        flex-wrap: nowrap;
+    }
+    .navbar-brand {
+        margin-right: 10px;
+        flex-shrink: 0;
+    }
+    .navbar-toggler {
+        margin-left: auto;
+        padding: .25rem .5rem;
+        font-size: 1rem;
+    }
+    .navbar-collapse {
+        width: 100%;
+    }
+    .navbar-nav {
+        width: 100%;
+    }
+    .navbar-nav .nav-item {
+       width: 100%;
+       text-align: left;
+    }
+     .navbar-nav .nav-link {
+        padding: 10px 15px;
+        width: 100%;
+     }
+    @media (max-width: 991.98px) {
+        .navbar .container,
+        .navbar .container-fluid {
+             max-width: none;
+        }
+        .navbar-collapse {
+            background-color: #f8f9fa; /* Match your navbar or choose a suitable color */
+            margin-top: 10px;
+            border-top: 1px solid #dee2e6;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            /* Ensure position is correct if fixed-top */
+            /* position: absolute; */
+            /* top: 100%; */
+            /* left: 0; */
+            /* right: 0; */
+            /* z-index: 1029; */ /* Lower than navbar itself if fixed */
+        }
+    }
+
+    /* (Keep all other existing styles from previous steps below) */
     .cream_section .row {
         display: flex;
         flex-wrap: wrap;
@@ -323,7 +374,7 @@ require_once 'header.php';
         padding-bottom: 80px;
         position: relative;
         background-color: #f8f9fa;
-        overflow: hidden; /* Crucial for containing arrows */
+        overflow: hidden; /* Crucial */
     }
     .banner_section .container {
         position: relative;
@@ -511,7 +562,7 @@ require_once 'header.php';
         }
         .banner_section .carousel-item {
             min-height: 550px; /* ** Adjust this value ** */
-            /* text-align: center; Removed */
+             /* text-align: center; Removed */
         }
         .banner_section .carousel-item .row {
             align-items: normal;
@@ -568,9 +619,31 @@ require_once 'header.php';
         .about_taital {
              font-size: 2rem;
         }
+         .about_section .row {
+             flex-direction: column; /* Stack about section on mobile */
+         }
+         .about_section .col-md-6 {
+             width: 100%; /* Ensure full width */
+             margin-bottom: 30px; /* Add space between stacked items */
+         }
+          .about_section .col-md-6:last-child {
+             margin-bottom: 0;
+         }
+
         .newsletter-title {
             font-size: 1.8rem;
         }
+        .newsletter-section .row {
+             flex-direction: column; /* Stack newsletter section */
+             text-align: center;
+        }
+         .newsletter-section .col-md-6 {
+             width: 100%;
+             margin-bottom: 20px;
+         }
+         .newsletter-section .col-md-6:last-child {
+             margin-bottom: 0;
+         }
     }
 
 </style>
@@ -694,7 +767,7 @@ require_once 'header.php';
 <!-- About Section -->
 <div class="about_section layout_padding" style="background-color: #fff;">
     <div class="container">
-        <div class="row align-items-center">
+        <div class="row align-items-center"> <!-- Note: align-items-center might not be needed if stacking -->
             <div class="col-md-6" data-aos="fade-right">
                 <div class="about_img"><img src="/LandingPage/images/about_image_1.png" alt="About Top Food Exchange Corp." class="img-fluid"></div>
             </div>
