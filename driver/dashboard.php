@@ -1,7 +1,7 @@
 <?php
 session_start();
 // Adjust the path based on the final location of db_connection.php relative to driver/dashboard.php
-require_once __DIR__ . '/../../backend/db_connection.php';
+require_once __DIR__ . '/backend/db_connection.php';
 
 // Check if driver is logged in, otherwise redirect to login page
 if (!isset($_SESSION['driver_id']) || !isset($_SESSION['driver_logged_in']) || $_SESSION['driver_logged_in'] !== true) {
