@@ -382,7 +382,6 @@ if ($main_list_result === false) {
             top: 0; /* Reset any top positioning */
             left: 0; /* Reset any left positioning */
         }        
-        
         .deliveries-table-container { overflow-y: auto; flex-grow: 1; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
         .deliveries-table { width: 100%; border-collapse: collapse; }
         .deliveries-table th, .deliveries-table td { padding: 8px 10px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
