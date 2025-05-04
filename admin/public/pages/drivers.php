@@ -30,7 +30,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
     if ($_POST['formType'] == 'add') {
         $name = trim($_POST['name']);
         $username = trim($_POST['username']);
-        // Password is now generated, not taken from POST
         $address = $_POST['address'];
         $contact_no = trim($_POST['contact_no']); // Trim contact number
         $availability = $_POST['availability'];
@@ -40,15 +39,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         // --- Server-side Validations ---
         if (empty($name)) {
             $errors['name'] = 'Name is required.';
-        } elseif (strlen($name) > 40) { // Name length validation
+        } elseif (strlen($name) > 40) {
             $errors['name'] = 'Name cannot exceed 40 characters.';
         }
 
         if (empty($username)) {
              $errors['username'] = 'Username is required.';
-        } elseif (strlen($username) > 15) { // Username length validation
+        } elseif (strlen($username) > 15) {
              $errors['username'] = 'Username cannot exceed 15 characters.';
-        } elseif (str_contains($username, ' ')) { // Username space validation
+        } elseif (str_contains($username, ' ')) {
              $errors['username'] = 'Username cannot contain spaces.';
         } else {
             // Check username uniqueness
@@ -67,11 +66,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
             }
         }
 
-        // Contact number validation: Exactly 12 digits
+        // Contact number validation: Up to 12 digits
         if (empty($contact_no)) {
              $errors['contact_no'] = 'Contact number is required.';
-        } elseif (!preg_match('/^\\d{12}$/', $contact_no)) { // Updated Regex
-            $errors['contact_no'] = 'Contact number must be exactly 12 digits.';
+        } elseif (!preg_match('/^\\d{1,12}$/', $contact_no)) { // Updated Regex: 1 to 12 digits
+            $errors['contact_no'] = 'Contact number must be only digits (up to 12).'; // Updated Message
+        } elseif (strlen($contact_no) < 4) { // Ensure at least 4 digits for password generation
+            $errors['contact_no'] = 'Contact number must be at least 4 digits long.';
         }
 
         if (empty($address)) $errors['address'] = 'Address is required.';
@@ -101,14 +102,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         }
 
         // --- Generate Password ---
-        $last_four_digits = substr($contact_no, -4);
+        $last_four_digits = substr($contact_no, -4); // Still safe due to earlier length check
         $generated_password = $username . $last_four_digits;
 
         // Hash the generated password
         $hashed_password = password_hash($generated_password, PASSWORD_DEFAULT);
         if ($hashed_password === false) {
             error_log("Password hashing failed for add driver.");
-            // Don't expose generated password in error
             returnJsonResponse(false, false, 'Failed to secure password. Please try again.', ['general' => 'Password hashing failed.']);
         }
 
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         $stmtAdd->bind_param("sssssss", $name, $username, $hashed_password, $address, $contact_no, $availability, $area);
 
         if ($stmtAdd->execute()) {
-            returnJsonResponse(true, true, 'Driver added successfully.'); // Standard success message
+            returnJsonResponse(true, true, 'Driver added successfully.');
         } else {
             error_log("Add Driver DB Error: " . $stmtAdd->error);
             returnJsonResponse(false, false, 'Failed to add driver. Database error.', ['general' => 'Database execution error.']);
@@ -145,15 +145,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
 
          if (empty($name)) {
              $errors['name'] = 'Name is required.';
-         } elseif (strlen($name) > 40) { // Name length validation
+         } elseif (strlen($name) > 40) {
              $errors['name'] = 'Name cannot exceed 40 characters.';
          }
 
          if (empty($username)) {
              $errors['username'] = 'Username is required.';
-         } elseif (strlen($username) > 15) { // Username length validation
+         } elseif (strlen($username) > 15) {
              $errors['username'] = 'Username cannot exceed 15 characters.';
-         } elseif (str_contains($username, ' ')) { // Username space validation
+         } elseif (str_contains($username, ' ')) {
              $errors['username'] = 'Username cannot contain spaces.';
          } else {
              // Check username uniqueness (excluding current driver)
@@ -179,11 +179,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
              }
          }
 
-         // Contact number validation: Exactly 12 digits
+         // Contact number validation: Up to 12 digits
          if (empty($contact_no)) {
               $errors['contact_no'] = 'Contact number is required.';
-         } elseif (!preg_match('/^\\d{12}$/', $contact_no)) { // Updated Regex
-             $errors['contact_no'] = 'Contact number must be exactly 12 digits.';
+         } elseif (!preg_match('/^\\d{1,12}$/', $contact_no)) { // Updated Regex: 1 to 12 digits
+             $errors['contact_no'] = 'Contact number must be only digits (up to 12).'; // Updated Message
          }
 
          if (empty($address)) $errors['address'] = 'Address is required.';
@@ -426,6 +426,7 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
             max-width: 500px;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
         }
         .overlay-content h2 {
             margin-top: 0;
@@ -626,8 +627,6 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
             border-top: 1px solid #eee;
         }
 
-        /* Add other necessary styles from your original CSS files if needed */
-
     </style>
 </head>
 <body>
@@ -693,7 +692,7 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                                          <?= $active_delivery_count ?> / 20 <!-- Assuming 20 is the max -->
                                     </span>
                                     <button class="see-deliveries-btn" onclick="viewDriverDeliveries(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>')">
-                                        <i class="fas fa-list-ul"></i> See List <!-- Changed Icon/Text -->
+                                        <i class="fas fa-list-ul"></i> See List
                                     </button>
                                 </td>
                                 <td class="action-buttons">
@@ -701,7 +700,7 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
                                     <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>')">
-                                        <i class="fas fa-toggle-on"></i> Status <!-- Changed icon -->
+                                        <i class="fas fa-toggle-on"></i> Status
                                     </button>
                                 </td>
                             </tr>
@@ -745,8 +744,8 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                 <input type="text" id="add-address" name="address" required>
                 <span id="addAddressError" class="error-message"></span>
 
-                <label for="add-contact_no">Contact No.: (Exactly 12 digits)<span class="required-asterisk">*</span></label>
-                <input type="text" id="add-contact_no" name="contact_no" required maxlength="12" pattern="^\d{12}$" title="Must be exactly 12 digits">
+                <label for="add-contact_no">Contact No.: (Up to 12 digits)<span class="required-asterisk">*</span></label>
+                <input type="text" id="add-contact_no" name="contact_no" required maxlength="12" pattern="^\d{1,12}$" title="Must be only digits (up to 12)"> <!-- Updated pattern/title -->
                 <span id="addContactError" class="error-message"></span>
 
                 <label for="add-area">Area:<span class="required-asterisk">*</span></label>
@@ -799,8 +798,8 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                 <input type="text" id="edit-address" name="address" required>
                 <span id="editAddressError" class="error-message"></span>
 
-                <label for="edit-contact_no">Contact No.: (Exactly 12 digits)<span class="required-asterisk">*</span></label>
-                <input type="text" id="edit-contact_no" name="contact_no" required maxlength="12" pattern="^\d{12}$" title="Must be exactly 12 digits">
+                <label for="edit-contact_no">Contact No.: (Up to 12 digits)<span class="required-asterisk">*</span></label>
+                <input type="text" id="edit-contact_no" name="contact_no" required maxlength="12" pattern="^\d{1,12}$" title="Must be only digits (up to 12)"> <!-- Updated pattern/title -->
                 <span id="editContactError" class="error-message"></span>
 
                 <label for="edit-area">Area:<span class="required-asterisk">*</span></label>
@@ -937,7 +936,27 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
         function filterDrivers() { const status = document.getElementById('statusFilter').value; const area = document.getElementById('areaFilter').value; const params = new URLSearchParams(window.location.search); params.set('status', status); params.set('area', area); window.location.href = `drivers.php?${params.toString()}`; }
 
         // --- Client-Side Validation Functions ---
-        function validateContactNumber(contactInput, errorElement) { const contactValue = $(contactInput).val().trim(); const pattern = /^\d{12}$/; if (!contactValue) { $(errorElement).text('Contact number is required.'); $(contactInput).addClass('form-field-error'); return false; } else if (!pattern.test(contactValue)) { $(errorElement).text('Must be exactly 12 digits.'); $(contactInput).addClass('form-field-error'); return false; } $(errorElement).text(''); $(contactInput).removeClass('form-field-error'); return true; }
+        function validateContactNumber(contactInput, errorElement) {
+            const contactValue = $(contactInput).val().trim();
+            const pattern = /^\d{1,12}$/; // Updated Regex: 1 to 12 digits
+            if (!contactValue) {
+                $(errorElement).text('Contact number is required.');
+                $(contactInput).addClass('form-field-error');
+                return false;
+            } else if (!pattern.test(contactValue)) {
+                $(errorElement).text('Must be only digits (up to 12).'); // Updated Message
+                $(contactInput).addClass('form-field-error');
+                return false;
+            } else if (contactValue.length < 4 && $(contactInput).closest('form').attr('id') === 'addDriverForm') {
+                // Add check for minimum length only on Add form for password generation
+                 $(errorElement).text('Must be at least 4 digits long.');
+                 $(contactInput).addClass('form-field-error');
+                 return false;
+            }
+            $(errorElement).text('');
+            $(contactInput).removeClass('form-field-error');
+            return true;
+        }
         function validateRequired(inputElement, errorElement, fieldName) { const value = $(inputElement).val().trim(); if (!value) { $(errorElement).text(`${fieldName} is required.`); $(inputElement).addClass('form-field-error'); return false; } $(errorElement).text(''); $(inputElement).removeClass('form-field-error'); return true; }
         function validateMaxLength(inputElement, errorElement, maxLength, fieldName) { const value = $(inputElement).val().trim(); if (value.length > maxLength) { $(errorElement).text(`${fieldName} cannot exceed ${maxLength} characters.`); $(inputElement).addClass('form-field-error'); return false; } if ($(errorElement).text().includes('required')) return false; $(errorElement).text(''); $(inputElement).removeClass('form-field-error'); return true; }
         function validateNoSpaces(inputElement, errorElement, fieldName) { const value = $(inputElement).val(); if (value.includes(' ')) { $(errorElement).text(`${fieldName} cannot contain spaces.`); $(inputElement).addClass('form-field-error'); return false; } if ($(errorElement).text().includes('required') || $(errorElement).text().includes('characters')) return false; $(errorElement).text(''); $(inputElement).removeClass('form-field-error'); return true; }
@@ -965,7 +984,8 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                 e.preventDefault(); clearFormErrors('addDriverForm'); let isValid = true;
                 isValid &= validateRequired('#add-name', '#addNameError', 'Name'); isValid &= validateMaxLength('#add-name', '#addNameError', 40, 'Name');
                 isValid &= validateRequired('#add-username', '#addUsernameError', 'Username'); isValid &= validateMaxLength('#add-username', '#addUsernameError', 15, 'Username'); isValid &= validateNoSpaces('#add-username', '#addUsernameError', 'Username');
-                isValid &= validateRequired('#add-address', '#addAddressError', 'Address'); isValid &= validateContactNumber('#add-contact_no', '#addContactError');
+                isValid &= validateRequired('#add-address', '#addAddressError', 'Address');
+                isValid &= validateContactNumber('#add-contact_no', '#addContactError'); // Will also check min length 4 for add
                 if (!isValid) { showToast('Please correct the errors.', 'warning'); return false; }
                 $.ajax({ url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
                     success: function(response) { if (response.success && response.reload) { showToast(response.message || 'Driver added', 'success'); closeAddDriverForm(); setTimeout(() => window.location.reload(), 1500); } else { displayFormErrors('addDriverForm', response.errors); showToast(response.message || 'Failed to add driver.', 'error'); } },
@@ -978,7 +998,8 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                 e.preventDefault(); clearFormErrors('editDriverForm'); let isValid = true;
                 isValid &= validateRequired('#edit-name', '#editNameError', 'Name'); isValid &= validateMaxLength('#edit-name', '#editNameError', 40, 'Name');
                 isValid &= validateRequired('#edit-username', '#editUsernameError', 'Username'); isValid &= validateMaxLength('#edit-username', '#editUsernameError', 15, 'Username'); isValid &= validateNoSpaces('#edit-username', '#editUsernameError', 'Username');
-                isValid &= validateRequired('#edit-address', '#editAddressError', 'Address'); isValid &= validateContactNumber('#edit-contact_no', '#editContactError');
+                isValid &= validateRequired('#edit-address', '#editAddressError', 'Address');
+                isValid &= validateContactNumber('#edit-contact_no', '#editContactError'); // Edit doesn't need min length 4 check
                 if ($('#edit-password').val()) { isValid &= validatePasswordLength('#edit-password', '#editPasswordError'); }
                 if (!isValid) { showToast('Please correct the errors.', 'warning'); return false; }
                 $.ajax({ url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
