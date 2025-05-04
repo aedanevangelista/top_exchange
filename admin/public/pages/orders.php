@@ -904,7 +904,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .main-content { padding: 20px; margin-left: 250px; /* Adjust if sidebar width changes */ transition: margin-left 0.3s; }
         .orders-table-container { width: 100%; overflow-x: auto; }
         .orders-table { width: 100%; min-width: 1200px; /* Ensure minimum width */ border-collapse: collapse; }
-        .orders-table th, .orders-table td { padding: 10px 12px; text-align: center; font-size: 13px; vertical-align: middle; white-space: nowrap; }
+        .orders-table th, .orders-table td { padding: 10px 12px; text-align: left; font-size: 13px; vertical-align: middle; white-space: nowrap; }
         .orders-table thead th { background-color:rgb(34, 34, 34); font-weight: 600; position: sticky; top: 0; z-index: 10; }
         .orders-table tbody tr:hover { background-color: #f1f3f5; }
         .orders-table th.sortable a { color: inherit; text-decoration: none; display: flex; justify-content: space-between; align-items: center; }
@@ -915,7 +915,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .action-buttons button, .view-orders-btn { padding: 5px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 3px; }
         .view-orders-btn { background-color: #0dcaf0; color: white; }
         .view-orders-btn:hover { background-color: #0aa3bf; }
-        .status-btn { background-color: #ffc107; color: black; }
+        .status-btn { background-color: #ffc107; color: white; }
         .status-btn:hover { background-color: #e0a800; }
         /* REMOVED driver-btn specific styles */
         /* REMOVED driver-badge styles */
