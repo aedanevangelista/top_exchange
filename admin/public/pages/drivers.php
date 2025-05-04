@@ -138,12 +138,12 @@ if (!$stmtMain) { die("Error preparing driver list."); } if (!empty($types)) { i
         .form-buttons button:hover, .action-buttons button:hover, .add-account-btn:hover {
              box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        .cancel-btn { background-color: #6c757d; color: white; }
-        .save-btn { background-color: #28a745; color: white; }
-        .edit-btn { background-color: #ffc107; color: #333; } /* Yellow */
-        .availability-btn { background-color: #17a2b8; color: white;} /* Teal */
-        .account-status-btn { background-color: #fd7e14; color: white;} /* Orange */
-        .add-account-btn { background-color: #0d6efd; color: white; margin-left: auto; /* Push to right */}
+        .cancel-btn { background-color: #6c757d; color: white; border-radius: 40px;}
+        .save-btn { background-color: #28a745; color: white; border-radius: 40px; }
+        .edit-btn { background-color: #ffc107; color: #333; border-radius: 40px; } /* Yellow */
+        .availability-btn { background-color: #17a2b8; color: white; border-radius: 40px;} /* Teal */
+        .account-status-btn { background-color: #fd7e14; color: white; border-radius: 40px;} /* Orange */
+        .add-account-btn { background-color: #0d6efd; color: white; margin-left: auto; border-radius: 40px; /* Push to right */}
 
         /* Buttons for Status Modals */
         .approve-btn { background-color: #28a745; color: white; } /* Green */
@@ -183,7 +183,7 @@ if (!$stmtMain) { die("Error preparing driver list."); } if (!empty($types)) { i
         .delivery-count-low { background-color: #d4edda; color: #155724; }
         .delivery-count-medium { background-color: #fff3cd; color: #856404; }
         .delivery-count-high { background-color: #f8d7da; color: #721c24; }
-        .see-deliveries-btn { background-color: #6c757d; color: white; padding: 5px 10px; font-size: 13px; /* Slightly smaller */ } /* Adjusted padding/size */
+        .see-deliveries-btn { background-color: #6c757d; color: white; padding: 5px 10px; font-size: 13px; border-radius: 40px;}
 
         /* Availability Status Styles */
         .status-available { color: #155724; font-weight: bold; }
