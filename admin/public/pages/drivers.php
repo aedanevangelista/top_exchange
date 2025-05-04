@@ -5,7 +5,6 @@ include "../../backend/check_role.php";
 
 // Check if the user is logged in as an admin
 if (!isset($_SESSION['admin_user_id'])) {
-    // Redirect to admin login page
     header("Location: ../login.php");
     exit();
 }
@@ -14,7 +13,6 @@ if (!isset($_SESSION['admin_user_id'])) {
 checkRole('Drivers');
 
 function returnJsonResponse($success, $reload, $message = '', $errors = []) {
-    // Ensure JSON header is set ONLY when outputting JSON
     if (!headers_sent()) {
         header('Content-Type: application/json');
     }
@@ -22,9 +20,8 @@ function returnJsonResponse($success, $reload, $message = '', $errors = []) {
     exit;
 }
 
-// --- Process form submissions (Add, Edit, Status Change) ---
+// --- Process form submissions ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
-    // Set header here as these blocks exclusively output JSON
     if (!headers_sent()) {
         header('Content-Type: application/json');
     }
@@ -32,18 +29,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
     // --- ADD DRIVER ---
     if ($_POST['formType'] == 'add') {
         $name = trim($_POST['name']);
-        $username = trim($_POST['username']); // Added
-        $password = $_POST['password']; // Added
+        $username = trim($_POST['username']);
+        // Password is now generated, not taken from POST
         $address = $_POST['address'];
-        $contact_no = $_POST['contact_no'];
+        $contact_no = trim($_POST['contact_no']); // Trim contact number
         $availability = $_POST['availability'];
         $area = $_POST['area'];
         $errors = [];
 
         // --- Server-side Validations ---
-        if (empty($name)) $errors['name'] = 'Name is required.';
+        if (empty($name)) {
+            $errors['name'] = 'Name is required.';
+        } elseif (strlen($name) > 40) { // Name length validation
+            $errors['name'] = 'Name cannot exceed 40 characters.';
+        }
+
         if (empty($username)) {
              $errors['username'] = 'Username is required.';
+        } elseif (strlen($username) > 15) { // Username length validation
+             $errors['username'] = 'Username cannot exceed 15 characters.';
+        } elseif (str_contains($username, ' ')) { // Username space validation
+             $errors['username'] = 'Username cannot contain spaces.';
         } else {
             // Check username uniqueness
             $checkUserStmt = $conn->prepare("SELECT id FROM drivers WHERE username = ?");
@@ -60,19 +66,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                  returnJsonResponse(false, false, 'Database error checking username.', ['general' => 'Database error checking username.']);
             }
         }
-        if (empty($password)) {
-            $errors['password'] = 'Password is required.';
-        } elseif (strlen($password) < 6) { // Basic complexity: min length
-             $errors['password'] = 'Password must be at least 6 characters long.';
+
+        // Contact number validation: Exactly 12 digits
+        if (empty($contact_no)) {
+             $errors['contact_no'] = 'Contact number is required.';
+        } elseif (!preg_match('/^\\d{12}$/', $contact_no)) { // Updated Regex
+            $errors['contact_no'] = 'Contact number must be exactly 12 digits.';
         }
+
         if (empty($address)) $errors['address'] = 'Address is required.';
-        if (!preg_match('/^63\\d{10}$/', $contact_no)) {
-            $errors['contact_no'] = 'Contact number must be 12 digits starting with 63.';
-        }
         if (!in_array($availability, ['Available', 'Not Available'])) $errors['availability'] = 'Invalid availability status.';
         if (!in_array($area, ['North', 'South'])) $errors['area'] = 'Invalid area.';
 
-        // Check name uniqueness (already existed, kept it)
+        // Check name uniqueness (if no other errors on name)
         if (empty($errors['name'])) {
              $checkNameStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ?");
              if ($checkNameStmt) {
@@ -94,11 +100,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
             returnJsonResponse(false, false, 'Please correct the errors below.', $errors);
         }
 
-        // Hash the password
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        // --- Generate Password ---
+        $last_four_digits = substr($contact_no, -4);
+        $generated_password = $username . $last_four_digits;
+
+        // Hash the generated password
+        $hashed_password = password_hash($generated_password, PASSWORD_DEFAULT);
         if ($hashed_password === false) {
             error_log("Password hashing failed for add driver.");
-            returnJsonResponse(false, false, 'Failed to secure password. Please try again.', ['password' => 'Hashing failed.']);
+            // Don't expose generated password in error
+            returnJsonResponse(false, false, 'Failed to secure password. Please try again.', ['general' => 'Password hashing failed.']);
         }
 
         // Prepare and execute insert
@@ -107,11 +118,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
              error_log("Add Driver Prepare Error: " . $conn->error);
              returnJsonResponse(false, false, 'Failed to prepare statement. Database error.', ['general' => 'Database error.']);
         }
-        // Note: types changed to 'sssssss'
         $stmtAdd->bind_param("sssssss", $name, $username, $hashed_password, $address, $contact_no, $availability, $area);
 
         if ($stmtAdd->execute()) {
-            returnJsonResponse(true, true, 'Driver added successfully.'); // Success, trigger reload
+            returnJsonResponse(true, true, 'Driver added successfully.'); // Standard success message
         } else {
             error_log("Add Driver DB Error: " . $stmtAdd->error);
             returnJsonResponse(false, false, 'Failed to add driver. Database error.', ['general' => 'Database execution error.']);
@@ -122,19 +132,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
     elseif ($_POST['formType'] == 'edit') {
         $id = $_POST['id'];
         $name = trim($_POST['name']);
-        $username = trim($_POST['username']); // Added
-        $password = $_POST['password']; // Added (new password, optional)
+        $username = trim($_POST['username']);
+        $password = $_POST['password']; // New password, optional
         $address = $_POST['address'];
-        $contact_no = $_POST['contact_no'];
+        $contact_no = trim($_POST['contact_no']); // Trim contact number
         $availability = $_POST['availability'];
         $area = $_POST['area'];
         $errors = [];
 
         // --- Server-side Validations ---
          if (empty($id) || !filter_var($id, FILTER_VALIDATE_INT)) $errors['general'] = 'Invalid Driver ID.';
-         if (empty($name)) $errors['name'] = 'Name is required.';
+
+         if (empty($name)) {
+             $errors['name'] = 'Name is required.';
+         } elseif (strlen($name) > 40) { // Name length validation
+             $errors['name'] = 'Name cannot exceed 40 characters.';
+         }
+
          if (empty($username)) {
              $errors['username'] = 'Username is required.';
+         } elseif (strlen($username) > 15) { // Username length validation
+             $errors['username'] = 'Username cannot exceed 15 characters.';
+         } elseif (str_contains($username, ' ')) { // Username space validation
+             $errors['username'] = 'Username cannot contain spaces.';
          } else {
              // Check username uniqueness (excluding current driver)
              $checkUserStmt = $conn->prepare("SELECT id FROM drivers WHERE username = ? AND id != ?");
@@ -151,20 +171,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
                  returnJsonResponse(false, false, 'Database error checking username.', ['general' => 'Database error checking username.']);
              }
          }
-         // Validate password ONLY if provided
+
+         // Validate new password ONLY if provided
          if (!empty($password)) {
-             if (strlen($password) < 6) { // Basic complexity: min length
+             if (strlen($password) < 6) {
                  $errors['password'] = 'New password must be at least 6 characters long.';
              }
          }
-         if (empty($address)) $errors['address'] = 'Address is required.';
-         if (!preg_match('/^63\\d{10}$/', $contact_no)) {
-             $errors['contact_no'] = 'Contact number must be 12 digits starting with 63.';
+
+         // Contact number validation: Exactly 12 digits
+         if (empty($contact_no)) {
+              $errors['contact_no'] = 'Contact number is required.';
+         } elseif (!preg_match('/^\\d{12}$/', $contact_no)) { // Updated Regex
+             $errors['contact_no'] = 'Contact number must be exactly 12 digits.';
          }
+
+         if (empty($address)) $errors['address'] = 'Address is required.';
          if (!in_array($availability, ['Available', 'Not Available'])) $errors['availability'] = 'Invalid availability status.';
          if (!in_array($area, ['North', 'South'])) $errors['area'] = 'Invalid area.';
 
-         // Check name uniqueness (excluding current driver)
+         // Check name uniqueness (excluding current driver, if no other name/general errors)
          if (empty($errors['name']) && empty($errors['general'])) {
              $checkNameStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ? AND id != ?");
              if ($checkNameStmt) {
@@ -188,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
 
         // Prepare update statement
         $sql_update = "UPDATE drivers SET name = ?, username = ?, address = ?, contact_no = ?, availability = ?, area = ?";
-        $types = "ssssss"; // Base types
+        $types = "ssssss";
         $params_update = [$name, $username, $address, $contact_no, $availability, $area];
 
         // Handle optional password update
@@ -216,7 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         $stmtEdit->bind_param($types, ...$params_update);
 
         if ($stmtEdit->execute()) {
-            returnJsonResponse(true, true, 'Driver updated successfully.'); // Success, trigger reload
+            returnJsonResponse(true, true, 'Driver updated successfully.');
         } else {
             error_log("Edit Driver DB Error: " . $stmtEdit->error);
             returnJsonResponse(false, false, 'Failed to update driver. Database error.', ['general' => 'Database execution error.']);
@@ -226,9 +252,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
     // --- CHANGE STATUS ---
     elseif ($_POST['formType'] == 'status') {
         $id = $_POST['id'];
-        $status = $_POST['status']; // Should be 'Available' or 'Not Available'
+        $status = $_POST['status'];
 
-        // Basic validation
         if (empty($id) || !filter_var($id, FILTER_VALIDATE_INT)) {
              returnJsonResponse(false, false, 'Invalid Driver ID.');
         }
@@ -244,20 +269,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         $stmtStatus->bind_param("si", $status, $id);
 
         if ($stmtStatus->execute()) {
-            returnJsonResponse(true, true, 'Status updated successfully.'); // Success, trigger reload
+            returnJsonResponse(true, true, 'Status updated successfully.');
         } else {
             error_log("Change Driver Status DB Error: " . $stmtStatus->error);
             returnJsonResponse(false, false, 'Failed to change status. Database error.');
         }
         $stmtStatus->close();
     }
-    exit; // Ensure exit after handling any POST request
+    exit;
 }
-
 
 // --- Handler for fetching driver deliveries (Modal List) ---
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($_GET['action']) && $_GET['action'] == 'get_deliveries') {
-    // Set header here as this block exclusively outputs JSON
     if (!headers_sent()) {
         header('Content-Type: application/json');
     }
@@ -275,8 +298,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
         FROM driver_assignments da
         JOIN orders o ON da.po_number = o.po_number
         WHERE da.driver_id = ?
-          AND o.status IN ('Active', 'For Delivery', 'In Transit') -- Show only active/ongoing deliveries
-        ORDER BY o.delivery_date ASC -- Show soonest delivery date first
+          AND o.status IN ('Active', 'For Delivery', 'In Transit')
+        ORDER BY o.delivery_date ASC
     ");
 
     if (!$stmtModal) {
@@ -306,7 +329,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
             $orderItems = json_decode($row['orders'], true);
             if (json_last_error() !== JSON_ERROR_NONE) {
                 error_log("[drivers.php get_deliveries] JSON Decode Error for PO {$row['po_number']}: " . json_last_error_msg() . " | Raw Data: " . $row['orders']);
-                $orderItems = []; // Use empty array on error
+                $orderItems = [];
             }
             $data[] = [
                 'po_number' => $row['po_number'],
@@ -319,24 +342,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
         }
         echo json_encode(['success' => true, 'deliveries' => $data]);
     } else {
-        echo json_encode(['success' => true, 'deliveries' => []]); // No rows found is a valid success case
+        echo json_encode(['success' => true, 'deliveries' => []]);
     }
 
     $stmtModal->close();
-    exit; // Important to stop script execution here
+    exit;
 }
 
-
-// --- Fetch main list of drivers for the page display ---
+// --- Fetch main list of drivers ---
 $status_filter = $_GET['status'] ?? '';
 $area_filter = $_GET['area'] ?? '';
 $params = [];
 $types = "";
 $main_list_result = null;
 
-// Query to fetch drivers including username and calculate active deliveries
 $sql = "SELECT
-            d.id, d.name, d.username, d.address, d.contact_no, d.availability, d.area, d.created_at, -- Added d.username
+            d.id, d.name, d.username, d.address, d.contact_no, d.availability, d.area, d.created_at,
             COALESCE(COUNT(DISTINCT o.po_number), 0) AS calculated_deliveries
         FROM
             drivers d
@@ -347,7 +368,6 @@ $sql = "SELECT
         WHERE
             1=1";
 
-// Add filters
 if (!empty($status_filter)) {
     $sql .= " AND d.availability = ?";
     $params[] = $status_filter;
@@ -359,38 +379,15 @@ if (!empty($area_filter)) {
     $types .= "s";
 }
 
-// Updated GROUP BY
 $sql .= " GROUP BY d.id, d.name, d.username, d.address, d.contact_no, d.availability, d.area, d.created_at";
 $sql .= " ORDER BY d.name ASC";
 
-
 $stmtMain = $conn->prepare($sql);
-if (!$stmtMain) {
-    error_log("Prepare failed for main driver list: " . $conn->error);
-    die("Error preparing driver list. Please check server logs.");
-}
-
-if (!empty($types)) {
-    if (!$stmtMain->bind_param($types, ...$params)) {
-         error_log("Bind param failed for main driver list: " . $stmtMain->error);
-         $stmtMain->close();
-         die("Error binding parameters. Please check server logs.");
-    }
-}
-
-if(!$stmtMain->execute()) {
-    error_log("Execute failed for main driver list: " . $stmtMain->error);
-    $stmtMain->close();
-    die("Error executing driver list query. Please check server logs.");
-}
-
+if (!$stmtMain) { die("Error preparing driver list."); }
+if (!empty($types)) { if (!$stmtMain->bind_param($types, ...$params)) { $stmtMain->close(); die("Error binding parameters."); } }
+if(!$stmtMain->execute()) { $stmtMain->close(); die("Error executing driver list query."); }
 $main_list_result = $stmtMain->get_result();
-
-if ($main_list_result === false) {
-    error_log("Get result failed for main driver list: " . $stmtMain->error);
-    $stmtMain->close();
-    die("Error retrieving driver list results. Please check server logs.");
-}
+if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving driver list results."); }
 ?>
 
 <!DOCTYPE html>
@@ -399,7 +396,6 @@ if ($main_list_result === false) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drivers List</title>
-    <!-- Link your existing CSS files -->
     <link rel="stylesheet" href="/css/accounts.css">
     <link rel="stylesheet" href="/css/drivers.css">
     <link rel="stylesheet" href="/css/sidebar.css">
@@ -408,60 +404,227 @@ if ($main_list_result === false) {
     <link rel="stylesheet" href="/css/toast.css">
     <style>
         /* --- Minimal Styles Needed for Functionality --- */
-        .overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
-        .overlay-content { background-color: #fefefe; margin: auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .overlay-content h2 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; font-size: 1.5rem; }
-        .close-btn { color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer; }
-        .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; }
-        .account-form label { display: block; margin-bottom: 5px; font-weight: 500; }
-        .account-form input[type="text"], .account-form input[type="password"], .account-form select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .form-buttons { text-align: right; margin-top: 20px; }
-        .form-buttons button { margin-left: 10px; padding: 10px 20px; border-radius: 4px; border: none; cursor: pointer; font-size: 14px; }
+        .overlay {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+        }
+        .overlay-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 25px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .overlay-content h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+            font-size: 1.5rem;
+        }
+        .close-btn {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-btn:hover, .close-btn:focus {
+            color: black;
+            text-decoration: none;
+        }
+        .account-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .account-form input[type="text"],
+        .account-form input[type="password"],
+        .account-form select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            margin-bottom: 5px; /* Reduce bottom margin slightly */
+        }
+        .form-buttons {
+            text-align: right;
+            margin-top: 20px;
+        }
+        .form-buttons button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
         .cancel-btn { background-color: #6c757d; color: white; }
         .save-btn, .approve-btn { background-color: #28a745; color: white; }
         .reject-btn { background-color: #dc3545; color: white; }
-        .modal-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
         .modal-buttons.single-button { justify-content: flex-end; }
         .required-asterisk { color: red; margin-left: 3px; }
-        .error-message { color: red; margin-bottom: 10px; font-size: 0.9em; display: block; min-height: 1em; margin-top: -10px; /* Pull up slightly */ }
+        .error-message {
+            color: red;
+            font-size: 0.85em; /* Slightly smaller */
+            display: block;
+            min-height: 1.2em; /* Ensure space for message */
+            margin-top: 0;
+            margin-bottom: 10px; /* Space below error */
+        }
         .form-field-error { border: 1px solid red !important; }
+         /* Style for generated password info (optional) */
+         .password-info {
+             font-size: 0.9em;
+             color: #666;
+             margin-bottom: 15px;
+             margin-top: -5px; /* Pull up slightly */
+         }
 
         /* Styles for Delivery Count and List */
-        .delivery-count { font-weight: bold; padding: 3px 8px; border-radius: 10px; display: inline-block; text-align: center; margin-right: 5px; min-width: 40px; }
+        .delivery-count {
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 10px;
+            display: inline-block;
+            text-align: center;
+            margin-right: 5px;
+            min-width: 40px;
+        }
         .delivery-count-low { background-color: #d4edda; color: #155724; }
         .delivery-count-medium { background-color: #fff3cd; color: #856404; }
         .delivery-count-high { background-color: #f8d7da; color: #721c24; }
-        .see-deliveries-btn { background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; font-size: 14px; vertical-align: middle; }
+        .see-deliveries-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 14px;
+            vertical-align: middle;
+        }
         .see-deliveries-btn:hover { background-color: #5a6268; }
         .status-available { color: #155724; font-weight: bold; }
         .status-not-available { color: #721c24; font-weight: bold; }
 
         /* Deliveries Modal Specific */
-        .deliveries-modal-content { max-width: 900px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
-        .deliveries-table-container { overflow-y: auto; flex-grow: 1; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
+        .deliveries-modal-content {
+            max-width: 900px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .deliveries-table-container {
+            overflow-y: auto;
+            flex-grow: 1;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
         .deliveries-table { width: 100%; border-collapse: collapse; }
-        .deliveries-table th, .deliveries-table td { padding: 8px 10px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
-        .deliveries-table th { background-color: rgb(27, 27, 27); color: white; position: sticky; top: 0; z-index: 1; }
-        .no-deliveries { text-align: center; padding: 20px; color: #666; font-style: italic; }
-        .delivery-status-badge { padding: 3px 8px; border-radius: 4px; font-size: 12px; display: inline-block; color: #fff; }
+        .deliveries-table th, .deliveries-table td {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+            vertical-align: top;
+        }
+        .deliveries-table th {
+            background-color: rgb(27, 27, 27);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .no-deliveries {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-style: italic;
+        }
+        .delivery-status-badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: inline-block;
+            color: #fff;
+        }
         .status-pending { background-color: #ffc107; color: #333;}
         .status-active { background-color: #0d6efd; }
         .status-for-delivery { background-color: #17a2b8; }
         .status-in-transit { background-color: #fd7e14; }
         .status-completed { background-color: #198754; }
         .status-rejected { background-color: #dc3545; }
-        .po-header { background-color: #f9f9f9; cursor: pointer; transition: background-color 0.2s; }
+        .po-header {
+            background-color: #f9f9f9;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
         .po-header:hover { background-color: #f0f0f0; }
         .order-items-row { /* Initially hidden by JS */ }
         .order-items-row.collapsed .order-items { display: none; }
-        .order-items { padding: 10px 15px; background-color: #fff; border-left: 3px solid #17a2b8; }
-        .order-items h4 { margin-top: 0; margin-bottom: 10px; font-size: 1em; color: #555; }
-        .order-items table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
-        .order-items th, .order-items td { padding: 6px; text-align: left; border: 1px solid #eee; }
-        .order-items th { background-color:rgb(82, 82, 82); color: white; font-weight: 500; }
-        .expand-icon { margin-right: 5px; display: inline-block; transition: transform 0.2s; width: 1em; text-align: center; }
+        .order-items {
+            padding: 10px 15px;
+            background-color: #fff;
+            border-left: 3px solid #17a2b8; /* Indent items */
+        }
+        .order-items h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1em;
+            color: #555;
+        }
+        .order-items table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        .order-items th, .order-items td {
+            padding: 6px;
+            text-align: left;
+            border: 1px solid #eee;
+        }
+        .order-items th {
+            background-color:rgb(82, 82, 82);
+            color: white;
+            font-weight: 500;
+        }
+        .expand-icon {
+            margin-right: 5px;
+            display: inline-block;
+            transition: transform 0.2s;
+            width: 1em;
+            text-align: center;
+        }
         .po-header.collapsed .expand-icon { transform: rotate(-90deg); }
-        .deliveries-modal-content .modal-buttons { margin-top: auto; padding-top: 15px; border-top: 1px solid #eee; }
+        .deliveries-modal-content .modal-buttons {
+            margin-top: auto;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
 
         /* Add other necessary styles from your original CSS files if needed */
 
@@ -469,7 +632,7 @@ if ($main_list_result === false) {
 </head>
 <body>
     <div id="toast-container"></div>
-    <?php include '../sidebar.php'; // Make sure this path is correct ?>
+    <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="accounts-header">
             <h1>Drivers List</h1>
@@ -497,7 +660,7 @@ if ($main_list_result === false) {
                 <thead>
                     <tr>
                         <th>Name</th>
-                        <th>Username</th> <!-- Added Column -->
+                        <th>Username</th>
                         <th>Address</th>
                         <th>Contact No.</th>
                         <th>Area</th>
@@ -508,7 +671,6 @@ if ($main_list_result === false) {
                 </thead>
                 <tbody>
                     <?php
-                    // Use the result fetched earlier ($main_list_result)
                     if ($main_list_result && $main_list_result->num_rows > 0):
                         while ($row = $main_list_result->fetch_assoc()):
                             $active_delivery_count = $row['calculated_deliveries'];
@@ -519,7 +681,7 @@ if ($main_list_result === false) {
                     ?>
                             <tr>
                                 <td><?= htmlspecialchars($row['name']) ?></td>
-                                <td><?= htmlspecialchars($row['username']) ?></td> <!-- Added Data -->
+                                <td><?= htmlspecialchars($row['username']) ?></td>
                                 <td><?= htmlspecialchars($row['address']) ?></td>
                                 <td><?= htmlspecialchars($row['contact_no']) ?></td>
                                 <td><?= htmlspecialchars($row['area']) ?></td>
@@ -528,34 +690,31 @@ if ($main_list_result === false) {
                                 </td>
                                 <td>
                                     <span class="delivery-count <?= $deliveryClass ?>">
-                                        <?= $active_delivery_count ?> / 20
+                                         <?= $active_delivery_count ?> / 20 <!-- Assuming 20 is the max -->
                                     </span>
                                     <button class="see-deliveries-btn" onclick="viewDriverDeliveries(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>')">
-                                        <i class="fas fa-list-ul"></i> See List
+                                        <i class="fas fa-list-ul"></i> See List <!-- Changed Icon/Text -->
                                     </button>
                                 </td>
                                 <td class="action-buttons">
-                                    <!-- Pass username to openEditDriverForm -->
                                     <button class="edit-btn" onclick="openEditDriverForm(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>', '<?= htmlspecialchars(addslashes($row['username'])) ?>', '<?= htmlspecialchars(addslashes($row['address'])) ?>', '<?= htmlspecialchars($row['contact_no']) ?>', '<?= htmlspecialchars($row['availability']) ?>', '<?= htmlspecialchars($row['area']) ?>')">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
                                     <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>')">
-                                        <i class="fas fa-toggle-on"></i> Status
+                                        <i class="fas fa-toggle-on"></i> Status <!-- Changed icon -->
                                     </button>
                                 </td>
                             </tr>
                     <?php
                         endwhile;
-                    else: // No rows found
+                    else:
                     ?>
                         <tr>
-                            <td colspan="8" class="no-accounts">No drivers found matching criteria.</td> <!-- Updated colspan -->
+                            <td colspan="8" class="no-accounts">No drivers found matching criteria.</td>
                         </tr>
                     <?php
                     endif;
-                    // Close the main statement *ONCE* after the loop/else block
                     if (isset($stmtMain)) $stmtMain->close();
-                    // Close the database connection
                     $conn->close();
                     ?>
                 </tbody>
@@ -568,28 +727,26 @@ if ($main_list_result === false) {
          <div class="overlay-content">
             <span class="close-btn" onclick="closeAddDriverForm()">&times;</span>
             <h2><i class="fas fa-user-plus"></i> Add New Driver</h2>
-            <div id="addDriverError" class="error-message"></div> <!-- General Error Area -->
-            <form id="addDriverForm" method="POST" class="account-form" action="" novalidate> <!-- Added novalidate -->
+            <div id="addDriverError" class="error-message"></div>
+            <form id="addDriverForm" method="POST" class="account-form" action="" novalidate>
                 <input type="hidden" name="formType" value="add">
 
                 <label for="add-name">Name:<span class="required-asterisk">*</span></label>
-                <input type="text" id="add-name" name="name" required>
+                <input type="text" id="add-name" name="name" required maxlength="40">
                 <span id="addNameError" class="error-message"></span>
 
                 <label for="add-username">Username:<span class="required-asterisk">*</span></label>
-                <input type="text" id="add-username" name="username" required>
+                <input type="text" id="add-username" name="username" required maxlength="15">
                 <span id="addUsernameError" class="error-message"></span>
 
-                <label for="add-password">Password:<span class="required-asterisk">*</span></label>
-                <input type="password" id="add-password" name="password" required>
-                <span id="addPasswordError" class="error-message"></span>
+                <p class="password-info">Password will be automatically generated (username + last 4 digits of contact no.).</p>
 
                 <label for="add-address">Address:<span class="required-asterisk">*</span></label>
                 <input type="text" id="add-address" name="address" required>
                 <span id="addAddressError" class="error-message"></span>
 
-                <label for="add-contact_no">Contact No.: (e.g., 639171234567)<span class="required-asterisk">*</span></label>
-                <input type="text" id="add-contact_no" name="contact_no" required maxlength="12" pattern="^63\d{10}$" title="Must be 12 digits starting with 63">
+                <label for="add-contact_no">Contact No.: (Exactly 12 digits)<span class="required-asterisk">*</span></label>
+                <input type="text" id="add-contact_no" name="contact_no" required maxlength="12" pattern="^\d{12}$" title="Must be exactly 12 digits">
                 <span id="addContactError" class="error-message"></span>
 
                 <label for="add-area">Area:<span class="required-asterisk">*</span></label>
@@ -621,29 +778,29 @@ if ($main_list_result === false) {
         <div class="overlay-content">
             <span class="close-btn" onclick="closeEditDriverForm()">&times;</span>
             <h2><i class="fas fa-edit"></i> Edit Driver</h2>
-            <div id="editDriverError" class="error-message"></div> <!-- General Error Area -->
-            <form id="editDriverForm" method="POST" class="account-form" action="" novalidate> <!-- Added novalidate -->
+            <div id="editDriverError" class="error-message"></div>
+            <form id="editDriverForm" method="POST" class="account-form" action="" novalidate>
                 <input type="hidden" name="formType" value="edit">
                 <input type="hidden" id="edit-id" name="id">
 
                 <label for="edit-name">Name:<span class="required-asterisk">*</span></label>
-                <input type="text" id="edit-name" name="name" required>
+                <input type="text" id="edit-name" name="name" required maxlength="40">
                 <span id="editNameError" class="error-message"></span>
 
                 <label for="edit-username">Username:<span class="required-asterisk">*</span></label>
-                <input type="text" id="edit-username" name="username" required>
+                <input type="text" id="edit-username" name="username" required maxlength="15">
                 <span id="editUsernameError" class="error-message"></span>
 
                 <label for="edit-password">New Password: (Leave blank to keep current)</label>
-                <input type="password" id="edit-password" name="password"> <!-- Password is optional on edit -->
+                <input type="password" id="edit-password" name="password">
                 <span id="editPasswordError" class="error-message"></span>
 
                 <label for="edit-address">Address:<span class="required-asterisk">*</span></label>
                 <input type="text" id="edit-address" name="address" required>
                 <span id="editAddressError" class="error-message"></span>
 
-                <label for="edit-contact_no">Contact No.: (e.g., 639171234567)<span class="required-asterisk">*</span></label>
-                <input type="text" id="edit-contact_no" name="contact_no" required maxlength="12" pattern="^63\d{10}$" title="Must be 12 digits starting with 63">
+                <label for="edit-contact_no">Contact No.: (Exactly 12 digits)<span class="required-asterisk">*</span></label>
+                <input type="text" id="edit-contact_no" name="contact_no" required maxlength="12" pattern="^\d{12}$" title="Must be exactly 12 digits">
                 <span id="editContactError" class="error-message"></span>
 
                 <label for="edit-area">Area:<span class="required-asterisk">*</span></label>
@@ -655,14 +812,14 @@ if ($main_list_result === false) {
 
                 <label for="edit-availability">Availability:<span class="required-asterisk">*</span></label>
                 <select id="edit-availability" name="availability" required>
-                    <option value="Available">Available</option>
-                    <option value="Not Available">Not Available</option>
+                     <option value="Available">Available</option>
+                     <option value="Not Available">Not Available</option>
                 </select>
                 <span id="editAvailabilityError" class="error-message"></span>
 
                 <div class="form-buttons">
                     <button type="button" class="cancel-btn" onclick="closeEditDriverForm()">
-                        <i class="fas fa-times"></i> Cancel
+                         <i class="fas fa-times"></i> Cancel
                     </button>
                     <button type="submit" class="save-btn"><i class="fas fa-save"></i> Update</button>
                 </div>
@@ -720,89 +877,27 @@ if ($main_list_result === false) {
         </div>
     </div>
 
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src="/js/toast.js"></script> <!-- Make sure this path is correct -->
+    <script src="/js/toast.js"></script>
     <script>
         let selectedDriverId = null;
 
-        // --- Clear Form Errors ---
-        function clearFormErrors(formId) {
-            $(`#${formId} .error-message`).text('');
-            $(`#${formId} input, #${formId} select`).removeClass('form-field-error');
-            $(`#${formId}Error`).text(''); // Clear general error area
-        }
+        // --- Form Error Handling ---
+        function clearFormErrors(formId) { $(`#${formId} .error-message`).text(''); $(`#${formId} input, #${formId} select`).removeClass('form-field-error'); $(`#${formId}Error`).text(''); }
+        function displayFormErrors(formId, errors) { clearFormErrors(formId); if (errors && typeof errors === 'object') { $.each(errors, function(field, message) { const inputElement = $(`#${formId} [name="${field}"]`); const errorElementId = `#${formId.replace('Form', '')}${field.charAt(0).toUpperCase() + field.slice(1)}Error`; const errorElement = $(errorElementId); if (inputElement.length) { inputElement.addClass('form-field-error'); } if (errorElement.length) { errorElement.text(message); } else if (field === 'general') { $(`#${formId.replace('Form', '')}Error`).text(message); } }); } }
 
-        // --- Display Form Errors ---
-        function displayFormErrors(formId, errors) {
-             clearFormErrors(formId); // Clear previous errors first
-             if (errors && typeof errors === 'object') {
-                 $.each(errors, function(field, message) {
-                     const inputElement = $(`#${formId} [name="${field}"]`);
-                     const errorElement = $(`#${formId.replace('Form', '')}${field.charAt(0).toUpperCase() + field.slice(1)}Error`); // e.g., #addNameError
-
-                     if (inputElement.length) {
-                         inputElement.addClass('form-field-error');
-                     }
-                     if (errorElement.length) {
-                         errorElement.text(message);
-                     } else if (field === 'general') { // Handle general errors
-                          $(`#${formId.replace('Form', '')}Error`).text(message);
-                     }
-                 });
-             }
-        }
-
-        // --- Modal Control Functions ---
-        function openAddDriverForm() {
-            clearFormErrors('addDriverForm');
-            $('#addDriverForm')[0].reset();
-            $('#addDriverOverlay').css('display', 'flex');
-        }
-        function closeAddDriverForm() {
-            $('#addDriverOverlay').hide();
-            clearFormErrors('addDriverForm'); // Clear errors on close
-        }
-        // Updated to include username
-        function openEditDriverForm(id, name, username, address, contact_no, availability, area) {
-            clearFormErrors('editDriverForm');
-            $('#edit-id').val(id);
-            $('#edit-name').val(name);
-            $('#edit-username').val(username); // Populate username
-            $('#edit-password').val(''); // Clear password field
-            $('#edit-address').val(address);
-            $('#edit-contact_no').val(contact_no);
-            $('#edit-availability').val(availability);
-            $('#edit-area').val(area);
-            $('#editDriverOverlay').css('display', 'flex');
-        }
-        function closeEditDriverForm() {
-            $('#editDriverOverlay').hide();
-            clearFormErrors('editDriverForm'); // Clear errors on close
-        }
-        function openStatusModal(id, name) {
-            selectedDriverId = id;
-            $('#statusMessage').text(`Change availability status for driver: ${name}`);
-            $('#statusModal').css('display', 'flex');
-        }
-        function closeStatusModal() {
-            $('#statusModal').hide();
-            selectedDriverId = null;
-        }
-        function closeDeliveriesModal() {
-            $('#deliveriesModal').hide();
-            selectedDriverId = null;
-        }
+        // --- Modal Control ---
+        function openAddDriverForm() { clearFormErrors('addDriverForm'); $('#addDriverForm')[0].reset(); $('#addDriverOverlay').css('display', 'flex'); }
+        function closeAddDriverForm() { $('#addDriverOverlay').hide(); clearFormErrors('addDriverForm'); }
+        function openEditDriverForm(id, name, username, address, contact_no, availability, area) { clearFormErrors('editDriverForm'); $('#edit-id').val(id); $('#edit-name').val(name); $('#edit-username').val(username); $('#edit-password').val(''); $('#edit-address').val(address); $('#edit-contact_no').val(contact_no); $('#edit-availability').val(availability); $('#edit-area').val(area); $('#editDriverOverlay').css('display', 'flex'); }
+        function closeEditDriverForm() { $('#editDriverOverlay').hide(); clearFormErrors('editDriverForm'); }
+        function openStatusModal(id, name) { selectedDriverId = id; $('#statusMessage').text(`Change availability status for driver: ${name}`); $('#statusModal').css('display', 'flex'); }
+        function closeStatusModal() { $('#statusModal').hide(); selectedDriverId = null; }
+        function closeDeliveriesModal() { $('#deliveriesModal').hide(); selectedDriverId = null; }
 
         // --- Deliveries Modal Logic ---
-        function toggleOrderItems(headerRow) {
-             const itemsRow = headerRow.nextElementSibling;
-             if (itemsRow && itemsRow.classList.contains('order-items-row')) {
-                  headerRow.classList.toggle('collapsed');
-                  $(itemsRow).toggle(!headerRow.classList.contains('collapsed'));
-             }
-        }
+        function toggleOrderItems(headerRow) { const itemsRow = headerRow.nextElementSibling; if (itemsRow && itemsRow.classList.contains('order-items-row')) { headerRow.classList.toggle('collapsed'); $(itemsRow).toggle(!headerRow.classList.contains('collapsed')); } }
         function formatDate(dateStr) { if (!dateStr) return 'N/A'; try { const date = new Date(dateStr); if (isNaN(date.getTime())) return 'Invalid Date'; return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { return 'Invalid Date'; } }
         function formatCurrency(amount) { const num = parseFloat(amount); if (isNaN(num)) return '₱--.--'; return '₱' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
         function viewDriverDeliveries(id, name) {
@@ -811,30 +906,16 @@ if ($main_list_result === false) {
             $('#deliveriesModal').css('display', 'flex');
             const tableBody = $('#deliveriesTableBody');
             tableBody.html('<tr><td colspan="4" class="no-deliveries"><i class="fas fa-spinner fa-spin"></i> Loading deliveries...</td></tr>');
-
             fetch(`drivers.php?driver_id=${id}&action=get_deliveries`)
                 .then(response => { if (!response.ok) { return response.text().then(text => { console.error("Server response:", text); throw new Error(`Server error: ${response.status}`); }); } return response.json(); })
                 .then(data => {
-                    console.log("Received deliveries data:", data);
                     if (data.success && data.deliveries) {
                         if (data.deliveries.length > 0) {
                             let html = '';
                             data.deliveries.forEach((delivery) => {
                                 let statusClass = 'status-' + (delivery.status ? delivery.status.toLowerCase().replace(/\s+/g, '-') : 'unknown');
-                                html += `<tr class="po-header collapsed" onclick="toggleOrderItems(this)">
-                                            <td><span class="expand-icon">▼</span> ${delivery.po_number}</td>
-                                            <td>${formatDate(delivery.delivery_date)}</td>
-                                            <td>${delivery.delivery_address || 'N/A'}</td>
-                                            <td><span class="delivery-status-badge ${statusClass}">${delivery.status || 'Unknown'}</span></td>
-                                         </tr>
-                                         <tr class="order-items-row" style="display: none;">
-                                            <td colspan="4" class="order-items">
-                                                <h4>Order Items (${delivery.username || 'N/A'})</h4>
-                                                <table><thead><tr><th>Item</th><th>Packaging</th><th>Quantity</th><th>Price</th></tr></thead><tbody>`;
-                                if (delivery.items && Array.isArray(delivery.items) && delivery.items.length > 0) {
-                                    delivery.items.forEach(item => { html += `<tr><td>${item.item_description || 'N/A'}</td><td>${item.packaging || 'N/A'}</td><td>${item.quantity || 0}</td><td>${formatCurrency(item.price)}</td></tr>`; });
-                                } else { html += `<tr><td colspan="4" style="text-align: center; color: #888;">No items details available.</td></tr>`; }
-                                html += `</tbody></table></td></tr>`;
+                                html += `<tr class="po-header collapsed" onclick="toggleOrderItems(this)"><td><span class="expand-icon">▼</span> ${delivery.po_number}</td><td>${formatDate(delivery.delivery_date)}</td><td>${delivery.delivery_address || 'N/A'}</td><td><span class="delivery-status-badge ${statusClass}">${delivery.status || 'Unknown'}</span></td></tr><tr class="order-items-row" style="display: none;"><td colspan="4" class="order-items"><h4>Order Items (${delivery.username || 'N/A'})</h4><table><thead><tr><th>Item</th><th>Packaging</th><th>Quantity</th><th>Price</th></tr></thead><tbody>`;
+                                if (delivery.items && Array.isArray(delivery.items) && delivery.items.length > 0) { delivery.items.forEach(item => { html += `<tr><td>${item.item_description || 'N/A'}</td><td>${item.packaging || 'N/A'}</td><td>${item.quantity || 0}</td><td>${formatCurrency(item.price)}</td></tr>`; }); } else { html += `<tr><td colspan="4" style="text-align: center; color: #888;">No items details available.</td></tr>`; } html += `</tbody></table></td></tr>`;
                             });
                             tableBody.html(html);
                         } else { tableBody.html('<tr><td colspan="4" class="no-deliveries">No active or pending deliveries found.</td></tr>'); }
@@ -845,157 +926,64 @@ if ($main_list_result === false) {
 
         // --- Status Change AJAX ---
         function changeStatus(status) {
-            if (selectedDriverId === null) { showToast('No driver selected.', 'error'); return; }
-            $.ajax({
-                url: 'drivers.php', type: 'POST',
-                data: { ajax: true, formType: 'status', id: selectedDriverId, status: status },
-                dataType: 'json',
-                success: function(response) { if (response.success && response.reload) { showToast(response.message || 'Status updated successfully', 'success'); setTimeout(() => window.location.reload(), 1500); } else { showToast(response.message || 'Failed to update status', 'error'); closeStatusModal(); } },
-                error: function(xhr, status, error) { console.error("Change Status AJAX Error:", status, error, xhr.responseText); showToast('An error occurred: ' + error, 'error'); closeStatusModal(); }
-            });
+             if (selectedDriverId === null) { showToast('No driver selected.', 'error'); return; }
+             $.ajax({ url: 'drivers.php', type: 'POST', data: { ajax: true, formType: 'status', id: selectedDriverId, status: status }, dataType: 'json',
+                 success: function(response) { if (response.success && response.reload) { showToast(response.message || 'Status updated successfully', 'success'); setTimeout(() => window.location.reload(), 1500); } else { showToast(response.message || 'Failed to update status', 'error'); closeStatusModal(); } },
+                 error: function(xhr, status, error) { console.error("Change Status AJAX Error:", status, error, xhr.responseText); showToast('An error occurred: ' + error, 'error'); closeStatusModal(); }
+             });
         }
 
-        // --- Filtering ---\
-        function filterDrivers() {
-            const status = document.getElementById('statusFilter').value;
-            const area = document.getElementById('areaFilter').value;
-            const params = new URLSearchParams(window.location.search);
-            params.set('status', status);
-            params.set('area', area);
-            window.location.href = `drivers.php?${params.toString()}`;
-        }
+        // --- Filtering ---
+        function filterDrivers() { const status = document.getElementById('statusFilter').value; const area = document.getElementById('areaFilter').value; const params = new URLSearchParams(window.location.search); params.set('status', status); params.set('area', area); window.location.href = `drivers.php?${params.toString()}`; }
 
-        // --- Basic Client-Side Validation (Example) ---
-        function validateContactNumber(contactInput, errorElement) {
-             const contactValue = contactInput.value.trim();
-             const pattern = /^63\d{10}$/;
-             if (!pattern.test(contactValue)) {
-                 $(errorElement).text('Must be 12 digits starting with 63.');
-                 $(contactInput).addClass('form-field-error');
-                 return false;
-             }
-             $(errorElement).text('');
-             $(contactInput).removeClass('form-field-error');
-             return true;
-         }
-         function validateRequired(inputElement, errorElement, fieldName) {
-            const value = $(inputElement).val().trim();
-            if (!value) {
-                $(errorElement).text(`${fieldName} is required.`);
-                $(inputElement).addClass('form-field-error');
-                return false;
-            }
-            $(errorElement).text('');
-            $(inputElement).removeClass('form-field-error');
-            return true;
-         }
-         function validatePasswordLength(inputElement, errorElement, minLength = 6) {
-             const value = $(inputElement).val();
-             // Only validate if password is being entered (or required)
-             if (value && value.length < minLength) {
-                 $(errorElement).text(`Password must be at least ${minLength} characters.`);
-                 $(inputElement).addClass('form-field-error');
-                 return false;
-             }
-             $(errorElement).text('');
-             $(inputElement).removeClass('form-field-error');
-             return true;
-         }
-
+        // --- Client-Side Validation Functions ---
+        function validateContactNumber(contactInput, errorElement) { const contactValue = $(contactInput).val().trim(); const pattern = /^\d{12}$/; if (!contactValue) { $(errorElement).text('Contact number is required.'); $(contactInput).addClass('form-field-error'); return false; } else if (!pattern.test(contactValue)) { $(errorElement).text('Must be exactly 12 digits.'); $(contactInput).addClass('form-field-error'); return false; } $(errorElement).text(''); $(contactInput).removeClass('form-field-error'); return true; }
+        function validateRequired(inputElement, errorElement, fieldName) { const value = $(inputElement).val().trim(); if (!value) { $(errorElement).text(`${fieldName} is required.`); $(inputElement).addClass('form-field-error'); return false; } $(errorElement).text(''); $(inputElement).removeClass('form-field-error'); return true; }
+        function validateMaxLength(inputElement, errorElement, maxLength, fieldName) { const value = $(inputElement).val().trim(); if (value.length > maxLength) { $(errorElement).text(`${fieldName} cannot exceed ${maxLength} characters.`); $(inputElement).addClass('form-field-error'); return false; } if ($(errorElement).text().includes('required')) return false; $(errorElement).text(''); $(inputElement).removeClass('form-field-error'); return true; }
+        function validateNoSpaces(inputElement, errorElement, fieldName) { const value = $(inputElement).val(); if (value.includes(' ')) { $(errorElement).text(`${fieldName} cannot contain spaces.`); $(inputElement).addClass('form-field-error'); return false; } if ($(errorElement).text().includes('required') || $(errorElement).text().includes('characters')) return false; $(errorElement).text(''); $(inputElement).removeClass('form-field-error'); return true; }
+        function validatePasswordLength(inputElement, errorElement, minLength = 6) { const value = $(inputElement).val(); if (value && value.length < minLength) { $(errorElement).text(`Password must be at least ${minLength} characters.`); $(inputElement).addClass('form-field-error'); return false; } $(errorElement).text(''); $(inputElement).removeClass('form-field-error'); return true; }
 
         // --- Document Ready ---
         $(document).ready(function() {
-            // Close modals on overlay click
-            $(document).on('click', '.overlay', function(event) { if (event.target === this) { $(this).hide(); if (this.id === 'statusModal' || this.id === 'deliveriesModal') selectedDriverId = null; } });
-            // Prevent closing on content click
+            // Modal closing
+            $(document).on('click', '.overlay', function(event) { if (event.target === this) $(this).hide(); });
             $(document).on('click', '.overlay-content', function(event) { event.stopPropagation(); });
 
-            // Live validation for contact numbers
+            // Live Validation
+            $('#add-name').on('input blur', function() { validateRequired(this, '#addNameError', 'Name') && validateMaxLength(this, '#addNameError', 40, 'Name'); });
+            $('#add-username').on('input blur', function() { validateRequired(this, '#addUsernameError', 'Username') && validateMaxLength(this, '#addUsernameError', 15, 'Username') && validateNoSpaces(this, '#addUsernameError', 'Username'); });
+            $('#add-address').on('input blur', function() { validateRequired(this, '#addAddressError', 'Address'); });
             $('#add-contact_no').on('input blur', function() { validateContactNumber(this, '#addContactError'); });
+            $('#edit-name').on('input blur', function() { validateRequired(this, '#editNameError', 'Name') && validateMaxLength(this, '#editNameError', 40, 'Name'); });
+            $('#edit-username').on('input blur', function() { validateRequired(this, '#editUsernameError', 'Username') && validateMaxLength(this, '#editUsernameError', 15, 'Username') && validateNoSpaces(this, '#editUsernameError', 'Username'); });
+            $('#edit-address').on('input blur', function() { validateRequired(this, '#editAddressError', 'Address'); });
             $('#edit-contact_no').on('input blur', function() { validateContactNumber(this, '#editContactError'); });
-            // Example live validation for required fields
-            $('#add-name').on('input blur', function() { validateRequired(this, '#addNameError', 'Name'); });
-            $('#add-username').on('input blur', function() { validateRequired(this, '#addUsernameError', 'Username'); });
-            $('#add-password').on('input blur', function() { validateRequired(this, '#addPasswordError', 'Password') && validatePasswordLength(this, '#addPasswordError'); });
-            $('#edit-name').on('input blur', function() { validateRequired(this, '#editNameError', 'Name'); });
-            $('#edit-username').on('input blur', function() { validateRequired(this, '#editUsernameError', 'Username'); });
-            // Password validation on edit only if entered
-             $('#edit-password').on('input blur', function() { if ($(this).val()) validatePasswordLength(this, '#editPasswordError'); else { $('#editPasswordError').text(''); $(this).removeClass('form-field-error'); } });
+            $('#edit-password').on('input blur', function() { if ($(this).val()) validatePasswordLength(this, '#editPasswordError'); else { $('#editPasswordError').text(''); $(this).removeClass('form-field-error'); } });
 
-
-            // AJAX form submission for Add Driver
+            // Add Form Submit
             $('#addDriverForm').on('submit', function(e) {
-                e.preventDefault();
-                clearFormErrors('addDriverForm'); // Clear previous errors
-                let isValid = true;
-                isValid &= validateRequired('#add-name', '#addNameError', 'Name');
-                isValid &= validateRequired('#add-username', '#addUsernameError', 'Username');
-                isValid &= validateRequired('#add-password', '#addPasswordError', 'Password');
-                isValid &= validatePasswordLength('#add-password', '#addPasswordError'); // Check length only if required passed
-                isValid &= validateRequired('#add-address', '#addAddressError', 'Address');
-                isValid &= validateContactNumber('#add-contact_no', '#addContactError');
-                // Select validation can be added if needed
-
+                e.preventDefault(); clearFormErrors('addDriverForm'); let isValid = true;
+                isValid &= validateRequired('#add-name', '#addNameError', 'Name'); isValid &= validateMaxLength('#add-name', '#addNameError', 40, 'Name');
+                isValid &= validateRequired('#add-username', '#addUsernameError', 'Username'); isValid &= validateMaxLength('#add-username', '#addUsernameError', 15, 'Username'); isValid &= validateNoSpaces('#add-username', '#addUsernameError', 'Username');
+                isValid &= validateRequired('#add-address', '#addAddressError', 'Address'); isValid &= validateContactNumber('#add-contact_no', '#addContactError');
                 if (!isValid) { showToast('Please correct the errors.', 'warning'); return false; }
-
-                $.ajax({
-                    url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
-                    success: function(response) {
-                        if (response.success && response.reload) {
-                            showToast(response.message || 'Driver added successfully', 'success');
-                            closeAddDriverForm();
-                            setTimeout(() => window.location.reload(), 1500);
-                        } else {
-                            // Display server-side errors
-                            displayFormErrors('addDriverForm', response.errors);
-                            showToast(response.message || 'Failed to add driver. Check errors.', 'error');
-                             $('#addDriverError').text(response.errors?.general || ''); // Show general error
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("Add AJAX Error:", status, error, xhr.responseText);
-                        $('#addDriverError').text('An unexpected error occurred. Please try again.');
-                        showToast('Request error: ' + error, 'error');
-                    }
+                $.ajax({ url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
+                    success: function(response) { if (response.success && response.reload) { showToast(response.message || 'Driver added', 'success'); closeAddDriverForm(); setTimeout(() => window.location.reload(), 1500); } else { displayFormErrors('addDriverForm', response.errors); showToast(response.message || 'Failed to add driver.', 'error'); } },
+                    error: function(xhr, status, error) { console.error("Add AJAX Error:", status, error, xhr.responseText); $('#addDriverError').text('Request error.'); showToast('Request error: ' + error, 'error'); }
                 });
             });
 
-            // AJAX form submission for Edit Driver
+            // Edit Form Submit
             $('#editDriverForm').on('submit', function(e) {
-                e.preventDefault();
-                clearFormErrors('editDriverForm'); // Clear previous errors
-                let isValid = true;
-                isValid &= validateRequired('#edit-name', '#editNameError', 'Name');
-                isValid &= validateRequired('#edit-username', '#editUsernameError', 'Username');
-                // Password length validation only if password field is not empty
-                if ($('#edit-password').val()) {
-                    isValid &= validatePasswordLength('#edit-password', '#editPasswordError');
-                }
-                isValid &= validateRequired('#edit-address', '#editAddressError', 'Address');
-                isValid &= validateContactNumber('#edit-contact_no', '#editContactError');
-                 // Select validation can be added if needed
-
+                e.preventDefault(); clearFormErrors('editDriverForm'); let isValid = true;
+                isValid &= validateRequired('#edit-name', '#editNameError', 'Name'); isValid &= validateMaxLength('#edit-name', '#editNameError', 40, 'Name');
+                isValid &= validateRequired('#edit-username', '#editUsernameError', 'Username'); isValid &= validateMaxLength('#edit-username', '#editUsernameError', 15, 'Username'); isValid &= validateNoSpaces('#edit-username', '#editUsernameError', 'Username');
+                isValid &= validateRequired('#edit-address', '#editAddressError', 'Address'); isValid &= validateContactNumber('#edit-contact_no', '#editContactError');
+                if ($('#edit-password').val()) { isValid &= validatePasswordLength('#edit-password', '#editPasswordError'); }
                 if (!isValid) { showToast('Please correct the errors.', 'warning'); return false; }
-
-                $.ajax({
-                    url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
-                    success: function(response) {
-                        if (response.success && response.reload) {
-                            showToast(response.message || 'Driver updated successfully', 'success');
-                            closeEditDriverForm();
-                            setTimeout(() => window.location.reload(), 1500);
-                        } else {
-                            // Display server-side errors
-                            displayFormErrors('editDriverForm', response.errors);
-                            showToast(response.message || 'Failed to update driver. Check errors.', 'error');
-                             $('#editDriverError').text(response.errors?.general || ''); // Show general error
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("Edit AJAX Error:", status, error, xhr.responseText);
-                        $('#editDriverError').text('An unexpected error occurred. Please try again.');
-                        showToast('Request error: ' + error, 'error');
-                    }
+                $.ajax({ url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
+                    success: function(response) { if (response.success && response.reload) { showToast(response.message || 'Driver updated', 'success'); closeEditDriverForm(); setTimeout(() => window.location.reload(), 1500); } else { displayFormErrors('editDriverForm', response.errors); showToast(response.message || 'Failed to update driver.', 'error'); } },
+                    error: function(xhr, status, error) { console.error("Edit AJAX Error:", status, error, xhr.responseText); $('#editDriverError').text('Request error.'); showToast('Request error: ' + error, 'error'); }
                 });
             });
         });
