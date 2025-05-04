@@ -329,21 +329,30 @@ if ($main_list_result === false) {
     <link rel="stylesheet" href="/css/toast.css">
     <style>
         /* --- Minimal Styles Needed for Functionality --- */
-        .overlay {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.6);
-            justify-content: center;
-            align-items: center; /* This was likely missing or incomplete in your code */
-        }        
-        
-        .overlay-content { background-color: #fefefe; margin: auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .overlay { 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.6); 
+            justify-content: center; 
+            align-items: center;
+        }
+        .overlay-content { 
+            background-color: #fefefe; 
+            margin: auto; 
+            padding: 25px; 
+            border: 1px solid #888; 
+            width: 90%; 
+            max-width: 500px; 
+            border-radius: 8px; 
+            position: relative; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
         .overlay-content h2 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; font-size: 1.5rem; }
         .close-btn { color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer; }
         .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; }
@@ -365,23 +374,51 @@ if ($main_list_result === false) {
         .delivery-count-low { background-color: #d4edda; color: #155724; }
         .delivery-count-medium { background-color: #fff3cd; color: #856404; }
         .delivery-count-high { background-color: #f8d7da; color: #721c24; }
-        .see-deliveries-btn { background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; font-size: 14px; vertical-align: middle; }
+        .see-deliveries-btn { 
+            background-color: #6c757d; 
+            color: white; 
+            border: none; 
+            padding: 5px 10px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            transition: background-color 0.3s; 
+            font-size: 14px; 
+            vertical-align: middle;
+        }
         .see-deliveries-btn:hover { background-color: #5a6268; }
         .status-available { color: #155724; font-weight: bold; } /* From your original */
         .status-not-available { color: #721c24; font-weight: bold; } /* From your original */
 
         /* Deliveries Modal Specific */
-        .deliveries-modal-content {
+        #deliveriesModal.overlay {
+            display: none; /* Will be set to flex when shown */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #deliveriesModal .deliveries-modal-content {
+            background-color: #fefefe;
+            padding: 25px;
+            border: 1px solid #888;
+            width: 90%;
             max-width: 900px;
             max-height: 85vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            margin: auto; /* Make sure this is present */
-            position: relative; /* Ensure proper positioning */
-            top: 0; /* Reset any top positioning */
-            left: 0; /* Reset any left positioning */
-        }        
+            margin: auto;
+            transform: translate(0, 0); /* Reset any transform that might be affecting positioning */
+        }
         
         .deliveries-table-container { overflow-y: auto; flex-grow: 1; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
         .deliveries-table { width: 100%; border-collapse: collapse; }
@@ -486,7 +523,7 @@ if ($main_list_result === false) {
                                     </button>
                                 </td>
                                 <td class="action-buttons">
-                                    <button class="edit-btn" onclick="openEditDriverForm(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>', '<?= htmlspecialchars(addslashes($row['address'])) ?>', '<?= htmlspecialchars(addslashes($row['contact_no'])) ?>', '<?= htmlspecialchars($row['availability']) ?>', '<?= htmlspecialchars($row['area']) ?>')">
+                                    <button class="edit-btn" onclick="openEditDriverForm(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>', '<?= htmlspecialchars(addslashes($row['address'])) ?>', '<?= htmlspecialchars($row['contact_no']) ?>', '<?= htmlspecialchars($row['availability']) ?>', '<?= htmlspecialchars($row['area']) ?>')">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
                                     <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>')">
@@ -671,18 +708,46 @@ if ($main_list_result === false) {
                   $(itemsRow).toggle(!headerRow.classList.contains('collapsed'));
              }
         }
-        function formatDate(dateStr) { if (!dateStr) return 'N/A'; try { const date = new Date(dateStr); if (isNaN(date.getTime())) return 'Invalid Date'; return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { console.error("Error formatting date:", dateStr, e); return 'Invalid Date'; } }
-        function formatCurrency(amount) { const num = parseFloat(amount); if (isNaN(num)) return '₱--.--'; return '₱' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
+        function formatDate(dateStr) { 
+            if (!dateStr) return 'N/A'; 
+            try { 
+                const date = new Date(dateStr); 
+                if (isNaN(date.getTime())) return 'Invalid Date'; 
+                return date.toLocaleDateString('en-US', {year: 'numeric', month: 'short', day: 'numeric'}); 
+            } catch (e) { 
+                return 'Error'; 
+            } 
+        }
+        function formatCurrency(amount) { 
+            const num = parseFloat(amount); 
+            if (isNaN(num)) return '₱--.--'; 
+            return '₱' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); 
+        }
         function viewDriverDeliveries(id, name) {
             selectedDriverId = id;
             $('#deliveriesModalTitle').text(`${name}'s Active/Pending Deliveries`);
-            $('#deliveriesModal').css('display', 'flex');
+            
+            // Clear any inline styles that might be interfering
+            $('#deliveriesModal').removeAttr('style').css({
+                'display': 'flex',
+                'justify-content': 'center',
+                'align-items': 'center'
+            });
+            
             const tableBody = $('#deliveriesTableBody');
             tableBody.html('<tr><td colspan="4" class="no-deliveries"><i class="fas fa-spinner fa-spin"></i> Loading deliveries...</td></tr>');
 
             // Fetch using the GET handler in this same file
             fetch(`drivers.php?driver_id=${id}&action=get_deliveries`)
-                .then(response => { if (!response.ok) { return response.text().then(text => { console.error("Server response:", text); throw new Error(`Server error: ${response.status}`); }); } return response.json(); })
+                .then(response => { 
+                    if (!response.ok) { 
+                        return response.text().then(text => { 
+                            console.error("Server response:", text); 
+                            throw new Error(`Server error: ${response.status}`); 
+                        }); 
+                    } 
+                    return response.json(); 
+                })
                 .then(data => {
                     console.log("Received deliveries data:", data);
                     if (data.success && data.deliveries) {
@@ -702,15 +767,27 @@ if ($main_list_result === false) {
                                                 <h4>Order Items (${delivery.username || 'N/A'})</h4>
                                                 <table><thead><tr><th>Item</th><th>Packaging</th><th>Quantity</th><th>Price</th></tr></thead><tbody>`;
                                 if (delivery.items && Array.isArray(delivery.items) && delivery.items.length > 0) {
-                                    delivery.items.forEach(item => { html += `<tr><td>${item.item_description || 'N/A'}</td><td>${item.packaging || 'N/A'}</td><td>${item.quantity || 0}</td><td>${formatCurrency(item.price)}</td></tr>`; });
-                                } else { html += `<tr><td colspan="4" style="text-align: center; color: #888;">No items details available.</td></tr>`; }
+                                    delivery.items.forEach(item => { 
+                                        html += `<tr><td>${item.item_description || 'N/A'}</td><td>${item.packaging || 'N/A'}</td><td>${item.quantity || 0}</td><td>${formatCurrency(item.price)}</td></tr>`; 
+                                    });
+                                } else { 
+                                    html += `<tr><td colspan="4" style="text-align: center; color: #888;">No items details available.</td></tr>`; 
+                                }
                                 html += `</tbody></table></td></tr>`;
                             });
                             tableBody.html(html);
-                        } else { tableBody.html('<tr><td colspan="4" class="no-deliveries">No active or pending deliveries found.</td></tr>'); }
-                    } else { console.error('API reported failure or missing data:', data.message); tableBody.html(`<tr><td colspan="4" class="no-deliveries">Error loading deliveries: ${data.message || 'Unknown error'}</td></tr>`); }
+                        } else { 
+                            tableBody.html('<tr><td colspan="4" class="no-deliveries">No active or pending deliveries found.</td></tr>'); 
+                        }
+                    } else { 
+                        console.error('API reported failure or missing data:', data.message); 
+                        tableBody.html(`<tr><td colspan="4" class="no-deliveries">Error loading deliveries: ${data.message || 'Unknown error'}</td></tr>`); 
+                    }
                 })
-                .catch(error => { console.error('Error fetching deliveries:', error); tableBody.html('<tr><td colspan="4" class="no-deliveries">Error loading deliveries. Check console.</td></tr>'); showToast(`Error loading deliveries: ${error.message}`, 'error'); });
+                .catch(error => { 
+                    console.error('Error fetching deliveries:', error); 
+                    tableBody.html('<tr><td colspan="4" class="no-deliveries">Error loading deliveries. Check console.</td></tr>'); 
+                });
         }
 
         // --- Status Change AJAX ---
@@ -720,8 +797,20 @@ if ($main_list_result === false) {
                 url: 'drivers.php', type: 'POST',
                 data: { ajax: true, formType: 'status', id: selectedDriverId, status: status },
                 dataType: 'json',
-                success: function(response) { if (response.success && response.reload) { showToast('Status updated successfully', 'success'); setTimeout(() => window.location.reload(), 1500); } else { showToast(response.message || 'Failed to update status', 'error'); } closeStatusModal(); },
-                error: function(xhr, status, error) { console.error("Change Status AJAX Error:", status, error, xhr.responseText); showToast('An error occurred: ' + error, 'error'); closeStatusModal(); }
+                success: function(response) { 
+                    if (response.success && response.reload) { 
+                        showToast('Status updated successfully', 'success'); 
+                        setTimeout(() => window.location.reload(), 1500); 
+                    } else { 
+                        showToast(response.message || 'Update failed', 'error'); 
+                    } 
+                    closeStatusModal(); 
+                },
+                error: function(xhr, status, error) { 
+                    console.error("Change Status AJAX Error:", status, error, xhr.responseText); 
+                    showToast('An error occurred: ' + error, 'error'); 
+                    closeStatusModal(); 
+                }
             });
         }
 
@@ -752,7 +841,12 @@ if ($main_list_result === false) {
         // --- Document Ready ---
         $(document).ready(function() {
             // Close modals on overlay click
-            $(document).on('click', '.overlay', function(event) { if (event.target === this) { $(this).hide(); if (this.id === 'statusModal' || this.id === 'deliveriesModal') selectedDriverId = null; } });
+            $(document).on('click', '.overlay', function(event) { 
+                if (event.target === this) { 
+                    $(this).hide(); 
+                    if (this.id === 'statusModal' || this.id === 'deliveriesModal') selectedDriverId = null; 
+                } 
+            });
             // Prevent closing on content click
             $(document).on('click', '.overlay-content', function(event) { event.stopPropagation(); });
 
@@ -767,8 +861,20 @@ if ($main_list_result === false) {
                 if (!validateContactNumber(contactInput, document.getElementById('contactError'))) { showToast('Please correct errors.', 'warning'); return false; }
                 $.ajax({
                     url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
-                    success: function(response) { if (response.success && response.reload) { showToast('Driver added', 'success'); closeAddDriverForm(); setTimeout(() => window.location.reload(), 1500); } else { $('#addDriverError').text(response.message || 'Error adding.'); showToast(response.message || 'Error adding.', 'error'); } },
-                    error: function(xhr, status, error) { console.error("Add AJAX Error:", status, error, xhr.responseText); $('#addDriverError').text('Request error.'); showToast('Request error: ' + error, 'error'); }
+                    success: function(response) { 
+                        if (response.success && response.reload) { 
+                            showToast('Driver added', 'success'); 
+                            closeAddDriverForm(); 
+                            setTimeout(() => window.location.reload(), 1500); 
+                        } else { 
+                            $('#addDriverError').text(response.message || 'Failed to add driver'); 
+                        } 
+                    },
+                    error: function(xhr, status, error) { 
+                        console.error("Add AJAX Error:", status, error, xhr.responseText); 
+                        $('#addDriverError').text('Request error.'); 
+                        showToast('Request error.', 'error'); 
+                    }
                 });
             });
 
@@ -779,8 +885,20 @@ if ($main_list_result === false) {
                 if (!validateContactNumber(contactInput, document.getElementById('editContactError'))) { showToast('Please correct errors.', 'warning'); return false; }
                 $.ajax({
                     url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
-                    success: function(response) { if (response.success && response.reload) { showToast('Driver updated', 'success'); closeEditDriverForm(); setTimeout(() => window.location.reload(), 1500); } else { $('#editDriverError').text(response.message || 'Error updating.'); showToast(response.message || 'Error updating.', 'error'); } },
-                    error: function(xhr, status, error) { console.error("Edit AJAX Error:", status, error, xhr.responseText); $('#editDriverError').text('Request error.'); showToast('Request error: ' + error, 'error'); }
+                    success: function(response) { 
+                        if (response.success && response.reload) { 
+                            showToast('Driver updated', 'success'); 
+                            closeEditDriverForm(); 
+                            setTimeout(() => window.location.reload(), 1500); 
+                        } else { 
+                            $('#editDriverError').text(response.message || 'Update failed'); 
+                        } 
+                    },
+                    error: function(xhr, status, error) { 
+                        console.error("Edit AJAX Error:", status, error, xhr.responseText); 
+                        $('#editDriverError').text('Request error.'); 
+                        showToast('Request error.', 'error'); 
+                    }
                 });
             });
         });
