@@ -1,4 +1,5 @@
 <?php
+// UTC: 2025-05-04 07:05:07
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
@@ -74,7 +75,30 @@ $pageTitle = "Reporting"; // Set the page title
     <!-- VERIFY THIS PATH: Is it /css/ or /admin/public/css/ ? -->
     <link rel="stylesheet" href="/css/reporting.css">
 
-    <!-- REMOVED the inline <style> block -->
+    <!-- You might need specific styles in reporting.css for tables, headers, etc. -->
+    <style>
+        /* Basic styles if reporting.css is missing */
+        .main-content { margin-left: 250px; /* Adjust if sidebar width changes */ padding: 20px; }
+        .reporting-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+        .reporting-header h1 { margin: 0; flex-grow: 1; }
+        .report-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .report-controls label { font-weight: 500; }
+        .report-controls select, .report-controls input[type="date"], .report-controls button { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        .report-controls button { background-color: #007bff; color: white; cursor: pointer; transition: background-color 0.2s; }
+        .report-controls button:hover { background-color: #0056b3; }
+        .report-controls button:disabled { background-color: #aaa; cursor: not-allowed; }
+        #report-display-area { margin-top: 20px; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 100px; }
+        .loading-message, .report-error-message { text-align: center; padding: 30px; font-size: 1.1em; color: #666; }
+        .report-error-message { color: #dc3545; font-weight: bold; }
+        .report-container h2 { margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .report-period { font-size: 0.9em; color: #555; margin-bottom: 15px; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .report-table th, .report-table td { padding: 10px 12px; border: 1px solid #ddd; text-align: left; }
+        .report-table th { background-color: #f8f9fa; font-weight: 600; }
+        .report-table tbody tr:nth-child(even) { background-color: #f9f9f9; }
+        .report-table tbody tr:hover { background-color: #f1f1f1; }
+        /* Add more specific styles as needed in reporting.css */
+    </style>
 
 </head>
 <body>
@@ -82,24 +106,24 @@ $pageTitle = "Reporting"; // Set the page title
 
     <?php
     // Include the sidebar using the relative path
-    // Assuming sidebar.php is in /public/ based on your original include
+    // Assuming sidebar.php is in /public/
     include __DIR__ . '/../sidebar.php';
     ?>
 
-    <!-- Main Content Area (matches your structure) -->
+    <!-- Main Content Area -->
     <div class="main-content">
 
         <div class="reporting-header">
              <h1><?php echo htmlspecialchars($pageTitle); ?></h1>
-             <!-- Reporting controls moved into the header div -->
              <div class="report-controls">
                 <label for="report-type">Report:</label>
                 <select id="report-type" name="report-type">
                     <option value="">-- Choose --</option>
                     <option value="sales_summary">Sales Summary</option>
-                    <option value="inventory_status">Low Inventory Status</option> <!-- Updated Label -->
-                    <option value="order_trends">Order Listing</option> <!-- Updated Label -->
-                    <!-- Add more report types -->
+                    <option value="sales_by_client">Sales by Client</option>
+                    <option value="inventory_status">Low Inventory Status</option>
+                    <option value="order_trends">Order Listing</option>
+                    <!-- Add more report types here -->
                 </select>
 
                 <label for="start-date">From:</label>
@@ -107,12 +131,11 @@ $pageTitle = "Reporting"; // Set the page title
                 <label for="end-date">To:</label>
                 <input type="date" id="end-date" name="end-date">
 
-                <!-- Added ID to button for easier JS selection -->
                 <button id="generate-report-btn" onclick="generateReport()"><i class="fas fa-play"></i> Generate</button>
             </div>
         </div>
 
-        <hr style="border: 0; border-top: 1px solid #e1e4e8; margin: 20px 0;"> <!-- Styled HR -->
+        <hr style="border: 0; border-top: 1px solid #e1e4e8; margin: 20px 0;">
 
         <!-- Area to display the selected report -->
         <div id="report-display-area">
@@ -121,38 +144,39 @@ $pageTitle = "Reporting"; // Set the page title
 
     </div> <!-- End main-content -->
 
-    <!-- JS Includes copied from accounts.php -->
+    <!-- JS Includes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <!-- Assuming /js/ points to public_html/admin/public/js/ -->
     <!-- VERIFY THIS PATH -->
     <script src="/js/toast.js"></script>
 
-    <!-- UPDATED Page-specific JS for Reporting -->
+    <!-- Page-specific JS for Reporting -->
     <script>
-        // Ensure toastr is ready (might need $(document).ready if toast.js isn't global immediately)
-        // Relying on toast.js to set options globally
+        // Ensure toastr is configured via toast.js or configure here if needed
+        // toastr.options = { ... };
 
         function generateReport() {
             const reportType = $('#report-type').val();
             const startDate = $('#start-date').val();
             const endDate = $('#end-date').val();
             const displayArea = $('#report-display-area');
-            const generateButton = $('#generate-report-btn'); // Select button by ID
+            const generateButton = $('#generate-report-btn');
 
             if (!reportType) {
-                // Check if showToast function exists before calling
                 if (typeof showToast === 'function') {
                     showToast('Please select a report type.', 'warning');
                 } else {
-                    alert('Please select a report type.'); // Fallback alert
+                    alert('Please select a report type.');
                     console.error('showToast function not found.');
                 }
                 return;
             }
 
+            // Define which reports require date range
+            const requiresDates = ['sales_summary', 'order_trends', 'sales_by_client'];
+
             // Basic date validation for relevant reports
-            if ((reportType === 'sales_summary' || reportType === 'order_trends') && startDate && endDate && startDate > endDate) {
+            if (requiresDates.includes(reportType) && startDate && endDate && startDate > endDate) {
                  if (typeof showToast === 'function') {
                     showToast('Start date cannot be after end date.', 'warning');
                  } else {
@@ -162,26 +186,23 @@ $pageTitle = "Reporting"; // Set the page title
             }
 
             // Show loading state and disable button
-            // Using the CSS class defined in reporting.css
-            displayArea.html(`<div class="loading-message">Generating ${reportType.replace(/_/g, ' ')} report... <i class="fas fa-spinner fa-spin"></i></div>`);
-            generateButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
+            displayArea.html(`<div class=\"loading-message\">Generating ${reportType.replace(/_/g, ' ')} report... <i class=\"fas fa-spinner fa-spin\"></i></div>`);
+            generateButton.prop('disabled', true).html('<i class=\"fas fa-spinner fa-spin\"></i> Generating...');
 
 
             const formData = new FormData();
             formData.append('report_type', reportType);
             // Only send dates if they are relevant and have values
-            if (reportType === 'sales_summary' || reportType === 'order_trends') {
+            if (requiresDates.includes(reportType)) {
                  if(startDate) formData.append('start_date', startDate);
                  if(endDate) formData.append('end_date', endDate);
             }
 
 
-            // Use fetch API
             // *** VERIFY THIS FETCH URL PATH ***
-            // Based on your includes, this seems most likely:
+            // Assumes backend folder is one level up from the public folder root
             const fetchUrl = '/backend/fetch_report.php';
-            // If your backend is elsewhere (e.g., /admin/backend/), change it here:
-            // const fetchUrl = '/admin/backend/fetch_report.php';
+            // Example if backend is inside admin: const fetchUrl = '/admin/backend/fetch_report.php';
 
             fetch(fetchUrl, {
                 method: 'POST',
@@ -195,8 +216,7 @@ $pageTitle = "Reporting"; // Set the page title
                          try {
                             const parser = new DOMParser();
                             const doc = parser.parseFromString(text, "text/html");
-                            // Use the specific class from reporting.css
-                            const errorElement = doc.querySelector('.report-error-message');
+                            const errorElement = doc.querySelector('.report-error-message'); // Use class selector
                             if (errorElement && errorElement.textContent.trim()) {
                                 throw new Error(errorElement.textContent.trim());
                             }
@@ -213,8 +233,8 @@ $pageTitle = "Reporting"; // Set the page title
             })
             .catch(error => {
                 console.error('Error fetching report:', error);
-                // Display the specific error message caught using the CSS class
-                 displayArea.html(`<div class="report-error-message">Error loading report: ${error.message}. Check console for details.</div>`);
+                // Display the specific error message caught
+                 displayArea.html(`<div class=\"report-error-message\">Error loading report: ${error.message}. Check console for details.</div>`);
                  if (typeof showToast === 'function') {
                     showToast(`Error loading report: ${error.message}`, 'error');
                  } else {
@@ -223,7 +243,7 @@ $pageTitle = "Reporting"; // Set the page title
             })
             .finally(() => {
                  // Re-enable button and restore text
-                 generateButton.prop('disabled', false).html('<i class="fas fa-play"></i> Generate');
+                 generateButton.prop('disabled', false).html('<i class=\"fas fa-play\"></i> Generate');
             });
         }
 
@@ -238,7 +258,7 @@ $pageTitle = "Reporting"; // Set the page title
         //         $('#report-type').val(reportType);
         //         if(startDate) $('#start-date').val(startDate);
         //         if(endDate) $('#end-date').val(endDate);
-        //         generateReport(); // Call the updated function
+        //         generateReport();
         //     }
         // });
 
