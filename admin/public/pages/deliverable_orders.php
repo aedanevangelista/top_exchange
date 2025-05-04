@@ -1,5 +1,5 @@
 <?php
-// Current Date: 2025-05-04 12:53:08 UTC
+// Current Date: 2025-05-04 13:00:24 UTC
 // Author: aedanevangelista
 // Based on commit: e801e50...
 // Modifications: Re-added driver assignment/change functionality. Corrected JS parameter passing for driver assignment.
@@ -1092,7 +1092,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
 
     <!-- Driver Change Confirmation Modal (Kept as is) -->
     <div id="driverConfirmationModal" class="confirmation-modal">
-        <div class="confirmation-content"><div class="confirmation-title">Confirm Driver Assignment</div><div class="confirmation-message">Assign this driver?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeDriverConfirmation()">No</button><button class="confirm-yes" onclick="assignDriver()">Yes</button></div></div>
+        <div class="confirmation-content"><div class="confirmation-title">Confirm Driver Assignment</div><div class="confirmation-message">Assign this driver?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeDriverConfirmation()">No</button><button class="confirm-yes" onclick="assignDriver(0)">Yes</button></div></div> <!-- Passed 0 initially, will be replaced -->
     </div>
 
     <!-- Download Confirmation Modal (Kept as is) -->
@@ -1252,7 +1252,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             // *** Dynamically set the onclick for the "Yes" button ***
             const confirmBtn = document.querySelector('#driverConfirmationModal .confirm-yes');
             // Pass the *selectedDriverId* directly to assignDriver when "Yes" is clicked
-            confirmBtn.onclick = () => assignDriver(selectedDriverId);
+            confirmBtn.onclick = () => assignDriver(selectedDriverId); // Ensure correct ID is passed
 
             $('#driverConfirmationModal').show(); // Show the confirmation modal
             $('#driverModal').hide(); // Hide the selection modal
@@ -1263,7 +1263,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             $('#driverConfirmationModal').hide();
             // Reset the confirm button's onclick to prevent accidental calls
             const confirmBtn = document.querySelector('#driverConfirmationModal .confirm-yes');
-            confirmBtn.onclick = null; // Reset onclick
+            if (confirmBtn) confirmBtn.onclick = null; // Reset onclick
             $('#driverModal').show(); // Re-show the selection modal
         }
 
