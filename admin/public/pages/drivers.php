@@ -124,7 +124,7 @@ if (!$stmtMain) { die("Error preparing driver list."); } if (!empty($types)) { i
         .form-buttons button, .action-buttons button, .add-account-btn { /* General Button Styling */
             margin-left: 10px;
             padding: 8px 15px; /* Adjusted padding */
-            border-radius: 4px;
+            border-radius: 40px;
             border: none;
             cursor: pointer;
             font-size: 14px;
