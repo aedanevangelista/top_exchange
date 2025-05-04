@@ -43,27 +43,122 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
     $checkStmt->close();
 
-    // Proceed with update
-    $updateStmt = $conn->prepare("UPDATE orders SET status = ? WHERE po_number = ?");
-     if (!$updateStmt) {
-         error_log("Dashboard Status Update - Update Prepare Error: " . $conn->error);
-         echo json_encode(['success' => false, 'message' => 'Database error (update).']); exit;
-    }
-    $updateStmt->bind_param("ss", $new_status, $po_number);
+    // Begin transaction for order update and potential email sending
+    $conn->begin_transaction();
 
-    if ($updateStmt->execute()) {
-        // Optionally: Log the status change
-        // log_activity($conn, $driver_id, 'driver', "Updated order $po_number status to $new_status");
-        echo json_encode(['success' => true, 'message' => "Order $po_number status updated to $new_status."]);
-    } else {
-        error_log("Dashboard Status Update - Update Execute Error: " . $updateStmt->error);
-        echo json_encode(['success' => false, 'message' => 'Failed to update order status.']);
+    try {
+        // Proceed with update
+        $updateStmt = $conn->prepare("UPDATE orders SET status = ? WHERE po_number = ?");
+        if (!$updateStmt) {
+            throw new Exception("Dashboard Status Update - Update Prepare Error: " . $conn->error);
+        }
+        $updateStmt->bind_param("ss", $new_status, $po_number);
+        
+        if (!$updateStmt->execute()) {
+            throw new Exception("Dashboard Status Update - Update Execute Error: " . $updateStmt->error);
+        }
+        $updateStmt->close();
+        
+        // If marking as completed, get customer details for email
+        if ($new_status === 'Completed') {
+            // Get order details for the email
+            $orderQuery = $conn->prepare("
+                SELECT o.*, c.email, c.username, c.company
+                FROM orders o
+                JOIN clients_accounts c ON o.username = c.username
+                WHERE o.po_number = ?
+            ");
+            
+            if (!$orderQuery) {
+                throw new Exception("Error preparing order details query: " . $conn->error);
+            }
+            
+            $orderQuery->bind_param("s", $po_number);
+            $orderQuery->execute();
+            $orderResult = $orderQuery->get_result();
+            
+            if ($orderResult->num_rows === 1) {
+                $orderData = $orderResult->fetch_assoc();
+                
+                // Send email notification
+                $email_sent = sendCompletionEmail($orderData);
+                
+                if (!$email_sent) {
+                    // Log email failure but don't fail the transaction
+                    error_log("Failed to send completion email for order $po_number");
+                }
+            } else {
+                error_log("Order data not found for email notification: $po_number");
+            }
+            $orderQuery->close();
+        }
+        
+        // Commit the transaction
+        $conn->commit();
+        
+        echo json_encode([
+            'success' => true, 
+            'message' => "Order $po_number status updated to $new_status."
+        ]);
+        
+    } catch (Exception $e) {
+        // Rollback on error
+        $conn->rollback();
+        error_log("Transaction Error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Error updating order: ' . $e->getMessage()]);
     }
-    $updateStmt->close();
+    
     $conn->close();
     exit; // Important to exit after AJAX handling
 }
 
+/**
+ * Function to send completion email to customer
+ */
+function sendCompletionEmail($orderData) {
+    if (empty($orderData['email'])) {
+        return false;
+    }
+    
+    $to = $orderData['email'];
+    $subject = "Order Completed: {$orderData['po_number']}";
+    
+    // Decode the JSON orders
+    $orderItems = json_decode($orderData['orders'], true);
+    $itemsList = '';
+    
+    if (is_array($orderItems)) {
+        foreach ($orderItems as $item) {
+            $itemsList .= "• {$item['quantity']} x {$item['item_description']} ({$item['packaging']}) - PHP " . 
+                number_format($item['price'] * $item['quantity'], 2) . "\n";
+        }
+    }
+    
+    $company = !empty($orderData['company']) ? $orderData['company'] : $orderData['username'];
+    
+    $message = "Dear {$orderData['username']},\n\n" .
+        "Your order has been successfully delivered and marked as completed.\n\n" .
+        "Order Details:\n" .
+        "------------------------\n" .
+        "PO Number: {$orderData['po_number']}\n" .
+        "Company: $company\n" .
+        "Order Date: {$orderData['order_date']}\n" .
+        "Delivery Date: {$orderData['delivery_date']}\n" .
+        "Delivery Address: {$orderData['delivery_address']}\n\n" .
+        "Items:\n$itemsList\n" .
+        "------------------------\n" .
+        "Total Amount: PHP " . number_format($orderData['total_amount'], 2) . "\n\n" .
+        "If you have any questions about your delivery, please contact our customer service.\n\n" .
+        "Thank you for your business!\n\n" .
+        "Best regards,\n" .
+        "Top Exchange Team";
+    
+    $headers = "From: noreply@topexchange.com\r\n" .
+        "Reply-To: support@topexchange.com\r\n" .
+        "X-Mailer: PHP/" . phpversion();
+    
+    return mail($to, $subject, $message, $headers);
+}
 
 // --- Fetch Assigned Orders for Display ---
 $orders = [];
@@ -96,7 +191,6 @@ if ($stmt) {
     // Handle error display if needed, e.g., set an error flag
 }
 $conn->close();
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -167,21 +261,10 @@ $conn->close();
                         <div class="order-actions">
                             <label for="status-<?= htmlspecialchars($order['po_number']) ?>"><i class="fas fa-tag"></i> Update Status:</label>
                             <select id="status-<?= htmlspecialchars($order['po_number']) ?>" name="new_status" class="status-select" data-po="<?= htmlspecialchars($order['po_number']) ?>">
-                                <!-- Show current status and next logical steps -->
-                                <?php if ($order['status'] == 'Active'): ?>
-                                     <option value="Active" selected>Active (Pending Pickup)</option>
-                                     <option value="For Delivery">For Delivery</option>
-                                <?php elseif ($order['status'] == 'For Delivery'): ?>
-                                     <option value="For Delivery" selected>For Delivery</option>
-                                     <option value="In Transit">In Transit</option>
-                                     <option value="Completed">Completed</option>
-                                <?php elseif ($order['status'] == 'In Transit'): ?>
-                                    <option value="In Transit" selected>In Transit</option>
-                                    <option value="Completed">Completed</option>
-                                <?php else: ?>
-                                    <!-- Fallback for unexpected statuses, might need adjustment -->
-                                    <option value="<?= htmlspecialchars($order['status']) ?>" selected><?= htmlspecialchars($order['status']) ?></option>
-                                <?php endif; ?>
+                                <!-- Always show all three status options -->
+                                <option value="For Delivery" <?= $order['status'] == 'For Delivery' ? 'selected' : '' ?>>For Delivery</option>
+                                <option value="In Transit" <?= $order['status'] == 'In Transit' ? 'selected' : '' ?>>In Transit</option>
+                                <option value="Completed">Completed</option>
                             </select>
                             <button class="update-status-btn" data-po="<?= htmlspecialchars($order['po_number']) ?>">
                                 <i class="fas fa-sync-alt"></i> Update
@@ -310,6 +393,13 @@ $conn->close();
                 $modalPoNumber.text(po_number);
                 $modalNewStatus.text(new_status);
                 
+                // Add special note if completing the order
+                if (new_status === 'Completed') {
+                    $modalNewStatus.after('<p class="modal-note" style="margin-top:10px;font-size:0.9em;color:#666;"><i class="fas fa-envelope"></i> An email notification will be sent to the customer.</p>');
+                } else {
+                    $('.modal-note').remove();
+                }
+                
                 // Set appropriate status class for pill
                 $modalNewStatus.removeClass().addClass('status-pill ' + new_status.toLowerCase().replace(/\s+/g, '-'));
                 
@@ -343,6 +433,7 @@ $conn->close();
                 currentNewStatus = '';
                 currentOrderCard = null;
                 currentStatusSpan = null;
+                $('.modal-note').remove();
             }
             
             // Function to actually update the order status
@@ -380,6 +471,14 @@ $conn->close();
                             // If status is 'Completed', maybe hide the card or move it after a short delay
                             if (new_status === 'Completed') {
                                 orderCard.addClass('order-completed-visual'); // Add class for styling fade/strike-through
+                                
+                                // Show special toast message for completed orders with email notification
+                                if(typeof toastr !== 'undefined') {
+                                    setTimeout(() => {
+                                        toastr.info('<i class="fas fa-envelope"></i> Email notification sent to customer.', 'Notification Sent');
+                                    }, 1000);
+                                }
+                                
                                 setTimeout(() => {
                                     // Remove the card with animation
                                     orderCard.fadeOut(500, function() { $(this).remove(); });
@@ -398,8 +497,6 @@ $conn->close();
                             } else {
                                 // Re-enable button for non-completed updates
                                 button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update');
-                                // Refresh the select options based on the new status
-                                updateStatusOptions($(`#status-${po_number}`), new_status);
                             }
 
                         } else {
@@ -415,40 +512,17 @@ $conn->close();
                     },
                     error: function(xhr, status, error) {
                         console.error("AJAX Error:", status, error, xhr.responseText);
-                         if(typeof showToast === 'function') {
+                        if(typeof showToast === 'function') {
                             showToast('An error occurred while communicating with the server.', 'error');
-                         } else if (typeof toastr !== 'undefined') {
+                        } else if (typeof toastr !== 'undefined') {
                             toastr.error('An error occurred while communicating with the server.');
-                         } else {
-                             alert('An error occurred. Please check console.'); // Fallback alert
-                         }
+                        } else {
+                            alert('An error occurred. Please check console.'); // Fallback alert
+                        }
                         button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update'); // Re-enable button on error
                     }
                 });
             }
-
-            // Function to update the dropdown options based on the current status
-            function updateStatusOptions(selectElement, currentStatus) {
-                selectElement.empty(); // Clear existing options
-
-                if (currentStatus === 'Active') {
-                    selectElement.append($('<option>', { value: 'Active', text: 'Active (Pending Pickup)', selected: true }));
-                    selectElement.append($('<option>', { value: 'For Delivery', text: 'For Delivery' }));
-                } else if (currentStatus === 'For Delivery') {
-                     selectElement.append($('<option>', { value: 'For Delivery', text: 'For Delivery', selected: true }));
-                     selectElement.append($('<option>', { value: 'In Transit', text: 'In Transit' }));
-                     selectElement.append($('<option>', { value: 'Completed', text: 'Completed' }));
-                } else if (currentStatus === 'In Transit') {
-                    selectElement.append($('<option>', { value: 'In Transit', text: 'In Transit', selected: true }));
-                    selectElement.append($('<option>', { value: 'Completed', text: 'Completed' }));
-                }
-            }
-
-            // Initial setup of dropdowns based on current status on page load
-            $('.status-select').each(function() {
-                const currentStatus = $(this).closest('.order-card').find('.order-status').text().trim();
-                updateStatusOptions($(this), currentStatus);
-            });
 
             // Prevent zooming on iOS
             document.addEventListener('gesturestart', function (e) {
