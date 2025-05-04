@@ -1063,94 +1063,155 @@ function truncate($text, $max = 15) {
             });
         }
 
-        // --- EDIT ACCOUNT ---
         function openEditAccountForm(id, username, email, phone, regionCode, cityName, company, companyAddress, billToAddress, businessProofEncoded) {
-             const overlay = document.getElementById("editAccountOverlay");
-             const form = document.getElementById("editAccountForm");
-             if (!overlay || !form) return;
+    const overlay = document.getElementById("editAccountOverlay");
+    const form = document.getElementById("editAccountForm");
+    if (!overlay || !form) return;
 
-             form.reset();
-             resetErrors();
-             console.log("Opening edit form for ID:", id, "Region:", regionCode, "City:", cityName); // Debug log
+    form.reset();
+    resetErrors();
+    console.log("Opening edit form for ID:", id, "Region:", regionCode, "City:", cityName); // Debug log
 
-             // Populate basic fields
-             $('#edit-id').val(id);
-             $('#edit-username').val(username);
-             $('#edit-email').val(email);
-             $('#edit-phone').val(phone);
-             $('#edit-company').val(company);
-             $('#edit-company_address').val(companyAddress);
-             $('#edit-bill_to_address').val(billToAddress);
+    // Populate basic fields
+    $('#edit-id').val(id);
+    $('#edit-username').val(username);
+    $('#edit-email').val(email);
+    $('#edit-phone').val(phone);
+    $('#edit-company').val(company);
+    $('#edit-company_address').val(companyAddress);
+    $('#edit-bill_to_address').val(billToAddress);
 
-             // Reset password fields
-             $('#edit-password-toggle').prop('checked', false).trigger('change');
-             $('#edit-manual-password').val('');
+    // Reset password fields
+    $('#edit-password-toggle').prop('checked', false).trigger('change');
+    $('#edit-manual-password').val('');
 
-            // --- Handle Business Proof ---
-            const proofContainer = $('#edit-business-proof-container');
-            const existingProofInput = $('#existing-business-proof');
-            proofContainer.empty().append('<h4>Current Business Proof:</h4>'); // Clear and add header
-            existingProofInput.val('[]'); // Default
+    // --- Handle Business Proof ---
+    const proofContainer = $('#edit-business-proof-container');
+    const existingProofInput = $('#existing-business-proof');
+    proofContainer.empty().append('<h4>Current Business Proof:</h4>'); // Clear and add header
+    
+    // Default to empty array
+    existingProofInput.val('[]');
 
-            let original_json = '[]';
-            if (businessProofEncoded) {
+    // First log the raw businessProofEncoded to see what we're getting
+    console.log("Raw businessProofEncoded:", businessProofEncoded);
+
+    if (businessProofEncoded && businessProofEncoded !== 'null') {
+        try {
+            // Check if it's already a proper array
+            if (Array.isArray(businessProofEncoded)) {
+                // It's already a JavaScript array, use JSON.stringify to convert it
+                existingProofInput.val(JSON.stringify(businessProofEncoded));
+                console.log("Array processed:", JSON.stringify(businessProofEncoded));
+            } else {
+                // Try to parse as JSON
+                let proofArray;
+                
                 try {
-                    const tempTextArea = document.createElement('textarea');
-                    tempTextArea.innerHTML = businessProofEncoded; // Decode HTML entities
-                    original_json = tempTextArea.value;
-                    JSON.parse(original_json); // Validate JSON
-                    existingProofInput.val(original_json); // Store valid, original JSON
-                    console.log("Storing existing proofs JSON:", original_json); // Debug log
-                } catch (e) {
-                    console.error("Error decoding/parsing existing proofs:", e, "Input:", businessProofEncoded);
-                    proofContainer.append('<p style="color: red;">Error loading current proofs.</p>');
-                    original_json = '[]'; // Fallback
-                }
-            }
-
-            // Display current images from the validated JSON
-            try {
-                const proofs = JSON.parse(original_json);
-                if (Array.isArray(proofs) && proofs.length > 0) {
-                    proofs.forEach(proof => {
-                        if (typeof proof === 'string' && proof.startsWith('/')) {
-                            // Ensure src is correctly escaped for HTML attribute
-                            const escapedProof = $('<div>').text(proof).html(); // Basic escaping
-                            $('<img>', {
-                                src: escapedProof, // Use the path directly
-                                alt: 'Business Proof', width: 50,
-                                css: { margin: '3px', border: '1px solid #ccc', padding: '1px', cursor: 'pointer', backgroundColor: '#fff', borderRadius: '3px' },
-                                click: function() { openModal(this); }
-                            }).appendTo(proofContainer);
-                        } else {
-                             console.warn('Skipping invalid proof item for display:', proof);
+                    proofArray = JSON.parse(businessProofEncoded);
+                } catch (jsonError) {
+                    // If parsing fails, it might be because data is HTML encoded or paths with backslashes
+                    console.log("Initial JSON parse failed, trying to clean up the input:", jsonError);
+                    
+                    // If the input looks like a string representing a JSON array with paths
+                    if (typeof businessProofEncoded === 'string' && 
+                        (businessProofEncoded.includes('../../') || 
+                         businessProofEncoded.includes('/admin/') || 
+                         businessProofEncoded.startsWith('["'))) {
+                        
+                        // Clean up common issues
+                        let cleanedJson = businessProofEncoded
+                            .replace(/\\\\/g, '\\') // Double backslashes to single
+                            .replace(/\\"/g, '"');  // Escaped quotes to regular quotes
+                        
+                        try {
+                            proofArray = JSON.parse(cleanedJson);
+                        } catch (e) {
+                            // If still fails, try to manually extract paths
+                            console.log("Cleaned JSON parse failed:", e);
+                            
+                            // Extract what looks like file paths between quotes
+                            const pathMatches = businessProofEncoded.match(/["']([^"']+\.(?:jpg|jpeg|png))["']/g);
+                            if (pathMatches) {
+                                proofArray = pathMatches.map(match => 
+                                    match.replace(/^["']|["']$/g, '')
+                                );
+                            } else {
+                                throw new Error("Could not extract valid paths");
+                            }
                         }
-                    });
-                } else {
-                    proofContainer.append('<p>No business proof images on record.</p>');
+                    } else {
+                        throw jsonError; // Re-throw if none of our fix attempts worked
+                    }
                 }
-            } catch (e) {
-                console.error("Error displaying proofs from JSON:", e, "JSON:", original_json);
-                proofContainer.append('<p style="color: red;">Error displaying proofs.</p>');
+                
+                if (Array.isArray(proofArray)) {
+                    existingProofInput.val(JSON.stringify(proofArray));
+                    console.log("Processed proofs JSON:", JSON.stringify(proofArray));
+                } else {
+                    throw new Error("Parsed value is not an array");
+                }
             }
-
-             // Clear the file input
-             $('#edit-business_proof').val(null);
-
-             // --- Handle Region/City ---
-             // Load regions, then pre-select and trigger city loading via the callback mechanism in loadPhilippinesRegions
-             loadPhilippinesRegions('edit-region', regionCode).then(() => {
-                 // The change event triggered inside loadPhilippinesRegions should handle city loading
-                 // We might still need to explicitly set the city value if the event doesn't fire reliably or fast enough
-                 if (cityName && $('#edit-region').val() === regionCode) {
-                     // Optionally force load cities again if needed, but the change event should cover it
-                     // loadCities(regionCode, 'edit-city', cityName);
-                     // console.log("Region loaded, city should load/select:", cityName);
-                 }
-             });
-
-             $(overlay).css('display', 'flex'); // Show modal
+        } catch (e) {
+            console.error("Error processing business proofs:", e, "Input:", businessProofEncoded);
+            proofContainer.append('<p style="color: red;">Error loading current proofs.</p>');
+            existingProofInput.val('[]'); // Fallback to empty array
         }
+    }
+
+    // Display current images from the processed JSON
+    try {
+        const proofs = JSON.parse(existingProofInput.val());
+        if (Array.isArray(proofs) && proofs.length > 0) {
+            proofs.forEach(proof => {
+                if (typeof proof === 'string') {
+                    // Ensure path starts with / if relative
+                    let imagePath = proof;
+                    if (proof.startsWith('..')) {
+                        imagePath = proof.replace('../../', '/admin/');
+                    } else if (!proof.startsWith('/')) {
+                        imagePath = '/admin/uploads/' + proof;
+                    }
+                    
+                    // Create the image element
+                    $('<img>', {
+                        src: imagePath,
+                        alt: 'Business Proof', 
+                        width: 50,
+                        css: { margin: '3px', border: '1px solid #ccc', padding: '1px', cursor: 'pointer', backgroundColor: '#fff', borderRadius: '3px' },
+                        click: function() { openModal(this); }
+                    }).appendTo(proofContainer);
+                } else {
+                    console.warn('Skipping invalid proof item for display:', proof);
+                }
+            });
+        } else {
+            proofContainer.append('<p>No business proof images on record.</p>');
+        }
+    } catch (e) {
+        console.error("Error displaying proofs from JSON:", e, "JSON:", existingProofInput.val());
+        proofContainer.append('<p style="color: red;">Error displaying proofs.</p>');
+    }
+
+    // Clear the file input
+    $('#edit-business_proof').val(null);
+
+    // --- Handle Region/City ---
+    // Load regions, then pre-select and trigger city loading via the callback mechanism in loadPhilippinesRegions
+    loadPhilippinesRegions('edit-region', regionCode).then(() => {
+        // The change event triggered inside loadPhilippinesRegions should handle city loading
+        if (cityName && $('#edit-region').val() === regionCode) {
+            // In case the change event didn't fire correctly
+            setTimeout(() => {
+                if ($('#edit-city option').length <= 1) {
+                    loadCities(regionCode, 'edit-city', cityName);
+                }
+            }, 500);
+        }
+    });
+
+    $(overlay).css('display', 'flex'); // Show modal
+}
 
         function closeEditAccountForm() { $('#editAccountOverlay').hide(); }
         function confirmEditAccount() { /* Unchanged, uses submitEditAccount */
