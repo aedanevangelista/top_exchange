@@ -1,5 +1,8 @@
 <?php
-session_start();
+// Start the session if it hasn't been started already
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Check if user is logged in
 if (!isset($_SESSION['username'])) {
@@ -41,10 +44,13 @@ if (!empty($missing_fields)) {
 $productId = $_POST['product_id'];
 $productName = $_POST['product_name'];
 $productPrice = floatval($_POST['price']); // Changed from product_price to price to match the form data
-$imagePath = $_POST['image_path'] ?? 'images/default-product.jpg';
+$imagePath = isset($_POST['image_path']) && !empty($_POST['image_path']) ? $_POST['image_path'] : '/LandingPage/images/default-product.jpg';
 $packaging = $_POST['packaging'] ?? '';
 $category = $_POST['category'] ?? '';
 $quantity = isset($_POST['quantity']) ? intval($_POST['quantity']) : 1;
+
+// Log the data being added to the cart
+error_log("Adding to cart: Product ID: $productId, Name: $productName, Price: $productPrice, Image: $imagePath, Quantity: $quantity");
 
 // Validate quantity
 if ($quantity < 1) {

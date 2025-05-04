@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 
     // Security Check: Verify this driver is assigned to this PO number
-    $checkStmt = $conn->prepare("SELECT da.driver_id FROM driver_assignments da JOIN orders o ON da.po_number = o.po_number WHERE da.driver_id = ? AND da.po_number = ? AND o.status NOT IN ('Completed', 'Rejected')"); // Ensure order is actionable by this driver
+    $checkStmt = $conn->prepare("SELECT da.driver_id FROM driver_assignments da JOIN orders o ON da.po_number = o.po_number WHERE da.driver_id = ? AND da.po_number = ? AND o.status NOT IN ('Completed', 'Cancelled')");
     if (!$checkStmt) {
          error_log("Dashboard Status Update - Check Prepare Error: " . $conn->error);
          echo json_encode(['success' => false, 'message' => 'Database error (check).']); exit;
@@ -102,29 +102,39 @@ $conn->close();
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Driver Dashboard - Top Exchange</title>
     <link rel="stylesheet" href="css/driver_dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Link to the shared toast CSS if it's outside this folder -->
     <link rel="stylesheet" href="../css/toast.css">
+    <!-- Added theme color for mobile browsers -->
+    <meta name="theme-color" content="#343a40">
 </head>
 <body>
     <div id="toast-container"></div>
     <header class="dashboard-header">
-        <h1>Driver Dashboard</h1>
+        <h1><i class="fas fa-truck"></i> Driver Dashboard</h1>
         <div class="driver-info">
-            <span>Welcome, <?= htmlspecialchars($driver_name) ?>!</span>
+            <span><i class="fas fa-user-circle"></i> Welcome, <?= htmlspecialchars($driver_name) ?>!</span>
             <a href="logout.php" class="logout-button"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </header>
+
+    <div class="pull-indicator" id="pullIndicator">
+        <span class="spinner"></span> Pull down to refresh...
+    </div>
 
     <main class="dashboard-content">
         <h2>Your Assigned Deliveries</h2>
 
         <?php if (empty($orders)): ?>
-            <p class="no-orders">You have no active deliveries assigned.</p>
+            <div class="no-orders">
+                <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: 15px; opacity: 0.5;"></i>
+                <p>You have no active deliveries assigned.</p>
+                <p style="font-size: 0.9rem; margin-top: 10px;">Pull down to refresh the page when new deliveries are assigned.</p>
+            </div>
         <?php else: ?>
             <div class="orders-list">
                 <?php foreach ($orders as $order):
@@ -132,15 +142,17 @@ $conn->close();
                 ?>
                     <div class="order-card" id="order-<?= htmlspecialchars($order['po_number']) ?>">
                         <div class="order-header">
-                            <span class="po-number">PO: <?= htmlspecialchars($order['po_number']) ?></span>
-                            <span class="order-date">Date: <?= htmlspecialchars(date('M d, Y', strtotime($order['delivery_date']))) ?></span>
+                            <div class="order-header-text">
+                                <span class="po-number"><?= htmlspecialchars($order['po_number']) ?></span>
+                                <span class="order-date"><i class="fas fa-calendar-alt"></i> <?= htmlspecialchars(date('M d, Y', strtotime($order['delivery_date']))) ?></span>
+                            </div>
                             <span class="order-status <?= $status_class ?>"><?= htmlspecialchars($order['status']) ?></span>
                         </div>
                         <div class="order-body">
-                            <p><strong>Customer:</strong> <?= htmlspecialchars($order['username']) ?></p>
-                            <p><strong>Address:</strong> <?= htmlspecialchars($order['delivery_address']) ?></p>
+                            <p><strong><i class="fas fa-user"></i> Customer:</strong> <?= htmlspecialchars($order['username']) ?></p>
+                            <p><strong><i class="fas fa-map-marker-alt"></i> Address:</strong> <?= htmlspecialchars($order['delivery_address']) ?></p>
                             <div class="order-items-summary">
-                                <p><strong>Items:</strong></p>
+                                <p><strong><i class="fas fa-box"></i> Items:</strong></p>
                                 <ul>
                                     <?php if (!empty($order['items']) && is_array($order['items'])): ?>
                                         <?php foreach ($order['items'] as $item): ?>
@@ -153,7 +165,7 @@ $conn->close();
                             </div>
                         </div>
                         <div class="order-actions">
-                            <label for="status-<?= htmlspecialchars($order['po_number']) ?>">Update Status:</label>
+                            <label for="status-<?= htmlspecialchars($order['po_number']) ?>"><i class="fas fa-tag"></i> Update Status:</label>
                             <select id="status-<?= htmlspecialchars($order['po_number']) ?>" name="new_status" class="status-select" data-po="<?= htmlspecialchars($order['po_number']) ?>">
                                 <!-- Show current status and next logical steps -->
                                 <?php if ($order['status'] == 'Active'): ?>
@@ -215,6 +227,40 @@ $conn->close();
                  console.error("Toastr library not loaded correctly.");
              }
 
+            // Setup pull-to-refresh
+            let touchStartY = 0;
+            let touchEndY = 0;
+            const minSwipeDistance = 100; // Minimum distance required for a swipe
+            const $pullIndicator = $('#pullIndicator');
+
+            document.addEventListener('touchstart', function(e) {
+                touchStartY = e.touches[0].clientY;
+            }, false);
+
+            document.addEventListener('touchmove', function(e) {
+                touchEndY = e.touches[0].clientY;
+                const swipeDistance = touchEndY - touchStartY;
+                
+                // Show pull indicator if user is pulling down from top of page
+                if (window.scrollY === 0 && swipeDistance > 30) {
+                    $pullIndicator.addClass('active');
+                    e.preventDefault(); // Prevent default scroll behavior
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchend', function(e) {
+                $pullIndicator.removeClass('active');
+                
+                // Calculate the vertical distance
+                const swipeDistance = touchEndY - touchStartY;
+                
+                // If we're at the top of the page and the pull is long enough, refresh
+                if (window.scrollY === 0 && swipeDistance > minSwipeDistance) {
+                    $pullIndicator.html('<span class="spinner"></span> Refreshing...');
+                    $pullIndicator.addClass('active');
+                    window.location.reload();
+                }
+            }, false);
 
             $('.update-status-btn').on('click', function() {
                 const button = $(this);
@@ -224,10 +270,10 @@ $conn->close();
                 const orderCard = button.closest('.order-card');
                 const currentStatusSpan = orderCard.find('.order-status');
 
-                // Optional: Add confirmation?
-                // if (!confirm(`Update order ${po_number} to status "${new_status}"?`)) {
-                //     return;
-                // }
+                // Optional: Add confirmation for completed status
+                if (new_status === 'Completed' && !confirm(`Mark order ${po_number} as completed?`)) {
+                    return;
+                }
 
                 button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...'); // Disable button and show spinner
 
@@ -244,6 +290,8 @@ $conn->close();
                         if (response.success) {
                            if(typeof showToast === 'function') {
                                 showToast(response.message, 'success');
+                           } else if (typeof toastr !== 'undefined') {
+                                toastr.success(response.message);
                            } else {
                                 alert(response.message); // Fallback alert
                            }
@@ -253,18 +301,26 @@ $conn->close();
                             // Update status class for color
                             currentStatusSpan.removeClass (function (index, className) {
                                 return (className.match (/(^|\s)status-\S+/g) || []).join(' ');
-                            }).addClass('status-' + new_status.toLowerCase().replace(' ', '-'));
+                            }).addClass('status-' + new_status.toLowerCase().replace(/\s+/g, '-'));
 
                             // If status is 'Completed', maybe hide the card or move it after a short delay
                             if (new_status === 'Completed') {
                                 orderCard.addClass('order-completed-visual'); // Add class for styling fade/strike-through
                                 setTimeout(() => {
-                                    // Option 1: Remove the card
-                                     orderCard.fadeOut(500, function() { $(this).remove(); });
-                                    // Option 2: Keep it but disable controls
-                                    // statusSelect.prop('disabled', true);
-                                    // button.remove(); // Remove the update button
-                                }, 1500); // Delay before removing/disabling
+                                    // Remove the card with animation
+                                    orderCard.fadeOut(500, function() { $(this).remove(); });
+                                    
+                                    // Check if no orders left
+                                    if ($('.order-card:visible').length === 0) {
+                                        $('.orders-list').html(`
+                                            <div class="no-orders">
+                                                <i class="fas fa-check-circle fa-2x" style="margin-bottom: 15px; color: #28a745; opacity: 0.8;"></i>
+                                                <p>All deliveries completed! Great job!</p>
+                                                <p style="font-size: 0.9rem; margin-top: 10px;">Pull down to refresh when new deliveries are assigned.</p>
+                                            </div>
+                                        `);
+                                    }
+                                }, 1500); // Delay before removing
                             } else {
                                 // Re-enable button for non-completed updates
                                 button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update');
@@ -275,6 +331,8 @@ $conn->close();
                         } else {
                             if(typeof showToast === 'function') {
                                 showToast(response.message || 'Failed to update status.', 'error');
+                            } else if (typeof toastr !== 'undefined') {
+                                toastr.error(response.message || 'Failed to update status.');
                             } else {
                                 alert(response.message || 'Failed to update status.'); // Fallback alert
                             }
@@ -285,6 +343,8 @@ $conn->close();
                         console.error("AJAX Error:", status, error, xhr.responseText);
                          if(typeof showToast === 'function') {
                             showToast('An error occurred while communicating with the server.', 'error');
+                         } else if (typeof toastr !== 'undefined') {
+                            toastr.error('An error occurred while communicating with the server.');
                          } else {
                              alert('An error occurred. Please check console.'); // Fallback alert
                          }
@@ -317,6 +377,10 @@ $conn->close();
                 updateStatusOptions($(this), currentStatus);
             });
 
+            // Prevent zooming on iOS
+            document.addEventListener('gesturestart', function (e) {
+                e.preventDefault();
+            });
         });
     </script>
 </body>

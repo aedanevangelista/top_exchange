@@ -1,19 +1,64 @@
 <?php
-session_start();
+// Start the session and initialize cart if it hasn't been started already
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Enable error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Process checkout form submission first, before any output
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Process the form submission (this code will be moved from below)
+    processCheckoutForm();
+}
+
+// Set page-specific variables before including header
+$pageTitle = "Checkout | Top Exchange Food Corp";
+$pageDescription = "Complete your order with Top Food Exchange Corp. - Premium Filipino food products since 1998.";
+
+// Log session data for debugging
+error_log("Checkout.php - Session data: " . json_encode([
+    'username' => $_SESSION['username'] ?? 'not set',
+    'cart_count' => isset($_SESSION['cart']) ? count($_SESSION['cart']) : 'cart not set',
+    'cart_items' => isset($_SESSION['cart']) ? array_keys($_SESSION['cart']) : 'cart not set'
+]));
+
+// Include the header now that we've processed any form submissions
+require_once 'header.php';
+
+// Handle redirects from form processing, but only if we're not already on the checkout page
+if (isset($_SESSION['redirect']) && !isset($_POST['delivery_address'])) {
+    // Only redirect to order_confirmation.php if this is a new order
+    if (strpos($_SESSION['redirect'], 'order_confirmation.php') !== false &&
+        (!isset($_SESSION['new_order']) || $_SESSION['new_order'] !== true)) {
+        // This is not a new order, so don't redirect to order confirmation
+        unset($_SESSION['redirect']);
+        error_log("Prevented unnecessary redirect to order_confirmation.php");
+    } else {
+        $redirectUrl = $_SESSION['redirect'];
+        unset($_SESSION['redirect']);
+        echo "<script>window.location.href = '$redirectUrl';</script>";
+        exit();
+    }
+}
+
 // Check if user is logged in
 if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
+    echo "<script>window.location.href = 'login.php';</script>";
     exit();
 }
 
 // Check if cart is empty
-if (empty($_SESSION['cart'])) {
-    header("Location: ordering.php");
+if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart']) || count($_SESSION['cart']) === 0) {
+    // Initialize cart if it doesn't exist
+    if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
+        $_SESSION['cart'] = [];
+    }
+
+    $_SESSION['error'] = "Your cart is empty. Please add items before checking out.";
+    echo "<script>window.location.href = 'ordering.php';</script>";
     exit();
 }
 
@@ -25,8 +70,17 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Process checkout form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Function to process checkout form
+function processCheckoutForm() {
+    // Connect to database
+    include_once('db_connection.php');
+
+    // Check connection
+    if ($conn->connect_error) {
+        $_SESSION['error'] = "Database connection failed. Please try again later.";
+        return;
+    }
+
     // Validate and sanitize input
     $deliveryAddress = trim($_POST['delivery_address']);
     $deliveryDate = $_POST['delivery_date'];
@@ -37,39 +91,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Basic validation
     if (empty($deliveryAddress) || empty($deliveryDate) || empty($contactNumber)) {
         $_SESSION['error'] = "Please fill in all required fields";
-        header("Location: checkout.php");
-        exit();
+        return;
     }
 
     // Validate delivery day is Monday, Wednesday, or Friday
     $deliveryDay = date('l', strtotime($deliveryDate));
     if (!in_array($deliveryDay, ['Monday', 'Wednesday', 'Friday'])) {
         $_SESSION['error'] = "Delivery is only available on Monday, Wednesday, and Friday";
-        header("Location: checkout.php");
-        exit();
+        return;
     }
 
     // Calculate order totals
     $subtotal = 0;
     $orderItems = [];
     foreach ($_SESSION['cart'] as $productId => $item) {
-        $itemSubtotal = $item['price'] * $item['quantity'];
+        // Skip invalid items
+        if (!isset($item['price']) || !isset($item['quantity']) || !isset($item['name'])) {
+            continue;
+        }
+
+        $price = isset($item['price']) ? (float)$item['price'] : 0;
+        $quantity = isset($item['quantity']) ? (int)$item['quantity'] : 1;
+
+        $itemSubtotal = $price * $quantity;
         $subtotal += $itemSubtotal;
+
         $orderItems[] = [
             'product_id' => $productId,
             'category' => $item['category'] ?? '',
             'item_description' => $item['name'],
             'packaging' => $item['packaging'] ?? '',
-            'price' => (float)$item['price'],
-            'quantity' => (int)$item['quantity']
+            'price' => $price,
+            'quantity' => $quantity
         ];
     }
 
     // Make sure we have items in the cart
     if (empty($orderItems)) {
         $_SESSION['error'] = "Your cart is empty. Please add items before checking out.";
-        header("Location: ordering.php");
-        exit();
+        $_SESSION['redirect'] = "ordering.php";
+        return;
     }
 
     // Remove delivery fee as requested
@@ -85,6 +146,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     error_log("Generated PO number: " . $poNumber);
 
     try {
+        // Log the order data for debugging
+        error_log("Preparing to insert order: PO=" . $poNumber . ", Username=" . $username);
+
         // Insert order into database - removed payment_method
         $stmt = $conn->prepare("INSERT INTO orders (
             po_number,
@@ -112,13 +176,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Ensure all required fields exist
             if (!isset($item['category'])) $item['category'] = '';
             if (!isset($item['packaging'])) $item['packaging'] = '';
+
+            // Log each item for debugging
+            error_log("Order item: " . json_encode($item));
         }
 
-        $jsonOrders = json_encode($orderItems, JSON_UNESCAPED_UNICODE);
+        // Use JSON_UNESCAPED_UNICODE and JSON_UNESCAPED_SLASHES for better compatibility
+        $jsonOrders = json_encode($orderItems, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         if ($jsonOrders === false) {
             throw new Exception("JSON encoding failed: " . json_last_error_msg());
         }
+
+        // Log the JSON string for debugging
+        error_log("JSON orders string (first 200 chars): " . substr($jsonOrders, 0, 200) . "...");
 
         // Updated bind_param without delivery_fee and payment_method
         $bindResult = $stmt->bind_param(
@@ -138,11 +209,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Bind failed: " . $stmt->error);
         }
 
+        // Log before executing
+        error_log("Executing order insert query...");
+
         $executeResult = $stmt->execute();
 
         if (!$executeResult) {
             throw new Exception("Execute failed: " . $stmt->error);
         }
+
+        // Log success
+        error_log("Order successfully inserted with ID: " . $stmt->insert_id);
 
         // Clear the cart
         $_SESSION['cart'] = [];
@@ -157,9 +234,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['new_order'] = true;
         $_SESSION['order_id'] = $orderId;
 
-        // Redirect to confirmation page
-        header("Location: order_confirmation.php?id=" . $orderId);
-        exit();
+        // Log that we're setting up a new order
+        error_log("New order created with ID: $orderId - Setting new_order flag");
+
+        // Output the order ID for AJAX to capture
+        echo "<div id='order_redirect' data-order-id='$orderId'>order_confirmation.php?id=$orderId</div>";
+
+        // Also set redirect in session as fallback
+        $_SESSION['redirect'] = "order_confirmation.php?id=" . $orderId;
+
+        // Set a timestamp to track when this order was created
+        $_SESSION['order_timestamp'] = time();
 
     } catch (Exception $e) {
         // Log detailed error information
@@ -181,9 +266,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $_SESSION['error'] = "Error processing your order. Please try again. Error: " . $e->getMessage();
         }
-
-        header("Location: checkout.php");
-        exit();
     }
 }
 
@@ -243,27 +325,9 @@ if (isset($_SESSION['error'])) {
     $errorMessage = $_SESSION['error'];
     unset($_SESSION['error']);
 }
+
+// Additional checkout-specific styles
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Checkout | Top Exchange Food Corp</title>
-    <meta name="keywords" content="checkout, order, food delivery, Filipino food">
-    <meta name="description" content="Complete your order with Top Food Exchange Corp. - Premium Filipino food products since 1998.">
-    <meta name="author" content="Top Food Exchange Corp.">
-    <link rel="stylesheet" type="text/css" href="/LandingPage/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="/LandingPage/css/style.css">
-    <link rel="stylesheet" href="/LandingPage/css/responsive.css">
-    <link rel="icon" href="images/resized_food_corp_logo.png" type="image/png" />
-    <!-- Fallback favicon -->
-    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
-    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
     <style>
         :root {
@@ -377,7 +441,7 @@ if (isset($_SESSION['error'])) {
             padding: 25px;
             background: white;
             position: sticky;
-            top: 20px;
+            top: 96px; /* Adjusted to account for fixed header (76px header + 20px spacing) */
         }
 
         .order-summary-title {
@@ -737,56 +801,6 @@ if (isset($_SESSION['error'])) {
     </style>
 </head>
 <body>
-    <div class="header_section">
-        <div class="container">
-            <nav class="navbar navbar-expand-lg navbar-light bg-light">
-                <a class="navbar-brand" href="index.php"><img src="/LandingPage/images/resized_food_corp_logo.png" alt="Top Food Exchange Corp. Logo"></a>
-                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <ul class="navbar-nav ml-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/LandingPage/index.php">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/LandingPage/about.php">About</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/LandingPage/ordering.php">Products</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/LandingPage/contact.php">Contact Us</a>
-                        </li>
-                    </ul>
-                    <form class="form-inline my-2 my-lg-0">
-                        <div class="login_bt">
-                            <?php if (isset($_SESSION['username'])): ?>
-                                <a href="#" class="cart-button" data-toggle="modal" data-target="#cartModal">
-                                    <span style="color: #222222;"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
-                                    <span id="cart-count" class="badge badge-danger"><?php echo array_sum(array_column($_SESSION['cart'], 'quantity')); ?></span>
-                                </a>
-                                <a href="/LandingPage/logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)
-                                    <span style="color: #222222;"><i class="fa fa-sign-out" aria-hidden="true"></i></span>
-                                </a>
-                            <?php else: ?>
-                                <a href="/LandingPage/login.php">Login
-                                    <span style="color: #222222;"><i class="fa fa-user" aria-hidden="true"></i></span>
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    </form>
-                </div>
-            </nav>
-        </div>
-
-        <!-- Custom Popup Message -->
-        <div id="customPopup" class="custom-popup">
-            <div class="popup-content">
-                <span id="popupMessage"></span>
-            </div>
-        </div>
-    </div>
 
     <!-- Main Content Section -->
     <main class="main-content">
@@ -872,23 +886,50 @@ if (isset($_SESSION['error'])) {
                         <div id="orderItems">
                             <?php
                             $subtotal = 0;
-                            foreach ($_SESSION['cart'] as $productId => $item):
-                                $itemSubtotal = $item['price'] * $item['quantity'];
-                                $subtotal += $itemSubtotal;
+                            $hasValidItems = false;
+
+                            if (isset($_SESSION['cart']) && is_array($_SESSION['cart']) && !empty($_SESSION['cart'])):
+                                foreach ($_SESSION['cart'] as $productId => $item):
+                                    // Skip invalid items
+                                    if (!isset($item['price']) || !isset($item['quantity']) || !isset($item['name'])) {
+                                        continue;
+                                    }
+
+                                    $hasValidItems = true;
+                                    $price = isset($item['price']) ? (float)$item['price'] : 0;
+                                    $quantity = isset($item['quantity']) ? (int)$item['quantity'] : 1;
+
+                                    $itemSubtotal = $price * $quantity;
+                                    $subtotal += $itemSubtotal;
                             ?>
                                 <div class="order-item">
                                     <div>
                                         <div class="order-item-name"><?php echo htmlspecialchars($item['name']); ?></div>
                                         <div class="order-item-details">
-                                            x<?php echo $item['quantity']; ?>
+                                            x<?php echo $quantity; ?>
                                             <?php if (!empty($item['packaging'])): ?>
                                                 • <?php echo htmlspecialchars($item['packaging']); ?>
+                                            <?php endif; ?>
+                                            <?php if (!empty($item['category'])): ?>
+                                                • <span class="badge badge-info"><?php echo htmlspecialchars($item['category']); ?></span>
                                             <?php endif; ?>
                                         </div>
                                     </div>
                                     <div>₱<?php echo number_format($itemSubtotal, 2); ?></div>
                                 </div>
-                            <?php endforeach; ?>
+                            <?php
+                                endforeach;
+                            endif;
+
+                            if (!$hasValidItems):
+                            ?>
+                                <div class="text-center py-4">
+                                    <i class="fa fa-shopping-cart fa-3x mb-3" style="color: #ddd;"></i>
+                                    <h5>Your cart is empty</h5>
+                                    <p>Please add items to your cart before checkout</p>
+                                    <a href="ordering.php" class="btn btn-primary mt-2">Go to Products</a>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <div class="order-totals">
@@ -906,6 +947,8 @@ if (isset($_SESSION['error'])) {
                         <button type="button" id="placeOrderBtn" class="btn btn-primary btn-checkout">
                             <i class="fas fa-shopping-bag mr-2"></i> Place Order
                         </button>
+
+                       
                     </div>
                 </div>
             </div>
@@ -913,7 +956,7 @@ if (isset($_SESSION['error'])) {
     </main>
 
     <!-- Order Confirmation Modal -->
-    <div class="modal fade confirmation-modal" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+    <div class="modal fade confirmation-modal" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="confirmationModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -932,12 +975,39 @@ if (isset($_SESSION['error'])) {
 
                     <div class="order-summary">
                         <h6 class="text-center mb-3">Order Summary</h6>
-                        <?php foreach ($_SESSION['cart'] as $productId => $item): ?>
+                        <?php
+                        $hasItems = false;
+                        if (isset($_SESSION['cart']) && is_array($_SESSION['cart']) && !empty($_SESSION['cart'])):
+                            foreach ($_SESSION['cart'] as $productId => $item):
+                                // Skip invalid items
+                                if (!isset($item['price']) || !isset($item['quantity']) || !isset($item['name'])) {
+                                    continue;
+                                }
+
+                                $hasItems = true;
+                                $price = isset($item['price']) ? (float)$item['price'] : 0;
+                                $quantity = isset($item['quantity']) ? (int)$item['quantity'] : 1;
+                                $itemSubtotal = $price * $quantity;
+                        ?>
                             <div class="order-summary-item">
-                                <span><?php echo htmlspecialchars($item['name']) . ' x ' . $item['quantity']; ?></span>
-                                <span>₱<?php echo number_format($item['price'] * $item['quantity'], 2); ?></span>
+                                <span>
+                                    <?php echo htmlspecialchars($item['name']) . ' x ' . $quantity; ?>
+                                    <?php if (!empty($item['category'])): ?>
+                                        <small class="d-block text-muted"><?php echo htmlspecialchars($item['category']); ?></small>
+                                    <?php endif; ?>
+                                </span>
+                                <span>₱<?php echo number_format($itemSubtotal, 2); ?></span>
                             </div>
-                        <?php endforeach; ?>
+                        <?php
+                            endforeach;
+                        endif;
+
+                        if (!$hasItems):
+                        ?>
+                            <div class="text-center">
+                                <p>No items in cart</p>
+                            </div>
+                        <?php endif; ?>
 
                         <div class="order-summary-item mt-3 pt-2 border-top">
                             <span><strong>Subtotal:</strong></span>
@@ -976,24 +1046,21 @@ if (isset($_SESSION['error'])) {
         </div>
     </div>
 
-    <!-- Footer Section -->
-    <div class="copyright_section">
-        <div class="container">
-            <p class="copyright_text">2025 All Rights Reserved. Design by STI Munoz Students</p>
+    <!-- Custom Popup for Notifications -->
+    <div id="customPopup" class="custom-popup" style="display: none;">
+        <div class="popup-content">
+            <span id="popupMessage"></span>
         </div>
     </div>
 
-    <!-- Javascript files-->
-    <script src="/LandingPage/js/jquery.min.js"></script>
-    <script src="/LandingPage/js/popper.min.js"></script>
-    <script src="/LandingPage/js/bootstrap.bundle.min.js"></script>
-    <script src="/LandingPage/js/jquery-3.0.0.min.js"></script>
-    <script src="/LandingPage/js/plugin.js"></script>
-    <!-- AOS Animation -->
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <!-- sidebar -->
-    <script src="/LandingPage/js/jquery.mCustomScrollbar.concat.min.js"></script>
-    <script src="/LandingPage/js/custom.js"></script>
+    <?php
+    // Include the footer
+    require_once 'footer.php';
+    ?>
+    <!-- Make sure Bootstrap JS is loaded for modals -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+
     <!-- Password Manager -->
     <script>
     /**
@@ -1064,6 +1131,8 @@ if (isset($_SESSION['error'])) {
             once: true
         });
 
+       
+
         // Function to show custom popup message
         function showPopup(message, isError = false) {
             const popup = $('#customPopup');
@@ -1087,6 +1156,11 @@ if (isset($_SESSION['error'])) {
 
         // Handle place order button click
         $(document).ready(function() {
+            // Initialize all modals
+            $('.modal').modal({
+                show: false
+            });
+
             // Show error message if exists
             <?php if (isset($errorMessage)): ?>
                 showPopup('<?php echo addslashes($errorMessage); ?>', true);
@@ -1094,6 +1168,10 @@ if (isset($_SESSION['error'])) {
 
             $('#placeOrderBtn').click(function(e) {
                 e.preventDefault();
+                console.log('Place Order button clicked');
+
+                // Show a popup to confirm the button was clicked
+                showPopup('Processing your order...', false);
 
                 // Validate form
                 const form = $('#checkoutForm');
@@ -1114,8 +1192,13 @@ if (isset($_SESSION['error'])) {
                     return;
                 }
 
-                // Show confirmation modal
-                $('#confirmationModal').modal('show');
+                // Show confirmation modal - use direct jQuery method to ensure it works
+                console.log('Showing confirmation modal');
+                $('#confirmationModal').modal({
+                    backdrop: 'static',
+                    keyboard: false,
+                    show: true
+                });
 
                 // Check if we have a saved password
                 if (PasswordManager.hasPassword()) {
@@ -1162,7 +1245,40 @@ if (isset($_SESSION['error'])) {
                             }
 
                             // Password verified, submit the form
-                            $('#checkoutForm').submit();
+                            $('#confirmOrderBtn').html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+
+                            // Submit the form with AJAX to avoid redirect issues
+                            $.ajax({
+                                url: 'checkout.php',
+                                type: 'POST',
+                                data: $('#checkoutForm').serialize(),
+                                success: function(response) {
+                                    // Check if there's a redirect URL in the session
+                                    if (response.indexOf('order_confirmation.php') !== -1) {
+                                        // Extract the order ID from the response
+                                        let orderId = null;
+                                        const match = response.match(/order_confirmation\.php\?id=(\d+)/);
+                                        if (match && match[1]) {
+                                            orderId = match[1];
+                                        }
+
+                                        if (orderId) {
+                                            // Redirect to order confirmation page
+                                            window.location.href = 'order_confirmation.php?id=' + orderId;
+                                        } else {
+                                            // Fallback to direct form submission
+                                            $('#checkoutForm').submit();
+                                        }
+                                    } else {
+                                        // Fallback to direct form submission
+                                        $('#checkoutForm').submit();
+                                    }
+                                },
+                                error: function() {
+                                    // Fallback to direct form submission on error
+                                    $('#checkoutForm').submit();
+                                }
+                            });
                         } else {
                             // Show error message
                             $('#confirm_password').addClass('is-invalid');
@@ -1254,5 +1370,3 @@ if (isset($_SESSION['error'])) {
             });
         });
     </script>
-</body>
-</html>

@@ -1,5 +1,8 @@
 <?php
-session_start();
+// Start the session if it hasn't been started already
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 header('Content-Type: application/json');
 
 // Check if user is logged in
@@ -123,27 +126,65 @@ $passwordMatches = false;
 // Debug: Log for troubleshooting
 error_log("Verifying password for user: " . $username);
 
-// Primary method: Check if password is hashed with password_hash (recommended)
-if (password_verify($password, $storedPassword)) {
-    $passwordMatches = true;
-    error_log("Password matched with password_verify");
-}
-// Fallback method: Direct database query as a last resort
-else {
-    // This is a special case for this specific system
-    $fallbackQuery = "SELECT * FROM clients_accounts WHERE username = ? AND password = ?";
-    $fallbackStmt = $conn->prepare($fallbackQuery);
-    $fallbackStmt->bind_param("ss", $username, $password);
-    $fallbackStmt->execute();
-    $fallbackResult = $fallbackStmt->get_result();
-
-    if ($fallbackResult && $fallbackResult->num_rows > 0) {
-        // Fallback method worked
+try {
+    // Primary method: Check if password is hashed with password_hash (recommended)
+    if (password_verify($password, $storedPassword)) {
         $passwordMatches = true;
-        error_log("Password matched with direct database query");
-    } else {
-        error_log("Password verification failed with all methods");
+        error_log("Password matched with password_verify");
     }
+    // Fallback method: Direct database query as a last resort
+    else {
+        // This is a special case for this specific system
+        $fallbackQuery = "SELECT * FROM clients_accounts WHERE username = ? AND password = ?";
+        $fallbackStmt = $conn->prepare($fallbackQuery);
+        if (!$fallbackStmt) {
+            throw new Exception("Prepare failed: " . $conn->error);
+        }
+
+        $bindResult = $fallbackStmt->bind_param("ss", $username, $password);
+        if (!$bindResult) {
+            throw new Exception("Bind failed: " . $fallbackStmt->error);
+        }
+
+        $executeResult = $fallbackStmt->execute();
+        if (!$executeResult) {
+            throw new Exception("Execute failed: " . $fallbackStmt->error);
+        }
+
+        $fallbackResult = $fallbackStmt->get_result();
+
+        if ($fallbackResult && $fallbackResult->num_rows > 0) {
+            // Fallback method worked
+            $passwordMatches = true;
+            error_log("Password matched with direct database query");
+        } else {
+            error_log("Password verification failed with direct database query");
+
+            // Try one more fallback with email as username
+            $emailFallbackQuery = "SELECT * FROM clients_accounts WHERE email = ? AND password = ?";
+            $emailFallbackStmt = $conn->prepare($emailFallbackQuery);
+            if ($emailFallbackStmt) {
+                $emailFallbackStmt->bind_param("ss", $username, $password);
+                $emailFallbackStmt->execute();
+                $emailFallbackResult = $emailFallbackStmt->get_result();
+
+                if ($emailFallbackResult && $emailFallbackResult->num_rows > 0) {
+                    $passwordMatches = true;
+                    error_log("Password matched with email fallback query");
+                } else {
+                    error_log("Password verification failed with all methods");
+                }
+
+                $emailFallbackStmt->close();
+            }
+        }
+
+        if ($fallbackStmt) {
+            $fallbackStmt->close();
+        }
+    }
+} catch (Exception $e) {
+    error_log("Error during password verification: " . $e->getMessage());
 }
 
 if ($passwordMatches) {

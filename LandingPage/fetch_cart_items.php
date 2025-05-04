@@ -20,19 +20,45 @@ $response = [
 
 // Format cart items for response
 foreach ($cartItems as $productId => $item) {
+    // Ensure all required fields exist
+    if (!isset($item['name']) || !isset($item['price']) || !isset($item['quantity'])) {
+        continue; // Skip invalid items
+    }
+
+    // Ensure quantity is a valid number
+    $quantity = max(1, intval($item['quantity']));
+
+    // Ensure price is a valid number
+    $price = floatval($item['price']);
+
+    // Create a valid cart item
     $response['cart_items'][] = [
         'product_id' => $productId,
         'name' => $item['name'],
-        'price' => $item['price'],
-        'quantity' => $item['quantity'],
-        'image_path' => $item['image_path'],
-        'packaging' => $item['packaging']
+        'price' => $price,
+        'quantity' => $quantity,
+        'image_path' => isset($item['image_path']) ? $item['image_path'] : '/LandingPage/images/default-product.jpg',
+        'packaging' => isset($item['packaging']) ? $item['packaging'] : ''
     ];
-    
-    $response['subtotal'] += $item['price'] * $item['quantity'];
+
+    $response['subtotal'] += $price * $quantity;
 }
 
-$response['total_items'] = array_sum(array_column($cartItems, 'quantity'));
+// Calculate total items
+$response['total_items'] = 0;
+if (!empty($cartItems)) {
+    foreach ($cartItems as $item) {
+        if (isset($item['quantity']) && is_numeric($item['quantity'])) {
+            $response['total_items'] += (int)$item['quantity'];
+        }
+    }
+}
+
+// Add debug information
+$response['debug'] = [
+    'session_cart' => $cartItems,
+    'formatted_cart' => $response['cart_items']
+];
 
 // Return JSON response
 header('Content-Type: application/json');

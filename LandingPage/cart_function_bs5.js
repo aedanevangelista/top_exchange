@@ -117,14 +117,12 @@ function updateCartModal() {
                                 <td>₱${price.toFixed(2)}</td>
                                 <td>
                                     <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <button class="btn btn-outline-secondary decrease-quantity"
-                                                    type="button"
-                                                    data-product-id="${item.product_id}"
-                                                    onclick="event.stopPropagation(); updateCartItemQuantity('${item.product_id}', -1); return false;">
-                                                <i class="fa fa-minus"></i>
-                                            </button>
-                                        </div>
+                                        <button class="btn btn-outline-secondary decrease-quantity"
+                                                type="button"
+                                                data-product-id="${item.product_id}"
+                                                onclick="event.stopPropagation(); updateCartItemQuantity('${item.product_id}', -1); return false;">
+                                            <i class="fa fa-minus"></i>
+                                        </button>
                                         <input type="number"
                                                class="form-control text-center quantity-input"
                                                value="${parseInt(item.quantity) || 1}"
@@ -133,14 +131,12 @@ function updateCartModal() {
                                                data-product-id="${item.product_id}"
                                                data-old-quantity="${parseInt(item.quantity) || 1}"
                                                onchange="updateQuantityManually(this)">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-outline-secondary increase-quantity"
-                                                    type="button"
-                                                    data-product-id="${item.product_id}"
-                                                    onclick="event.stopPropagation(); updateCartItemQuantity('${item.product_id}', 1); return false;">
-                                                <i class="fa fa-plus"></i>
-                                            </button>
-                                        </div>
+                                        <button class="btn btn-outline-secondary increase-quantity"
+                                                type="button"
+                                                data-product-id="${item.product_id}"
+                                                onclick="event.stopPropagation(); updateCartItemQuantity('${item.product_id}', 1); return false;">
+                                            <i class="fa fa-plus"></i>
+                                        </button>
                                     </div>
                                 </td>
                                 <td>₱${itemSubtotal.toFixed(2)}</td>
@@ -194,52 +190,47 @@ function updateQuantityManually(input) {
 }
 
 // Document ready function for cart operations
-function initializeCartFunctions() {
-    // Add to cart handler
-    $(document).on('click', '.add-to-cart', function(e) {
+$(document).ready(function() {
+    // Cart button click handler
+    $(document).on('click', '.cart-button', function(e) {
         e.preventDefault();
+        console.log('Cart button clicked');
+        var cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
+        cartModal.show();
+    });
 
-        const productId = $(this).data('product-id');
-        const productName = $(this).data('product-name');
-        const productPrice = $(this).data('product-price');
-        const imagePath = $(this).data('image-path');
-        const packaging = $(this).data('packaging');
+    // Checkout button handler
+    $(document).on('click', '#checkout-button', function() {
+        const specialInstructions = $('#special-instructions').val();
+        sessionStorage.setItem('specialInstructions', specialInstructions);
+        
+        // Hide the modal using Bootstrap 5 method
+        var cartModal = bootstrap.Modal.getInstance(document.getElementById('cartModal'));
+        if (cartModal) {
+            cartModal.hide();
+        }
 
+        // Use relative path to ensure it works in all environments
+        window.location.href = '/LandingPage/checkout.php';
+    });
+
+    // Update cart modal when it's shown
+    document.getElementById('cartModal').addEventListener('show.bs.modal', function() {
+        // First clean up the cart by removing any invalid items
         $.ajax({
-            url: 'add_to_cart.php',
+            url: '/LandingPage/clean_cart.php',
             type: 'POST',
             dataType: 'json',
-            data: {
-                product_id: productId,
-                product_name: productName,
-                product_price: productPrice,
-                image_path: imagePath,
-                packaging: packaging
-            },
             success: function(response) {
-                if(response.success) {
-                    $('#cart-count').text(response.cart_count);
-                    showPopup(productName + " added to cart!");
-
-                    // Update cart modal if it's open
-                    if ($('#cartModal').hasClass('show')) {
-                        updateCartModal();
-                    }
-                } else {
-                    showPopup(response.message || "Error adding to cart", true);
-                }
+                console.log('Cart cleaned:', response);
+                // Then update the cart modal
+                updateCartModal();
             },
             error: function(xhr, status, error) {
-                console.error("Error adding product to cart:", error);
-                showPopup("Error adding product to cart.", true);
+                console.error("Error cleaning cart:", error);
+                // Still try to update the cart modal
+                updateCartModal();
             }
         });
     });
-
-    // Note: Quantity adjustment and remove handlers are now handled by direct onclick attributes in the HTML
-
-    // Update cart modal when it's shown
-    $('#cartModal').on('show.bs.modal', function() {
-        updateCartModal();
-    });
-}
+});

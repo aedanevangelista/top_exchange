@@ -1,6 +1,8 @@
 <?php
-// Start the session
-session_start();
+// Start the session if it hasn't been started already
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Prevent caching of the page
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
@@ -44,6 +46,11 @@ if (!isset($_SESSION['cart'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- jQuery (required for cart functions) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Cart Functions -->
+    <script src="/LandingPage/cart_functions.js"></script>
 
     <style>
         /* Primary brand colors and variables */
@@ -259,13 +266,10 @@ if (!isset($_SESSION['cart'])) {
             color: var(--primary-color);
         }
 
-        .profile-dropdown-toggle img {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
+        .profile-dropdown-toggle .profile-icon {
+            font-size: 1.5rem;
+            color: var(--primary-color);
             margin-right: 10px;
-            object-fit: cover;
-            border: 2px solid var(--primary-color);
         }
 
         .profile-dropdown-toggle .username {
@@ -317,13 +321,10 @@ if (!isset($_SESSION['cart'])) {
             align-items: center;
         }
 
-        .profile-dropdown-header img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+        .profile-dropdown-header .profile-header-icon {
+            font-size: 2.2rem;
+            color: var(--primary-color);
             margin-right: 10px;
-            object-fit: cover;
-            border: 2px solid var(--primary-color);
         }
 
         .profile-dropdown-header .user-info {
@@ -375,8 +376,80 @@ if (!isset($_SESSION['cart'])) {
             background-color: rgba(0,0,0,0.05);
         }
 
+        /* Cart Button Styles */
+        .cart-button {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--transition);
+            background-color: rgba(154, 116, 50, 0.1);
+            border: 1px solid rgba(154, 116, 50, 0.2);
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+        }
+
+        .cart-button:hover {
+            background-color: rgba(154, 116, 50, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .cart-button .cart-icon {
+            color: var(--primary-color);
+            font-size: 1.2rem;
+        }
+
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: var(--accent-color);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.25em 0.4em;
+            min-width: 18px;
+            height: 18px;
+            line-height: 1;
+            text-align: center;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .cart-button:hover .cart-count {
+            transform: scale(1.1);
+        }
+
+        /* Fixed Header Styles */
+        .header_section {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Add padding to body to prevent content from being hidden under fixed header */
+        body {
+            padding-top: 76px; /* Adjust this value based on your header height */
+        }
+
         /* Responsive styles */
         @media (max-width: 768px) {
+            body {
+                padding-top: 66px; /* Smaller padding for mobile */
+            }
+
             .profile-dropdown-menu {
                 position: static;
                 box-shadow: none;
@@ -393,13 +466,19 @@ if (!isset($_SESSION['cart'])) {
             .profile-dropdown-toggle .username {
                 max-width: 80px;
             }
+
+            .cart-button {
+                width: 38px;
+                height: 38px;
+                margin-right: 10px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="header_section">
         <div class="container">
-            <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light py-2">
                 <a class="navbar-brand" href="index.php">
                     <img src="/LandingPage/images/resized_food_corp_logo.png" alt="Top Food Exchange Corp. Logo">
                     <div class="company-name">
@@ -428,21 +507,32 @@ if (!isset($_SESSION['cart'])) {
                     <form class="form-inline my-2 my-lg-0">
                         <div class="login_bt">
                             <?php if (isset($_SESSION['username'])): ?>
-                                <a href="#" class="cart-button" style="margin-right: 15px; position: relative; display: inline-block; text-decoration: none;">
-                                    <span style="color: #222222; font-size: 1.2rem;"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
-                                    <span id="cart-count" class="badge badge-danger" style="position: absolute; top: -8px; right: -8px; font-size: 0.7rem; padding: 0.25em 0.4em; border-radius: 50%;"><?php echo array_sum(array_column($_SESSION['cart'], 'quantity')); ?></span>
+                                <a href="javascript:void(0);" class="cart-button" onclick="$('#cartModal').modal('show');" aria-label="Shopping Cart">
+                                    <span class="cart-icon"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
+                                    <span id="cart-count" class="cart-count"><?php
+                                        // Safely calculate cart count with error handling
+                                        $cartCount = 0;
+                                        if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
+                                            foreach ($_SESSION['cart'] as $item) {
+                                                if (isset($item['quantity']) && is_numeric($item['quantity'])) {
+                                                    $cartCount += (int)$item['quantity'];
+                                                }
+                                            }
+                                        }
+                                        echo $cartCount;
+                                    ?></span>
                                 </a>
 
                                 <!-- Enhanced Profile Dropdown -->
                                 <div class="profile-dropdown" id="profileDropdown">
                                     <a href="#" class="profile-dropdown-toggle" onclick="event.preventDefault(); document.getElementById('profileDropdown').classList.toggle('active');">
-                                        <img src="/LandingPage/images/default-profile.jpg" alt="Profile Picture">
+                                        <i class="fas fa-user-circle profile-icon"></i>
                                         <span class="username"><?php echo htmlspecialchars($_SESSION['username']); ?></span>
                                         <span class="caret"><i class="fas fa-chevron-down"></i></span>
                                     </a>
                                     <div class="profile-dropdown-menu">
                                         <div class="profile-dropdown-header">
-                                            <img src="/LandingPage/images/default-profile.jpg" alt="Profile Picture">
+                                            <i class="fas fa-user-circle profile-header-icon"></i>
                                             <div class="user-info">
                                                 <div class="user-name"><?php echo htmlspecialchars($_SESSION['username']); ?></div>
                                                 <div class="user-email">
@@ -518,121 +608,19 @@ if (!isset($_SESSION['cart'])) {
         </div>
 
         <?php if (isset($_SESSION['username'])): ?>
-        <!-- Cart Modal -->
-        <div class="modal fade" id="cartModal" tabindex="-1" role="dialog" aria-labelledby="cartModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="cartModalLabel">Your Shopping Cart</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div id="empty-cart-message" class="text-center py-4" style="display: <?php echo empty($_SESSION['cart']) ? 'block' : 'none'; ?>;">
-                            <i class="fa fa-shopping-cart fa-4x mb-3" style="color: #ddd;"></i>
-                            <h4>Your cart is empty</h4>
-                            <p>Start shopping to add items to your cart</p>
-                        </div>
-                        <div id="cart-items-container" style="display: <?php echo empty($_SESSION['cart']) ? 'none' : 'block'; ?>;">
-                            <div class="table-responsive">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 120px;">Product</th>
-                                            <th>Description</th>
-                                            <th style="width: 100px;">Price</th>
-                                            <th style="width: 150px;">Quantity</th>
-                                            <th style="width: 100px;">Subtotal</th>
-                                            <th style="width: 40px;"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="cart-items-list">
-                                        <?php if (!empty($_SESSION['cart'])): ?>
-                                            <?php
-                                            $subtotal = 0;
-                                            foreach ($_SESSION['cart'] as $productId => $item):
-                                                $itemSubtotal = $item['price'] * $item['quantity'];
-                                                $subtotal += $itemSubtotal;
-                                            ?>
-                                                <tr>
-                                                    <td>
-                                                        <img src="<?php echo htmlspecialchars($item['image_path'] ?? '/LandingPage/images/default-product.jpg'); ?>"
-                                                             style="width: 80px; height: 80px; object-fit: contain;">
-                                                    </td>
-                                                    <td>
-                                                        <h6><?php echo htmlspecialchars($item['name']); ?></h6>
-                                                        <small class="text-muted"><?php echo htmlspecialchars($item['packaging'] ?? ''); ?></small>
-                                                    </td>
-                                                    <td>₱<?php echo number_format($item['price'], 2); ?></td>
-                                                    <td>
-                                                        <div class="input-group">
-                                                            <div class="input-group-prepend">
-                                                                <button class="btn btn-outline-secondary decrease-quantity"
-                                                                        type="button"
-                                                                        data-product-id="<?php echo $productId; ?>">
-                                                                    <i class="fa fa-minus"></i>
-                                                                </button>
-                                                            </div>
-                                                            <input type="number"
-                                                                   class="form-control text-center quantity-input"
-                                                                   value="<?php echo $item['quantity']; ?>"
-                                                                   min="1"
-                                                                   data-product-id="<?php echo $productId; ?>"
-                                                                   onchange="updateQuantityManually(this)">
-                                                            <div class="input-group-append">
-                                                                <button class="btn btn-outline-secondary increase-quantity"
-                                                                        type="button"
-                                                                        data-product-id="<?php echo $productId; ?>">
-                                                                    <i class="fa fa-plus"></i>
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td>₱<?php echo number_format($itemSubtotal, 2); ?></td>
-                                                    <td>
-                                                        <button class="btn btn-sm btn-outline-danger remove-from-cart"
-                                                                data-product-id="<?php echo $productId; ?>">
-                                                            <i class="fa fa-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="special-instructions">Special Instructions</label>
-                                        <textarea class="form-control" id="special-instructions" rows="3" placeholder="Any special requests or notes for your order..."></textarea>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 text-right">
-                                    <div class="order-summary">
-                                        <h5>Order Summary</h5>
-                                        <div class="d-flex justify-content-between">
-                                            <span>Subtotal:</span>
-                                            <span id="subtotal-amount">₱<?php echo number_format($subtotal ?? 0, 2); ?></span>
-                                        </div>
-                                        <hr>
-                                        <div class="d-flex justify-content-between">
-                                            <strong>Total:</strong>
-                                            <strong id="total-amount">₱<?php echo number_format(($subtotal ?? 0), 2); ?></strong>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Continue Shopping</button>
-                        <button type="button" class="btn btn-primary" id="checkout-button">Proceed to Checkout</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- Cart Modal is included in footer.php for Bootstrap 4 pages -->
+        <!-- For Bootstrap 5 pages (profile.php, orders.php, payments.php, settings.php),
+             the cart modal is included directly in those files -->
+        <?php
+        // Set a flag to prevent including cart modal in footer for Bootstrap 5 pages
+        $currentPage = basename($_SERVER['PHP_SELF']);
+        $bootstrap5Pages = ['profile.php', 'orders.php', 'payments.php', 'settings.php'];
+        if (in_array($currentPage, $bootstrap5Pages)) {
+            $_SESSION['skip_cart_modal_in_footer'] = true;
+        } else {
+            $_SESSION['skip_cart_modal_in_footer'] = false;
+        }
+        ?>
         <?php endif; ?>
 
         <!-- Custom Popup Message -->

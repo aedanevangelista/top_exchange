@@ -3,8 +3,10 @@
 $pageTitle = "Home | Top Exchange Food Corp";
 $pageDescription = "Top Food Exchange Corp. - Premium Filipino food products since 1998. Quality siopao, siomai, noodles, and sauces.";
 
-// Start the session and initialize cart
-session_start();
+// Start the session and initialize cart if it hasn't been started already
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
@@ -13,7 +15,7 @@ if (!isset($_SESSION['cart'])) {
 require_once 'header.php';
 ?>
 
-<!-- banner section start --> 
+<!-- banner section start -->
 <div class="banner_section layout_padding">
     <div class="container">
         <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">

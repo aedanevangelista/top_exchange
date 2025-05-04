@@ -1,7 +1,10 @@
 <?php
 // login.php
 
-session_start();
+// Start the session if it hasn't been started already
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 require 'db_connection.php';
 
 // Email functions
@@ -13,6 +16,34 @@ function generateVerificationCode() {
         // Fallback if random_int isn't available (less secure)
         return str_pad(mt_rand(0, 999999), 6, '0', STR_PAD_LEFT);
     }
+}
+
+// reCAPTCHA verification function
+function verifyReCaptcha($recaptcha_response) {
+    // Your reCAPTCHA secret key
+    $secret_key = '6Lf33C0rAAAAAJi4-UDk93nFJfnmMdFld8vu4OXc';
+
+    // Make a POST request to the Google reCAPTCHA API
+    $url = 'https://www.google.com/recaptcha/api/siteverify';
+    $data = [
+        'secret' => $secret_key,
+        'response' => $recaptcha_response
+    ];
+
+    // Use cURL to make the request
+    $options = [
+        'http' => [
+            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+            'method' => 'POST',
+            'content' => http_build_query($data)
+        ]
+    ];
+    $context = stream_context_create($options);
+    $verify_response = file_get_contents($url, false, $context);
+    $response_data = json_decode($verify_response);
+
+    // Return true if the reCAPTCHA verification was successful
+    return $response_data->success;
 }
 
 function sendVerificationEmail($email, $code) {
@@ -142,6 +173,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         $form_errors['login_password'] = "Password is required";
     }
 
+    // Verify reCAPTCHA
+    if (!isset($_POST['g-recaptcha-response']) || empty($_POST['g-recaptcha-response'])) {
+        $form_errors['recaptcha'] = "Please verify that you are not a robot";
+    } else {
+        $recaptcha_response = $_POST['g-recaptcha-response'];
+        if (!verifyReCaptcha($recaptcha_response)) {
+            $form_errors['recaptcha'] = "reCAPTCHA verification failed. Please try again";
+        }
+    }
+
     if (empty($form_errors)) {
         // Check if the user exists in the accounts table (for admins, managers, etc.)
         $stmt = $conn->prepare("SELECT * FROM accounts WHERE username = ?");
@@ -245,6 +286,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <!-- Google reCAPTCHA -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
     <style>
         :root {
@@ -403,6 +446,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             border-color: var(--accent-color);
         }
 
+        /* reCAPTCHA styling */
+        .g-recaptcha {
+            margin: 15px 0;
+            transform-origin: left top;
+            display: flex;
+            justify-content: center;
+        }
+
+        @media screen and (max-width: 480px) {
+            .g-recaptcha {
+                transform: scale(0.85);
+                margin-left: -13px;
+            }
+        }
+
         .alert-danger {
             background-color: rgba(220, 53, 69, 0.1);
             border: 1px solid rgba(220, 53, 69, 0.2);
@@ -507,6 +565,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 
                     <div class="forgot-password">
                         <a href="forgot_password.php">Forgot Password?</a>
+                    </div>
+
+                    <!-- Google reCAPTCHA widget -->
+                    <div class="form-group">
+                        <div class="g-recaptcha" data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"></div>
+                        <?php if (isset($form_errors['recaptcha'])): ?>
+                            <span class="error-message"><?php echo $form_errors['recaptcha']; ?></span>
+                        <?php endif; ?>
                     </div>
 
                     <button type="submit" name="login" class="btn btn-login">Login</button>

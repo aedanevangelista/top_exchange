@@ -161,12 +161,19 @@
 
         // Function to update the cart modal
         function updateCartModal() {
+            console.log('Updating cart modal...');
             $.ajax({
                 url: '/LandingPage/fetch_cart_items.php',
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
+                    console.log('Cart response:', response);
                     if(response && response.cart_items !== undefined) {
+                        // Update the cart count in the header with the total_items from the response
+                        if(response.total_items !== undefined) {
+                            $('#cart-count').text(response.total_items);
+                        }
+
                         if(response.cart_items.length === 0) {
                             $('#empty-cart-message').show();
                             $('#cart-items-container').hide();
@@ -185,8 +192,9 @@
                                 cartItemsHtml += `
                                     <tr>
                                         <td>
-                                            <img src="${item.image_path || '/LandingPage/images/default-product.jpg'}"
+                                            <img src="${item.image_path ? item.image_path : '/LandingPage/images/default-product.jpg'}"
                                                  alt="${item.name}"
+                                                 onerror="this.src='/LandingPage/images/default-product.jpg'; this.onerror=null;"
                                                  style="width: 80px; height: 80px; object-fit: contain;">
                                         </td>
                                         <td>
@@ -199,20 +207,23 @@
                                                 <div class="input-group-prepend">
                                                     <button class="btn btn-outline-secondary decrease-quantity"
                                                             type="button"
-                                                            data-product-id="${item.product_id}">
+                                                            data-product-id="${item.product_id}"
+                                                            onclick="updateCartItemQuantity('${item.product_id}', -1); return false;">
                                                         <i class="fa fa-minus"></i>
                                                     </button>
                                                 </div>
                                                 <input type="number"
                                                        class="form-control text-center quantity-input"
-                                                       value="${item.quantity}"
+                                                       value="${parseInt(item.quantity) || 1}"
                                                        min="1"
+                                                       max="100"
                                                        data-product-id="${item.product_id}"
                                                        onchange="updateQuantityManually(this)">
                                                 <div class="input-group-append">
                                                     <button class="btn btn-outline-secondary increase-quantity"
                                                             type="button"
-                                                            data-product-id="${item.product_id}">
+                                                            data-product-id="${item.product_id}"
+                                                            onclick="updateCartItemQuantity('${item.product_id}', 1); return false;">
                                                         <i class="fa fa-plus"></i>
                                                     </button>
                                                 </div>
@@ -221,7 +232,8 @@
                                         <td>₱${itemSubtotal.toFixed(2)}</td>
                                         <td>
                                             <button class="btn btn-sm btn-outline-danger remove-from-cart"
-                                                    data-product-id="${item.product_id}">
+                                                    data-product-id="${item.product_id}"
+                                                    onclick="event.stopPropagation(); removeCartItem('${item.product_id}'); return false;">
                                                 <i class="fa fa-trash"></i>
                                             </button>
                                         </td>
@@ -253,37 +265,46 @@
                 $('#cartModal').modal('show');
             });
 
-            // Quantity adjustment handlers
-            $(document).on('click', '.increase-quantity', function() {
-                const productId = $(this).data('product-id');
-                updateCartItemQuantity(productId, 1);
-            });
-
-            $(document).on('click', '.decrease-quantity', function() {
-                const productId = $(this).data('product-id');
-                updateCartItemQuantity(productId, -1);
-            });
-
-            // Remove item handler
-            $(document).on('click', '.remove-from-cart', function() {
-                const productId = $(this).data('product-id');
-                removeCartItem(productId);
-            });
+            // Note: Quantity adjustment and remove handlers are handled by inline onclick attributes in the HTML
 
             // Checkout button handler
             $(document).on('click', '#checkout-button', function() {
                 const specialInstructions = $('#special-instructions').val();
                 sessionStorage.setItem('specialInstructions', specialInstructions);
                 $('#cartModal').modal('hide');
-                window.location.href = '/LandingPage/checkout.php';
+
+                // Use relative path to ensure it works in all environments
+                window.location.href = 'checkout.php';
             });
 
             // Update cart modal when it's shown
             $('#cartModal').on('show.bs.modal', function() {
-                updateCartModal();
+                // First clean up the cart by removing any invalid items
+                $.ajax({
+                    url: '/LandingPage/clean_cart.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    success: function(response) {
+                        console.log('Cart cleaned:', response);
+                        // Then update the cart modal
+                        updateCartModal();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error cleaning cart:", error);
+                        // Still try to update the cart modal
+                        updateCartModal();
+                    }
+                });
             });
         });
     </script>
     <?php endif; ?>
+
+    <?php
+    // Include the cart modal if user is logged in and not on a Bootstrap 5 page
+    if (isset($_SESSION['username']) && (!isset($_SESSION['skip_cart_modal_in_footer']) || $_SESSION['skip_cart_modal_in_footer'] !== true)) {
+        include_once 'cart_modal.php';
+    }
+    ?>
 </body>
 </html>

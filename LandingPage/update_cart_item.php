@@ -51,7 +51,12 @@ if ($_SESSION['cart'][$productId]['quantity'] <= 0) {
 }
 
 // Calculate total items in cart
-$cartCount = array_sum(array_column($_SESSION['cart'], 'quantity'));
+$cartCount = 0;
+foreach ($_SESSION['cart'] as $item) {
+    if (isset($item['quantity']) && is_numeric($item['quantity'])) {
+        $cartCount += (int)$item['quantity'];
+    }
+}
 
 // Return success response
 echo json_encode([

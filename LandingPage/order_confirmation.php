@@ -1,29 +1,70 @@
 <?php
-// Set page-specific variables before including header
-$pageTitle = "Order Confirmation | Top Exchange Food Corp";
-$pageDescription = "Order confirmation for Top Food Exchange Corp. - Premium Filipino food products since 1998.";
-
 // Start the session (will be ignored if already started in header.php)
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-include_once('db_connection.php');
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Process any redirects before output
+$needsRedirect = false;
+$redirectUrl = '';
 
 // Check if user is logged in
 if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
+    $needsRedirect = true;
+    $redirectUrl = 'login.php';
 }
 
 // Check if order ID is provided
-if (!isset($_GET['id'])) {
-    header("Location: ordering.php");
+if (!$needsRedirect && !isset($_GET['id'])) {
+    $needsRedirect = true;
+    $redirectUrl = 'ordering.php';
+}
+
+// Set page-specific variables before including header
+$pageTitle = "Order Confirmation | Top Exchange Food Corp";
+$pageDescription = "Order confirmation for Top Food Exchange Corp. - Premium Filipino food products since 1998.";
+
+// Include the header at the very top
+require_once 'header.php';
+
+// Handle redirects using JavaScript after header is included
+if ($needsRedirect) {
+    echo "<script>window.location.href = '$redirectUrl';</script>";
     exit();
 }
 
-$orderId = $_GET['id'];
+// Include database connection
+include_once('db_connection.php');
+
+// Log connection status
+if ($conn->connect_error) {
+    error_log("Database connection failed in order_confirmation.php: " . $conn->connect_error);
+} else {
+    error_log("Database connection successful in order_confirmation.php");
+}
+
+// Get order ID from GET parameter or session
+if (isset($_GET['id'])) {
+    $orderId = $_GET['id'];
+} elseif (isset($_SESSION['order_id'])) {
+    $orderId = $_SESSION['order_id'];
+    // Clear the session variable to prevent reuse
+    unset($_SESSION['order_id']);
+} else {
+    // No order ID found, show error
+    $_SESSION['error'] = "No order ID provided. Please try again.";
+    echo "<script>window.location.href = 'ordering.php';</script>";
+    exit();
+}
+
 $username = $_SESSION['username'];
+
+// Log the order ID for debugging
+error_log("Processing order confirmation for Order ID: $orderId, Username: $username");
 
 // Include the email sending functionality
 require_once 'send_order_email.php';
@@ -32,24 +73,54 @@ require_once 'send_order_email.php';
 $sendEmail = false;
 if (isset($_SESSION['new_order']) && $_SESSION['new_order'] === true && isset($_SESSION['order_id']) && $_SESSION['order_id'] == $orderId) {
     $sendEmail = true;
-    // Clear the flags to prevent sending duplicate emails on page refresh
-    $_SESSION['new_order'] = false;
-    unset($_SESSION['order_id']);
 }
 
+// Always clear these session variables to prevent issues with the checkout flow
+$_SESSION['new_order'] = false;
+unset($_SESSION['order_id']);
+unset($_SESSION['redirect']);
+
+// Log session cleanup
+error_log("Cleared order session variables in order_confirmation.php");
+
 // Fetch order details
-$stmt = $conn->prepare("SELECT * FROM orders WHERE id = ? AND username = ?");
-$stmt->bind_param("is", $orderId, $username);
-$stmt->execute();
-$result = $stmt->get_result();
+try {
+    // Log the query parameters for debugging
+    error_log("Fetching order: ID=$orderId, Username=$username");
 
-if ($result->num_rows === 0) {
-    // Log the error for debugging
-    error_log("Order not found: ID=$orderId, Username=$username");
+    $stmt = $conn->prepare("SELECT * FROM orders WHERE id = ? AND username = ?");
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
+    }
 
-    // Redirect with error message
-    $_SESSION['error'] = "Order not found. Please try again.";
-    header("Location: ordering.php");
+    $bindResult = $stmt->bind_param("is", $orderId, $username);
+    if (!$bindResult) {
+        throw new Exception("Bind failed: " . $stmt->error);
+    }
+
+    $executeResult = $stmt->execute();
+    if (!$executeResult) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
+
+    $result = $stmt->get_result();
+
+    if ($result->num_rows === 0) {
+        // Log the error for debugging
+        error_log("Order not found: ID=$orderId, Username=$username");
+
+        // Set error message and redirect with JavaScript
+        $_SESSION['error'] = "Order not found. Please try again.";
+        echo "<script>window.location.href = 'ordering.php';</script>";
+        exit();
+    }
+} catch (Exception $e) {
+    // Log the error
+    error_log("Error fetching order: " . $e->getMessage());
+
+    // Set error message and redirect with JavaScript
+    $_SESSION['error'] = "Error retrieving order details. Please try again.";
+    echo "<script>window.location.href = 'ordering.php';</script>";
     exit();
 }
 
@@ -57,15 +128,35 @@ $order = $result->fetch_assoc();
 
 // Safely decode JSON orders
 $orderItems = [];
-if (!empty($order['orders'])) {
-    $decodedItems = json_decode($order['orders'], true);
-    if ($decodedItems !== null) {
-        $orderItems = $decodedItems;
+try {
+    if (!empty($order['orders'])) {
+        // Log the raw JSON for debugging
+        error_log("Raw JSON orders for order ID $orderId: " . substr($order['orders'], 0, 200) . "...");
+
+        // Attempt to decode the JSON
+        $decodedItems = json_decode($order['orders'], true);
+
+        // Check for JSON decode errors
+        if ($decodedItems === null && json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception("JSON decode error: " . json_last_error_msg());
+        }
+
+        if (is_array($decodedItems)) {
+            $orderItems = $decodedItems;
+            error_log("Successfully decoded " . count($orderItems) . " order items");
+        } else {
+            throw new Exception("Decoded JSON is not an array");
+        }
     } else {
-        // Log JSON decode error
-        error_log("JSON decode error for order ID $orderId: " . json_last_error_msg());
-        error_log("Raw JSON: " . $order['orders']);
+        error_log("No order items found for order ID $orderId");
     }
+} catch (Exception $e) {
+    // Log the error
+    error_log("Error processing order items for order ID $orderId: " . $e->getMessage());
+    error_log("Raw JSON: " . (isset($order['orders']) ? $order['orders'] : 'not set'));
+
+    // Continue with empty order items rather than failing completely
+    $orderItems = [];
 }
 
 // Send order confirmation email if this is a new order
@@ -82,7 +173,7 @@ if ($sendEmail) {
 }
 ?>
 
-<?php include 'header.php'; ?>
+<!-- Additional styles for order confirmation page -->
     <style>
         :root {
             --primary-color: #9a7432;
@@ -103,7 +194,7 @@ if ($sendEmail) {
 
         .confirmation-container {
             max-width: 800px;
-            margin: 50px auto;
+            margin: 30px auto;
             padding: 40px;
             background: white;
             border-radius: var(--border-radius);
@@ -368,10 +459,45 @@ if ($sendEmail) {
             font-weight: 600;
         }
 
+        /* Custom popup styling */
+        .custom-popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            display: none;
+            animation: slideIn 0.5s forwards, fadeOut 0.5s forwards 2.5s;
+            max-width: 300px;
+        }
+
+        .popup-content {
+            display: flex;
+            align-items: center;
+        }
+
+        .custom-popup.error {
+            background-color: var(--accent-color);
+        }
+
+        @keyframes slideIn {
+            from { right: -100%; opacity: 0; }
+            to { right: 20px; opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
         @media (max-width: 767px) {
             .confirmation-container {
                 padding: 25px;
-                margin: 30px 15px;
+                margin: 20px 15px;
             }
 
             .confirmation-header {
@@ -518,10 +644,24 @@ if ($sendEmail) {
             <a href="/LandingPage/index.php" class="btn-secondary">
                 <i class="fas fa-home mr-2"></i> Back to Home
             </a>
-            <a href="/LandingPage/ordering.php" class="btn-continue">
+            <a href="/LandingPage/ordering.php" class="btn-continue" onclick="resetOrderFlow()">
                 <i class="fas fa-shopping-cart mr-2"></i> Continue Shopping
             </a>
         </div>
+
+        <script>
+            // Function to reset the order flow when continuing shopping
+            function resetOrderFlow() {
+                // Clear any remaining order session variables
+                <?php
+                echo "console.log('Resetting order flow...');";
+                ?>
+
+                // You can add additional client-side cleanup here if needed
+                localStorage.removeItem('pendingOrder');
+                sessionStorage.removeItem('checkoutInProgress');
+            }
+        </script>
 
         <div style="text-align: center; margin-top: 30px; color: #666; font-size: 0.9rem;">
             <?php if (isset($emailSuccessMessage)): ?>
@@ -535,19 +675,45 @@ if ($sendEmail) {
         </div>
     </div>
 
-    <div class="copyright_section">
-        <div class="container">
-            <p class="copyright_text">2025 All Rights Reserved. Design by STI Munoz Students</p>
+    <!-- Custom Popup for Notifications -->
+    <div id="customPopup" class="custom-popup" style="display: none;">
+        <div class="popup-content">
+            <span id="popupMessage"></span>
         </div>
     </div>
 
-    <!-- Javascript files-->
-    <script src="/LandingPage/js/jquery.min.js"></script>
-    <script src="/LandingPage/js/popper.min.js"></script>
-    <script src="/LandingPage/js/bootstrap.bundle.min.js"></script>
-    <script src="/LandingPage/js/jquery-3.0.0.min.js"></script>
-    <script src="/LandingPage/js/plugin.js"></script>
-    <script src="/LandingPage/js/jquery.mCustomScrollbar.concat.min.js"></script>
-    <script src="/LandingPage/js/custom.js"></script>
-</body>
-</html>
+    <script>
+        // Function to show custom popup message
+        function showPopup(message, isError = false) {
+            const popup = $('#customPopup');
+            const popupMessage = $('#popupMessage');
+
+            popupMessage.text(message);
+            popup.removeClass('error');
+
+            if (isError) {
+                popup.addClass('error');
+            }
+
+            // Reset animation by briefly showing/hiding
+            popup.hide().show();
+
+            // Automatically hide after 3 seconds
+            setTimeout(() => {
+                popup.hide();
+            }, 3000);
+        }
+
+        $(document).ready(function() {
+            <?php if (isset($emailSuccessMessage)): ?>
+                showPopup('<?php echo addslashes($emailSuccessMessage); ?>', false);
+            <?php elseif (isset($emailErrorMessage)): ?>
+                showPopup('<?php echo addslashes($emailErrorMessage); ?>', true);
+            <?php endif; ?>
+        });
+    </script>
+
+    <?php
+    // Include the footer
+    require_once 'footer.php';
+    ?>

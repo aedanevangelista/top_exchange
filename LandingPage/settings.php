@@ -438,6 +438,13 @@ $conn->close();
     <!-- Include your header -->
     <?php include 'header.php'; ?>
 
+    <?php
+    // Include the Bootstrap 5 cart modal if user is logged in
+    if (isset($_SESSION['username'])) {
+        include_once 'cart_modal_bs5.php';
+    }
+    ?>
+
     <!-- Settings Header -->
     <div class="settings-header">
         <div class="container">
@@ -652,6 +659,10 @@ $conn->close();
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery (required for cart functions) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Cart Functions for Bootstrap 5 -->
+    <script src="/LandingPage/cart_functions_bs5.js"></script>
     <!-- Custom JS -->
     <script>
         // Initialize proof modal

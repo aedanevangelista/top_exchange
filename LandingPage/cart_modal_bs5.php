@@ -1,13 +1,11 @@
 <?php if (isset($_SESSION['username'])): ?>
-<!-- Cart Modal -->
-<div class="modal fade" id="cartModal" tabindex="-1" role="dialog" aria-labelledby="cartModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+<!-- Cart Modal for Bootstrap 5 -->
+<div class="modal fade" id="cartModal" tabindex="-1" aria-labelledby="cartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="cartModalLabel">Your Shopping Cart</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div id="empty-cart-message" class="text-center py-4" style="display: <?php echo empty($_SESSION['cart']) ? 'block' : 'none'; ?>;">
@@ -48,14 +46,12 @@
                                             <td>₱<?php echo number_format($item['price'], 2); ?></td>
                                             <td>
                                                 <div class="input-group">
-                                                    <div class="input-group-prepend">
-                                                        <button class="btn btn-outline-secondary decrease-quantity"
-                                                                type="button"
-                                                                data-product-id="<?php echo $productId; ?>"
-                                                                onclick="event.stopPropagation(); updateCartItemQuantity('<?php echo $productId; ?>', -1); return false;">
-                                                            <i class="fa fa-minus"></i>
-                                                        </button>
-                                                    </div>
+                                                    <button class="btn btn-outline-secondary decrease-quantity"
+                                                            type="button"
+                                                            data-product-id="<?php echo $productId; ?>"
+                                                            onclick="event.stopPropagation(); updateCartItemQuantity('<?php echo $productId; ?>', -1); return false;">
+                                                        <i class="fa fa-minus"></i>
+                                                    </button>
                                                     <input type="number"
                                                            class="form-control text-center quantity-input"
                                                            value="<?php echo $item['quantity']; ?>"
@@ -63,14 +59,12 @@
                                                            max="100"
                                                            data-product-id="<?php echo $productId; ?>"
                                                            onchange="updateQuantityManually(this)">
-                                                    <div class="input-group-append">
-                                                        <button class="btn btn-outline-secondary increase-quantity"
-                                                                type="button"
-                                                                data-product-id="<?php echo $productId; ?>"
-                                                                onclick="event.stopPropagation(); updateCartItemQuantity('<?php echo $productId; ?>', 1); return false;">
-                                                            <i class="fa fa-plus"></i>
-                                                        </button>
-                                                    </div>
+                                                    <button class="btn btn-outline-secondary increase-quantity"
+                                                            type="button"
+                                                            data-product-id="<?php echo $productId; ?>"
+                                                            onclick="event.stopPropagation(); updateCartItemQuantity('<?php echo $productId; ?>', 1); return false;">
+                                                        <i class="fa fa-plus"></i>
+                                                    </button>
                                                 </div>
                                             </td>
                                             <td>₱<?php echo number_format($itemSubtotal, 2); ?></td>
@@ -89,12 +83,12 @@
                     </div>
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="special-instructions">Special Instructions</label>
+                            <div class="mb-3">
+                                <label for="special-instructions" class="form-label">Special Instructions</label>
                                 <textarea class="form-control" id="special-instructions" rows="3" placeholder="Any special requests or notes for your order..."></textarea>
                             </div>
                         </div>
-                        <div class="col-md-6 text-right">
+                        <div class="col-md-6 text-end">
                             <div class="order-summary">
                                 <h5>Order Summary</h5>
                                 <div class="d-flex justify-content-between">
@@ -116,7 +110,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Continue Shopping</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Continue Shopping</button>
                 <button type="button" class="btn btn-primary" id="checkout-button">Proceed to Checkout</button>
             </div>
         </div>
