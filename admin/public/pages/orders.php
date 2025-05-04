@@ -907,7 +907,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .orders-table-container { width: 100%; overflow-x: auto; }
         .orders-table { width: 100%; min-width: 1200px; /* Ensure minimum width */ border-collapse: collapse; }
         .orders-table th, .orders-table td { padding: 10px 12px; border: 1px solid #dee2e6; text-align: left; font-size: 13px; vertical-align: middle; white-space: nowrap; }
-        .orders-table thead th { background-color: #f8f9fa; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+        .orders-table thead th { background-color:rgb(34, 34, 34); font-weight: 600; position: sticky; top: 0; z-index: 10; }
         .orders-table tbody tr:hover { background-color: #f1f3f5; }
         .orders-table th.sortable a { color: inherit; text-decoration: none; display: flex; justify-content: space-between; align-items: center; }
         .orders-table th.sortable a i { margin-left: 5px; color: #adb5bd; }
