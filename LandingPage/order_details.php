@@ -49,14 +49,14 @@ $result = $stmt->get_result();
 
 if ($result->num_rows > 0) {
     $orderDetails = $result->fetch_assoc();
-    
+
     // Get order items
     $itemsQuery = "SELECT * FROM order_items WHERE po_number = ?";
     $itemsStmt = $conn->prepare($itemsQuery);
     $itemsStmt->bind_param("s", $po_number);
     $itemsStmt->execute();
     $itemsResult = $itemsStmt->get_result();
-    
+
     while ($item = $itemsResult->fetch_assoc()) {
         $orderItems[] = $item;
     }
@@ -81,6 +81,8 @@ $conn->close();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="icon" href="/LandingPage/images/resized_food_corp_logo.png" type="image/png" />
     <!-- Custom CSS -->
     <style>
         :root {
@@ -307,20 +309,20 @@ $conn->close();
                             <div class="col-md-6">
                                 <div class="order-info-label">Order Number</div>
                                 <div class="order-info-value"><?php echo htmlspecialchars($orderDetails['po_number']); ?></div>
-                                
+
                                 <div class="order-info-label">Order Date</div>
                                 <div class="order-info-value"><?php echo date('F j, Y', strtotime($orderDetails['order_date'])); ?></div>
-                                
+
                                 <div class="order-info-label">Delivery Date</div>
                                 <div class="order-info-value"><?php echo date('F j, Y', strtotime($orderDetails['delivery_date'])); ?></div>
                             </div>
                             <div class="col-md-6">
                                 <div class="order-info-label">Payment Method</div>
                                 <div class="order-info-value"><?php echo htmlspecialchars($orderDetails['payment_method'] ?? 'Not specified'); ?></div>
-                                
+
                                 <div class="order-info-label">Shipping Address</div>
                                 <div class="order-info-value"><?php echo htmlspecialchars($orderDetails['shipping_address'] ?? 'Not specified'); ?></div>
-                                
+
                                 <div class="order-info-label">Notes</div>
                                 <div class="order-info-value"><?php echo htmlspecialchars($orderDetails['notes'] ?? 'No notes'); ?></div>
                             </div>
@@ -406,7 +408,7 @@ $conn->close();
                                 <span>₱<?php echo number_format($orderDetails['total_amount'], 2); ?></span>
                             </div>
                         </div>
-                        
+
                         <div class="mt-4">
                             <a href="/LandingPage/orders.php" class="btn btn-outline-primary w-100 mb-2">
                                 <i class="fas fa-arrow-left me-2"></i> Back to Orders

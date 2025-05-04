@@ -17,7 +17,7 @@ function generateVerificationCode() {
 
 function sendVerificationEmail($email, $code) {
     $subject = "Your Top Food Exchange Corp Login Verification Code";
-    
+
     // HTML email template
     $message = '
     <!DOCTYPE html>
@@ -29,9 +29,9 @@ function sendVerificationEmail($email, $code) {
             .header { background-color: #9a7432; padding: 20px; text-align: center; }
             .header img { max-width: 200px; }
             .content { padding: 30px 20px; background-color: #f9f9f9; }
-            .code { 
-                font-size: 24px; 
-                font-weight: bold; 
+            .code {
+                font-size: 24px;
+                font-weight: bold;
                 color: #9a7432;
                 text-align: center;
                 margin: 20px 0;
@@ -41,12 +41,12 @@ function sendVerificationEmail($email, $code) {
                 border-radius: 5px;
                 display: inline-block;
             }
-            .footer { 
-                margin-top: 30px; 
-                padding-top: 20px; 
-                border-top: 1px solid #ddd; 
-                font-size: 12px; 
-                color: #777; 
+            .footer {
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #ddd;
+                font-size: 12px;
+                color: #777;
                 text-align: center;
             }
             .button {
@@ -69,13 +69,13 @@ function sendVerificationEmail($email, $code) {
                 <h2>Login Verification Code</h2>
                 <p>Hello,</p>
                 <p>We received a login attempt to your Top Food Exchange Corp account. Please use the following verification code to complete your login:</p>
-                
+
                 <div class="code">'.$code.'</div>
-                
+
                 <p>This code will expire in 15 minutes. If you didn\'t request this, please ignore this email or contact our support team immediately.</p>
-                
+
                 <p>For security reasons, never share this code with anyone.</p>
-                
+
                 <p>Thank you,<br>
                 Top Food Exchange Corp Team</p>
             </div>
@@ -87,7 +87,7 @@ function sendVerificationEmail($email, $code) {
     </body>
     </html>
     ';
-    
+
     // Plain text version for non-HTML email clients
     $plain_message = "Login Verification Code\n\n";
     $plain_message .= "We received a login attempt to your Top Food Exchange Corp account.\n";
@@ -95,30 +95,30 @@ function sendVerificationEmail($email, $code) {
     $plain_message .= "This code will expire in 15 minutes. If you didn't request this, please ignore this email or contact our support team immediately.\n\n";
     $plain_message .= "For security reasons, never share this code with anyone.\n\n";
     $plain_message .= "Thank you,\nTop Food Exchange Corp Team";
-    
+
     $headers = "From: Top Food Exchange Corp <no-reply@topfoodexchangecorp.com>\r\n";
     $headers .= "Reply-To: no-reply@topfoodexchangecorp.com\r\n";
     $headers .= "MIME-Version: 1.0\r\n";
     $headers .= "Content-Type: multipart/alternative; boundary=\"boundary\"\r\n";
-    
+
     // Email body with both HTML and plain text versions
     $email_body = "--boundary\r\n";
     $email_body .= "Content-Type: text/plain; charset=\"UTF-8\"\r\n";
     $email_body .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
     $email_body .= $plain_message . "\r\n\r\n";
-    
+
     $email_body .= "--boundary\r\n";
     $email_body .= "Content-Type: text/html; charset=\"UTF-8\"\r\n";
     $email_body .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
     $email_body .= $message . "\r\n\r\n";
     $email_body .= "--boundary--";
-    
+
     // Additional headers for email tracking (optional)
     $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
     $headers .= "X-Priority: 1 (Highest)\r\n";
     $headers .= "X-MSMail-Priority: High\r\n";
     $headers .= "Importance: High\r\n";
-    
+
     return mail($email, $subject, $email_body, $headers);
 }
 
@@ -178,19 +178,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                     // Generate and send verification code
                     $verification_code = generateVerificationCode();
                     $expires_at = date('Y-m-d H:i:s', strtotime('+15 minutes'));
-                    
+
                     // Store code in database
                     $stmt = $conn->prepare("UPDATE clients_accounts SET verification_code = ?, code_expires_at = ? WHERE email = ?");
                     $stmt->bind_param("sss", $verification_code, $expires_at, $email);
                     $stmt->execute();
-                    
+
                     // Send email
                     if (sendVerificationEmail($email, $verification_code)) {
                         // Store email in session for verification
                         $_SESSION['verification_email'] = $email;
                         $_SESSION['verification_attempts'] = 0;
                         $_SESSION['last_verification_attempt'] = time();
-                        
+
                         // Redirect to verification page
                         header('Location: verify_code.php');
                         exit();
@@ -225,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="viewport" content="initial-scale=1, maximum-scale=1">
     <!-- site metas -->
-    <title>Login | Top Exchange Food Corp</title> 
+    <title>Login | Top Exchange Food Corp</title>
     <meta name="keywords" content="login, food supplier, Philippines">
     <meta name="description" content="Login to your Top Exchange Food Corp account">
     <meta name="author" content="Top Food Exchange Corp.">
@@ -236,7 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <!-- Responsive-->
     <link rel="stylesheet" href="/LandingPage/css/responsive.css">
     <!-- fevicon -->
-    <link rel="icon" href="/LandingPage/images/fevicon.png" type="image/gif" />
+    <link rel="icon" href="/LandingPage/images/resized_food_corp_logo.png" type="image/png" />
     <!-- font css -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
     <!-- fontawesome -->
@@ -245,7 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    
+
     <style>
         :root {
             --primary-color: #9a7432;
@@ -520,7 +520,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 
     <!-- Include external footer -->
     <?php include('footer.php'); ?>
-    
+
     <!-- Javascript files-->
     <script src="/LandingPage/js/jquery.min.js"></script>
     <script src="/LandingPage/js/popper.min.js"></script>
@@ -532,7 +532,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <!-- sidebar -->
     <script src="/LandingPage/js/jquery.mCustomScrollbar.concat.min.js"></script>
     <script src="/LandingPage/js/custom.js"></script>
-    
+
     <script>
         // Initialize AOS animation
         AOS.init({
@@ -540,7 +540,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             easing: 'ease-in-out',
             once: true
         });
-        
+
         // Function to toggle password visibility
         function togglePassword() {
             const passwordInput = document.getElementById('password');
@@ -555,22 +555,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 icon.classList.add('fa-eye');
             }
         }
-        
+
         // Function to show custom popup message
         function showPopup(message, isError = false) {
             const popup = $('#customPopup');
             const popupMessage = $('#popupMessage');
-            
+
             popupMessage.text(message);
             popup.removeClass('error');
-            
+
             if (isError) {
                 popup.addClass('error');
             }
-            
+
             // Reset animation by briefly showing/hiding
             popup.hide().show();
-            
+
             // Automatically hide after 3 seconds
             setTimeout(() => {
                 popup.hide();
@@ -645,20 +645,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                         } else {
                             $('#empty-cart-message').hide();
                             $('#cart-items-container').show();
-                            
+
                             let cartItemsHtml = '';
                             let subtotal = 0;
-                            
+
                             response.cart_items.forEach(item => {
                                 const price = parseFloat(item.price);
                                 const itemSubtotal = price * item.quantity;
                                 subtotal += itemSubtotal;
-                                
+
                                 cartItemsHtml += `
                                     <tr>
                                         <td>
-                                            <img src="${item.image_path || '/LandingPage/images/default-product.jpg'}" 
-                                                 alt="${item.name}" 
+                                            <img src="${item.image_path || '/LandingPage/images/default-product.jpg'}"
+                                                 alt="${item.name}"
                                                  style="width: 80px; height: 80px; object-fit: contain;">
                                         </td>
                                         <td>
@@ -669,19 +669,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                                         <td>
                                             <div class="input-group">
                                                 <div class="input-group-prepend">
-                                                    <button class="btn btn-outline-secondary decrease-quantity" 
-                                                            type="button" 
+                                                    <button class="btn btn-outline-secondary decrease-quantity"
+                                                            type="button"
                                                             data-product-id="${item.product_id}">
                                                         <i class="fa fa-minus"></i>
                                                     </button>
                                                 </div>
-                                                <input type="text" 
-                                                       class="form-control text-center quantity-input" 
-                                                       value="${item.quantity}" 
+                                                <input type="text"
+                                                       class="form-control text-center quantity-input"
+                                                       value="${item.quantity}"
                                                        readonly>
                                                 <div class="input-group-append">
-                                                    <button class="btn btn-outline-secondary increase-quantity" 
-                                                            type="button" 
+                                                    <button class="btn btn-outline-secondary increase-quantity"
+                                                            type="button"
                                                             data-product-id="${item.product_id}">
                                                         <i class="fa fa-plus"></i>
                                                     </button>
@@ -690,7 +690,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                                         </td>
                                         <td>₱${itemSubtotal.toFixed(2)}</td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-danger remove-from-cart" 
+                                            <button class="btn btn-sm btn-outline-danger remove-from-cart"
                                                     data-product-id="${item.product_id}">
                                                 <i class="fa fa-trash"></i>
                                             </button>
@@ -701,11 +701,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 
                             $('#cart-items-list').html(cartItemsHtml);
                             $('#subtotal-amount').text('₱' + subtotal.toFixed(2));
-                            
+
                             // Calculate delivery fee
                             const deliveryFee = subtotal > 500 ? 0 : 50;
                             $('#delivery-fee').text('₱' + deliveryFee.toFixed(2));
-                            
+
                             const totalAmount = subtotal + deliveryFee;
                             $('#total-amount').text('₱' + totalAmount.toFixed(2));
                         }

@@ -8,7 +8,7 @@ if ($conn->connect_error) {
 }
 
 // Fetch products using correct column names
-$sql = "SELECT item_description AS name, price, image_path, packaging, category FROM products";  
+$sql = "SELECT item_description AS name, price, image_path, packaging, category FROM products";
 $result = $conn->query($sql);
 
 // Get selected category from URL (if any)
@@ -50,7 +50,7 @@ $category_result = $conn->query("SELECT DISTINCT category FROM products");
     <!-- Responsive-->
     <link rel="stylesheet" href="css/responsive.css">
       <!-- fevicon -->
-      <link rel="icon" href="images/fevicon.png" type="image/gif" />
+      <link rel="icon" href="images/resized_food_corp_logo.png" type="image/png" />
       <!-- font css -->
       <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
       <!-- Scrollbar Custom CSS -->
@@ -107,10 +107,10 @@ $(document).ready(function() {
         }, 500);
     });
 });
-</script>  
+</script>
 
-    
-      
+
+
 </head>
 <body>
 
@@ -169,12 +169,12 @@ $(document).ready(function() {
 
         <div class="cream_section_2">
         <div class="row">
-            <?php 
+            <?php
             while ($row = mysqli_fetch_assoc($result)) { ?>
                 <div class="col-md-4">
                     <div class="cream_box">
                         <div class="cream_img">
-                            <img src="<?php echo htmlspecialchars($row['image_path']); ?>">   
+                            <img src="<?php echo htmlspecialchars($row['image_path']); ?>">
                         </div>
                         <div class="price_text">
                              ₱<?php echo isset($row['price']) ? number_format($row['price'], 2) : '0.00'; ?>

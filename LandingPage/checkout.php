@@ -257,7 +257,7 @@ if (isset($_SESSION['error'])) {
     <link rel="stylesheet" type="text/css" href="/LandingPage/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="/LandingPage/css/style.css">
     <link rel="stylesheet" href="/LandingPage/css/responsive.css">
-    <link rel="icon" href="images/fevicon.png" type="image/gif" />
+    <link rel="icon" href="images/resized_food_corp_logo.png" type="image/png" />
     <!-- Fallback favicon -->
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
