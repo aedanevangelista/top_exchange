@@ -1,5 +1,7 @@
 <?php
-// UTC: 2025-05-04 09:45:00
+// UTC: 2025-05-04 09:48:01
+// Location: Assumed moved to public/api/fetch_report.php
+
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
@@ -14,15 +16,20 @@ if (!function_exists('mysqli_stmt_get_result')) {
     }
 }
 
-// Basic security check
+// --- UPDATED INCLUDE PATHS ---
+// Go up one level from /api/, then into /backend/
+include_once __DIR__ . '/../backend/db_connection.php';
+
+// Basic security check (using the included connection)
 $isLoggedIn = isset($_SESSION['admin_user_id']) || isset($_SESSION['client_user_id']) || isset($_SESSION['user_id']);
 if (!$isLoggedIn) {
     http_response_code(403);
     echo "<div class='report-error-message'>Access Denied. Please log in.</div>";
+    if (isset($conn) && $conn instanceof mysqli) $conn->close(); // Close connection if opened by include
     exit;
 }
-
-include_once __DIR__ . '/db_connection.php';
+// Note: Role check is now handled in reporting.php before calling this script.
+// If you need finer control here, re-add role check logic using the included $conn.
 
 // Default error response function
 function sendError($message, $httpCode = 500) {
@@ -36,7 +43,6 @@ function sendError($message, $httpCode = 500) {
 }
 
 // --- Helper Function to Format Weight ---
-// (Ensure this is available for generateInventoryStatus)
 function formatWeight($grams) {
     if (!is_numeric($grams)) return 'N/A';
     $grams = floatval($grams);
@@ -61,7 +67,7 @@ if ($startDate && $endDate && $startDate > $endDate) {
     sendError("Start date cannot be after end date.", 400);
 }
 
-// DB Connection Check
+// DB Connection Check (from included file)
 if (!isset($conn) || !($conn instanceof mysqli) || $conn->connect_error) {
      error_log("Database connection failed in fetch_report.php: " . ($conn->connect_error ?? 'Unknown error'));
      sendError("Database connection failed. Please contact support.", 500);
@@ -126,7 +132,6 @@ catch (Exception $e) {
 
 /**
  * Generates a Sales Summary Report.
- * (Based on user's 07:18:20 code)
  */
 function generateSalesSummary($conn, $startDate, $endDate) {
     error_log("--- Starting generateSalesSummary ---");
@@ -202,7 +207,7 @@ function generateSalesSummary($conn, $startDate, $endDate) {
 
 /**
  * Generates Inventory Status Report for 'products', 'walkin_products', AND low 'raw_materials'.
- * (Modified to include raw materials)
+ * (Modified to include raw materials and improved error handling)
  */
 function generateInventoryStatus($conn) {
     error_log("--- Starting generateInventoryStatus (Includes Raw Materials) ---");
@@ -218,15 +223,13 @@ function generateInventoryStatus($conn) {
     if (!$stmtCompany) { error_log("!!! DB prepare error (Company Inventory): " . $conn->error); $companyQueryError = true; $errorOccurred = true; }
     else {
         $stmtCompany->bind_param("i", $lowStockThreshold);
-        if (!$stmtCompany->execute()) { error_log("!!! DB execute error (Company Inventory): " . $stmtCompany->error); $companyQueryError = true; $errorOccurred = true; }
-        else {
-            if (!method_exists($stmtCompany, 'get_result')) { error_log("!!! CRITICAL: get_result() failed for Company Inventory."); $companyQueryError = true; $errorOccurred = true; }
-            else {
-                $resultCompany = $stmtCompany->get_result();
-                if ($stmtCompany->errno) { error_log("!!! DB get_result error (Company Inventory): " . $stmtCompany->error); $companyQueryError = true; $errorOccurred = true; }
-                else { while ($row = $resultCompany->fetch_assoc()) { $companyStockData[] = $row; } $resultCompany->close(); }
-            }
-        }
+        if ($stmtCompany->errno) { $err = $stmtCompany->error; $errno = $stmtCompany->errno; $stmtCompany->close(); throw new mysqli_sql_exception("DB bind_param error (Company Inventory): " . $err, $errno); }
+        if (!$stmtCompany->execute()) { $err = $stmtCompany->error; $errno = $stmtCompany->errno; $stmtCompany->close(); throw new mysqli_sql_exception("DB execute error (Company Inventory): " . $err, $errno); }
+        if (!method_exists($stmtCompany, 'get_result')) { $stmtCompany->close(); throw new Exception("Server configuration error: get_result missing (Company Inventory)."); }
+        $resultCompany = $stmtCompany->get_result();
+        if ($stmtCompany->errno) { $err = $stmtCompany->error; $errno = $stmtCompany->errno; $stmtCompany->close(); throw new mysqli_sql_exception("DB get_result error (Company Inventory): " . $err, $errno); }
+        while ($row = $resultCompany->fetch_assoc()) { $companyStockData[] = $row; }
+        $resultCompany->close();
         $stmtCompany->close();
     }
 
@@ -236,15 +239,13 @@ function generateInventoryStatus($conn) {
     if (!$stmtWalkin) { error_log("!!! DB prepare error (Walkin Inventory): " . $conn->error . " - Check 'walkin_products' table."); $walkinQueryError = true; } // Non-critical if table might not exist
     else {
         $stmtWalkin->bind_param("i", $lowStockThreshold);
-        if (!$stmtWalkin->execute()) { error_log("!!! DB execute error (Walkin Inventory): " . $stmtWalkin->error); $walkinQueryError = true; $errorOccurred = true; } // Execute error is critical
-        else {
-            if (!method_exists($stmtWalkin, 'get_result')) { error_log("!!! CRITICAL: get_result() failed for Walkin Inventory."); $walkinQueryError = true; $errorOccurred = true; }
-            else {
-                $resultWalkin = $stmtWalkin->get_result();
-                if ($stmtWalkin->errno) { error_log("!!! DB get_result error (Walkin Inventory): " . $stmtWalkin->error); $walkinQueryError = true; $errorOccurred = true; }
-                else { while ($row = $resultWalkin->fetch_assoc()) { $walkinStockData[] = $row; } $resultWalkin->close(); }
-            }
-        }
+        if ($stmtWalkin->errno) { $err = $stmtWalkin->error; $errno = $stmtWalkin->errno; $stmtWalkin->close(); throw new mysqli_sql_exception("DB bind_param error (Walkin Inventory): " . $err, $errno); }
+        if (!$stmtWalkin->execute()) { $err = $stmtWalkin->error; $errno = $stmtWalkin->errno; $stmtWalkin->close(); throw new mysqli_sql_exception("DB execute error (Walkin Inventory): " . $err, $errno); } // Execute error is critical
+        if (!method_exists($stmtWalkin, 'get_result')) { $stmtWalkin->close(); throw new Exception("Server configuration error: get_result missing (Walkin Inventory)."); }
+        $resultWalkin = $stmtWalkin->get_result();
+        if ($stmtWalkin->errno) { $err = $stmtWalkin->error; $errno = $stmtWalkin->errno; $stmtWalkin->close(); throw new mysqli_sql_exception("DB get_result error (Walkin Inventory): " . $err, $errno); }
+        while ($row = $resultWalkin->fetch_assoc()) { $walkinStockData[] = $row; }
+        $resultWalkin->close();
         $stmtWalkin->close();
     }
 
@@ -253,11 +254,10 @@ function generateInventoryStatus($conn) {
     $sqlRaw = "SELECT material_name, current_stock_grams FROM raw_materials WHERE current_stock_grams < ? AND status = 'active' ORDER BY material_name ASC"; // Added status check example
     $stmtRaw = $conn->prepare($sqlRaw);
     if (!$stmtRaw) {
-        // This is the most likely place for the exception if the error log isn't checked
         error_log("!!! DB prepare error (Raw Materials Inventory): " . $conn->error);
-        $rawMaterialQueryError = true;
-        $errorOccurred = true;
-        // IMPORTANT: Throw the exception so the main catch block handles it
+        $rawMaterialQueryError = true; // Set flag
+        $errorOccurred = true; // Set general flag
+        // IMPORTANT: Throw the exception so the main catch block handles it and sends generic error
         throw new mysqli_sql_exception("DB prepare error (Raw Materials Inventory): " . $conn->error, $conn->errno);
     }
     else {
@@ -266,37 +266,19 @@ function generateInventoryStatus($conn) {
              $err = $stmtRaw->error; $errno = $stmtRaw->errno; $stmtRaw->close(); throw new mysqli_sql_exception("DB bind_param error (Raw Materials): " . $err, $errno);
          }
         if (!$stmtRaw->execute()) {
-            error_log("!!! DB execute error (Raw Materials Inventory): " . $stmtRaw->error);
-            $rawMaterialQueryError = true;
-            $errorOccurred = true;
-            // IMPORTANT: Throw the exception
-             $err = $stmtRaw->error; $errno = $stmtRaw->errno; $stmtRaw->close(); throw new mysqli_sql_exception("DB execute error (Raw Materials): " . $err, $errno);
+            $err = $stmtRaw->error; $errno = $stmtRaw->errno; $stmtRaw->close(); throw new mysqli_sql_exception("DB execute error (Raw Materials): " . $err, $errno);
         }
-        else {
-            if (!method_exists($stmtRaw, 'get_result')) {
-                error_log("!!! CRITICAL: get_result() failed for Raw Materials.");
-                $rawMaterialQueryError = true;
-                $errorOccurred = true;
-                // IMPORTANT: Throw the exception
-                $stmtRaw->close(); throw new Exception("Server configuration error: get_result missing for Raw Materials.");
-            }
-            else {
-                $resultRaw = $stmtRaw->get_result();
-                if ($stmtRaw->errno) {
-                    error_log("!!! DB get_result error (Raw Materials): " . $stmtRaw->error);
-                    $rawMaterialQueryError = true;
-                    $errorOccurred = true;
-                    // IMPORTANT: Throw the exception
-                    $err = $stmtRaw->error; $errno = $stmtRaw->errno; $resultRaw->close(); $stmtRaw->close(); throw new mysqli_sql_exception("DB get_result error (Raw Materials): " . $err, $errno);
-                }
-                else {
-                    while ($row = $resultRaw->fetch_assoc()) {
-                        $rawMaterialData[] = $row;
-                    }
-                    $resultRaw->close();
-                }
-            }
+        if (!method_exists($stmtRaw, 'get_result')) {
+             $stmtRaw->close(); throw new Exception("Server configuration error: get_result missing for Raw Materials.");
         }
+        $resultRaw = $stmtRaw->get_result();
+        if ($stmtRaw->errno) {
+             $err = $stmtRaw->error; $errno = $stmtRaw->errno; $resultRaw->close(); $stmtRaw->close(); throw new mysqli_sql_exception("DB get_result error (Raw Materials): " . $err, $errno);
+        }
+        while ($row = $resultRaw->fetch_assoc()) {
+            $rawMaterialData[] = $row;
+        }
+        $resultRaw->close();
         $stmtRaw->close();
     }
     // --- END Raw Materials Section ---
@@ -338,9 +320,9 @@ function generateInventoryStatus($conn) {
 
     // --- Raw Materials Section Output ---
     echo "<div class='inventory-section raw-materials-inventory'><h4 class='report-subtitle'>Low Raw Materials (Threshold: &lt; 5 kg)</h4>";
-    // Check the specific error flag for raw materials
-    if ($rawMaterialQueryError) { echo "<div class='report-error-message'>Error retrieving Raw Materials stock data. Check logs.</div>"; }
-    elseif (!empty($rawMaterialData)) {
+    // Check the specific error flag for raw materials - NO, rely on exception handling above
+    // if ($rawMaterialQueryError) { echo "<div class='report-error-message'>Error retrieving Raw Materials stock data. Check logs.</div>"; }
+    if (!empty($rawMaterialData)) { // Only show table if data was successfully fetched
         echo "<table class='report-table'><thead><tr><th>Material Name</th><th>Current Stock</th></tr></thead><tbody>";
         foreach ($rawMaterialData as $row) {
             $materialName = htmlspecialchars($row['material_name'] ?? 'N/A');
@@ -350,7 +332,14 @@ function generateInventoryStatus($conn) {
             $lowStockClass = ($gramsValue <= 0) ? 'low-stock-highlight' : (($gramsValue < $rawMaterialThresholdGrams) ? 'low-stock-highlight' : '');
             echo "<tr><td>{$materialName}</td><td class='numeric {$lowStockClass}'>{$stockFormatted}</td></tr>";
         } echo "</tbody></table>";
-    } else { echo "<p class='no-data-message'>No raw materials found below the 5 kg threshold.</p>"; }
+    } else {
+        // Don't show 'No data' if there might have been an error fetching it (exception was thrown)
+        if (!$errorOccurred) { // Only show 'No data' if no errors occurred at all in this function
+             echo "<p class='no-data-message'>No raw materials found below the 5 kg threshold.</p>";
+        } else if ($rawMaterialQueryError) { // Explicitly mention if raw material query failed
+             echo "<div class='report-error-message'>Error retrieving Raw Materials stock data. Check logs.</div>";
+        }
+    }
     echo "</div>";
     // --- END Raw Materials Output ---
 
@@ -360,7 +349,6 @@ function generateInventoryStatus($conn) {
 
 /**
  * Generates an Order Listing Report.
- * (Based on user's 07:18:20 code)
  */
 function generateOrderTrends($conn, $startDate, $endDate) {
     error_log("--- Starting generateOrderTrends ---");
@@ -376,7 +364,7 @@ function generateOrderTrends($conn, $startDate, $endDate) {
         if ($stmt->errno) { $err = $stmt->error; $errno = $stmt->errno; $stmt->close(); throw new mysqli_sql_exception("DB bind_param error (Order Trends): " . $err, $errno); }
     }
     if (!$stmt->execute()) { $err = $stmt->error; $errno = $stmt->errno; $stmt->close(); throw new mysqli_sql_exception("DB execute error (Order Trends): " . $err, $errno); }
-    if (!method_exists($stmt, 'get_result')) { $stmt->close(); throw new Exception("Server configuration error: get_result missing."); }
+    if (!method_exists($stmt, 'get_result')) { $stmt->close(); throw new Exception("Server configuration error: get_result missing (Order Trends)."); }
     $result = $stmt->get_result();
     if ($stmt->errno) { $err = $stmt->error; $errno = $stmt->errno; $stmt->close(); throw new mysqli_sql_exception("DB get_result error (Order Trends): " . $err, $errno); }
 
@@ -387,7 +375,8 @@ function generateOrderTrends($conn, $startDate, $endDate) {
 
     echo "<h3 class='report-title'>Order Listing" . $dateRangeStr . "</h3>";
     if ($result && $result->num_rows > 0) {
-        echo "<table class='accounts-table report-table'><thead><tr><th>Order ID</th><th>PO Number</th><th>Date</th><th>Username</th><th>Company</th><th>Total</th><th>Status</th></tr></thead><tbody>";
+        // Use consistent table class
+        echo "<table class='report-table'><thead><tr><th>Order ID</th><th>PO Number</th><th>Date</th><th>Username</th><th>Company</th><th>Total</th><th>Status</th></tr></thead><tbody>";
         while ($row = $result->fetch_assoc()) {
              $statusClass = 'status-' . strtolower(preg_replace('/[^a-z0-9]+/', '-', $row['status'] ?? 'unknown'));
              $orderId = htmlspecialchars($row['id'] ?? 'N/A');
@@ -407,7 +396,6 @@ function generateOrderTrends($conn, $startDate, $endDate) {
 
 /**
  * Generates a Sales by Client Report.
- * (Based on previous steps)
  */
 function generateSalesByClient($conn, $startDate, $endDate) {
     error_log("--- Starting generateSalesByClient ---");
@@ -424,7 +412,7 @@ function generateSalesByClient($conn, $startDate, $endDate) {
         if ($stmt->errno) { $err = $stmt->error; $errno = $stmt->errno; $stmt->close(); throw new mysqli_sql_exception("DB bind_param error (Sales by Client): " . $err, $errno); }
     }
     if (!$stmt->execute()){ $err = $stmt->error; $errno = $stmt->errno; $stmt->close(); throw new mysqli_sql_exception("DB execute error (Sales by Client): " . $err, $errno); }
-    if (!method_exists($stmt, 'get_result')) { $stmt->close(); throw new Exception("Server configuration error: get_result missing."); }
+    if (!method_exists($stmt, 'get_result')) { $stmt->close(); throw new Exception("Server configuration error: get_result missing (Sales by Client)."); }
     $result = $stmt->get_result();
     if ($stmt->errno) { $err = $stmt->error; $errno = $stmt->errno; $stmt->close(); throw new mysqli_sql_exception("DB get_result error (Sales by Client): " . $err, $errno); }
 
@@ -452,7 +440,6 @@ function generateSalesByClient($conn, $startDate, $endDate) {
 
 /**
  * Generates a Sales by Product Report by processing JSON order data.
- * Uses 'orders' table: orders (JSON), order_date, status
  */
 function generateSalesByProduct($conn, $startDate, $endDate) {
     error_log("--- Starting generateSalesByProduct ---");
