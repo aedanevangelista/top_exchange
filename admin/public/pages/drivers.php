@@ -278,25 +278,25 @@ if (!$stmtMain) { die("Error preparing driver list."); } if (!empty($types)) { i
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/js/toast.js"></script> <!-- Assuming toast.js initializes toastr -->
 
-    <script>
-        let currentDriverId = null;
+        <script>
+        let currentDriverId = null; // Renamed from selectedDriverId for clarity
 
         // --- Form Error Handling ---
-        function clearFormErrors(formId) { /* ... */ }
-        function displayFormErrors(formId, errors) { /* ... */ }
+        function clearFormErrors(formId) { $(`#${formId} .error-message`).text(''); $(`#${formId} input, #${formId} select`).removeClass('form-field-error'); $(`#${formId}Error`).text(''); }
+        function displayFormErrors(formId, errors) { clearFormErrors(formId); if (errors && typeof errors === 'object') { $.each(errors, function(field, message) { const inputElement = $(`#${formId} [name="${field}"]`); const errorElementId = `#${formId.replace('Form', '')}${field.charAt(0).toUpperCase() + field.slice(1)}Error`; const errorElement = $(errorElementId); if (inputElement.length) { inputElement.addClass('form-field-error'); } if (errorElement.length) { errorElement.text(message); } else if (field === 'general') { $(`#${formId.replace('Form', '')}Error`).text(message); } }); } }
 
         // --- Modal Control ---
-        function openAddDriverForm() { /* ... */ }
-        function closeAddDriverForm() { /* ... */ }
-        function openEditDriverForm(id, name, username, address, contact_no, availability, area, status) { /* ... */ }
-        function closeEditDriverForm() { /* ... */ }
+        function openAddDriverForm() { clearFormErrors('addDriverForm'); $('#addDriverForm')[0].reset(); $('#addDriverOverlay').css('display', 'flex'); }
+        function closeAddDriverForm() { $('#addDriverOverlay').hide(); clearFormErrors('addDriverForm'); }
+        function openEditDriverForm(id, name, username, address, contact_no, availability, area, status) { clearFormErrors('editDriverForm'); $('#edit-id').val(id); $('#edit-name').val(name); $('#edit-username').val(username); $('#edit-password').val(''); $('#edit-address').val(address); $('#edit-contact_no').val(contact_no); $('#edit-availability').val(availability); $('#edit-area').val(area); $('#edit-status').val(status); $('#editDriverOverlay').css('display', 'flex'); }
+        function closeEditDriverForm() { $('#editDriverOverlay').hide(); clearFormErrors('editDriverForm'); }
         function closeDeliveriesModal() { $('#deliveriesModal').hide(); } // Keep this
-        function openAvailabilityModal(id, name) { /* ... */ }
-        function closeAvailabilityModal() { /* ... */ }
-        function openAccountStatusModal(id, name) { /* ... */ }
-        function closeAccountStatusModal() { /* ... */ }
+        function openAvailabilityModal(id, name) { currentDriverId = id; $('#availabilityMessage').text(`Change work availability for driver: ${name}`); $('#availabilityModal').css('display', 'flex'); }
+        function closeAvailabilityModal() { $('#availabilityModal').hide(); currentDriverId = null; }
+        function openAccountStatusModal(id, name) { currentDriverId = id; $('#accountStatusMessage').text(`Change account login status for driver: ${name}`); $('#accountStatusModal').css('display', 'flex'); }
+        function closeAccountStatusModal() { $('#accountStatusModal').hide(); currentDriverId = null; }
 
-        // --- Deliveries Modal Logic (REINSERTED) ---
+        // --- Deliveries Modal Logic ---
         function toggleOrderItems(headerRow) {
             const itemsRow = headerRow.nextElementSibling;
             if (itemsRow && itemsRow.classList.contains('order-items-row')) {
@@ -316,33 +316,18 @@ if (!$stmtMain) { die("Error preparing driver list."); } if (!empty($types)) { i
             return isNaN(num) ? '₱--.--' : '₱' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
         }
         function viewDriverDeliveries(id, name) {
-            // Make sure the modal HTML exists
-            if ($('#deliveriesModal').length === 0) {
-                console.error("Deliveries modal (#deliveriesModal) not found in the HTML.");
-                showToast("Error: Delivery details modal is missing.", "error");
-                return;
-            }
-             // Make sure the target body exists
-            if ($('#deliveriesTableBody').length === 0) {
-                console.error("Deliveries table body (#deliveriesTableBody) not found in the HTML.");
-                 showToast("Error: Delivery details table is missing.", "error");
-                return;
-            }
+            if ($('#deliveriesModal').length === 0) { console.error("Deliveries modal (#deliveriesModal) not found."); showToast("Error: Delivery details modal is missing.", "error"); return; }
+            if ($('#deliveriesTableBody').length === 0) { console.error("Deliveries table body (#deliveriesTableBody) not found."); showToast("Error: Delivery details table is missing.", "error"); return; }
 
             $('#deliveriesModalTitle').text(`${name}'s Active/Pending Deliveries`);
-            $('#deliveriesModal').css('display', 'flex'); // Show the modal
+            $('#deliveriesModal').css('display', 'flex');
             const tableBody = $('#deliveriesTableBody');
-            tableBody.html('<tr><td colspan="4" class="no-deliveries"><i class="fas fa-spinner fa-spin"></i> Loading deliveries...</td></tr>'); // Show loading state
+            tableBody.html('<tr><td colspan="4" class="no-deliveries"><i class="fas fa-spinner fa-spin"></i> Loading deliveries...</td></tr>');
 
             fetch(`drivers.php?driver_id=${id}&action=get_deliveries`)
                 .then(response => {
-                    if (!response.ok) {
-                        return response.text().then(text => { // Get text for detailed error
-                            console.error(`Server Error (${response.status}) fetching deliveries for driver ${id}:`, text);
-                            throw new Error(`Server error: ${response.status}`);
-                        });
-                    }
-                    return response.json(); // Only parse JSON if response is OK
+                    if (!response.ok) { return response.text().then(text => { console.error(`Server Error (${response.status}) fetching deliveries for driver ${id}:`, text); throw new Error(`Server error: ${response.status}`); }); }
+                    return response.json();
                 })
                 .then(data => {
                     if (data.success && data.deliveries) {
@@ -360,63 +345,105 @@ if (!$stmtMain) { die("Error preparing driver list."); } if (!empty($types)) { i
                                 html += `<h4>Order Items (${delivery.username || 'N/A'})</h4>`;
                                 html += `<table><thead><tr><th>Item</th><th>Packaging</th><th>Quantity</th><th>Price</th></tr></thead><tbody>`;
                                 if (delivery.items && Array.isArray(delivery.items) && delivery.items.length > 0) {
-                                    delivery.items.forEach(item => {
-                                        html += `<tr><td>${item.item_description || 'N/A'}</td><td>${item.packaging || 'N/A'}</td><td>${item.quantity || 0}</td><td>${formatCurrency(item.price)}</td></tr>`;
-                                    });
-                                } else {
-                                    html += `<tr><td colspan="4" style="text-align: center; color: #888;">No item details available.</td></tr>`;
-                                }
+                                    delivery.items.forEach(item => { html += `<tr><td>${item.item_description || 'N/A'}</td><td>${item.packaging || 'N/A'}</td><td>${item.quantity || 0}</td><td>${formatCurrency(item.price)}</td></tr>`; });
+                                } else { html += `<tr><td colspan="4" style="text-align: center; color: #888;">No item details available.</td></tr>`; }
                                 html += `</tbody></table></td></tr>`;
                             });
-                            tableBody.html(html); // Populate table
-                        } else {
-                            tableBody.html('<tr><td colspan="4" class="no-deliveries">No active or pending deliveries found.</td></tr>');
-                        }
-                    } else {
-                        console.error('API reported failure or missing delivery data:', data.message);
-                        tableBody.html(`<tr><td colspan="4" class="no-deliveries">Error loading deliveries: ${data.message || 'Unknown error'}</td></tr>`);
-                    }
+                            tableBody.html(html);
+                        } else { tableBody.html('<tr><td colspan="4" class="no-deliveries">No active or pending deliveries found.</td></tr>'); }
+                    } else { console.error('API reported failure or missing delivery data:', data.message); tableBody.html(`<tr><td colspan="4" class="no-deliveries">Error loading deliveries: ${data.message || 'Unknown error'}</td></tr>`); }
                 })
-                .catch(error => {
-                    console.error('Fetch Error:', error); // Log fetch-specific errors
-                    tableBody.html(`<tr><td colspan="4" class="no-deliveries">Failed to load delivery details. ${error.message}</td></tr>`);
-                });
+                .catch(error => { console.error('Fetch Error:', error); tableBody.html(`<tr><td colspan="4" class="no-deliveries">Failed to load delivery details. ${error.message}</td></tr>`); });
         }
         // --- END Deliveries Modal Logic ---
 
-
         // --- Change AVAILABILITY Status AJAX ---
-        function changeAvailability(availability) { /* ... */ }
+        function changeAvailability(availability) {
+             if (currentDriverId === null) { showToast('No driver selected.', 'error'); return; }
+             $.ajax({ url: 'drivers.php', type: 'POST', data: { ajax: true, formType: 'availability_status', id: currentDriverId, availability: availability }, dataType: 'json',
+                 success: function(response) { if (response.success && response.reload) { showToast(response.message || 'Availability updated', 'success'); setTimeout(() => window.location.reload(), 1500); } else { showToast(response.message || 'Failed to update availability', 'error'); } closeAvailabilityModal(); },
+                 error: function(xhr, status, error) { console.error("Change Availability AJAX Error:", status, error, xhr.responseText); showToast('An error occurred: ' + error, 'error'); closeAvailabilityModal(); }
+             });
+        }
 
          // --- Change ACCOUNT Status AJAX ---
-        function changeAccountStatus(status) { /* ... */ }
+        function changeAccountStatus(status) {
+             if (currentDriverId === null) { showToast('No driver selected.', 'error'); return; }
+             $.ajax({ url: 'drivers.php', type: 'POST', data: { ajax: true, formType: 'account_status', id: currentDriverId, status: status }, dataType: 'json',
+                 success: function(response) { if (response.success && response.reload) { showToast(response.message || 'Account status updated', 'success'); setTimeout(() => window.location.reload(), 1500); } else { showToast(response.message || 'Failed to update account status', 'error'); } closeAccountStatusModal(); },
+                 error: function(xhr, status, error) { console.error("Change Account Status AJAX Error:", status, error, xhr.responseText); showToast('An error occurred: ' + error, 'error'); closeAccountStatusModal(); }
+             });
+        }
 
         // --- Filtering ---
-        function filterDrivers() { /* ... */ }
+        function filterDrivers() { const status = document.getElementById('statusFilter').value; const area = document.getElementById('areaFilter').value; const params = new URLSearchParams(window.location.search); params.set('status', status); params.set('area', area); window.location.href = `drivers.php?${params.toString()}`; }
 
         // --- Client-Side Validation Functions ---
-        function validateContactNumber(contactInput, errorElement) { /* ... */ }
-        function validateRequired(inputElement, errorElement, fieldName) { /* ... */ }
-        function validateMaxLength(inputElement, errorElement, maxLength, fieldName) { /* ... */ }
-        function validateNoSpaces(inputElement, errorElement, fieldName) { /* ... */ }
-        function validatePasswordLength(inputElement, errorElement, minLength = 6) { /* ... */ }
-        function validateSelect(selectElement, errorElement, fieldName) { /* ... */ }
+        function validateContactNumber(contactInput, errorElement) { const contactValue = $(contactInput).val().trim(); const pattern = /^\d{1,12}$/; if (!contactValue) { $(errorElement).text('Contact number is required.'); $(contactInput).addClass('form-field-error'); return false; } else if (!pattern.test(contactValue)) { $(errorElement).text('Must be only digits (up to 12).'); $(contactInput).addClass('form-field-error'); return false; } else if (contactValue.length < 4 && $(contactInput).closest('form').attr('id') === 'addDriverForm') { $(errorElement).text('Must be at least 4 digits long.'); $(contactInput).addClass('form-field-error'); return false; } $(errorElement).text(''); $(contactInput).removeClass('form-field-error'); return true; }
+        function validateRequired(inputElement, errorElement, fieldName) { const value = $(inputElement).val().trim(); if (!value) { $(errorElement).text(`${fieldName} is required.`); $(inputElement).addClass('form-field-error'); return false; } $(errorElement).text(''); $(inputElement).removeClass('form-field-error'); return true; }
+        function validateMaxLength(inputElement, errorElement, maxLength, fieldName) { const value = $(inputElement).val().trim(); if (value.length > maxLength) { $(errorElement).text(`${fieldName} cannot exceed ${maxLength} characters.`); $(inputElement).addClass('form-field-error'); return false; } if ($(errorElement).text().includes('required')) return false; $(errorElement).text(''); $(inputElement).removeClass('form-field-error'); return true; }
+        function validateNoSpaces(inputElement, errorElement, fieldName) { const value = $(inputElement).val(); if (value.includes(' ')) { $(errorElement).text(`${fieldName} cannot contain spaces.`); $(inputElement).addClass('form-field-error'); return false; } if ($(errorElement).text().includes('required') || $(errorElement).text().includes('characters')) return false; $(errorElement).text(''); $(inputElement).removeClass('form-field-error'); return true; }
+        function validatePasswordLength(inputElement, errorElement, minLength = 6) { const value = $(inputElement).val(); if (value && value.length < minLength) { $(errorElement).text(`Password must be at least ${minLength} characters.`); $(inputElement).addClass('form-field-error'); return false; } $(errorElement).text(''); $(inputElement).removeClass('form-field-error'); return true; }
+        function validateSelect(selectElement, errorElement, fieldName) { const value = $(selectElement).val(); if (!value) { $(errorElement).text(`${fieldName} is required.`); $(selectElement).addClass('form-field-error'); return false; } $(errorElement).text(''); $(selectElement).removeClass('form-field-error'); return true; }
 
 
-        // --- Document Ready ---
+        // --- Document Ready (Event Handlers) ---
         $(document).ready(function() {
-            // Modal closing
+            // Modal closing click handlers
             $(document).on('click', '.overlay', function(event) { if (event.target === this) $(this).hide(); });
-            $(document).on('click', '.overlay-content', function(event) { event.stopPropagation(); });
+            $(document).on('click', '.overlay-content', function(event) { event.stopPropagation(); }); // Prevent closing when clicking inside content
 
-            // Live Validation
-            // ... (Live validation bindings remain the same) ...
+            // Live Validation Bindings
+            $('#add-name').on('input blur', function() { validateRequired(this, '#addNameError', 'Name') && validateMaxLength(this, '#addNameError', 40, 'Name'); });
+            $('#add-username').on('input blur', function() { validateRequired(this, '#addUsernameError', 'Username') && validateMaxLength(this, '#addUsernameError', 15, 'Username') && validateNoSpaces(this, '#addUsernameError', 'Username'); });
+            $('#add-address').on('input blur', function() { validateRequired(this, '#addAddressError', 'Address'); });
+            $('#add-contact_no').on('input blur', function() { validateContactNumber(this, '#addContactError'); });
+            $('#add-area').on('change blur', function() { validateSelect(this, '#addAreaError', 'Area'); });
+            $('#add-availability').on('change blur', function() { validateSelect(this, '#addAvailabilityError', 'Availability'); });
 
-            // Add Form Submit
-            $('#addDriverForm').on('submit', function(e) { /* ... */ });
+            $('#edit-name').on('input blur', function() { validateRequired(this, '#editNameError', 'Name') && validateMaxLength(this, '#editNameError', 40, 'Name'); });
+            $('#edit-username').on('input blur', function() { validateRequired(this, '#editUsernameError', 'Username') && validateMaxLength(this, '#editUsernameError', 15, 'Username') && validateNoSpaces(this, '#editUsernameError', 'Username'); });
+            $('#edit-address').on('input blur', function() { validateRequired(this, '#editAddressError', 'Address'); });
+            $('#edit-contact_no').on('input blur', function() { validateContactNumber(this, '#editContactError'); });
+            $('#edit-password').on('input blur', function() { if ($(this).val()) validatePasswordLength(this, '#editPasswordError'); else { $('#editPasswordError').text(''); $(this).removeClass('form-field-error'); } });
+            $('#edit-area').on('change blur', function() { validateSelect(this, '#editAreaError', 'Area'); });
+            $('#edit-availability').on('change blur', function() { validateSelect(this, '#editAvailabilityError', 'Availability'); });
+            $('#edit-status').on('change blur', function() { validateSelect(this, '#editStatusError', 'Account Status'); });
 
-            // Edit Form Submit
-            $('#editDriverForm').on('submit', function(e) { /* ... */ });
+
+            // Add Form Submit Handler
+            $('#addDriverForm').on('submit', function(e) {
+                e.preventDefault(); clearFormErrors('addDriverForm'); let isValid = true;
+                isValid &= validateRequired('#add-name', '#addNameError', 'Name'); isValid &= validateMaxLength('#add-name', '#addNameError', 40, 'Name');
+                isValid &= validateRequired('#add-username', '#addUsernameError', 'Username'); isValid &= validateMaxLength('#add-username', '#addUsernameError', 15, 'Username'); isValid &= validateNoSpaces('#add-username', '#addUsernameError', 'Username');
+                isValid &= validateRequired('#add-address', '#addAddressError', 'Address');
+                isValid &= validateContactNumber('#add-contact_no', '#addContactError');
+                isValid &= validateSelect('#add-area', '#addAreaError', 'Area');
+                isValid &= validateSelect('#add-availability', '#addAvailabilityError', 'Availability');
+                if (!isValid) { showToast('Please correct the errors.', 'warning'); return false; }
+                $.ajax({ url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
+                    success: function(response) { if (response.success && response.reload) { showToast(response.message || 'Driver added', 'success'); closeAddDriverForm(); setTimeout(() => window.location.reload(), 1500); } else { displayFormErrors('addDriverForm', response.errors); showToast(response.message || 'Failed to add driver.', 'error'); } },
+                    error: function(xhr, status, error) { console.error("Add AJAX Error:", status, error, xhr.responseText); $('#addDriverError').text('Request error.'); showToast('Request error: ' + error, 'error'); }
+                });
+            });
+
+            // Edit Form Submit Handler
+            $('#editDriverForm').on('submit', function(e) {
+                e.preventDefault(); clearFormErrors('editDriverForm'); let isValid = true;
+                isValid &= validateRequired('#edit-name', '#editNameError', 'Name'); isValid &= validateMaxLength('#edit-name', '#editNameError', 40, 'Name');
+                isValid &= validateRequired('#edit-username', '#editUsernameError', 'Username'); isValid &= validateMaxLength('#edit-username', '#editUsernameError', 15, 'Username'); isValid &= validateNoSpaces('#edit-username', '#editUsernameError', 'Username');
+                isValid &= validateRequired('#edit-address', '#editAddressError', 'Address');
+                isValid &= validateContactNumber('#edit-contact_no', '#editContactError');
+                if ($('#edit-password').val()) { isValid &= validatePasswordLength('#edit-password', '#editPasswordError'); }
+                isValid &= validateSelect('#edit-area', '#editAreaError', 'Area');
+                isValid &= validateSelect('#edit-availability', '#editAvailabilityError', 'Availability');
+                isValid &= validateSelect('#edit-status', '#editStatusError', 'Account Status');
+                if (!isValid) { showToast('Please correct the errors.', 'warning'); return false; }
+                $.ajax({ url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
+                    success: function(response) { if (response.success && response.reload) { showToast(response.message || 'Driver updated', 'success'); closeEditDriverForm(); setTimeout(() => window.location.reload(), 1500); } else { displayFormErrors('editDriverForm', response.errors); showToast(response.message || 'Failed to update driver.', 'error'); } },
+                    error: function(xhr, status, error) { console.error("Edit AJAX Error:", status, error, xhr.responseText); $('#editDriverError').text('Request error.'); showToast('Request error: ' + error, 'error'); }
+                });
+            });
         });
     </script>
 </body>
