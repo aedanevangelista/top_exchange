@@ -17,7 +17,7 @@ require_once 'header.php';
 
 <!-- Added CSS Styles -->
 <style>
-    /* --- Product Card Uniform Height & Hierarchy --- */
+    /* --- Product Card Uniform Height & Hierarchy (UPDATED) --- */
     .cream_section .row {
         display: flex;
         flex-wrap: wrap;
@@ -25,56 +25,100 @@ require_once 'header.php';
         margin-right: -15px;
     }
     .cream_section .col-md-4 {
-        display: flex;
+        display: flex; /* Keep column as flex container */
         padding-left: 15px;
         padding-right: 15px;
         margin-bottom: 30px;
     }
     .product-card {
-        display: flex;
-        flex-direction: column;
+        display: flex; /* Keep card as flex container */
+        flex-direction: column; /* Stack image and body vertically */
         width: 100%;
-        height: 100%;
+        height: 100%; /* Ensures card fills the column space */
         border: 1px solid #eee;
         border-radius: 8px;
         overflow: hidden;
         transition: box-shadow 0.3s ease;
+        background-color: #fff; /* Ensure background for consistency */
     }
     .product-card:hover {
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
+
+    /* UPDATED: Image container styling */
     .product-img {
-        position: relative;
+        position: relative; /* Crucial for badge positioning */
+        height: 250px; /* ** NEW: Set a fixed height for the image area ** */
+        display: flex; /* Use flex to center the image inside */
+        align-items: center; /* Vertical centering */
+        justify-content: center; /* Horizontal centering */
+        overflow: hidden; /* Hide parts of image if needed (though contain shouldn't need it) */
+        padding: 10px; /* Add some padding around the image */
+        background-color: #f8f9fa; /* Light background for image area */
     }
+
+    /* UPDATED: Image styling */
     .product-img img {
         max-width: 100%;
-        height: auto;
+        max-height: 100%; /* Ensure image doesn't exceed container height */
+        height: auto; /* Maintain aspect ratio */
+        width: auto; /* Maintain aspect ratio */
+        object-fit: contain; /* ** NEW: Scale image down to fit, preserving aspect ratio ** */
         display: block;
     }
+
+    /* UPDATED: Badge styling */
+    .product-badge {
+        position: absolute; /* Position relative to .product-img */
+        top: 10px; /* ** NEW: Consistent top position ** */
+        left: 10px; /* ** NEW: Consistent left position ** */
+        background-color: rgba(0, 123, 255, 0.8); /* Example blue badge color */
+        color: white;
+        padding: 3px 8px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        border-radius: 4px;
+        z-index: 1; /* Ensure badge is above image */
+        text-transform: uppercase;
+    }
+    /* Specific badge colors (Optional - add classes to HTML) */
+    .product-badge.bestseller {
+         background-color: rgba(220, 53, 69, 0.8); /* Red for bestseller */
+    }
+    .product-badge.popular {
+         background-color: rgba(255, 193, 7, 0.8); /* Yellow for popular */
+         color: #333;
+    }
+    .product-badge.new {
+         background-color: rgba(40, 167, 69, 0.8); /* Green for new */
+    }
+
+
     .product-body {
-        padding: 15px;
+        padding: 20px; /* ** ADJUSTED: Slightly increased padding ** */
         display: flex;
         flex-direction: column;
-        flex-grow: 1;
+        flex-grow: 1; /* Takes remaining vertical space */
+        text-align: center; /* Center align text in the body */
     }
     .product-title {
         font-size: 1.15rem;
         font-weight: 600;
-        margin-bottom: 5px;
+        margin-bottom: 8px; /* Adjusted spacing */
         color: #333;
     }
     .product-price {
         font-size: 1.25rem;
         font-weight: bold;
         color: #007bff; /* Adjust color */
-        margin-bottom: 10px;
+        margin-bottom: 12px; /* Adjusted spacing */
     }
     .product-description {
         font-size: 0.9rem;
         color: #666;
-        line-height: 1.4;
-        margin-bottom: 10px;
-        flex-grow: 1;
+        line-height: 1.5; /* Adjusted line height */
+        margin-bottom: 15px; /* Adjusted spacing */
+        flex-grow: 1; /* ** Crucial: Pushes rating/button down ** */
     }
     .product-rating {
         margin-bottom: 15px;
@@ -85,18 +129,21 @@ require_once 'header.php';
     }
     .product-rating span {
         color: #777;
+        margin-left: 5px; /* Space between stars and text */
     }
     .product-btn {
         background-color: #28a745; /* Adjust color */
         color: white;
-        padding: 8px 15px;
+        padding: 10px 20px; /* Adjusted padding */
         border-radius: 5px;
         text-decoration: none;
         text-align: center;
         transition: background-color 0.3s ease;
-        margin-top: auto;
-        align-self: center;
+        margin-top: auto; /* Pushes button to bottom */
+        align-self: center; /* Center button horizontally */
         display: inline-block;
+        border: none; /* Remove default border if any */
+        cursor: pointer;
     }
     .product-btn:hover {
         background-color: #218838; /* Adjust color */
@@ -415,7 +462,8 @@ require_once 'header.php';
                 <div class="product-card"> <!-- Flex applied via .product-card CSS -->
                     <div class="product-img">
                         <img src="/LandingPage/images/Sioma1.png" alt="Premium Pork Siomai">
-                        <span class="product-badge">BESTSELLER</span>
+                        <!-- Add class="bestseller" for specific styling -->
+                        <span class="product-badge bestseller">BESTSELLER</span>
                     </div>
                     <div class="product-body"> <!-- Flex applied via .product-body CSS -->
                         <div class="product-price">₱280</div>
@@ -437,7 +485,8 @@ require_once 'header.php';
                  <div class="product-card">
                     <div class="product-img">
                         <img src="/LandingPage/images/dumpling.png" alt="Special Sharksfin Dumpling">
-                        <span class="product-badge">POPULAR</span>
+                        <!-- Add class="popular" for specific styling -->
+                        <span class="product-badge popular">POPULAR</span>
                     </div>
                     <div class="product-body">
                         <div class="product-price">₱260</div>
@@ -459,6 +508,7 @@ require_once 'header.php';
                  <div class="product-card">
                     <div class="product-img">
                         <img src="/LandingPage/images/wanton.png" alt="Wanton Regular">
+                        <!-- No badge shown in example image, but could add one -->
                     </div>
                     <div class="product-body">
                         <div class="product-price">₱315</div>
@@ -503,7 +553,8 @@ require_once 'header.php';
                  <div class="product-card">
                     <div class="product-img">
                         <img src="/LandingPage/images/pancitcanton.png" alt="Pancit Canton">
-                        <span class="product-badge">NEW</span>
+                         <!-- Add class="new" for specific styling -->
+                        <span class="product-badge new">NEW</span>
                     </div>
                     <div class="product-body">
                         <div class="product-price">₱350</div>
