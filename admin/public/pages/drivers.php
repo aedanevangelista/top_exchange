@@ -1,7 +1,8 @@
 <?php
 session_start();
-include "../../backend/db_connection.php";
-include "../../backend/check_role.php";
+// UTC: 2025-05-04 06:06:24
+include "../../backend/db_connection.php"; // Adjust path if needed
+include "../../backend/check_role.php";   // Adjust path if needed
 
 // Check if the user is logged in as an admin
 if (!isset($_SESSION['admin_user_id'])) {
@@ -11,7 +12,16 @@ if (!isset($_SESSION['admin_user_id'])) {
 }
 
 // Check role permission for Drivers
-checkRole('Drivers');
+// User 'aedanevangelista' needs appropriate role
+try {
+    checkRole('Drivers');
+} catch (Exception $e) {
+    // Handle permission denied - maybe redirect or show error
+    // For now, just exiting might be okay depending on checkRole implementation
+    error_log("Permission Denied for user '{$_SESSION['admin_username']}' on drivers.php: " . $e->getMessage());
+    die("Access Denied: You do not have permission to view this page."); // Or redirect
+}
+
 
 function returnJsonResponse($success, $reload, $message = '') {
     // Ensure JSON header is set ONLY when outputting JSON
@@ -23,7 +33,10 @@ function returnJsonResponse($success, $reload, $message = '') {
 }
 
 // --- Process form submissions (Add, Edit, Status Change) ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
+// These blocks handle POST requests with specific 'formType' and 'ajax' parameters.
+// They exclusively output JSON and then exit.
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && isset($_POST['formType']) && $_POST['formType'] == 'add') {
     // Set header here as this block exclusively outputs JSON
     if (!headers_sent()) {
         header('Content-Type: application/json');
@@ -40,18 +53,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
         returnJsonResponse(false, false, 'Contact number must be 12 digits starting with 63.');
     }
 
+    // Check for existing name
     $checkStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ?");
+    if (!$checkStmt) {
+         error_log("Add Driver Check Prepare Error: " . $conn->error);
+         returnJsonResponse(false, false, 'Database error checking name.');
+    }
     $checkStmt->bind_param("s", $name);
-    $checkStmt->execute();
+    if(!$checkStmt->execute()) {
+        error_log("Add Driver Check Execute Error: " . $checkStmt->error);
+        $checkStmt->close();
+        returnJsonResponse(false, false, 'Database error executing check.');
+    }
     $checkStmt->store_result();
 
     if ($checkStmt->num_rows > 0) {
+        $checkStmt->close(); // Close check statement here
         returnJsonResponse(false, false, 'Driver name already exists.');
     }
-    $checkStmt->close();
+    $checkStmt->close(); // Also close if no rows found
 
-    $stmt = $conn->prepare("INSERT INTO drivers (name, address, contact_no, availability, area, current_deliveries) VALUES (?, ?, ?, ?, ?, 0)");
-    // Use $stmtAdd for clarity to avoid conflict with main list $stmt
+    // Prepare insert statement
     $stmtAdd = $conn->prepare("INSERT INTO drivers (name, address, contact_no, availability, area, current_deliveries) VALUES (?, ?, ?, ?, ?, 0)");
     if (!$stmtAdd) { // Check prepare result
          error_log("Add Driver Prepare Error: " . $conn->error);
@@ -62,7 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     if ($stmtAdd->execute()) {
         returnJsonResponse(true, true); // Success, trigger reload
     } else {
-        // Provide specific error if possible, otherwise generic
         error_log("Add Driver DB Error: " . $stmtAdd->error);
         returnJsonResponse(false, false, 'Failed to add driver. Database error.');
     }
@@ -70,13 +91,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     exit; // Ensure exit after handling POST
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['formType'] == 'edit') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && isset($_POST['formType']) && $_POST['formType'] == 'edit') {
     // Set header here as this block exclusively outputs JSON
     if (!headers_sent()) {
         header('Content-Type: application/json');
     }
 
-    $id = $_POST['id'];
+    // Validate incoming ID
+    $id = filter_var($_POST['id'], FILTER_VALIDATE_INT);
+    if ($id === false || $id <= 0) {
+        returnJsonResponse(false, false, 'Invalid driver ID provided.');
+    }
+
     $name = trim($_POST['name']);
     $address = $_POST['address'];
     $contact_no = $_POST['contact_no'];
@@ -87,6 +113,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     if (!preg_match('/^63\d{10}$/', $contact_no)) {
         returnJsonResponse(false, false, 'Contact number must be 12 digits starting with 63.');
     }
+     // Basic validation for other fields
+    if (empty($name) || empty($address) || !in_array($availability, ['Available', 'Not Available']) || !in_array($area, ['North', 'South'])) {
+        returnJsonResponse(false, false, 'Missing or invalid required fields.');
+    }
+
 
     // Check for existing name (excluding current driver)
     $checkStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ? AND id != ?");
@@ -95,7 +126,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
          returnJsonResponse(false, false, 'Database error checking name.');
     }
     $checkStmt->bind_param("si", $name, $id);
-    $checkStmt->execute();
+    if(!$checkStmt->execute()) {
+        error_log("Edit Driver Check Execute Error: " . $checkStmt->error);
+        $checkStmt->close();
+        returnJsonResponse(false, false, 'Database error executing check.');
+    }
     $checkStmt->store_result();
 
     if ($checkStmt->num_rows > 0) {
@@ -105,7 +140,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     $checkStmt->close(); // Also close if no rows found
 
     // Prepare update statement
-    // Use $stmtEdit for clarity
     $stmtEdit = $conn->prepare("UPDATE drivers SET name = ?, address = ?, contact_no = ?, availability = ?, area = ? WHERE id = ?");
     if (!$stmtEdit) {
         error_log("Edit Driver Prepare Error: " . $conn->error);
@@ -123,13 +157,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     exit; // Ensure exit after handling POST
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['formType'] == 'status') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && isset($_POST['formType']) && $_POST['formType'] == 'status') {
     // Set header here as this block exclusively outputs JSON
     if (!headers_sent()) {
         header('Content-Type: application/json');
     }
 
-    $id = $_POST['id'];
+    // Validate incoming ID
+    $id = filter_var($_POST['id'], FILTER_VALIDATE_INT);
+    if ($id === false || $id <= 0) {
+        returnJsonResponse(false, false, 'Invalid driver ID provided.');
+    }
     $status = $_POST['status']; // Should be 'Available' or 'Not Available'
 
     // Basic validation
@@ -137,7 +175,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
          returnJsonResponse(false, false, 'Invalid status provided.');
     }
 
-    // Use $stmtStatus for clarity
     $stmtStatus = $conn->prepare("UPDATE drivers SET availability = ? WHERE id = ?");
     if (!$stmtStatus) {
          error_log("Change Driver Status Prepare Error: " . $conn->error);
@@ -158,6 +195,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
 
 
 // --- Handler for fetching driver deliveries (Modal List) ---
+// This block handles GET requests with specific 'action' parameter.
+// It exclusively outputs JSON and then exits.
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($_GET['action']) && $_GET['action'] == 'get_deliveries') {
     // Set header here as this block exclusively outputs JSON
     if (!headers_sent()) {
@@ -217,7 +256,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
             // Parse the JSON orders data with error checking
             $orderItems = json_decode($row['orders'], true);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                error_log("[drivers.php get_deliveries] JSON Decode Error for PO {$row['po_number']}: " . json_last_error_msg() . " | Raw Data: " . $row['orders']);
+                error_log("[drivers.php get_deliveries] JSON Decode Error for PO {$row['po_number']}: " . json_last_error_msg() . " | Raw Data: " . substr($row['orders'] ?? '', 0, 100) . "..."); // Log snippet
                 $orderItems = []; // Use empty array on error
             }
 
@@ -328,12 +367,43 @@ if ($main_list_result === false) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" href="/css/toast.css">
     <style>
-        /* --- Minimal Styles Needed for Functionality --- */
-        .overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; padding: 20px; }
-        .overlay-content { background-color: #fefefe; margin: auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        /* --- Minimal Styles Needed for Functionality & Layout --- */
+        /* (Assuming base styles come from linked CSS) */
+
+        /* Modal Base Styles (including centering via Flexbox) */
+        .overlay {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            /* Flexbox for centering */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .overlay-content {
+            background-color: #fefefe;
+            padding: 25px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 500px; /* Default max */
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            max-height: 90vh; /* Limit height */
+            overflow-y: auto; /* Allow scroll inside content */
+        }
         .overlay-content h2 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; font-size: 1.5rem; }
         .close-btn { color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer; }
         .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; }
+
+        /* Form Styles within Modals */
         .account-form label { display: block; margin-bottom: 5px; font-weight: 500; }
         .account-form input[type="text"], .account-form select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .form-buttons { text-align: right; margin-top: 20px; }
@@ -347,19 +417,31 @@ if ($main_list_result === false) {
         .error-message { color: red; margin-bottom: 10px; font-size: 0.9em; display: block; min-height: 1em; }
         .form-field-error { border: 1px solid red !important; }
 
-        /* Styles for Delivery Count and List */
+        /* Driver List Table Styles */
         .delivery-count { font-weight: bold; padding: 3px 8px; border-radius: 10px; display: inline-block; text-align: center; margin-right: 5px; min-width: 40px; }
         .delivery-count-low { background-color: #d4edda; color: #155724; }
         .delivery-count-medium { background-color: #fff3cd; color: #856404; }
         .delivery-count-high { background-color: #f8d7da; color: #721c24; }
         .see-deliveries-btn { background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; font-size: 14px; vertical-align: middle; }
         .see-deliveries-btn:hover { background-color: #5a6268; }
-        .status-available { color: #155724; font-weight: bold; } /* From your original */
-        .status-not-available { color: #721c24; font-weight: bold; } /* From your original */
+        .status-available { color: #155724; font-weight: bold; }
+        .status-not-available { color: #721c24; font-weight: bold; }
 
-        /* Deliveries Modal Specific */
-        .deliveries-modal-content { max-width: 900px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
-        .deliveries-table-container { overflow-y: auto; flex-grow: 1; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
+        /* Deliveries Modal Specific Styles */
+        .deliveries-modal-content {
+            max-width: 900px; /* Wider modal */
+            /* max-height: 85vh; */ /* Handled by base */
+            display: flex;
+            flex-direction: column;
+        }
+        .deliveries-table-container {
+            overflow-y: auto; /* Scroll only the table area */
+            flex-grow: 1; /* Allow table container to fill space */
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-height: 150px; /* Prevent collapsing when empty */
+        }
         .deliveries-table { width: 100%; border-collapse: collapse; }
         .deliveries-table th, .deliveries-table td { padding: 8px 10px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
         .deliveries-table th { background-color: #f2f2f2; position: sticky; top: 0; z-index: 1; }
@@ -369,29 +451,53 @@ if ($main_list_result === false) {
         .status-active { background-color: #0d6efd; }
         .status-for-delivery { background-color: #17a2b8; }
         .status-in-transit { background-color: #fd7e14; }
-        .status-completed { background-color: #198754; }
-        .status-rejected { background-color: #dc3545; }
+        .status-completed { background-color: #198754; } /* Although not shown by query */
+        .status-rejected { background-color: #dc3545; } /* Although not shown by query */
         .po-header { background-color: #f9f9f9; cursor: pointer; transition: background-color 0.2s; }
         .po-header:hover { background-color: #f0f0f0; }
-        .order-items-row { /* Initially hidden by JS */ }
-        .order-items-row.collapsed .order-items { display: none; }
-        .order-items { padding: 10px 15px; background-color: #fff; border-left: 3px solid #17a2b8; } /* Indent items */
+        .order-items-row { /* Hidden by default via JS */ }
+        .order-items { padding: 10px 15px; background-color: #fff; border-left: 3px solid #17a2b8; }
         .order-items h4 { margin-top: 0; margin-bottom: 10px; font-size: 1em; color: #555; }
         .order-items table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
         .order-items th, .order-items td { padding: 6px; text-align: left; border: 1px solid #eee; }
         .order-items th { background-color: #f7f7f7; font-weight: 500; }
         .expand-icon { margin-right: 5px; display: inline-block; transition: transform 0.2s; width: 1em; text-align: center; }
         .po-header.collapsed .expand-icon { transform: rotate(-90deg); }
-        .deliveries-modal-content .modal-buttons { margin-top: auto; padding-top: 15px; border-top: 1px solid #eee; }
+        .deliveries-modal-content .modal-buttons { margin-top: auto; padding-top: 15px; border-top: 1px solid #eee; flex-shrink: 0; }
 
-        /* Add other necessary styles from your original CSS files if needed */
+        /* Add styles from accounts.css, drivers.css, sidebar.css if they provide essential layout */
+        /* e.g., */
+         body { display: flex; } /* If sidebar is direct child */
+         .main-content { flex-grow: 1; margin-left: 250px; /* Example: Adjust */ padding: 20px; }
+         .accounts-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+         .accounts-header h1 { margin: 0; }
+         .filter-section { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+         .filter-section label { font-weight: 500; }
+         .filter-section select { padding: 5px 8px; border: 1px solid #ccc; border-radius: 4px; }
+         .add-account-btn { background-color: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; font-size: 14px; }
+         .add-account-btn:hover { background-color: #0056b3; }
+         .accounts-table-container { background-color: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; }
+         .accounts-table { width: 100%; border-collapse: collapse; }
+         .accounts-table th, .accounts-table td { padding: 12px 15px; border-bottom: 1px solid #ccc; text-align: left; white-space: nowrap; }
+         .accounts-table th { background-color: #f8f9fa; font-weight: 600; }
+         .accounts-table tbody tr:hover { background-color: #f1f1f1; }
+         .no-accounts { text-align: center; padding: 20px; color: #6c757d; }
+         .action-buttons button { margin-right: 5px; padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; }
+         .edit-btn { background-color: #ffc107; color: #333; }
+         .status-btn { background-color: #17a2b8; color: white; }
 
     </style>
 </head>
 <body>
+    <!-- Toast container for notifications -->
     <div id="toast-container"></div>
+
+    <!-- Sidebar -->
     <?php include '../sidebar.php'; // Make sure this path is correct ?>
+
+    <!-- Main Content Area -->
     <div class="main-content">
+        <!-- Header with Title, Filters, Add Button -->
         <div class="accounts-header">
             <h1>Drivers List</h1>
             <div class="filter-section">
@@ -413,6 +519,8 @@ if ($main_list_result === false) {
                 <i class="fas fa-user-plus"></i> Add New Driver
             </button>
         </div>
+
+        <!-- Driver List Table -->
         <div class="accounts-table-container">
             <table class="accounts-table">
                 <thead>
@@ -422,7 +530,7 @@ if ($main_list_result === false) {
                         <th>Contact No.</th>
                         <th>Area</th>
                         <th>Availability</th>
-                        <th>Active Deliveries</th> <!-- Renamed Header -->
+                        <th>Active Deliveries</th> <!-- Header matches calculated data -->
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -458,7 +566,7 @@ if ($main_list_result === false) {
                                         <?= $active_delivery_count ?> / 20 <!-- Assuming 20 is the max -->
                                     </span>
                                     <button class="see-deliveries-btn" onclick="viewDriverDeliveries(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>')">
-                                        <i class="fas fa-list-ul"></i> See List <!-- Changed Icon/Text -->
+                                        <i class="fas fa-list-ul"></i> See List
                                     </button>
                                 </td>
                                 <td class="action-buttons">
@@ -466,7 +574,7 @@ if ($main_list_result === false) {
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
                                     <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>')">
-                                        <i class="fas fa-toggle-on"></i> Status <!-- Changed icon -->
+                                        <i class="fas fa-toggle-on"></i> Status
                                     </button>
                                 </td>
                             </tr>
@@ -623,6 +731,7 @@ if ($main_list_result === false) {
     </div>
 
 
+    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/js/toast.js"></script> <!-- Make sure this path is correct -->
@@ -652,13 +761,13 @@ if ($main_list_result === false) {
         function viewDriverDeliveries(id, name) {
             selectedDriverId = id;
             $('#deliveriesModalTitle').text(`${name}'s Active/Pending Deliveries`);
-            $('#deliveriesModal').css('display', 'flex');
+            $('#deliveriesModal').css('display', 'flex'); // Use flex to trigger centering
             const tableBody = $('#deliveriesTableBody');
             tableBody.html('<tr><td colspan="4" class="no-deliveries"><i class="fas fa-spinner fa-spin"></i> Loading deliveries...</td></tr>');
 
             // Fetch using the GET handler in this same file
-            fetch(`drivers.php?driver_id=${id}&action=get_deliveries`)
-                .then(response => { if (!response.ok) { return response.text().then(text => { console.error("Server response:", text); throw new Error(`Server error: ${response.status}`); }); } return response.json(); })
+            fetch(`drivers.php?driver_id=${id}&action=get_deliveries`) // Relative path should work
+                .then(response => { if (!response.ok) { return response.text().then(text => { console.error("Server response (Deliveries Fetch):", text); throw new Error(`Server error: ${response.status}`); }); } return response.json(); })
                 .then(data => {
                     console.log("Received deliveries data:", data);
                     if (data.success && data.deliveries) {
@@ -693,7 +802,7 @@ if ($main_list_result === false) {
         function changeStatus(status) {
             if (selectedDriverId === null) { showToast('No driver selected.', 'error'); return; }
             $.ajax({
-                url: 'drivers.php', type: 'POST',
+                url: 'drivers.php', type: 'POST', // Post back to self
                 data: { ajax: true, formType: 'status', id: selectedDriverId, status: status },
                 dataType: 'json',
                 success: function(response) { if (response.success && response.reload) { showToast('Status updated successfully', 'success'); setTimeout(() => window.location.reload(), 1500); } else { showToast(response.message || 'Failed to update status', 'error'); } closeStatusModal(); },
@@ -705,10 +814,10 @@ if ($main_list_result === false) {
         function filterDrivers() {
             const status = document.getElementById('statusFilter').value;
             const area = document.getElementById('areaFilter').value;
-            const params = new URLSearchParams(window.location.search);
+            const params = new URLSearchParams(window.location.search); // Preserve other params if any
             params.set('status', status);
             params.set('area', area);
-            window.location.href = `drivers.php?${params.toString()}`;
+            window.location.href = `drivers.php?${params.toString()}`; // Navigate with new params
         }
 
         // --- Validation ---
@@ -727,36 +836,102 @@ if ($main_list_result === false) {
 
         // --- Document Ready ---
         $(document).ready(function() {
-            // Close modals on overlay click
+            // Close modals on overlay click (if click is on overlay itself)
             $(document).on('click', '.overlay', function(event) { if (event.target === this) { $(this).hide(); if (this.id === 'statusModal' || this.id === 'deliveriesModal') selectedDriverId = null; } });
-            // Prevent closing on content click
+            // Prevent closing when clicking inside the modal content
             $(document).on('click', '.overlay-content', function(event) { event.stopPropagation(); });
 
-            // Live validation for contact numbers
-            $('#add-contact_no').on('input blur', function() { validateContactNumber(this, document.getElementById('contactError')); });
-            $('#edit-contact_no').on('input blur', function() { validateContactNumber(this, document.getElementById('editContactError')); });
+            // Live validation for contact numbers in Add form
+            $('#add-contact_no').on('input blur', function() {
+                validateContactNumber(this, document.getElementById('contactError'));
+            });
+
+            // Live validation for contact numbers in Edit form
+            $('#edit-contact_no').on('input blur', function() {
+                validateContactNumber(this, document.getElementById('editContactError'));
+            });
 
             // AJAX form submission for Add Driver
             $('#addDriverForm').on('submit', function(e) {
-                e.preventDefault();
-                const contactInput = document.getElementById('add-contact_no'); // Use specific ID
-                if (!validateContactNumber(contactInput, document.getElementById('contactError'))) { showToast('Please correct errors.', 'warning'); return false; }
+                e.preventDefault(); // Prevent default form submission
+                const contactInput = document.getElementById('add-contact_no');
+                // Final validation check before submitting
+                if (!validateContactNumber(contactInput, document.getElementById('contactError'))) {
+                    showToast('Please correct errors before saving.', 'warning');
+                    // Focus the invalid field
+                    contactInput.focus();
+                    return false; // Stop submission if invalid
+                }
+                // Disable button to prevent double submit
+                const submitBtn = $(this).find('button[type="submit"]');
+                submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+
                 $.ajax({
-                    url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
-                    success: function(response) { if (response.success && response.reload) { showToast('Driver added', 'success'); closeAddDriverForm(); setTimeout(() => window.location.reload(), 1500); } else { $('#addDriverError').text(response.message || 'Error adding.'); showToast(response.message || 'Error adding.', 'error'); } },
-                    error: function(xhr, status, error) { console.error("Add AJAX Error:", status, error, xhr.responseText); $('#addDriverError').text('Request error.'); showToast('Request error: ' + error, 'error'); }
+                    url: 'drivers.php', // Post back to self
+                    type: 'POST',
+                    data: $(this).serialize() + '&ajax=true', // Add ajax flag
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success && response.reload) {
+                            showToast('Driver added successfully', 'success');
+                            closeAddDriverForm();
+                            setTimeout(() => window.location.reload(), 1500); // Reload after success
+                        } else {
+                            // Show error message in the modal
+                            $('#addDriverError').text(response.message || 'Error adding driver. Please try again.');
+                            showToast(response.message || 'Error adding driver.', 'error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                         console.error("Add Driver AJAX Error:", status, error, xhr.responseText);
+                         $('#addDriverError').text('An error occurred. Please check console or try again.');
+                         showToast('An error occurred: ' + error, 'error');
+                    },
+                    complete: function() {
+                         // Re-enable button
+                         submitBtn.prop('disabled', false).html('<i class="fas fa-save"></i> Save');
+                    }
                 });
             });
 
             // AJAX form submission for Edit Driver
             $('#editDriverForm').on('submit', function(e) {
-                e.preventDefault();
-                const contactInput = document.getElementById('edit-contact_no'); // Use specific ID
-                if (!validateContactNumber(contactInput, document.getElementById('editContactError'))) { showToast('Please correct errors.', 'warning'); return false; }
+                e.preventDefault(); // Prevent default form submission
+                const contactInput = document.getElementById('edit-contact_no');
+                // Final validation check before submitting
+                if (!validateContactNumber(contactInput, document.getElementById('editContactError'))) {
+                     showToast('Please correct errors before saving.', 'warning');
+                     contactInput.focus();
+                    return false; // Stop submission if invalid
+                }
+                // Disable button
+                const submitBtn = $(this).find('button[type="submit"]');
+                submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
+
                 $.ajax({
-                    url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
-                    success: function(response) { if (response.success && response.reload) { showToast('Driver updated', 'success'); closeEditDriverForm(); setTimeout(() => window.location.reload(), 1500); } else { $('#editDriverError').text(response.message || 'Error updating.'); showToast(response.message || 'Error updating.', 'error'); } },
-                    error: function(xhr, status, error) { console.error("Edit AJAX Error:", status, error, xhr.responseText); $('#editDriverError').text('Request error.'); showToast('Request error: ' + error, 'error'); }
+                    url: 'drivers.php', // Post back to self
+                    type: 'POST',
+                    data: $(this).serialize() + '&ajax=true', // Add ajax flag
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success && response.reload) {
+                            showToast('Driver updated successfully', 'success');
+                            closeEditDriverForm();
+                            setTimeout(() => window.location.reload(), 1500); // Reload after success
+                        } else {
+                            $('#editDriverError').text(response.message || 'Error updating driver. Please try again.');
+                             showToast(response.message || 'Error updating driver.', 'error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                         console.error("Edit Driver AJAX Error:", status, error, xhr.responseText);
+                         $('#editDriverError').text('An error occurred. Please check console or try again.');
+                         showToast('An error occurred: ' + error, 'error');
+                    },
+                    complete: function() {
+                         // Re-enable button
+                         submitBtn.prop('disabled', false).html('<i class="fas fa-save"></i> Update');
+                    }
                 });
             });
         });
