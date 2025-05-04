@@ -189,8 +189,9 @@ $pageTitle = "Reporting";
                  if(endDate) formData.append('end_date', endDate);
             }
 
-            // --- !!! UPDATED FETCH URL TO POINT TO HANDLER !!! ---
-            const fetchUrl = '/api/report_handler.php'; // Point to the new handler script
+            // --- !!! UPDATED FETCH URL !!! ---
+            // Assumes fetch_report.php was moved to public/api/
+            const fetchUrl = '../backend/fetch_report.php';
 
             fetch(fetchUrl, {
                 method: 'POST',
@@ -240,7 +241,7 @@ $pageTitle = "Reporting";
                  .replace(/'/g, "&#039;");
         }
 
-        // Add event listener to toggle date fields based on report selection
+        // Add event listener to toggle date fields based on report selection (optional but good UX)
         $('#report-type').on('change', function() {
             const reportType = $(this).val();
             const requiresDates = ['sales_summary', 'order_trends', 'sales_by_client', 'sales_by_product'];
@@ -250,6 +251,9 @@ $pageTitle = "Reporting";
                 dateControls.show();
             } else {
                 dateControls.hide();
+                 // Optionally clear date fields when hidden
+                 // $('#start-date').val('');
+                 // $('#end-date').val('');
             }
         }).trigger('change'); // Trigger on page load to set initial visibility
 
