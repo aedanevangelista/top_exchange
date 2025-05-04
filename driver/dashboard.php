@@ -182,10 +182,6 @@ $conn->close();
                                     <!-- Fallback for unexpected statuses, might need adjustment -->
                                     <option value="<?= htmlspecialchars($order['status']) ?>" selected><?= htmlspecialchars($order['status']) ?></option>
                                 <?php endif; ?>
-                                <!-- Always allow marking as completed if actionable -->
-                                <?php if ($order['status'] != 'Completed' && in_array($order['status'], ['For Delivery', 'In Transit'])): ?>
-                                     <!-- <option value="Completed">Completed</option> -->
-                                <?php endif; ?>
                             </select>
                             <button class="update-status-btn" data-po="<?= htmlspecialchars($order['po_number']) ?>">
                                 <i class="fas fa-sync-alt"></i> Update
@@ -197,6 +193,22 @@ $conn->close();
         <?php endif; ?>
     </main>
 
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="confirmation-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-question-circle"></i> Confirm Status Update</h3>
+            </div>
+            <div class="modal-message">
+                Are you sure you want to update order <strong id="modalPoNumber"></strong> status to <span id="modalNewStatus" class="status-pill"></span>?
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" id="cancelBtn"><i class="fas fa-times"></i> Cancel</button>
+                <button class="btn-confirm" id="confirmBtn"><i class="fas fa-check"></i> Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <!-- Link to the shared toast JS if it's outside this folder -->
@@ -204,28 +216,28 @@ $conn->close();
 
     <script>
         $(document).ready(function() {
-            // Initialize toastr (ensure toast.js does this or do it here)
-             if (typeof toastr !== 'undefined') {
-                 toastr.options = {
-                     "closeButton": true,
-                     "debug": false,
-                     "newestOnTop": true,
-                     "progressBar": true,
-                     "positionClass": "toast-top-right",
-                     "preventDuplicates": false,
-                     "onclick": null,
-                     "showDuration": "300",
-                     "hideDuration": "1000",
-                     "timeOut": "5000",
-                     "extendedTimeOut": "1000",
-                     "showEasing": "swing",
-                     "hideEasing": "linear",
-                     "showMethod": "fadeIn",
-                     "hideMethod": "fadeOut"
-                 };
-             } else {
-                 console.error("Toastr library not loaded correctly.");
-             }
+            // Initialize toastr with bottom-right position
+            if (typeof toastr !== 'undefined') {
+                toastr.options = {
+                    "closeButton": true,
+                    "debug": false,
+                    "newestOnTop": false,
+                    "progressBar": true,
+                    "positionClass": "toast-bottom-right", // Changed to bottom-right
+                    "preventDuplicates": false,
+                    "onclick": null,
+                    "showDuration": "300",
+                    "hideDuration": "1000",
+                    "timeOut": "5000",
+                    "extendedTimeOut": "1000",
+                    "showEasing": "swing",
+                    "hideEasing": "linear",
+                    "showMethod": "fadeIn",
+                    "hideMethod": "fadeOut"
+                };
+            } else {
+                console.error("Toastr library not loaded correctly.");
+            }
 
             // Setup pull-to-refresh
             let touchStartY = 0;
@@ -262,19 +274,81 @@ $conn->close();
                 }
             }, false);
 
+            // Variables for modal confirmation
+            let currentPoNumber = '';
+            let currentNewStatus = '';
+            let currentOrderCard = null;
+            let currentStatusSpan = null;
+            const $confirmationModal = $('#confirmationModal');
+            const $modalPoNumber = $('#modalPoNumber');
+            const $modalNewStatus = $('#modalNewStatus');
+            const $cancelBtn = $('#cancelBtn');
+            const $confirmBtn = $('#confirmBtn');
+
+            // Show confirmation modal when update button is clicked
             $('.update-status-btn').on('click', function() {
                 const button = $(this);
                 const po_number = button.data('po');
                 const statusSelect = $(`#status-${po_number}`);
                 const new_status = statusSelect.val();
-                const orderCard = button.closest('.order-card');
-                const currentStatusSpan = orderCard.find('.order-status');
-
-                // Optional: Add confirmation for completed status
-                if (new_status === 'Completed' && !confirm(`Mark order ${po_number} as completed?`)) {
+                currentOrderCard = button.closest('.order-card');
+                currentStatusSpan = currentOrderCard.find('.order-status');
+                const current_status = currentStatusSpan.text().trim();
+                
+                // Skip modal if no change in status
+                if (new_status === current_status) {
+                    if (typeof toastr !== 'undefined') {
+                        toastr.info('Status remains unchanged.');
+                    }
                     return;
                 }
-
+                
+                // Set up modal content
+                currentPoNumber = po_number;
+                currentNewStatus = new_status;
+                
+                $modalPoNumber.text(po_number);
+                $modalNewStatus.text(new_status);
+                
+                // Set appropriate status class for pill
+                $modalNewStatus.removeClass().addClass('status-pill ' + new_status.toLowerCase().replace(/\s+/g, '-'));
+                
+                // Show the confirmation modal
+                $confirmationModal.fadeIn(200);
+            });
+            
+            // Handle cancel button click
+            $cancelBtn.on('click', function() {
+                $confirmationModal.fadeOut(200);
+                resetModalVariables();
+            });
+            
+            // Close modal if clicking outside of it
+            $confirmationModal.on('click', function(e) {
+                if ($(e.target).is($confirmationModal)) {
+                    $confirmationModal.fadeOut(200);
+                    resetModalVariables();
+                }
+            });
+            
+            // Handle confirm button click
+            $confirmBtn.on('click', function() {
+                $confirmationModal.fadeOut(200);
+                updateOrderStatus(currentPoNumber, currentNewStatus, currentOrderCard, currentStatusSpan);
+            });
+            
+            // Reset modal variables
+            function resetModalVariables() {
+                currentPoNumber = '';
+                currentNewStatus = '';
+                currentOrderCard = null;
+                currentStatusSpan = null;
+            }
+            
+            // Function to actually update the order status
+            function updateOrderStatus(po_number, new_status, orderCard, statusSpan) {
+                const button = $(`.update-status-btn[data-po="${po_number}"]`);
+                
                 button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...'); // Disable button and show spinner
 
                 $.ajax({
@@ -297,9 +371,9 @@ $conn->close();
                            }
 
                             // Update status display dynamically
-                            currentStatusSpan.text(new_status);
+                            statusSpan.text(new_status);
                             // Update status class for color
-                            currentStatusSpan.removeClass (function (index, className) {
+                            statusSpan.removeClass (function (index, className) {
                                 return (className.match (/(^|\s)status-\S+/g) || []).join(' ');
                             }).addClass('status-' + new_status.toLowerCase().replace(/\s+/g, '-'));
 
@@ -325,7 +399,7 @@ $conn->close();
                                 // Re-enable button for non-completed updates
                                 button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update');
                                 // Refresh the select options based on the new status
-                                updateStatusOptions(statusSelect, new_status);
+                                updateStatusOptions($(`#status-${po_number}`), new_status);
                             }
 
                         } else {
@@ -351,7 +425,7 @@ $conn->close();
                         button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update'); // Re-enable button on error
                     }
                 });
-            });
+            }
 
             // Function to update the dropdown options based on the current status
             function updateStatusOptions(selectElement, currentStatus) {
@@ -368,10 +442,9 @@ $conn->close();
                     selectElement.append($('<option>', { value: 'In Transit', text: 'In Transit', selected: true }));
                     selectElement.append($('<option>', { value: 'Completed', text: 'Completed' }));
                 }
-                // No options needed if already 'Completed' (though completed orders are removed/disabled)
             }
 
-             // Initial setup of dropdowns based on current status on page load
+            // Initial setup of dropdowns based on current status on page load
             $('.status-select').each(function() {
                 const currentStatus = $(this).closest('.order-card').find('.order-status').text().trim();
                 updateStatusOptions($(this), currentStatus);

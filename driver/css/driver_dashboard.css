@@ -185,6 +185,90 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
     to {transform: rotate(360deg);}
 }
 
+/* Confirmation Modal */
+.confirmation-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 400px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    animation: modalOpen 0.3s ease-out;
+}
+@keyframes modalOpen {
+    from {transform: scale(0.8); opacity: 0;}
+    to {transform: scale(1); opacity: 1;}
+}
+.modal-header {
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 15px;
+    text-align: center;
+}
+.modal-title {
+    margin: 0;
+    color: #333;
+    font-size: 1.4rem;
+}
+.modal-message {
+    margin-bottom: 20px;
+    text-align: center;
+    color: #555;
+}
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+.btn-cancel, .btn-confirm {
+    padding: 8px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.btn-cancel {
+    background-color: #f1f1f1;
+    color: #333;
+}
+.btn-cancel:hover {
+    background-color: #e0e0e0;
+}
+.btn-confirm {
+    background-color: #0d6efd;
+    color: white;
+}
+.btn-confirm:hover {
+    background-color: #0b5ed7;
+}
+/* Status colors in modal */
+.status-pill {
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.9em;
+    display: inline-block;
+    margin: 0 3px;
+}
+.status-pill.active { background-color: #cfe2ff; color: #084298; }
+.status-pill.for-delivery { background-color: #cff4fc; color: #055160; }
+.status-pill.in-transit { background-color: #fff3cd; color: #664d03; }
+.status-pill.completed { background-color: #d1e7dd; color: #0f5132; }
+
 /* Responsive */
 @media (max-width: 768px) {
     .dashboard-header { 
@@ -241,6 +325,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
     .order-card {
         margin-bottom: 15px;
     }
+    .modal-content {
+        width: 90%;
+        margin: 30% auto;
+    }
 }
 
 @media (min-width: 576px) and (max-width: 991px) {
@@ -270,39 +358,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
     }
     .status-select {
         padding: 12px 10px; /* Larger touch target */
-    }
-}
-
-/* Dark theme support for users with dark mode preference */
-@media (prefers-color-scheme: dark) {
-    body {
-        background-color: #121212;
-        color: #e0e0e0;
-    }
-    .dashboard-header {
-        background-color: #1f1f1f;
-    }
-    .order-card, .no-orders {
-        background-color: #1e1e1e;
-        border-color: #333;
-    }
-    .order-header, .order-actions {
-        background-color: #252525;
-        border-color: #333;
-    }
-    .order-body strong {
-        color: #e0e0e0;
-    }
-    .order-body p, .order-items-summary li {
-        color: #aaa;
-    }
-    .status-select {
-        background-color: #2a2a2a;
-        border-color: #444;
-        color: #e0e0e0;
-    }
-    .order-items-summary li {
-        border-bottom-color: #333;
     }
 }
 
