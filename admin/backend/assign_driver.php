@@ -1,10 +1,14 @@
 <?php
-// Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): 2025-05-04 08:46:40
+// Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): 2025-05-04 13:08:34
 // Current User's Login: aedanevangelista
 
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
+
+// NEW CODE: Parse JSON input
+$json_data = file_get_contents('php://input');
+$data = json_decode($json_data, true);
 
 // Include database connection - Ensure this file ONLY establishes $conn and doesn't output anything
 include_once __DIR__ . '/db_connection.php';
@@ -45,15 +49,14 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     sendJsonResponse(false, 'Invalid request method.', ['error_code' => 'INVALID_METHOD']);
 }
 
-// Check required parameters
-if (!isset($_POST['po_number']) || !isset($_POST['driver_id'])) {
+// MODIFIED CODE: Check required parameters using $data instead of $_POST
+if (!isset($data['po_number']) || !isset($data['driver_id'])) {
     sendJsonResponse(false, 'Missing required parameters (PO Number or Driver ID).', ['error_code' => 'MISSING_PARAMS']);
 }
 
-// Sanitize inputs
-// FILTER_SANITIZE_STRING is deprecated. Just trim and rely on prepared statements for DB safety.
-$po_number = trim($_POST['po_number']); // <<< UPDATED LINE
-$driver_id = filter_var(trim($_POST['driver_id']), FILTER_VALIDATE_INT);
+// MODIFIED CODE: Sanitize inputs using $data instead of $_POST
+$po_number = trim($data['po_number']);
+$driver_id = filter_var(trim($data['driver_id']), FILTER_VALIDATE_INT);
 
 if ($driver_id === false || $driver_id <= 0) {
     sendJsonResponse(false, 'Invalid Driver ID provided.', ['error_code' => 'INVALID_DRIVER_ID']);
