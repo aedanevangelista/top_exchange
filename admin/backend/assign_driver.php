@@ -1,158 +1,131 @@
 <?php
 session_start();
-include "db_connection.php";
-include "check_role.php";
+include "db_connection.php"; // Adjust path if needed
+include "check_role.php";   // Adjust path if needed
 
-// For debugging
-$log_file = __DIR__ . "/driver_assignment_log.txt";
-file_put_contents($log_file, date('Y-m-d H:i:s') . ": Script started\n", FILE_APPEND);
-
-// Ensure the user is logged in
+// --- Security & Role Check ---
 if (!isset($_SESSION['admin_user_id'])) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Not authorized']);
-    file_put_contents($log_file, date('Y-m-d H:i:s') . ": Not authorized\n", FILE_APPEND);
+    echo json_encode(['success' => false, 'message' => 'Authentication required.']);
+    exit;
+}
+try {
+    checkRole('Orders'); // Or appropriate role for assigning drivers
+} catch (Exception $e) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Permission denied: ' . $e->getMessage()]);
     exit;
 }
 
-// Set content type to JSON
+// --- Response Setup ---
 header('Content-Type: application/json');
+$response = ['success' => false, 'message' => 'An error occurred.'];
 
-// Check request method
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Get data from POST or JSON input
-    $data = $_POST;
-    
-    // If empty, try JSON input
-    if (empty($data)) {
-        $input = file_get_contents('php://input');
-        if (!empty($input)) {
-            $data = json_decode($input, true);
-        }
-    }
-    
-    // Log the received data
-    file_put_contents($log_file, date('Y-m-d H:i:s') . ": Received data: " . print_r($data, true) . "\n", FILE_APPEND);
-    file_put_contents($log_file, date('Y-m-d H:i:s') . ": Raw POST: " . print_r($_POST, true) . "\n", FILE_APPEND);
-    file_put_contents($log_file, date('Y-m-d H:i:s') . ": Raw REQUEST: " . print_r($_REQUEST, true) . "\n", FILE_APPEND);
-    
-    if (!isset($data['po_number']) || !isset($data['driver_id'])) {
-        echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
-        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Missing required parameters\n", FILE_APPEND);
-        exit;
-    }
-    
-    $po_number = $data['po_number'];
-    $driver_id = (int)$data['driver_id'];
-    
-    file_put_contents($log_file, date('Y-m-d H:i:s') . ": Processing PO: $po_number, Driver ID: $driver_id\n", FILE_APPEND);
-    
-    if (empty($po_number) || $driver_id <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Invalid parameters provided']);
-        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Invalid parameters\n", FILE_APPEND);
-        exit;
-    }
-
-    // Check the order status
-    $statusCheck = $conn->prepare("SELECT status FROM orders WHERE po_number = ?");
-    $statusCheck->bind_param("s", $po_number);
-    $statusCheck->execute();
-    $statusResult = $statusCheck->get_result();
-
-    if ($statusResult->num_rows === 0) {
-        echo json_encode(['success' => false, 'message' => 'Order not found']);
-        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Order not found: $po_number\n", FILE_APPEND);
-        exit;
-    }
-
-    $statusRow = $statusResult->fetch_assoc();
-    if ($statusRow['status'] !== 'Active') {
-        echo json_encode(['success' => false, 'message' => 'Driver assignment is only allowed for Active orders']);
-        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Order status not Active: " . $statusRow['status'] . "\n", FILE_APPEND);
-        exit;
-    }
-    $statusCheck->close();
-
-    // Begin transaction
-    $conn->begin_transaction();
-
-    try {
-        // First check if the driver exists and is available
-        $checkDriverStmt = $conn->prepare("SELECT id FROM drivers WHERE id = ? AND availability = 'Available' AND current_deliveries < 20");
-        $checkDriverStmt->bind_param("i", $driver_id);
-        $checkDriverStmt->execute();
-        $checkDriverResult = $checkDriverStmt->get_result();
-        
-        if ($checkDriverResult->num_rows === 0) {
-            $conn->rollback();
-            echo json_encode(['success' => false, 'message' => 'Driver is not available or has reached maximum deliveries']);
-            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Driver not available: $driver_id\n", FILE_APPEND);
-            exit;
-        }
-        $checkDriverStmt->close();
-        
-        // Check if there's already a driver assigned to this order
-        $checkAssignmentStmt = $conn->prepare("SELECT driver_id FROM driver_assignments WHERE po_number = ?");
-        $checkAssignmentStmt->bind_param("s", $po_number);
-        $checkAssignmentStmt->execute();
-        $checkAssignmentResult = $checkAssignmentStmt->get_result();
-        
-        $oldDriverId = 0;
-        if ($checkAssignmentResult->num_rows > 0) {
-            $assignmentRow = $checkAssignmentResult->fetch_assoc();
-            $oldDriverId = $assignmentRow['driver_id'];
-            
-            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Existing assignment found. Old driver ID: $oldDriverId\n", FILE_APPEND);
-            
-            // Update existing assignment
-            $updateAssignmentStmt = $conn->prepare("UPDATE driver_assignments SET driver_id = ?, assigned_at = NOW(), status = 'Assigned' WHERE po_number = ?");
-            $updateAssignmentStmt->bind_param("is", $driver_id, $po_number);
-            $updateAssignmentStmt->execute();
-            $updateAssignmentStmt->close();
-            
-            // Decrease the old driver's current_deliveries count if different from new driver
-            if ($oldDriverId > 0 && $oldDriverId != $driver_id) {
-                $decrementStmt = $conn->prepare("UPDATE drivers SET current_deliveries = GREATEST(current_deliveries - 1, 0) WHERE id = ?");
-                $decrementStmt->bind_param("i", $oldDriverId);
-                $decrementStmt->execute();
-                $decrementStmt->close();
-                file_put_contents($log_file, date('Y-m-d H:i:s') . ": Decremented old driver's count\n", FILE_APPEND);
-            }
-        } else {
-            file_put_contents($log_file, date('Y-m-d H:i:s') . ": Creating new assignment\n", FILE_APPEND);
-            
-            // Create new assignment
-            $createAssignmentStmt = $conn->prepare("INSERT INTO driver_assignments (po_number, driver_id, status) VALUES (?, ?, 'Assigned')");
-            $createAssignmentStmt->bind_param("si", $po_number, $driver_id);
-            $createAssignmentStmt->execute();
-            $createAssignmentStmt->close();
-        }
-        $checkAssignmentStmt->close();
-        
-        // Update the driver_assigned flag in the orders table
-        $updateOrderStmt = $conn->prepare("UPDATE orders SET driver_assigned = 1 WHERE po_number = ?");
-        $updateOrderStmt->bind_param("s", $po_number);
-        $updateOrderStmt->execute();
-        $updateOrderStmt->close();
-        
-        // Increment the driver's current_deliveries count
-        $updateDriverStmt = $conn->prepare("UPDATE drivers SET current_deliveries = current_deliveries + 1 WHERE id = ?");
-        $updateDriverStmt->bind_param("i", $driver_id);
-        $updateDriverStmt->execute();
-        $updateDriverStmt->close();
-        
-        $conn->commit();
-        echo json_encode(['success' => true, 'message' => 'Driver assigned successfully']);
-        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Driver assigned successfully\n", FILE_APPEND);
-        
-    } catch (Exception $e) {
-        $conn->rollback();
-        echo json_encode(['success' => false, 'message' => 'Failed to assign driver: ' . $e->getMessage()]);
-        file_put_contents($log_file, date('Y-m-d H:i:s') . ": Exception: " . $e->getMessage() . "\n", FILE_APPEND);
-    }
-} else {
-    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
-    file_put_contents($log_file, date('Y-m-d H:i:s') . ": Invalid request method: " . $_SERVER['REQUEST_METHOD'] . "\n", FILE_APPEND);
+// --- Request Validation ---
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['po_number']) || !isset($_POST['driver_id'])) {
+    $response['message'] = 'Invalid request method or missing parameters.';
+    echo json_encode($response);
+    exit;
 }
-exit;
+
+// --- Input Processing ---
+$po_number = trim($_POST['po_number']);
+$new_driver_id = filter_var(trim($_POST['driver_id']), FILTER_VALIDATE_INT); // Ensure it's an integer
+
+if (empty($po_number) || $new_driver_id === false || $new_driver_id <= 0) {
+    $response['message'] = 'Invalid PO Number or Driver ID.';
+    echo json_encode($response);
+    exit;
+}
+
+// --- Database Operations within a Transaction ---
+$conn->begin_transaction();
+
+try {
+    $old_driver_id = null;
+
+    // 1. Check if an assignment already exists for this PO
+    $stmt_check = $conn->prepare("SELECT driver_id FROM driver_orders WHERE po_number = ?");
+    if (!$stmt_check) throw new Exception("Prepare failed (check existing): " . $conn->error);
+    $stmt_check->bind_param("s", $po_number);
+    $stmt_check->execute();
+    $result_check = $stmt_check->get_result();
+    if ($row_check = $result_check->fetch_assoc()) {
+        $old_driver_id = $row_check['driver_id'];
+    }
+    $stmt_check->close();
+
+    // 2. Handle Assignment Logic (Insert or Update)
+    if ($old_driver_id !== null) {
+        // Existing assignment found - Handle driver change
+        if ($old_driver_id != $new_driver_id) {
+            // Update the assignment record
+            $stmt_update_assign = $conn->prepare("UPDATE driver_orders SET driver_id = ?, assigned_at = NOW() WHERE po_number = ?");
+             if (!$stmt_update_assign) throw new Exception("Prepare failed (update assignment): " . $conn->error);
+            $stmt_update_assign->bind_param("is", $new_driver_id, $po_number);
+            if (!$stmt_update_assign->execute()) throw new Exception("Execute failed (update assignment): " . $stmt_update_assign->error);
+            $stmt_update_assign->close();
+
+            // Decrement old driver's count
+            $stmt_dec = $conn->prepare("UPDATE drivers SET current_deliveries = GREATEST(0, current_deliveries - 1) WHERE id = ?");
+            if (!$stmt_dec) throw new Exception("Prepare failed (decrement driver): " . $conn->error);
+            $stmt_dec->bind_param("i", $old_driver_id);
+            if (!$stmt_dec->execute()) throw new Exception("Execute failed (decrement driver): " . $stmt_dec->error);
+            $stmt_dec->close();
+            error_log("Decremented delivery count for OLD driver ID: " . $old_driver_id . " due to change on PO: " . $po_number);
+
+            // Increment new driver's count
+            $stmt_inc = $conn->prepare("UPDATE drivers SET current_deliveries = current_deliveries + 1 WHERE id = ?");
+            if (!$stmt_inc) throw new Exception("Prepare failed (increment driver): " . $conn->error);
+            $stmt_inc->bind_param("i", $new_driver_id);
+             if (!$stmt_inc->execute()) throw new Exception("Execute failed (increment driver): " . $stmt_inc->error);
+            $stmt_inc->close();
+            error_log("Incremented delivery count for NEW driver ID: " . $new_driver_id . " due to assignment/change on PO: " . $po_number);
+
+        } else {
+            // Same driver assigned again - no change needed in counts or driver_orders
+            error_log("Re-assigned same driver ID: " . $new_driver_id . " to PO: " . $po_number . ". No count change.");
+        }
+    } else {
+        // No existing assignment - Insert new record
+        $stmt_insert_assign = $conn->prepare("INSERT INTO driver_orders (driver_id, po_number, assigned_at) VALUES (?, ?, NOW())");
+        if (!$stmt_insert_assign) throw new Exception("Prepare failed (insert assignment): " . $conn->error);
+        $stmt_insert_assign->bind_param("is", $new_driver_id, $po_number);
+        if (!$stmt_insert_assign->execute()) throw new Exception("Execute failed (insert assignment): " . $stmt_insert_assign->error);
+        $stmt_insert_assign->close();
+
+        // Increment new driver's count
+        $stmt_inc = $conn->prepare("UPDATE drivers SET current_deliveries = current_deliveries + 1 WHERE id = ?");
+         if (!$stmt_inc) throw new Exception("Prepare failed (increment driver): " . $conn->error);
+        $stmt_inc->bind_param("i", $new_driver_id);
+        if (!$stmt_inc->execute()) throw new Exception("Execute failed (increment driver): " . $stmt_inc->error);
+        $stmt_inc->close();
+        error_log("Incremented delivery count for NEW driver ID: " . $new_driver_id . " due to assignment on PO: " . $po_number);
+    }
+
+    // 3. Update the 'orders' table to reflect assignment (optional but good practice)
+    // You might store the driver_id or just a boolean flag. Here we set driver_assigned = 1.
+    $stmt_update_order = $conn->prepare("UPDATE orders SET driver_assigned = 1 WHERE po_number = ?");
+    if (!$stmt_update_order) throw new Exception("Prepare failed (update order flag): " . $conn->error);
+    $stmt_update_order->bind_param("s", $po_number);
+    if (!$stmt_update_order->execute()) throw new Exception("Execute failed (update order flag): " . $stmt_update_order->error);
+    $stmt_update_order->close();
+
+    // 4. Commit the transaction
+    $conn->commit();
+    $response['success'] = true;
+    $response['message'] = 'Driver assigned successfully.';
+     error_log("Successfully assigned driver ID {$new_driver_id} to PO {$po_number}. Transaction committed.");
+
+
+} catch (Exception $e) {
+    // Rollback transaction on any error
+    $conn->rollback();
+    $response['message'] = "Error assigning driver: " . $e->getMessage();
+    error_log("Transaction Rollback - Error assigning driver for PO {$po_number}: " . $e->getMessage());
+}
+
+// --- Cleanup and Response ---
+$conn->close();
+echo json_encode($response);
 ?>
