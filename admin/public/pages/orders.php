@@ -1,5 +1,5 @@
 <?php
-// Current Date: 2025-05-04 11:34:27 UTC // Updated timestamp
+// Current Date: 2025-05-04 11:42:49 UTC
 // Author: aedanevangelista
 
 session_start();
@@ -39,16 +39,13 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// --- REMOVED: Fetching drivers is no longer needed on this page ---
-// $drivers = []; ... (Driver fetch code removed)
-
-// Modified query to show Active, Pending, and Rejected orders with sorting
-// --- REMOVED driver_assigned, driver_id, driver_name FROM SELECT ---
+// Query to show Pending, Rejected, and Active orders *under* 100% progress
 $orders = [];
 $sql = "SELECT o.id, o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress,
         o.company, o.special_instructions
         FROM orders o
-        WHERE o.status IN ('Active', 'Pending', 'Rejected')"; // Removed LEFT JOINs for drivers
+        WHERE o.status IN ('Pending', 'Rejected')
+        OR (o.status = 'Active' AND o.progress < 100)"; // Only show Active orders NOT yet at 100% progress
 
 // Construct the ORDER BY clause
 $orderByClause = $sort_column;
@@ -527,13 +524,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             color: #0f5132;
         }
 
-        /* --- REMOVED Driver specific badge styles --- */
-        /* .driver-badge.driver-not-allowed {...} */
-        /* .driver-badge.driver-not-assigned {...} */
-        /* .driver-badge {...} */
-        /* .driver-btn {...} */
-        /* .assign-driver-btn {...} */
-
         .btn-info {
             font-size: 10px;
             opacity: 0.8;
@@ -949,7 +939,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td><?= htmlspecialchars($order['order_date']) ?></td>
                                 <td><?= htmlspecialchars($order['delivery_date']) ?></td>
                                 <td>
-                                    <?php if ($order['status'] === 'Active'): ?>
+                                    <?php // Only show progress bar for Active (and now < 100%) orders
+                                    if ($order['status'] === 'Active'): ?>
                                     <div class="progress-bar-container">
                                         <div class="progress-bar" style="width: <?= $order['progress'] ?? 0 ?>%"></div>
                                         <div class="progress-text"><?= $order['progress'] ?? 0 ?>%</div>
@@ -959,7 +950,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if ($order['status'] === 'Active'): ?>
+                                    <?php // Only allow editing progress for Active orders
+                                    if ($order['status'] === 'Active'): ?>
                                         <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order['po_number']) ?>')"><i class="fas fa-clipboard-list"></i> View</button>
                                     <?php else: ?>
                                         <button class="view-orders-btn" onclick="viewOrderInfo('<?= htmlspecialchars(addslashes($order['orders'])) ?>', '<?= htmlspecialchars($order['status']) ?>')"><i class="fas fa-info-circle"></i> Info</button>
@@ -973,7 +965,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                         <span class="no-instructions">None</span>
                                     <?php endif; ?>
                                 </td>
-                                <!-- REMOVED Drivers Column Data (<td>...</td>) -->
+                                <!-- REMOVED Drivers Column Data -->
                                 <td>
                                     <?php
                                     $statusClass = '';
@@ -991,7 +983,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td class="action-buttons">
                                     <?php if ($order['status'] === 'Pending'): ?>
                                         <button class="status-btn" onclick="confirmPendingStatusChange('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', '<?= htmlspecialchars(addslashes($order['orders'])) ?>', 'Pending')"><i class="fas fa-sync-alt"></i> Status</button>
-                                    <?php elseif ($order['status'] === 'Active'): ?>
+                                    <?php elseif ($order['status'] === 'Active'): // Progress < 100% is handled by SQL query now ?>
                                         <button class="status-btn" onclick="confirmStatusChange('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', 'Active')"><i class="fas fa-sync-alt"></i> Status</button>
                                     <?php elseif ($order['status'] === 'Rejected'): ?>
                                         <button class="status-btn" onclick="confirmRejectedStatusChange('<?= htmlspecialchars($order['po_number']) ?>', '<?= htmlspecialchars($order['username']) ?>', 'Rejected')"><i class="fas fa-sync-alt"></i> Status</button>
@@ -1084,9 +1076,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
-    <!-- REMOVED Driver Assignment Modal -->
-    <!-- <div id="driverModal" ...> ... </div> -->
-
     <!-- Add New Order Overlay (Keep as is) -->
     <div id="addOrderOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
@@ -1126,7 +1115,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <!-- Confirmation modals (Keep as is, except driver confirmation) -->
     <div id="addConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Add Order</div><div class="confirmation-message">Add this new order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeAddConfirmation()">No</button><button class="confirm-yes" onclick="submitAddOrder()">Yes</button></div></div></div>
     <!-- REMOVED Driver Confirmation Modal -->
-    <!-- <div id="driverConfirmationModal" ... > ... </div> -->
     <div id="saveProgressConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Save Progress</div><div class="confirmation-message">Save the current progress for this order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeSaveProgressConfirmation()">No</button><button class="confirm-yes" onclick="saveProgressChanges()">Yes</button></div></div></div>
     <div id="statusConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Status Change</div><div class="confirmation-message" id="statusConfirmationMessage">Are you sure?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeStatusConfirmation()">No</button><button class="confirm-yes" onclick="executeStatusChange()">Yes</button></div></div></div>
     <div id="downloadConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Download</div><div class="confirmation-message">Download the PO PDF?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeDownloadConfirmation()">No</button><button class="confirm-yes" onclick="downloadPODirectly()">Yes</button></div></div></div>
@@ -1152,6 +1140,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     </div>
 
     <script>
+        // --- Keep all existing JavaScript EXCEPT the driver-related functions ---
         // --- Global Variables (Removed currentDriverId) ---\
         let currentPoNumber = '';
         let currentOrderOriginalStatus = '';
@@ -1234,7 +1223,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             let confirmationMsg = `Are you sure you want to change the status to ${selectedStatus}?`;
             if (selectedStatus === 'Active') { confirmationMsg += ' This will deduct required stock from inventory.'; }
             else if (currentOrderOriginalStatus === 'Active' && (selectedStatus === 'Pending' || selectedStatus === 'Rejected')) { confirmationMsg += ' This will attempt to return deducted stock to inventory.'; }
-            // REMOVED: Specific message for 'For Delivery' as it's no longer an option here
             $('#statusConfirmationMessage').text(confirmationMsg);
             $('#statusConfirmationModal').css('display', 'block');
             $('#statusModal, #pendingStatusModal, #rejectedStatusModal').css('display', 'none');
@@ -1246,20 +1234,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
              else if (currentOrderOriginalStatus === 'Active') $('#statusModal').css('display', 'flex');
              selectedStatus = '';
         }
-        // --- MODIFIED executeStatusChange ---
         function executeStatusChange() {
             $('#statusConfirmationModal').css('display', 'none');
-            // Determine flags based on TARGET status and ORIGINAL status
             let deductMaterials = (selectedStatus === 'Active');
             let returnMaterials = (currentOrderOriginalStatus === 'Active' && (selectedStatus === 'Pending' || selectedStatus === 'Rejected'));
-
-            // --- REMOVED: Special check block for 'For Delivery' ---
-            // if (selectedStatus === 'For Delivery') { ... }
-
-            // Proceed with other status changes, sending calculated flags
             updateOrderStatus(selectedStatus, deductMaterials, returnMaterials);
         }
-        // --- END MODIFIED executeStatusChange ---
         function updateOrderStatus(status, deductMaterials, returnMaterials) {
             const formData = new FormData();
             formData.append('po_number', currentPoNumber);
@@ -1293,7 +1273,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function displayFinishedProducts(productsData, containerSelector) {
              const container = $(containerSelector); if (!container.length) return false;
              let html = `<h3>Finished Products Status</h3>`;
-             if (!productsData || Object.keys(productsData).length === 0) { html += '<p>No finished product information available.</p>'; container.html(html).append('<div id="raw-materials-section"></div>'); return true; } // Changed default return
+             if (!productsData || Object.keys(productsData).length === 0) { html += '<p>No finished product information available.</p>'; container.html(html).append('<div id="raw-materials-section"></div>'); return true; }
              html += `<table class="materials-table"><thead><tr><th>Product</th><th>In Stock</th><th>Required</th><th>Status</th></tr></thead><tbody>`;
              Object.keys(productsData).forEach(product => {
                  const data = productsData[product];
@@ -1436,14 +1416,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             .then(response => response.json()).then(data => { if (data.success) { showToast('Progress updated', 'success'); setTimeout(() => { window.location.reload(); }, 1000); } else { showToast('Error saving: ' + (data.message || 'Unknown error'), 'error'); } })
             .catch(error => { showToast('Error saving: ' + error, 'error'); console.error('Save progress error:', error); });
         }
-
-        // --- REMOVED Driver Assignment Modal Functions ---
-        // function confirmDriverAssign(poNumber) { ... }
-        // function confirmDriverChange(poNumber, driverId, driverName) { ... }
-        // function closeDriverModal() { ... }
-        // function confirmDriverAssignment() { ... }
-        // function closeDriverConfirmation() { ... }
-        // function assignDriver() { ... }
 
         // --- PDF Download Functions (Keep as is) ---\
         function confirmDownloadPO(...args) {
