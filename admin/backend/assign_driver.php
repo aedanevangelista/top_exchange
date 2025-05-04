@@ -1,12 +1,12 @@
 <?php
-// Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): 2025-05-04 13:08:34
+// Current Date and Time (UTC - YYYY-MM-DD HH:MM:SS formatted): 2025-05-04 13:15:45
 // Current User's Login: aedanevangelista
 
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// NEW CODE: Parse JSON input
+// Parse JSON input
 $json_data = file_get_contents('php://input');
 $data = json_decode($json_data, true);
 
@@ -49,12 +49,12 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     sendJsonResponse(false, 'Invalid request method.', ['error_code' => 'INVALID_METHOD']);
 }
 
-// MODIFIED CODE: Check required parameters using $data instead of $_POST
+// Check required parameters
 if (!isset($data['po_number']) || !isset($data['driver_id'])) {
     sendJsonResponse(false, 'Missing required parameters (PO Number or Driver ID).', ['error_code' => 'MISSING_PARAMS']);
 }
 
-// MODIFIED CODE: Sanitize inputs using $data instead of $_POST
+// Sanitize inputs
 $po_number = trim($data['po_number']);
 $driver_id = filter_var(trim($data['driver_id']), FILTER_VALIDATE_INT);
 
@@ -98,7 +98,7 @@ $old_driver_id = 0; // Variable to store the ID of the previously assigned drive
 try {
     error_log("Assign Driver Attempt: PO='{$po_number}', New Driver='{$driver_id}'");
 
-    // 1. Check if the order exists and is 'Active' (only active orders can have drivers assigned/changed)
+    // 1. Check if the order exists and has a valid status for driver assignment
     $sqlCheckOrder = "SELECT status, driver_assigned FROM orders WHERE po_number = ?";
     $stmtCheck = $conn->prepare($sqlCheckOrder);
     // Check prepare result
@@ -127,8 +127,10 @@ try {
          throw new Exception("Failed to fetch current order status after successful fetch check."); // Should not happen if fetch worked
     }
 
-    if ($current_status !== 'Active') {
-         throw new Exception("Cannot assign driver. Order status is '{$current_status}', must be 'Active'.");
+    // MODIFIED: Changed the status check to allow 'For Delivery' or 'In Transit' 
+    $allowedStatuses = ['For Delivery', 'In Transit'];
+    if (!in_array($current_status, $allowedStatuses)) {
+         throw new Exception("Cannot assign driver. Order status is '{$current_status}', must be 'For Delivery' or 'In Transit'.");
     }
 
     // 2. Find the previously assigned driver ID (if any)
