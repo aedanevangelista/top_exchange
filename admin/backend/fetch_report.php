@@ -1,5 +1,5 @@
 <?php
-// UTC: 2025-05-04 07:36:05
+// UTC: 2025-05-04 09:45:00
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
@@ -34,6 +34,16 @@ function sendError($message, $httpCode = 500) {
     exit;
 }
 
+// --- Helper Function to Format Weight ---
+// (Ensure this is available for generateInventoryStatus)
+function formatWeight($grams) {
+    if (!is_numeric($grams)) return 'N/A';
+    $grams = floatval($grams);
+    if ($grams >= 1000) return number_format($grams / 1000, 2) . ' kg';
+    else return number_format($grams, 0) . ' g';
+}
+
+
 // Check request method and input
 if ($_SERVER["REQUEST_METHOD"] !== "POST" || !isset($_POST['report_type'])) {
     sendError("Invalid request method or missing report type.", 400);
@@ -65,6 +75,7 @@ try {
             break;
 
         case 'inventory_status':
+            // --- MODIFIED: This function now handles finished products AND raw materials ---
             generateInventoryStatus($conn);
             break;
 
@@ -76,9 +87,8 @@ try {
             generateSalesByClient($conn, $startDate, $endDate);
             break;
 
-        // **** ADDED CASE for Sales by Product ****
         case 'sales_by_product':
-            generateSalesByProduct($conn, $startDate, $endDate); // Call the new function
+            generateSalesByProduct($conn, $startDate, $endDate);
             break;
 
         default:
@@ -108,8 +118,8 @@ catch (Exception $e) {
 
 // --- Report Generating Functions ---
 
-// generateSalesSummary, generateInventoryStatus, generateOrderTrends, generateSalesByClient functions (as previously defined) go here...
-// (Keep the versions from the last correct code block you have)
+// generateSalesSummary, generateOrderTrends, generateSalesByClient, generateSalesByProduct functions remain the same as your provided code...
+// (Include them here for completeness)
 
 /**
  * Generates a Sales Summary Report.
@@ -186,16 +196,20 @@ function generateSalesSummary($conn, $startDate, $endDate) {
     error_log("--- Finished generateSalesSummary ---");
 }
 
+
 /**
- * Generates Low Inventory Report for 'products' and 'walkin_products'.
- * (Based on user's 07:18:20 code, corrected table/column names)
+ * Generates Inventory Status Report for 'products', 'walkin_products', AND low 'raw_materials'.
+ * (Modified to include raw materials)
  */
 function generateInventoryStatus($conn) {
-    error_log("--- Starting generateInventoryStatus (Restored Dual Table Logic) ---");
-    $lowStockThreshold = 50; $companyStockData = []; $walkinStockData = [];
-    $errorOccurred = false; $companyQueryError = false; $walkinQueryError = false;
+    error_log("--- Starting generateInventoryStatus (Includes Raw Materials) ---");
+    $lowStockThreshold = 50; // Threshold for finished products
+    $rawMaterialThresholdGrams = 5000; // 5 kg threshold for raw materials
 
-    // Company Order Stock ('products')
+    $companyStockData = []; $walkinStockData = []; $rawMaterialData = [];
+    $errorOccurred = false; $companyQueryError = false; $walkinQueryError = false; $rawMaterialQueryError = false;
+
+    // --- Finished Products: Company Order Stock ('products') ---
     $sqlCompany = "SELECT item_description, stock_quantity FROM products WHERE stock_quantity <= ? ORDER BY item_description ASC";
     $stmtCompany = $conn->prepare($sqlCompany);
     if (!$stmtCompany) { error_log("!!! DB prepare error (Company Inventory): " . $conn->error); $companyQueryError = true; $errorOccurred = true; }
@@ -213,7 +227,7 @@ function generateInventoryStatus($conn) {
         $stmtCompany->close();
     }
 
-    // Walk-in Stock ('walkin_products')
+    // --- Finished Products: Walk-in Stock ('walkin_products') ---
     $sqlWalkin = "SELECT item_description, stock_quantity FROM walkin_products WHERE stock_quantity <= ? ORDER BY item_description ASC";
     $stmtWalkin = $conn->prepare($sqlWalkin);
     if (!$stmtWalkin) { error_log("!!! DB prepare error (Walkin Inventory): " . $conn->error . " - Check 'walkin_products' table."); $walkinQueryError = true; } // Non-critical if table might not exist
@@ -231,9 +245,31 @@ function generateInventoryStatus($conn) {
         $stmtWalkin->close();
     }
 
-    echo "<h3 class='report-title'>Low Inventory Stock Report (Threshold: " . htmlspecialchars($lowStockThreshold) . " or less)</h3>";
+    // --- ADDED: Raw Materials Stock ('raw_materials') ---
+    $sqlRaw = "SELECT material_name, current_stock_grams FROM raw_materials WHERE current_stock_grams < ? AND status = 'active' ORDER BY material_name ASC"; // Added status check example
+    $stmtRaw = $conn->prepare($sqlRaw);
+    if (!$stmtRaw) { error_log("!!! DB prepare error (Raw Materials Inventory): " . $conn->error); $rawMaterialQueryError = true; $errorOccurred = true; }
+    else {
+        $stmtRaw->bind_param("d", $rawMaterialThresholdGrams); // Use 'd' for double
+        if (!$stmtRaw->execute()) { error_log("!!! DB execute error (Raw Materials Inventory): " . $stmtRaw->error); $rawMaterialQueryError = true; $errorOccurred = true; }
+        else {
+            if (!method_exists($stmtRaw, 'get_result')) { error_log("!!! CRITICAL: get_result() failed for Raw Materials."); $rawMaterialQueryError = true; $errorOccurred = true; }
+            else {
+                $resultRaw = $stmtRaw->get_result();
+                if ($stmtRaw->errno) { error_log("!!! DB get_result error (Raw Materials): " . $stmtRaw->error); $rawMaterialQueryError = true; $errorOccurred = true; }
+                else { while ($row = $resultRaw->fetch_assoc()) { $rawMaterialData[] = $row; } $resultRaw->close(); }
+            }
+        }
+        $stmtRaw->close();
+    }
+    // --- END ADDED ---
+
+
+    // --- HTML Output ---
+    echo "<h3 class='report-title'>Inventory Status Report</h3>";
+
     // Company Section
-    echo "<div class='inventory-section company-inventory'><h4 class='report-subtitle'>Company Order Inventory ('products' table)</h4>";
+    echo "<div class='inventory-section company-inventory'><h4 class='report-subtitle'>Low Company Order Stock (Threshold: " . htmlspecialchars($lowStockThreshold) . " or less)</h4>";
     if ($companyQueryError) { echo "<div class='report-error-message'>Error retrieving Company Order stock data. Check logs.</div>"; }
     elseif (!empty($companyStockData)) {
         echo "<table class='accounts-table report-table'><thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead><tbody>";
@@ -245,8 +281,9 @@ function generateInventoryStatus($conn) {
         } echo "</tbody></table>";
     } else { echo "<p class='no-data-message'>No low stock items found for Company Orders.</p>"; }
     echo "</div>";
+
     // Walk-in Section
-    echo "<div class='inventory-section walkin-inventory'><h4 class='report-subtitle'>Walk-in Inventory ('walkin_products' table)</h4>";
+    echo "<div class='inventory-section walkin-inventory'><h4 class='report-subtitle'>Low Walk-in Stock (Threshold: " . htmlspecialchars($lowStockThreshold) . " or less)</h4>";
     if ($walkinQueryError) { echo "<div class='report-error-message'>Error retrieving Walk-in stock data. Check logs (verify table/columns exist).</div>"; }
     elseif (!empty($walkinStockData)) {
         echo "<table class='accounts-table report-table'><thead><tr><th>Item Description</th><th>Stock Quantity</th></tr></thead><tbody>";
@@ -258,6 +295,24 @@ function generateInventoryStatus($conn) {
         } echo "</tbody></table>";
     } else { if (!$walkinQueryError) { echo "<p class='no-data-message'>No low stock items found for Walk-in.</p>"; } }
     echo "</div>";
+
+    // --- ADDED: Raw Materials Section ---
+    echo "<div class='inventory-section raw-materials-inventory'><h4 class='report-subtitle'>Low Raw Materials (Threshold: &lt; 5 kg)</h4>";
+    if ($rawMaterialQueryError) { echo "<div class='report-error-message'>Error retrieving Raw Materials stock data. Check logs.</div>"; }
+    elseif (!empty($rawMaterialData)) {
+        echo "<table class='accounts-table report-table'><thead><tr><th>Material Name</th><th>Current Stock</th></tr></thead><tbody>";
+        foreach ($rawMaterialData as $row) {
+            $materialName = htmlspecialchars($row['material_name'] ?? 'N/A');
+            $stockFormatted = formatWeight($row['current_stock_grams'] ?? null); // Use helper function
+            // Apply styling based on grams value
+            $gramsValue = $row['current_stock_grams'] ?? -1; // Default to -1 if null
+            $style = ($gramsValue <= 0) ? 'color:red; font-weight:bold;' : (($gramsValue < $rawMaterialThresholdGrams) ? 'color:orange;' : ''); // Orange/Red for low
+            echo "<tr style='{$style}'><td>{$materialName}</td><td class='numeric'>{$stockFormatted}</td></tr>";
+        } echo "</tbody></table>";
+    } else { echo "<p class='no-data-message'>No raw materials found below the 5 kg threshold.</p>"; }
+    echo "</div>";
+    // --- END ADDED ---
+
     error_log("--- Finished generateInventoryStatus ---");
 }
 
@@ -489,6 +544,5 @@ function generateSalesByProduct($conn, $startDate, $endDate) {
     }
     error_log("--- Finished generateSalesByProduct ---");
 }
-
 
 ?>
