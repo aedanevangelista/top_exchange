@@ -362,7 +362,7 @@ if ($main_list_result === false) {
         .deliveries-table-container { overflow-y: auto; flex-grow: 1; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
         .deliveries-table { width: 100%; border-collapse: collapse; }
         .deliveries-table th, .deliveries-table td { padding: 8px 10px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
-        .deliveries-table th { background-color: #f2f2f2; position: sticky; top: 0; z-index: 1; }
+        .deliveries-table th { background-color: rgb(27, 27, 27); position: sticky; top: 0; z-index: 1; }
         .no-deliveries { text-align: center; padding: 20px; color: #666; font-style: italic; }
         .delivery-status-badge { padding: 3px 8px; border-radius: 4px; font-size: 12px; display: inline-block; color: #fff; }
         .status-pending { background-color: #ffc107; color: #333;}
@@ -379,7 +379,7 @@ if ($main_list_result === false) {
         .order-items h4 { margin-top: 0; margin-bottom: 10px; font-size: 1em; color: #555; }
         .order-items table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
         .order-items th, .order-items td { padding: 6px; text-align: left; border: 1px solid #eee; }
-        .order-items th { background-color: #f7f7f7; font-weight: 500; }
+        .order-items th { background-color:rgb(27, 27, 27); font-weight: 500; }
         .expand-icon { margin-right: 5px; display: inline-block; transition: transform 0.2s; width: 1em; text-align: center; }
         .po-header.collapsed .expand-icon { transform: rotate(-90deg); }
         .deliveries-modal-content .modal-buttons { margin-top: auto; padding-top: 15px; border-top: 1px solid #eee; }
