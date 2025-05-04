@@ -155,7 +155,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
                         $urlPath = $userUploadUrl . $safeFilename; // Path to store in DB
 
                         if (move_uploaded_file($tmp_name, $filesystemTargetPath)) {
-                            $business_proof_paths[] = $urlPath; // Store the URL path
+                            $formattedUrlPath = '/admin/uploads/' . $username . '/' . $safeFilename;
+                            $business_proof_paths[] = $formattedUrlPath; // Store the standardized URL path
                             $uploaded_count++;
                         } else {
                              throw new Exception('Failed to move uploaded file: ' . htmlspecialchars($originalFilename));
@@ -611,12 +612,22 @@ function truncate($text, $max = 15) {
                                     $proofs = json_decode($row['business_proof'] ?? '[]', true);
                                     if (json_last_error() === JSON_ERROR_NONE && is_array($proofs) && !empty($proofs)) {
                                         foreach ($proofs as $proof) {
-                                            if (is_string($proof) && !empty($proof) && $proof[0] === '/') {
-                                                // Ensure path starts with / and escape for HTML context
-                                                echo '<img src="' . htmlspecialchars($proof, ENT_QUOTES, 'UTF-8') . '" alt="Business Proof" width="50" onclick="openModal(this)">';
+                                            if (is_string($proof) && !empty($proof)) {
+                                                // Normalize the path to ensure it works correctly
+                                                $imagePath = $proof;
+                                                if (strpos($proof, '../..') === 0) {
+                                                    $imagePath = str_replace('../../', '/admin/', $proof);
+                                                } else if (!strpos($proof, '/') === 0) {
+                                                    $imagePath = '/admin/uploads/' . $row['username'] . '/' . $proof;
+                                                }
+                                                
+                                                echo '<img src="' . htmlspecialchars($imagePath, ENT_QUOTES, 'UTF-8') . 
+                                                    '" alt="Business Proof" width="50" onclick="openModal(this)">';
                                             }
                                         }
-                                    } // No else needed, just won't show images if invalid/empty
+                                    } else {
+                                        echo '<span style="color:#888;font-style:italic;">No images</span>';
+                                    }
                                     ?>
                                 </td>
                                 <td class="<?= 'status-' . strtolower(htmlspecialchars($row['status'] ?? 'pending')) ?>"><?= htmlspecialchars($row['status'] ?? 'Pending') ?></td>

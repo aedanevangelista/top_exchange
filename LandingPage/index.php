@@ -12,12 +12,11 @@ if (!isset($_SESSION['cart'])) {
 }
 
 // Include the header
-require_once 'header.php'; // ** Ensure Font Awesome 5 Free (Solid) is linked here! **
+require_once 'header.php';
 ?>
 
 <!-- Added CSS Styles -->
 <style>
-    /* --- Product Card Uniform Height & Hierarchy --- */
     .cream_section .row {
         display: flex;
         flex-wrap: wrap;
@@ -25,124 +24,123 @@ require_once 'header.php'; // ** Ensure Font Awesome 5 Free (Solid) is linked he
         margin-right: -15px;
     }
     .cream_section .col-md-4 {
-        display: flex; /* Keep column as flex container */
+        display: flex;
         padding-left: 15px;
         padding-right: 15px;
         margin-bottom: 30px;
     }
     .product-card {
-        display: flex; /* Keep card as flex container */
-        flex-direction: column; /* Stack image and body vertically */
+        display: flex;
+        flex-direction: column;
         width: 100%;
-        height: 100%; /* Ensures card fills the column space */
+        height: 100%;
         border: 1px solid #eee;
         border-radius: 8px;
         overflow: hidden;
         transition: box-shadow 0.3s ease;
-        background-color: #fff; /* Ensure background for consistency */
+        background-color: #fff;
     }
     .product-card:hover {
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
     .product-img {
-        position: relative; /* Crucial for badge positioning */
-        height: 250px; /* Set a fixed height for the image area */
-        display: flex; /* Use flex to center the image inside */
-        align-items: center; /* Vertical centering */
-        justify-content: center; /* Horizontal centering */
+        position: relative;
+        height: 250px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         overflow: hidden;
-        padding: 10px; /* Add some padding around the image */
-        background-color: #f8f9fa; /* Light background for image area */
+        padding: 10px;
+        background-color: #f8f9fa;
     }
     .product-img img {
         max-width: 100%;
-        max-height: 100%; /* Ensure image doesn't exceed container height */
-        height: auto; /* Maintain aspect ratio */
-        width: auto; /* Maintain aspect ratio */
-        object-fit: contain; /* Scale image down to fit, preserving aspect ratio */
+        max-height: 100%;
+        height: auto;
+        width: auto;
+        object-fit: contain;
         display: block;
     }
     .product-badge {
-        position: absolute; /* Position relative to .product-img */
-        top: 10px; /* Consistent top position */
-        left: 10px; /* Consistent left position */
-        background-color: rgba(0, 123, 255, 0.8); /* Example blue badge color */
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background-color: rgba(0, 123, 255, 0.8);
         color: white;
         padding: 3px 8px;
         font-size: 0.75rem;
         font-weight: bold;
         border-radius: 4px;
-        z-index: 1; /* Ensure badge is above image */
+        z-index: 1;
         text-transform: uppercase;
     }
     .product-badge.bestseller {
-         background-color: rgba(220, 53, 69, 0.8); /* Red for bestseller */
+         background-color: rgba(220, 53, 69, 0.8);
     }
     .product-badge.popular {
-         background-color: rgba(255, 193, 7, 0.8); /* Yellow for popular */
+         background-color: rgba(255, 193, 7, 0.8);
          color: #333;
     }
     .product-badge.new {
-         background-color: rgba(40, 167, 69, 0.8); /* Green for new */
+         background-color: rgba(40, 167, 69, 0.8);
     }
     .product-body {
-        padding: 20px; /* Slightly increased padding */
+        padding: 20px;
         display: flex;
         flex-direction: column;
-        flex-grow: 1; /* Takes remaining vertical space */
-        text-align: center; /* Center align text in the body */
+        flex-grow: 1;
+        text-align: center;
     }
     .product-title {
         font-size: 1.15rem;
         font-weight: 600;
-        margin-bottom: 8px; /* Adjusted spacing */
+        margin-bottom: 8px;
         color: #333;
     }
     .product-price {
         font-size: 1.25rem;
         font-weight: bold;
-        color: #007bff; /* Adjust color */
-        margin-bottom: 12px; /* Adjusted spacing */
+        color: #007bff;
+        margin-bottom: 12px;
     }
     .product-description {
         font-size: 0.9rem;
         color: #666;
-        line-height: 1.5; /* Adjusted line height */
-        margin-bottom: 15px; /* Adjusted spacing */
-        flex-grow: 1; /* Crucial: Pushes rating/button down */
+        line-height: 1.5;
+        margin-bottom: 15px;
+        flex-grow: 1;
     }
     .product-rating {
         margin-bottom: 15px;
         font-size: 0.9rem;
     }
     .product-rating .fas, .product-rating .far {
-        color: #ffc107; /* Gold stars */
+        color: #ffc107;
     }
     .product-rating span {
         color: #777;
-        margin-left: 5px; /* Space between stars and text */
+        margin-left: 5px;
     }
     .product-btn {
-        background-color: #28a745; /* Adjust color */
+        background-color: #28a745;
         color: white;
-        padding: 10px 20px; /* Adjusted padding */
+        padding: 10px 20px;
         border-radius: 5px;
         text-decoration: none;
         text-align: center;
         transition: background-color 0.3s ease;
-        margin-top: auto; /* Pushes button to bottom */
-        align-self: center; /* Center button horizontally */
+        margin-top: auto;
+        align-self: center;
         display: inline-block;
-        border: none; /* Remove default border if any */
+        border: none;
         cursor: pointer;
     }
     .product-btn:hover {
-        background-color: #218838; /* Adjust color */
+        background-color: #218838;
         color: white;
         text-decoration: none;
     }
 
-    /* --- Testimonial Card Uniform Height & Styling (UPDATED for Font Awesome) --- */
     .testimonial-section .row {
         display: flex;
         flex-wrap: wrap;
@@ -165,35 +163,23 @@ require_once 'header.php'; // ** Ensure Font Awesome 5 Free (Solid) is linked he
         width: 100%;
         height: 100%;
         position: relative;
-        border-left: 5px solid #007bff; /* Adjust color */
+        border-left: 5px solid #007bff;
     }
-    /* UPDATED: Ensure Font Awesome 5 Free Solid is loaded */
-    .testimonial-card::before {
-        content: '\\f10d'; /* FontAwesome quote-left icon */
-        font-family: 'Font Awesome 5 Free'; /* ** Crucial: Make sure FA5 Free is loaded ** */
-        font-weight: 900; /* ** Crucial: Use the solid style weight ** */
-        font-size: 2rem;
-        color: #007bff; /* Adjust color */
-        opacity: 0.15; /* Slightly adjusted opacity */
-        position: absolute;
-        top: 15px;
-        left: 20px; /* Adjusted position slightly */
-        z-index: 0;
-    }
+    /* Removed .testimonial-card::before rule */
     .testimonial-text {
         font-style: italic;
         color: #555;
         margin-bottom: 15px;
         flex-grow: 1;
         line-height: 1.6;
-        padding-top: 25px; /* Adjusted padding to ensure space from icon */
-        position: relative; /* Ensure text is above the pseudo-element if overlap occurs */
+        padding-top: 15px; /* Adjusted padding after removing icon */
+        position: relative;
         z-index: 1;
     }
     .testimonial-author {
         font-weight: bold;
         color: #333;
-        margin-top: auto; /* Push author info down */
+        margin-top: auto;
         margin-bottom: 2px;
         position: relative;
         z-index: 1;
@@ -205,70 +191,65 @@ require_once 'header.php'; // ** Ensure Font Awesome 5 Free (Solid) is linked he
         z-index: 1;
     }
 
-    /* --- Back to Top Button --- */
     .back-to-top {
         position: fixed;
         bottom: 25px;
         right: 25px;
-        display: none; /* Initially hidden */
+        display: none;
         width: 40px;
         height: 40px;
-        background-color: rgba(0, 123, 255, 0.7); /* Adjust color */
+        background-color: rgba(0, 123, 255, 0.7);
         color: white;
         text-align: center;
-        line-height: 40px; /* Center icon vertically */
+        line-height: 40px;
         font-size: 18px;
-        border-radius: 50%; /* Circular */
-        z-index: 1000; /* Above other content */
+        border-radius: 50%;
+        z-index: 1000;
         transition: background-color 0.3s ease, opacity 0.5s ease, visibility 0.5s ease;
-        opacity: 0; /* Start faded out */
-        visibility: hidden; /* Start hidden */
+        opacity: 0;
+        visibility: hidden;
     }
     .back-to-top:hover {
-        background-color: rgba(0, 123, 255, 1); /* Adjust color */
+        background-color: rgba(0, 123, 255, 1);
         color: white;
     }
     .back-to-top.visible {
-        /* Styles applied by JS */
         display: block;
         opacity: 1;
         visibility: visible;
     }
 
-    /* --- General Section Styling (Ensure consistency) --- */
     .section-title {
-        font-size: 2.5rem; /* Example size */
+        font-size: 2.5rem;
         font-weight: 700;
         margin-bottom: 15px;
         color: #333;
     }
     .section-subtitle {
-        font-size: 1.1rem; /* Example size */
+        font-size: 1.1rem;
         color: #666;
-        margin-bottom: 40px; /* Space below subtitle */
-        max-width: 600px; /* Prevent subtitle from being too wide */
+        margin-bottom: 40px;
+        max-width: 600px;
         margin-left: auto;
         margin-right: auto;
     }
     .layout_padding {
-        /* Adjust padding if needed, ensure consistency */
         padding-top: 80px;
         padding-bottom: 80px;
     }
 
-    /* --- Feature Box Styling (Example Refinement) --- */
     .feature-box {
         text-align: center;
         padding: 20px;
-        background-color: #fff; /* Optional background */
-        border-radius: 8px; /* Optional rounding */
-        margin-bottom: 20px; /* Space below boxes */
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Optional subtle shadow */
-        height: 100%; /* Helps with alignment if needed */
+        background-color: #fff;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        height: 100%;
     }
     .feature-icon {
         font-size: 2.5rem;
-        color: #007bff; /* Adjust color */
+        color: #007bff;
         margin-bottom: 15px;
     }
     .feature-title {
@@ -281,57 +262,55 @@ require_once 'header.php'; // ** Ensure Font Awesome 5 Free (Solid) is linked he
         font-size: 0.95rem;
     }
 
-    /* --- Newsletter Section Styling (UPDATED) --- */
     .newsletter-section {
-        background-color: #343a40; /* Dark background */
+        background-color: #343a40;
         color: #fff;
-        padding: 70px 0; /* Increased padding */
+        padding: 70px 0;
     }
-    /* Center content vertically in the row */
     .newsletter-section .align-items-center {
         align-items: center !important;
     }
     .newsletter-title {
-        font-size: 2.2rem; /* Slightly larger */
+        font-size: 2.2rem;
         font-weight: 600;
         margin-bottom: 10px;
         line-height: 1.3;
     }
     .newsletter-text {
-        color: #ccc;
-        margin-bottom: 20px; /* Space below text on mobile */
+        color: #e9ecef; /* Brighter text color */
+        margin-bottom: 20px;
         font-size: 1rem;
     }
     .newsletter-form .input-group {
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Add subtle shadow */
-        border-radius: 30px; /* Apply rounding to the group */
-        overflow: hidden; /* Hide overflow for rounding */
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border-radius: 30px;
+        overflow: hidden;
     }
     .newsletter-form .form-control {
-        height: 55px; /* Slightly taller */
-        border-radius: 30px 0 0 30px !important; /* Match group rounding (important needed for Bootstrap override) */
+        height: 55px;
+        border-radius: 30px 0 0 30px !important;
         border: none;
         font-size: 1rem;
         padding-left: 20px;
     }
     .newsletter-form .form-control:focus {
-        box-shadow: none; /* Remove default focus glow */
+        box-shadow: none;
         border: none;
     }
     .newsletter-form .btn {
-        height: 55px; /* Match input height */
-        border-radius: 0 30px 30px 0 !important; /* Match group rounding */
-        background-color: #007bff; /* Adjust color */
+        height: 55px;
+        border-radius: 0 30px 30px 0 !important;
+        background-color: #007bff;
         color: white;
         border: none;
-        padding: 0 30px; /* More padding */
+        padding: 0 30px;
         font-weight: 500;
-        text-transform: uppercase; /* Uppercase text */
+        text-transform: uppercase;
         letter-spacing: 0.5px;
         transition: background-color 0.3s ease;
     }
     .newsletter-form .btn:hover {
-        background-color: #0056b3; /* Adjust color */
+        background-color: #0056b3;
     }
 
 </style>
@@ -625,9 +604,8 @@ require_once 'header.php'; // ** Ensure Font Awesome 5 Free (Solid) is linked he
 </div>
 
 <!-- Newsletter Section -->
-<div class="newsletter-section"> <!-- Styling applied via CSS -->
+<div class="newsletter-section">
     <div class="container">
-        <!-- Added align-items-center here -->
         <div class="row align-items-center">
             <div class="col-md-6" data-aos="fade-right">
                 <h2 class="newsletter-title">Join Our Newsletter</h2>
@@ -656,40 +634,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const backToTopButton = document.querySelector('.back-to-top');
 
     if (backToTopButton) {
-        // Function to toggle button visibility
         const toggleVisibility = () => {
-            if (window.scrollY > 300) { // Show after scrolling 300px
+            if (window.scrollY > 300) {
                 backToTopButton.classList.add('visible');
             } else {
                 backToTopButton.classList.remove('visible');
             }
         };
 
-        // Smooth scroll to top functionality
         backToTopButton.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent default anchor behavior
+            e.preventDefault();
             window.scrollTo({
                 top: 0,
-                behavior: 'smooth' // Smooth scroll animation
+                behavior: 'smooth'
             });
         });
 
-        // Listen for scroll events
         window.addEventListener('scroll', toggleVisibility);
-
-        // Initial check in case the page loads already scrolled
-        toggleVisibility();
+        toggleVisibility(); // Initial check
     }
 
-    // Initialize AOS (if not already done elsewhere)
-    // Make sure AOS library is included before this script
     if (typeof AOS !== 'undefined') {
       AOS.init({
-          duration: 800, // Animation duration
-          once: true // Whether animation should happen only once - while scrolling down
+          duration: 800,
+          once: true
       });
-    } else {
-        console.warn('AOS library not found. Animations will not work.');
     }
 });
 </script>
