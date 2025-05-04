@@ -14,13 +14,20 @@ if (!isset($_SESSION['admin_user_id'])) {
 checkRole('Drivers');
 
 function returnJsonResponse($success, $reload, $message = '') {
+    // Ensure JSON header is set ONLY when outputting JSON
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+    }
     echo json_encode(['success' => $success, 'reload' => $reload, 'message' => $message]);
     exit;
 }
 
-// Process form submissions
+// --- Process form submissions (Add, Edit, Status Change) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['formType'] == 'add') {
-    header('Content-Type: application/json');
+    // Set header here as this block exclusively outputs JSON
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+    }
 
     $name = trim($_POST['name']);
     $address = $_POST['address'];
@@ -28,9 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     $availability = $_POST['availability'];
     $area = $_POST['area'];
 
-    // Validate contact number length
-    if (strlen($contact_no) !== 12) {
-        returnJsonResponse(false, false, 'Contact number must be exactly 12 digits.');
+    // Validate contact number length and format (starts with 63, total 12 digits)
+    if (!preg_match('/^63\d{10}$/', $contact_no)) {
+        returnJsonResponse(false, false, 'Contact number must be 12 digits starting with 63.');
     }
 
     $checkStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ?");
@@ -47,16 +54,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     $stmt->bind_param("sssss", $name, $address, $contact_no, $availability, $area);
 
     if ($stmt->execute()) {
-        returnJsonResponse(true, true);
+        returnJsonResponse(true, true); // Success, trigger reload
     } else {
-        returnJsonResponse(false, false);
+        // Provide specific error if possible, otherwise generic
+        error_log("Add Driver DB Error: " . $stmt->error);
+        returnJsonResponse(false, false, 'Failed to add driver. Database error.');
     }
     $stmt->close();
-    exit;
+    exit; // Ensure exit after handling POST
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['formType'] == 'edit') {
-    header('Content-Type: application/json');
+    // Set header here as this block exclusively outputs JSON
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+    }
 
     $id = $_POST['id'];
     $name = trim($_POST['name']);
@@ -65,9 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     $availability = $_POST['availability'];
     $area = $_POST['area'];
 
-    // Validate contact number length
-    if (strlen($contact_no) !== 12) {
-        returnJsonResponse(false, false, 'Contact number must be exactly 12 digits.');
+    // Validate contact number length and format
+    if (!preg_match('/^63\d{10}$/', $contact_no)) {
+        returnJsonResponse(false, false, 'Contact number must be 12 digits starting with 63.');
     }
 
     $checkStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ? AND id != ?");
@@ -84,37 +96,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     $stmt->bind_param("sssssi", $name, $address, $contact_no, $availability, $area, $id);
 
     if ($stmt->execute()) {
-        returnJsonResponse(true, true);
+        returnJsonResponse(true, true); // Success, trigger reload
     } else {
-        returnJsonResponse(false, false);
+        error_log("Edit Driver DB Error: " . $stmt->error);
+        returnJsonResponse(false, false, 'Failed to update driver. Database error.');
     }
     $stmt->close();
-    exit;
+    exit; // Ensure exit after handling POST
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['formType'] == 'status') {
-    header('Content-Type: application/json');
+    // Set header here as this block exclusively outputs JSON
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+    }
 
     $id = $_POST['id'];
-    $status = $_POST['status'];
+    $status = $_POST['status']; // Should be 'Available' or 'Not Available'
+
+    // Basic validation
+    if (!in_array($status, ['Available', 'Not Available'])) {
+         returnJsonResponse(false, false, 'Invalid status provided.');
+    }
+
     $stmt = $conn->prepare("UPDATE drivers SET availability = ? WHERE id = ?");
     $stmt->bind_param("si", $status, $id);
 
     if ($stmt->execute()) {
-        returnJsonResponse(true, true);
+        returnJsonResponse(true, true); // Success, trigger reload
     } else {
-        returnJsonResponse(false, false, 'Failed to change status.');
+        error_log("Change Driver Status DB Error: " . $stmt->error);
+        returnJsonResponse(false, false, 'Failed to change status. Database error.');
     }
 
     $stmt->close();
-    exit;
+    exit; // Ensure exit after handling POST
 }
 
-// =====================================================================
-// ==== CORRECTED Handler for fetching driver deliveries ====
-// =====================================================================
+
+// --- Handler for fetching driver deliveries (Modal List) ---
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($_GET['action']) && $_GET['action'] == 'get_deliveries') {
-    header('Content-Type: application/json');
+    // Set header here as this block exclusively outputs JSON
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+    }
 
     $driver_id = filter_var($_GET['driver_id'], FILTER_VALIDATE_INT);
     $data = [];
@@ -124,7 +149,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
         exit;
     }
 
-    // *** CORRECTED QUERY ***
     // Uses 'driver_assignments da' and filters by relevant order statuses
     $stmt = $conn->prepare("
         SELECT da.po_number, o.orders, o.delivery_date, o.delivery_address, o.status, o.username
@@ -132,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
         JOIN orders o ON da.po_number = o.po_number
         WHERE da.driver_id = ?
           AND o.status IN ('Active', 'For Delivery', 'In Transit') -- Show only active/ongoing deliveries
-        ORDER BY o.delivery_date ASC -- Changed to ASC to show soonest first? Or DESC for latest assigned
+        ORDER BY o.delivery_date ASC -- Show soonest delivery date first
     ");
 
     // Check if prepare failed
@@ -192,42 +216,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
     $stmt->close();
     exit; // Important to stop script execution here
 }
-// =====================================================================
-// ==== END CORRECTED Handler ====
-// =====================================================================
 
 
 // --- Fetch main list of drivers for the page display ---
+// (This part runs only if it's a GET request without action=get_deliveries or a non-AJAX POST)
 $status_filter = $_GET['status'] ?? '';
 $area_filter = $_GET['area'] ?? '';
+$params = [];
+$types = "";
 
-$sql = "SELECT id, name, address, contact_no, availability, area, current_deliveries, created_at FROM drivers WHERE 1=1";
+// Query to fetch drivers and calculate their active deliveries
+$sql = "SELECT
+            d.id, d.name, d.address, d.contact_no, d.availability, d.area, d.created_at,
+            COALESCE(COUNT(DISTINCT o.po_number), 0) AS calculated_deliveries -- Calculate the count of relevant orders
+        FROM
+            drivers d
+        LEFT JOIN
+            driver_assignments da ON d.id = da.driver_id
+        LEFT JOIN
+            orders o ON da.po_number = o.po_number AND o.status IN ('Active', 'For Delivery', 'In Transit') -- Filter orders *before* counting
+        WHERE
+            1=1"; // Start WHERE clause
+
+// Add filters for the main drivers table
 if (!empty($status_filter)) {
-    $sql .= " AND availability = ?";
+    $sql .= " AND d.availability = ?";
+    $params[] = $status_filter;
+    $types .= "s";
 }
 if (!empty($area_filter)) {
-    $sql .= " AND area = ?";
+    $sql .= " AND d.area = ?";
+    $params[] = $area_filter;
+    $types .= "s";
 }
-$sql .= " ORDER BY name ASC";
 
-if (!empty($status_filter) && !empty($area_filter)) {
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ss", $status_filter, $area_filter);
-    $stmt->execute();
-    $result = $stmt->get_result();
-} elseif (!empty($status_filter)) {
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $status_filter);
-    $stmt->execute();
-    $result = $stmt->get_result();
-} elseif (!empty($area_filter)) {
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $area_filter);
-    $stmt->execute();
-    $result = $stmt->get_result();
-} else {
-    $result = $conn->query($sql);
+$sql .= " GROUP BY d.id, d.name, d.address, d.contact_no, d.availability, d.area, d.created_at"; // Group by all selected non-aggregated driver columns
+$sql .= " ORDER BY d.name ASC";
+
+
+$stmt = $conn->prepare($sql);
+if (!$stmt) {
+    // Handle prepare error - log it and maybe show a message
+    error_log("Prepare failed for main driver list: " . $conn->error);
+    die("Error preparing driver list. Please check server logs."); // Simple error for now
 }
+
+// Bind parameters if any filters were applied
+if (!empty($types)) {
+    $stmt->bind_param($types, ...$params);
+}
+
+if(!$stmt->execute()) {
+    error_log("Execute failed for main driver list: " . $stmt->error);
+    die("Error executing driver list query. Please check server logs.");
+}
+
+$result = $stmt->get_result();
+if ($result === false) {
+    error_log("Get result failed for main driver list: " . $stmt->error);
+    die("Error retrieving driver list results. Please check server logs.");
+}
+// $result now holds the data for the main table display
 ?>
 
 <!DOCTYPE html>
@@ -243,204 +292,112 @@ if (!empty($status_filter) && !empty($area_filter)) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" href="/css/toast.css">
     <style>
-        .required-asterisk {
-            color: red;
-            margin-left: 3px;
+        /* --- Basic Styles --- */
+        :root {
+             /* Define variables if not already done in linked CSS */
+             --primary-color: #007bff;
+             --primary-hover: #0056b3;
+             --accent-color: #dc3545;
+             --success-color: #28a745;
+             --warning-color: #ffc107;
+             --info-color: #17a2b8;
+             --light-gray: #f8f9fa;
+             --medium-gray: #dee2e6;
+             --dark-gray: #6c757d;
         }
+        body { font-family: sans-serif; margin: 0; background-color: #f4f6f9; }
+        .main-content { margin-left: 250px; /* Adjust according to sidebar width */ padding: 20px; }
+        .accounts-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .accounts-header h1 { margin: 0; }
+        .filter-section { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .filter-section label { font-weight: 500; }
+        .filter-section select { padding: 5px 8px; border: 1px solid var(--medium-gray); border-radius: 4px; }
+        .add-account-btn { background-color: var(--primary-color); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; font-size: 14px; }
+        .add-account-btn:hover { background-color: var(--primary-hover); }
+        .accounts-table-container { background-color: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; }
+        .accounts-table { width: 100%; border-collapse: collapse; }
+        .accounts-table th, .accounts-table td { padding: 12px 15px; border-bottom: 1px solid var(--medium-gray); text-align: left; white-space: nowrap; }
+        .accounts-table th { background-color: var(--light-gray); font-weight: 600; }
+        .accounts-table tbody tr:hover { background-color: #f1f1f1; }
+        .no-accounts { text-align: center; padding: 20px; color: var(--dark-gray); }
+        .action-buttons button { margin-right: 5px; padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; }
+        .edit-btn { background-color: var(--warning-color); color: #333; }
+        .status-btn { background-color: var(--info-color); color: white; }
 
-        .error-message {
-            color: red;
-            margin-bottom: 10px;
-            font-size: 0.9em; /* Smaller error message */
-            display: block; /* Ensure it takes space */
-            min-height: 1em; /* Prevent layout shift */
-        }
+        /* --- Specific Driver Styles --- */
+        .required-asterisk { color: red; margin-left: 3px; }
+        .error-message { color: red; margin-bottom: 10px; font-size: 0.9em; display: block; min-height: 1em; }
+        .form-field-error { border: 1px solid red !important; }
+        .delivery-count { font-weight: bold; padding: 3px 8px; border-radius: 10px; display: inline-block; text-align: center; margin-right: 5px; min-width: 40px; /* Ensure consistent width */ }
+        .delivery-count-low { background-color: #d4edda; color: #155724; }
+        .delivery-count-medium { background-color: #fff3cd; color: #856404; }
+        .delivery-count-high { background-color: #f8d7da; color: #721c24; }
+        .see-deliveries-btn { background-color: var(--dark-gray); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; font-size: 14px; vertical-align: middle; }
+        .see-deliveries-btn:hover { background-color: #5a6268; }
+        .status-available { color: #155724; font-weight: bold; }
+        .status-not-available { color: #721c24; font-weight: bold; }
 
-        .form-field-error {
-            border: 1px solid red !important;
-        }
+        /* --- Modal Styles --- */
+        .overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; padding: 20px; }
+        .overlay-content { background-color: #fefefe; margin: auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .overlay-content h2 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid var(--medium-gray); padding-bottom: 10px; font-size: 1.5rem; }
+        .account-form label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .account-form input[type="text"], .account-form select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid var(--medium-gray); border-radius: 4px; box-sizing: border-box; }
+        .form-buttons { text-align: right; margin-top: 20px; }
+        .form-buttons button { margin-left: 10px; padding: 10px 20px; border-radius: 4px; border: none; cursor: pointer; font-size: 14px; }
+        .cancel-btn { background-color: var(--dark-gray); color: white; }
+        .save-btn, .approve-btn { background-color: var(--success-color); color: white; }
+        .reject-btn { background-color: var(--accent-color); color: white; }
+        .modal-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+        .modal-buttons.single-button { justify-content: flex-end; } /* For single close button */
+        .close-btn { color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; }
 
-        .delivery-count {
-            font-weight: bold;
-            padding: 3px 8px;
-            border-radius: 10px;
-            display: inline-block;
-            text-align: center;
-            margin-right: 5px; /* Space before button */
-        }
-
-        .delivery-count-low {
-            background-color: #d4edda; /* Green */
-            color: #155724;
-        }
-
-        .delivery-count-medium {
-            background-color: #fff3cd; /* Yellow */
-            color: #856404;
-        }
-
-        .delivery-count-high {
-            background-color: #f8d7da; /* Red */
-            color: #721c24;
-        }
-
-        .deliveries-modal-content {
-            width: 90%;
-            max-width: 900px;
-            max-height: 80vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .deliveries-table-container {
-            overflow-y: auto;
-            flex-grow: 1; /* Allow table container to take available space */
-            margin-bottom: 15px; /* Space before footer */
-        }
-
-        .deliveries-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .deliveries-table th,
-        .deliveries-table td {
-            padding: 8px 10px; /* Slightly more padding */
-            border: 1px solid #ddd;
-            text-align: left;
-            vertical-align: top; /* Align content to top */
-        }
-
-        .deliveries-table th {
-            background-color: #f2f2f2;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-
-        .no-deliveries {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-            font-style: italic;
-        }
-
-        .delivery-status-badge {
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            display: inline-block;
-            color: #fff; /* White text for better contrast */
-        }
-
+        /* --- Deliveries Modal Specific Styles --- */
+        .deliveries-modal-content { max-width: 900px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
+        .deliveries-table-container { overflow-y: auto; flex-grow: 1; margin-bottom: 15px; border: 1px solid var(--medium-gray); border-radius: 4px; }
+        .deliveries-table { width: 100%; border-collapse: collapse; }
+        .deliveries-table th, .deliveries-table td { padding: 8px 10px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
+        .deliveries-table th { background-color: #f2f2f2; position: sticky; top: 0; z-index: 1; }
+        .no-deliveries { text-align: center; padding: 20px; color: #666; font-style: italic; }
+        .delivery-status-badge { padding: 3px 8px; border-radius: 4px; font-size: 12px; display: inline-block; color: #fff; }
         .status-pending { background-color: #ffc107; color: #333;}
         .status-active { background-color: #0d6efd; }
-        .status-for-delivery { background-color: #17a2b8; } /* Teal for 'For Delivery' */
-        .status-in-transit { background-color: #fd7e14; } /* Orange for 'In Transit' */
+        .status-for-delivery { background-color: #17a2b8; }
+        .status-in-transit { background-color: #fd7e14; }
         .status-completed { background-color: #198754; }
         .status-rejected { background-color: #dc3545; }
-
-
-        /* Button for seeing deliveries */
-        .see-deliveries-btn {
-            background-color: #6c757d; /* Grey button */
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            font-size: 14px;
-            vertical-align: middle; /* Align with count */
-        }
-
-        .see-deliveries-btn:hover {
-            background-color: #5a6268;
-        }
-
-        /* Styles for order items expansion */
-        .po-header {
-            background-color: #f9f9f9;
-            cursor: pointer;
-        }
-
-        .po-header:hover {
-            background-color: #f0f0f0;
-        }
-
-        .order-items-row.collapsed .order-items {
-            display: none;
-        }
-
-        .order-items {
-             padding: 10px 15px; /* Add padding inside the cell */
-             background-color: #fff; /* White background for items */
-        }
-
-        .order-items h4 {
-             margin-top: 0;
-             margin-bottom: 10px;
-             font-size: 1em;
-             color: #555;
-        }
-
-
-        .order-items table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9em;
-        }
-
-        .order-items th,
-        .order-items td {
-            padding: 6px;
-            text-align: left;
-            border: 1px solid #eee; /* Lighter border for items table */
-        }
-
-        .order-items th {
-            background-color: #f7f7f7;
-            font-weight: 500;
-        }
-
-        .expand-icon {
-            margin-right: 5px;
-            display: inline-block;
-            transition: transform 0.2s;
-            width: 1em; /* Ensure icon takes space */
-            text-align: center;
-        }
-
-        .po-header.collapsed .expand-icon {
-            transform: rotate(-90deg);
-        }
-
-        /* Ensure modal buttons are at the bottom */
-        .deliveries-modal-content .modal-buttons {
-            margin-top: auto; /* Push footer to bottom */
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-        }
+        .po-header { background-color: #f9f9f9; cursor: pointer; transition: background-color 0.2s; }
+        .po-header:hover { background-color: #f0f0f0; }
+        .order-items-row { /* Initially hidden by JS */ }
+        .order-items-row.collapsed .order-items { display: none; } /* Redundant if row hidden, but safe */
+        .order-items { padding: 10px 15px; background-color: #fff; border-left: 3px solid var(--info-color); } /* Indent items */
+        .order-items h4 { margin-top: 0; margin-bottom: 10px; font-size: 1em; color: #555; }
+        .order-items table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        .order-items th, .order-items td { padding: 6px; text-align: left; border: 1px solid #eee; }
+        .order-items th { background-color: #f7f7f7; font-weight: 500; }
+        .expand-icon { margin-right: 5px; display: inline-block; transition: transform 0.2s; width: 1em; text-align: center; }
+        .po-header.collapsed .expand-icon { transform: rotate(-90deg); }
+        .deliveries-modal-content .modal-buttons { margin-top: auto; padding-top: 15px; border-top: 1px solid #eee; }
 
     </style>
 </head>
 <body>
     <div id="toast-container"></div>
-    <?php include '../sidebar.php'; ?>
+    <?php include '../sidebar.php'; // Make sure this path is correct ?>
     <div class="main-content">
         <div class="accounts-header">
             <h1>Drivers List</h1>
             <div class="filter-section">
                 <label for="statusFilter">Status:</label>
-                <select id="statusFilter" onchange="filterByStatus()">
+                <select id="statusFilter" onchange="filterDrivers()">
                     <option value="">All</option>
                     <option value="Available" <?= $status_filter == 'Available' ? 'selected' : '' ?>>Available</option>
                     <option value="Not Available" <?= $status_filter == 'Not Available' ? 'selected' : '' ?>>Not Available</option>
                 </select>
 
                 <label for="areaFilter">Area:</label>
-                <select id="areaFilter" onchange="filterByArea()">
+                <select id="areaFilter" onchange="filterDrivers()">
                     <option value="">All</option>
                     <option value="North" <?= $area_filter == 'North' ? 'selected' : '' ?>>North</option>
                     <option value="South" <?= $area_filter == 'South' ? 'selected' : '' ?>>South</option>
@@ -458,36 +415,42 @@ if (!empty($status_filter) && !empty($area_filter)) {
                         <th>Address</th>
                         <th>Contact No.</th>
                         <th>Area</th>
-                        <th>Status</th>
-                        <th>Current Deliveries</th>
+                        <th>Availability</th>
+                        <th>Active Deliveries</th> <!-- Renamed Header -->
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if ($result && $result->num_rows > 0): ?>
                         <?php while ($row = $result->fetch_assoc()):
-                            // Determine CSS class for delivery count
+                            // Use calculated count for display
+                            $active_delivery_count = $row['calculated_deliveries'];
+
+                            // Determine CSS class for delivery count based on calculated count
                             $deliveryClass = 'delivery-count-low';
-                            if ($row['current_deliveries'] > 15) { // Example thresholds
+                            if ($active_delivery_count > 15) { // Example thresholds
                                 $deliveryClass = 'delivery-count-high';
-                            } else if ($row['current_deliveries'] > 10) {
+                            } else if ($active_delivery_count > 10) {
                                 $deliveryClass = 'delivery-count-medium';
                             }
+                            // Determine CSS class for availability status
+                            $availability_class = 'status-' . strtolower(str_replace(' ', '-', $row['availability']));
                         ?>
                             <tr>
                                 <td><?= htmlspecialchars($row['name']) ?></td>
                                 <td><?= htmlspecialchars($row['address']) ?></td>
                                 <td><?= htmlspecialchars($row['contact_no']) ?></td>
                                 <td><?= htmlspecialchars($row['area']) ?></td>
-                                <td class="<?= 'status-' . strtolower(str_replace(' ', '-', $row['availability'])) ?>">
+                                <td class="<?= $availability_class ?>">
                                     <?= htmlspecialchars($row['availability']) ?>
                                 </td>
                                 <td>
+                                    <!-- Display calculated count -->
                                     <span class="delivery-count <?= $deliveryClass ?>">
-                                        <?= $row['current_deliveries'] ?> / 20 <!-- Assuming 20 is the max -->
+                                        <?= $active_delivery_count ?> / 20 <!-- Assuming 20 is the max -->
                                     </span>
                                     <button class="see-deliveries-btn" onclick="viewDriverDeliveries(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>')">
-                                        <i class="fas fa-truck"></i> See List
+                                        <i class="fas fa-list-ul"></i> See List <!-- Changed Icon/Text -->
                                     </button>
                                 </td>
                                 <td class="action-buttons">
@@ -495,16 +458,19 @@ if (!empty($status_filter) && !empty($area_filter)) {
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
                                     <button class="status-btn" onclick="openStatusModal(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['name'])) ?>')">
-                                        <i class="fas fa-sync-alt"></i> Status <!-- Changed icon -->
+                                        <i class="fas fa-toggle-on"></i> Status <!-- Changed icon -->
                                     </button>
                                 </td>
                             </tr>
                         <?php endwhile; ?>
+                        <?php $stmt->close(); // Close statement after loop ?>
                     <?php else: ?>
                         <tr>
                             <td colspan="7" class="no-accounts">No drivers found matching criteria.</td>
                         </tr>
+                         <?php if(isset($stmt)) $stmt->close(); // Close statement if loop was skipped but stmt was prepared ?>
                     <?php endif; ?>
+                    <?php $conn->close(); // Close DB connection ?>
                 </tbody>
             </table>
         </div>
@@ -512,29 +478,30 @@ if (!empty($status_filter) && !empty($area_filter)) {
 
     <!-- Add Driver Modal -->
     <div id="addDriverOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content">
+         <div class="overlay-content">
+            <span class="close-btn" onclick="closeAddDriverForm()">&times;</span>
             <h2><i class="fas fa-user-plus"></i> Add New Driver</h2>
             <div id="addDriverError" class="error-message"></div>
             <form id="addDriverForm" method="POST" class="account-form" action="">
                 <input type="hidden" name="formType" value="add">
-                <label for="name">Name:<span class="required-asterisk">*</span></label>
-                <input type="text" id="name" name="name" required>
+                <label for="add-name">Name:<span class="required-asterisk">*</span></label>
+                <input type="text" id="add-name" name="name" required>
 
-                <label for="address">Address:<span class="required-asterisk">*</span></label>
-                <input type="text" id="address" name="address" required>
+                <label for="add-address">Address:<span class="required-asterisk">*</span></label>
+                <input type="text" id="add-address" name="address" required>
 
-                <label for="contact_no">Contact No.: (e.g., 639171234567)<span class="required-asterisk">*</span></label>
-                <input type="text" id="contact_no" name="contact_no" required maxlength="12" pattern="\d{12}" title="Contact number must be exactly 12 digits starting with 63">
+                <label for="add-contact_no">Contact No.: (e.g., 639171234567)<span class="required-asterisk">*</span></label>
+                <input type="text" id="add-contact_no" name="contact_no" required maxlength="12" pattern="^63\d{10}$" title="Must be 12 digits starting with 63">
                 <span id="contactError" class="error-message"></span>
 
-                <label for="area">Area:<span class="required-asterisk">*</span></label>
-                <select id="area" name="area" required>
+                <label for="add-area">Area:<span class="required-asterisk">*</span></label>
+                <select id="add-area" name="area" required>
                     <option value="North">North</option>
                     <option value="South">South</option>
                 </select>
 
-                <label for="availability">Availability:<span class="required-asterisk">*</span></label>
-                <select id="availability" name="availability" required>
+                <label for="add-availability">Availability:<span class="required-asterisk">*</span></label>
+                <select id="add-availability" name="availability" required>
                     <option value="Available">Available</option>
                     <option value="Not Available">Not Available</option>
                 </select>
@@ -552,6 +519,7 @@ if (!empty($status_filter) && !empty($area_filter)) {
     <!-- Edit Driver Modal -->
     <div id="editDriverOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
+            <span class="close-btn" onclick="closeEditDriverForm()">&times;</span>
             <h2><i class="fas fa-edit"></i> Edit Driver</h2>
             <div id="editDriverError" class="error-message"></div>
             <form id="editDriverForm" method="POST" class="account-form" action="">
@@ -565,7 +533,7 @@ if (!empty($status_filter) && !empty($area_filter)) {
                 <input type="text" id="edit-address" name="address" required>
 
                 <label for="edit-contact_no">Contact No.: (e.g., 639171234567)<span class="required-asterisk">*</span></label>
-                <input type="text" id="edit-contact_no" name="contact_no" required maxlength="12" pattern="\d{12}" title="Contact number must be exactly 12 digits starting with 63">
+                <input type="text" id="edit-contact_no" name="contact_no" required maxlength="12" pattern="^63\d{10}$" title="Must be 12 digits starting with 63">
                 <span id="editContactError" class="error-message"></span>
 
                 <label for="edit-area">Area:<span class="required-asterisk">*</span></label>
@@ -592,7 +560,8 @@ if (!empty($status_filter) && !empty($area_filter)) {
 
     <!-- Change Status Modal -->
     <div id="statusModal" class="overlay" style="display: none;">
-        <div class="overlay-content">
+         <div class="overlay-content">
+            <span class="close-btn" onclick="closeStatusModal()">&times;</span>
             <h2>Change Driver Availability</h2>
             <p id="statusMessage"></p>
             <div class="modal-buttons">
@@ -613,8 +582,8 @@ if (!empty($status_filter) && !empty($area_filter)) {
 
     <!-- Deliveries List Modal -->
     <div id="deliveriesModal" class="overlay" style="display: none;">
-        <div class="overlay-content deliveries-modal-content">
-             <span class="close-btn" onclick="closeDeliveriesModal()" style="position:absolute; top: 10px; right: 15px; font-size: 24px; cursor:pointer;">&times;</span>
+         <div class="overlay-content deliveries-modal-content">
+             <span class="close-btn" onclick="closeDeliveriesModal()">&times;</span>
             <h2><i class="fas fa-truck-loading"></i> <span id="deliveriesModalTitle">Driver's Deliveries</span></h2>
             <div id="deliveriesTableContainer" class="deliveries-table-container">
                 <table class="deliveries-table" id="deliveriesTable">
@@ -640,352 +609,139 @@ if (!empty($status_filter) && !empty($area_filter)) {
         </div>
     </div>
 
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/js/toast.js"></script> <!-- Make sure this path is correct -->
     <script>
         let selectedDriverId = null;
 
-        function openAddDriverForm() {
-            document.getElementById('addDriverOverlay').style.display = 'flex';
-        }
+        // --- Modal Control Functions ---
+        function openAddDriverForm() { $('#addDriverOverlay').css('display', 'flex'); }
+        function closeAddDriverForm() { $('#addDriverOverlay').hide(); $('#addDriverForm')[0].reset(); $('#addDriverError, #contactError').text(''); $('#add-contact_no').removeClass('form-field-error'); }
+        function openEditDriverForm(id, name, address, contact_no, availability, area) { $('#edit-id').val(id); $('#edit-name').val(name); $('#edit-address').val(address); $('#edit-contact_no').val(contact_no); $('#edit-availability').val(availability); $('#edit-area').val(area); $('#editDriverOverlay').css('display', 'flex'); }
+        function closeEditDriverForm() { $('#editDriverOverlay').hide(); $('#editDriverError, #editContactError').text(''); $('#edit-contact_no').removeClass('form-field-error');}
+        function openStatusModal(id, name) { selectedDriverId = id; $('#statusMessage').text(`Change availability status for driver: ${name}`); $('#statusModal').css('display', 'flex'); }
+        function closeStatusModal() { $('#statusModal').hide(); selectedDriverId = null; }
+        function closeDeliveriesModal() { $('#deliveriesModal').hide(); selectedDriverId = null; }
 
-        function closeAddDriverForm() {
-            document.getElementById('addDriverOverlay').style.display = 'none';
-            document.getElementById('addDriverForm').reset();
-            document.getElementById('addDriverError').textContent = '';
-            document.getElementById('contactError').textContent = '';
-            document.getElementById('contact_no').classList.remove('form-field-error');
-        }
-
-        function openEditDriverForm(id, name, address, contact_no, availability, area) {
-            document.getElementById('edit-id').value = id;
-            document.getElementById('edit-name').value = name;
-            document.getElementById('edit-address').value = address;
-            document.getElementById('edit-contact_no').value = contact_no;
-            document.getElementById('edit-availability').value = availability;
-            document.getElementById('edit-area').value = area;
-            document.getElementById('editDriverOverlay').style.display = 'flex';
-        }
-
-        function closeEditDriverForm() {
-            document.getElementById('editDriverOverlay').style.display = 'none';
-            document.getElementById('editDriverError').textContent = '';
-            document.getElementById('editContactError').textContent = '';
-            document.getElementById('edit-contact_no').classList.remove('form-field-error');
-        }
-
-        function openStatusModal(id, name) {
-            selectedDriverId = id;
-            document.getElementById('statusMessage').textContent = `Change availability status for driver: ${name}`;
-            document.getElementById('statusModal').style.display = 'flex';
-        }
-
-        function closeStatusModal() {
-            document.getElementById('statusModal').style.display = 'none';
-            selectedDriverId = null; // Clear selected ID
-        }
-
+        // --- Deliveries Modal Logic ---
         function toggleOrderItems(headerRow) {
-             // Find the next row which should contain the items
              const itemsRow = headerRow.nextElementSibling;
              if (itemsRow && itemsRow.classList.contains('order-items-row')) {
-                  // Toggle the 'collapsed' class on the header row
                   headerRow.classList.toggle('collapsed');
-                  // Toggle display of the items row itself
                   itemsRow.style.display = headerRow.classList.contains('collapsed') ? 'none' : 'table-row';
              }
         }
-
-
+        function formatDate(dateStr) { if (!dateStr) return 'N/A'; try { const date = new Date(dateStr); if (isNaN(date.getTime())) return 'Invalid Date'; return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { console.error("Error formatting date:", dateStr, e); return 'Invalid Date'; } }
+        function formatCurrency(amount) { const num = parseFloat(amount); if (isNaN(num)) return '₱--.--'; return '₱' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); }
         function viewDriverDeliveries(id, name) {
             selectedDriverId = id;
-            document.getElementById('deliveriesModalTitle').textContent = `${name}'s Active/Pending Deliveries`;
-            document.getElementById('deliveriesModal').style.display = 'flex';
+            $('#deliveriesModalTitle').text(`${name}'s Active/Pending Deliveries`);
+            $('#deliveriesModal').css('display', 'flex');
+            const tableBody = $('#deliveriesTableBody');
+            tableBody.html('<tr><td colspan="4" class="no-deliveries"><i class="fas fa-spinner fa-spin"></i> Loading deliveries...</td></tr>');
 
-            const tableBody = document.getElementById('deliveriesTableBody');
-            tableBody.innerHTML = '<tr><td colspan="4" class="no-deliveries"><i class="fas fa-spinner fa-spin"></i> Loading deliveries...</td></tr>';
-
-            // Fetch deliveries data using the GET handler within this same file
-            fetch(`drivers.php?driver_id=${id}&action=get_deliveries`) // Use relative path
-                .then(response => {
-                    // Check if response is ok (status 200-299)
-                    if (!response.ok) {
-                        // Try to get text for more detailed error info
-                        return response.text().then(text => {
-                             console.error("Server response:", text);
-                             throw new Error(`Server error: ${response.status}`);
-                        });
-                    }
-                    // If response is OK, try to parse JSON
-                    return response.json();
-                })
+            fetch(`drivers.php?driver_id=${id}&action=get_deliveries`)
+                .then(response => { if (!response.ok) { return response.text().then(text => { console.error("Server response:", text); throw new Error(`Server error: ${response.status}`); }); } return response.json(); })
                 .then(data => {
-                    console.log("Received deliveries data:", data); // Log received data
+                    console.log("Received deliveries data:", data);
                     if (data.success && data.deliveries) {
                         if (data.deliveries.length > 0) {
                             let html = '';
-                            data.deliveries.forEach((delivery, index) => {
-                                // Determine status class based on delivery.status
-                                let statusClass = 'status-' + (delivery.status ? delivery.status.toLowerCase().replace(' ', '-') : 'unknown');
-
-                                // Add the main delivery row (initially collapsed)
-                                // Added 'collapsed' class to the header row initially
-                                // Added 'display: none;' style to the items row initially
-                                html += `
-                                    <tr class="po-header collapsed" onclick="toggleOrderItems(this)">
-                                        <td><span class="expand-icon">▼</span> ${delivery.po_number}</td>
-                                        <td>${formatDate(delivery.delivery_date)}</td>
-                                        <td>${delivery.delivery_address || 'N/A'}</td>
-                                        <td><span class="delivery-status-badge ${statusClass}">${delivery.status || 'Unknown'}</span></td>
-                                    </tr>
-                                    <tr class="order-items-row" style="display: none;">
-                                        <td colspan="4" class="order-items">
-                                            <h4>Order Items (${delivery.username || 'N/A'})</h4>
-                                            <table>
-                                                <thead>
-                                                    <tr>
-                                                        <th>Item</th>
-                                                        <th>Packaging</th>
-                                                        <th>Quantity</th>
-                                                        <th>Price</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>`;
-
-                                // Add each order item
+                            data.deliveries.forEach((delivery) => {
+                                let statusClass = 'status-' + (delivery.status ? delivery.status.toLowerCase().replace(/\s+/g, '-') : 'unknown'); // Replace spaces too
+                                html += `<tr class="po-header collapsed" onclick="toggleOrderItems(this)">
+                                            <td><span class="expand-icon">▼</span> ${delivery.po_number}</td>
+                                            <td>${formatDate(delivery.delivery_date)}</td>
+                                            <td>${delivery.delivery_address || 'N/A'}</td>
+                                            <td><span class="delivery-status-badge ${statusClass}">${delivery.status || 'Unknown'}</span></td>
+                                         </tr>
+                                         <tr class="order-items-row" style="display: none;">
+                                            <td colspan="4" class="order-items">
+                                                <h4>Order Items (${delivery.username || 'N/A'})</h4>
+                                                <table><thead><tr><th>Item</th><th>Packaging</th><th>Quantity</th><th>Price</th></tr></thead><tbody>`;
                                 if (delivery.items && Array.isArray(delivery.items) && delivery.items.length > 0) {
-                                    delivery.items.forEach(item => {
-                                        html += `
-                                            <tr>
-                                                <td>${item.item_description || 'N/A'}</td>
-                                                <td>${item.packaging || 'N/A'}</td>
-                                                <td>${item.quantity || 0}</td>
-                                                <td>${formatCurrency(item.price)}</td>
-                                            </tr>`;
-                                    });
-                                } else {
-                                    html += `<tr><td colspan="4" style="text-align: center; color: #888;">No items details available or order data is invalid.</td></tr>`;
-                                }
-
-                                html += `
-                                                </tbody>
-                                            </table>
-                                        </td>
-                                    </tr>`;
+                                    delivery.items.forEach(item => { html += `<tr><td>${item.item_description || 'N/A'}</td><td>${item.packaging || 'N/A'}</td><td>${item.quantity || 0}</td><td>${formatCurrency(item.price)}</td></tr>`; });
+                                } else { html += `<tr><td colspan="4" style="text-align: center; color: #888;">No items details available.</td></tr>`; }
+                                html += `</tbody></table></td></tr>`;
                             });
-                            tableBody.innerHTML = html;
-                        } else {
-                            tableBody.innerHTML = '<tr><td colspan="4" class="no-deliveries">No active or pending deliveries found for this driver.</td></tr>';
-                        }
-                    } else {
-                         // Handle cases where success is false or deliveries array is missing
-                         console.error('API reported failure or missing data:', data.message);
-                         tableBody.innerHTML = `<tr><td colspan="4" class="no-deliveries">Error loading deliveries: ${data.message || 'Unknown error'}</td></tr>`;
-                    }
+                            tableBody.html(html);
+                        } else { tableBody.html('<tr><td colspan="4" class="no-deliveries">No active or pending deliveries found.</td></tr>'); }
+                    } else { console.error('API reported failure or missing data:', data.message); tableBody.html(`<tr><td colspan="4" class="no-deliveries">Error loading deliveries: ${data.message || 'Unknown error'}</td></tr>`); }
                 })
-                .catch(error => {
-                    // Handle fetch errors (network issue, JSON parsing failure)
-                    console.error('Error fetching deliveries:', error); // Log the actual error
-                    // Display user-friendly message
-                    tableBody.innerHTML = '<tr><td colspan="4" class="no-deliveries">Error loading deliveries. Check console or server logs.</td></tr>';
-                    // Show a toast message as well
-                    showToast(`Error loading deliveries: ${error.message}`, 'error');
-                });
+                .catch(error => { console.error('Error fetching deliveries:', error); tableBody.html('<tr><td colspan="4" class="no-deliveries">Error loading deliveries. Check console.</td></tr>'); showToast(`Error loading deliveries: ${error.message}`, 'error'); });
         }
 
-
-        function closeDeliveriesModal() {
-            document.getElementById('deliveriesModal').style.display = 'none';
-            selectedDriverId = null; // Clear selected ID
-        }
-
-        // Helper function to format date (adjust locale and options as needed)
-        function formatDate(dateStr) {
-            if (!dateStr) return 'N/A';
-            try {
-                 const date = new Date(dateStr);
-                 // Check if date is valid
-                 if (isNaN(date.getTime())) return 'Invalid Date';
-                 return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-            } catch (e) {
-                 console.error("Error formatting date:", dateStr, e);
-                 return 'Invalid Date';
-            }
-        }
-
-
-        // Helper function to format currency
-        function formatCurrency(amount) {
-             const num = parseFloat(amount);
-             if (isNaN(num)) return '₱--.--'; // Handle invalid numbers
-             // Using Intl.NumberFormat for better localization if needed in future
-             // return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(num);
-             return '₱' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'); // Basic formatting
-        }
-
-
+        // --- Status Change AJAX ---
         function changeStatus(status) {
-            if (selectedDriverId === null) {
-                showToast('No driver selected.', 'error');
-                return;
-            }
+            if (selectedDriverId === null) { showToast('No driver selected.', 'error'); return; }
             $.ajax({
-                url: 'drivers.php', // Post back to the same file
-                type: 'POST',
-                data: {
-                    ajax: true,
-                    formType: 'status',
-                    id: selectedDriverId,
-                    status: status
-                },
+                url: 'drivers.php', type: 'POST',
+                data: { ajax: true, formType: 'status', id: selectedDriverId, status: status },
                 dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        showToast('Status updated successfully', 'success');
-                        setTimeout(function() {
-                            window.location.reload(); // Reload page to see changes
-                        }, 1500); // Shorter delay
-                    } else {
-                        showToast(response.message || 'Failed to update status', 'error');
-                    }
-                    closeStatusModal(); // Close modal regardless of success/failure
-                },
-                error: function(xhr, status, error) {
-                     console.error("Change Status AJAX Error:", status, error, xhr.responseText);
-                    showToast('An error occurred: ' + error, 'error');
-                    closeStatusModal();
-                }
+                success: function(response) { if (response.success && response.reload) { showToast('Status updated successfully', 'success'); setTimeout(() => window.location.reload(), 1500); } else { showToast(response.message || 'Failed to update status', 'error'); } closeStatusModal(); },
+                error: function(xhr, status, error) { console.error("Change Status AJAX Error:", status, error, xhr.responseText); showToast('An error occurred: ' + error, 'error'); closeStatusModal(); }
             });
         }
 
-        function filterByStatus() {
+        // --- Filtering ---
+        function filterDrivers() {
             const status = document.getElementById('statusFilter').value;
             const area = document.getElementById('areaFilter').value;
-            window.location.href = `drivers.php?status=${status}&area=${area}`; // Ensure filename is correct
+            // Use window.location.search to preserve other potential query params
+            const params = new URLSearchParams(window.location.search);
+            params.set('status', status);
+            params.set('area', area);
+            window.location.href = `drivers.php?${params.toString()}`;
         }
 
-        function filterByArea() {
-            const status = document.getElementById('statusFilter').value;
-            const area = document.getElementById('areaFilter').value;
-            window.location.href = `drivers.php?status=${status}&area=${area}`; // Ensure filename is correct
-        }
-
+        // --- Validation ---
         function validateContactNumber(contactInput, errorElement) {
-            const contactValue = contactInput.value.trim();
-             // Updated pattern: Starts with 63, followed by 10 digits. Total 12 digits.
-             const pattern = /^63\d{10}$/;
-            if (!pattern.test(contactValue)) {
-                 errorElement.textContent = 'Contact number must be 12 digits starting with 63.';
+             const contactValue = contactInput.value.trim();
+             const pattern = /^63\d{10}$/; // Starts with 63, total 12 digits
+             if (!pattern.test(contactValue)) {
+                 errorElement.textContent = 'Must be 12 digits starting with 63.';
                  contactInput.classList.add('form-field-error');
                  return false;
-            }
-            errorElement.textContent = ''; // Clear error
-            contactInput.classList.remove('form-field-error');
-            return true;
-        }
+             }
+             errorElement.textContent = '';
+             contactInput.classList.remove('form-field-error');
+             return true;
+         }
 
-
+        // --- Document Ready ---
         $(document).ready(function() {
-            // Handle click events outside modals to close them
-            $(document).on('click', '.overlay', function(event) {
-                // Only close if the click is directly on the overlay background
-                if (event.target === this) {
-                    $(this).hide(); // Hide the clicked overlay
-                    // Optional: Clear specific states if needed when closing certain modals
-                    if (this.id === 'statusModal' || this.id === 'deliveriesModal') {
-                         selectedDriverId = null;
-                    }
-                }
-            });
+            // Close modals on overlay click
+            $(document).on('click', '.overlay', function(event) { if (event.target === this) { $(this).hide(); if (this.id === 'statusModal' || this.id === 'deliveriesModal') selectedDriverId = null; } });
+            // Prevent closing on content click
+            $(document).on('click', '.overlay-content', function(event) { event.stopPropagation(); });
 
-            // Prevent closing when clicking inside the modal content
-            $(document).on('click', '.overlay-content', function(event) {
-                 event.stopPropagation();
-            });
-
-
-            // Validate contact number on input/blur for Add form
-            $('#contact_no').on('input blur', function() {
-                validateContactNumber(this, document.getElementById('contactError'));
-            });
-
-            // Validate contact number on input/blur for Edit form
-            $('#edit-contact_no').on('input blur', function() {
-                validateContactNumber(this, document.getElementById('editContactError'));
-            });
+            // Live validation for contact numbers
+            $('#add-contact_no').on('input blur', function() { validateContactNumber(this, document.getElementById('contactError')); });
+            $('#edit-contact_no').on('input blur', function() { validateContactNumber(this, document.getElementById('editContactError')); });
 
             // AJAX form submission for Add Driver
             $('#addDriverForm').on('submit', function(e) {
-                e.preventDefault(); // Prevent default form submission
-
-                // Final validation check before submitting
-                if (!validateContactNumber(document.getElementById('contact_no'), document.getElementById('contactError'))) {
-                    showToast('Please correct the errors before saving.', 'warning');
-                    return false; // Stop submission if invalid
-                }
-
-                const formData = $(this).serialize() + '&ajax=true'; // Add ajax flag
-
+                e.preventDefault();
+                const contactInput = document.getElementById('add-contact_no');
+                if (!validateContactNumber(contactInput, document.getElementById('contactError'))) { showToast('Please correct errors.', 'warning'); return false; }
                 $.ajax({
-                    url: 'drivers.php', // Post back to the same file
-                    type: 'POST',
-                    data: formData,
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success && response.reload) {
-                            showToast('Driver added successfully', 'success');
-                            closeAddDriverForm();
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 1500);
-                        } else {
-                             $('#addDriverError').text(response.message || 'Error adding driver. Please try again.');
-                             showToast(response.message || 'Error adding driver.', 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                         console.error("Add Driver AJAX Error:", status, error, xhr.responseText);
-                         $('#addDriverError').text('An error occurred. Please check console or try again.');
-                         showToast('An error occurred: ' + error, 'error');
-                    }
+                    url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
+                    success: function(response) { if (response.success && response.reload) { showToast('Driver added', 'success'); closeAddDriverForm(); setTimeout(() => window.location.reload(), 1500); } else { $('#addDriverError').text(response.message || 'Error adding.'); showToast(response.message || 'Error adding.', 'error'); } },
+                    error: function(xhr, status, error) { console.error("Add AJAX Error:", status, error, xhr.responseText); $('#addDriverError').text('Request error.'); showToast('Request error: ' + error, 'error'); }
                 });
             });
 
             // AJAX form submission for Edit Driver
             $('#editDriverForm').on('submit', function(e) {
-                e.preventDefault(); // Prevent default form submission
-
-                 // Final validation check before submitting
-                if (!validateContactNumber(document.getElementById('edit-contact_no'), document.getElementById('editContactError'))) {
-                     showToast('Please correct the errors before saving.', 'warning');
-                    return false; // Stop submission if invalid
-                }
-
-                const formData = $(this).serialize() + '&ajax=true'; // Add ajax flag
-
+                e.preventDefault();
+                const contactInput = document.getElementById('edit-contact_no');
+                if (!validateContactNumber(contactInput, document.getElementById('editContactError'))) { showToast('Please correct errors.', 'warning'); return false; }
                 $.ajax({
-                    url: 'drivers.php', // Post back to the same file
-                    type: 'POST',
-                    data: formData,
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success && response.reload) {
-                            showToast('Driver updated successfully', 'success');
-                            closeEditDriverForm();
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 1500);
-                        } else {
-                            $('#editDriverError').text(response.message || 'Error updating driver. Please try again.');
-                             showToast(response.message || 'Error updating driver.', 'error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                         console.error("Edit Driver AJAX Error:", status, error, xhr.responseText);
-                         $('#editDriverError').text('An error occurred. Please check console or try again.');
-                         showToast('An error occurred: ' + error, 'error');
-                    }
+                    url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
+                    success: function(response) { if (response.success && response.reload) { showToast('Driver updated', 'success'); closeEditDriverForm(); setTimeout(() => window.location.reload(), 1500); } else { $('#editDriverError').text(response.message || 'Error updating.'); showToast(response.message || 'Error updating.', 'error'); } },
+                    error: function(xhr, status, error) { console.error("Edit AJAX Error:", status, error, xhr.responseText); $('#editDriverError').text('Request error.'); showToast('Request error: ' + error, 'error'); }
                 });
             });
         });
