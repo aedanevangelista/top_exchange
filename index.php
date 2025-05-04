@@ -1,4 +1,5 @@
 <?php
-header("Location: public/login.php");
+// Redirect to LandingPage/index.php
+header("Location: LandingPage/index.php");
 exit;
 ?>

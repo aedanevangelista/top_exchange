@@ -1,0 +1,307 @@
+/* ================================ */
+/* General & Main Content */
+/* ================================ */
+.main-content {
+    padding: 25px; /* Standard padding */
+    background-color: #eef0f4; /* Light background */
+    display: flex;
+    flex-direction: column;
+    gap: 16px; /* Consistent gap between sections */
+    /* align-items: center; /* Removed - let sections take full width */
+}
+
+.main-content h2, .main-content h3 {
+    color: #333;
+}
+
+/* ================================ */
+/* Overview Section (Top Badges) */
+/* ================================ */
+.overview-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 15px;
+    margin-bottom: 0; /* Remove extra margin, gap handles spacing */
+    /* border-bottom: 1px solid #ddd; */ /* Optional: remove border if gap is enough */
+}
+
+.overview-container h2 {
+    margin: 0; /* Remove default margin */
+}
+
+.notification-badges {
+    display: flex;
+    flex-wrap: wrap; /* Allow badges to wrap */
+    gap: 10px;
+}
+
+.notification-badge {
+    border-radius: 6px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    text-decoration: none; /* Remove underline from links */
+}
+
+.notification-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.notification-badge.pending { background-color: #ffe8e9; }
+.notification-badge.rejected { background-color: #ffe8e9; } /* Same as pending or choose another */
+.notification-badge.active { background-color: #e2f7e1; }
+.notification-badge.deliverable { background-color: #fff8d9; }
+
+.notification-icon { font-size: 1em; }
+.notification-count { font-size: 1.1em; font-weight: bold; }
+.notification-label { font-size: 0.85em; }
+
+.pending .notification-icon, .pending .notification-count, .pending .notification-label { color: #b52b38; }
+.rejected .notification-icon, .rejected .notification-count, .rejected .notification-label { color: #b52b38; }
+.active .notification-icon, .active .notification-count, .active .notification-label { color: #1d643b; }
+.deliverable .notification-icon, .deliverable .notification-count, .deliverable .notification-label { color: #856404; }
+
+
+/* ================================ */
+/* Stats Container (Was .top-section) */
+/* ================================ */
+.stats-container {
+    width: 100%;
+    display: flex;
+    gap: 25px; /* Consistent gap */
+}
+
+/* ================================ */
+/* Stat Card (Common style for top boxes) */
+/* ================================ */
+.stat-card {
+    flex: 1; /* Each card takes equal share */
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column; /* Stack header and content */
+    min-height: 350px; /* Ensure cards have a decent height, adjust as needed */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Header within cards (Title + Dropdown) */
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap; /* Allow wrap */
+    gap: 10px;
+}
+
+.chart-header h3 {
+    margin: 0;
+    font-size: 1.1em;
+    color: #495057;
+}
+
+/* Chart/Content Area within cards */
+.stat-card-content {
+    flex-grow: 1; /* Allow content to fill remaining space */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Center content vertically if needed */
+    align-items: center; /* Center content horizontally */
+    position: relative; /* Needed for chart canvas */
+    width: 100%;
+}
+
+/* Specific Card Styles */
+
+/* Client Orders Card */
+.client-orders-card .stat-card-content {
+    min-height: 250px; /* Ensure space for pie chart */
+}
+
+/* Packs Sold Card */
+.packs-sold-card {
+    justify-content: space-around; /* Distribute content vertically */
+}
+
+.packs-sold-card .packs-sold-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+    color: #6c757d;
+    width: 100%; /* Make header take full width */
+    justify-content: center; /* Center header content */
+    flex-wrap: wrap;
+}
+
+.packs-sold-card .packs-sold-count {
+    font-size: 2.5em; /* Adjust size as needed */
+    font-weight: 600;
+    color: #343a40;
+    margin: 10px 0;
+    text-align: center;
+}
+
+.packs-sold-card .packs-comparison-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+    color: #6c757d;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.packs-sold-card .packs-comparison {
+    font-weight: bold;
+}
+
+.packs-sold-card .packs-comparison.positive { color: #28a745; }
+.packs-sold-card .packs-comparison.negative { color: #dc3545; }
+
+/* ================================ */
+/* Dashboard Section (For lower sections like Sales Dept) */
+/* ================================ */
+.dashboard-section {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    width: 100%; /* Make sections take full width */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Sales Department Section */
+.sales-department-container .stat-card-content {
+     min-height: 300px; /* Adjust as needed */
+}
+
+.time-period-tabs {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.time-period-tab {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.2s;
+    color: #495057;
+}
+
+.time-period-tab.active {
+    background-color: #4a90e2; /* Use a consistent theme color */
+    color: white;
+    border-color: #4a90e2;
+}
+
+.time-period-tab:hover:not(.active) {
+    background-color: #e9ecef;
+}
+
+/* ================================ */
+/* Consistent Dropdown Styles */
+/* ================================ */
+.year-select,
+.packs-sold-dropdown {
+    padding: 6px 10px; /* Slightly smaller padding */
+    font-size: 0.9em;
+    /* font-weight: bold; */ /* Optional: remove bold */
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    background-color: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    /* box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05); */ /* Subtle shadow */
+}
+
+.year-select:hover,
+.packs-sold-dropdown:hover {
+    border-color: #adb5bd;
+}
+
+.year-select:focus,
+.packs-sold-dropdown:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* ================================ */
+/* Responsive Styles */
+/* ================================ */
+
+/* Medium screens (e.g., tablets) */
+@media (max-width: 992px) {
+    .stats-container {
+        gap: 15px;
+    }
+    .stat-card {
+        padding: 15px;
+    }
+    .packs-sold-card .packs-sold-count {
+        font-size: 2em;
+    }
+    .main-content {
+        padding: 20px;
+        gap: 20px;
+    }
+}
+
+/* Small screens (e.g., mobile) */
+@media (max-width: 767px) {
+    .stats-container {
+        flex-direction: column; /* Stack top cards */
+        gap: 15px;
+    }
+
+    .main-content {
+        padding: 15px;
+        gap: 15px;
+    }
+
+    .overview-container {
+        flex-direction: column;
+        align-items: flex-start; /* Align items to start */
+    }
+
+    .notification-badges {
+        justify-content: flex-start; /* Align badges to start */
+        width: 100%;
+    }
+
+    .chart-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .time-period-tabs {
+         width: 100%;
+         justify-content: flex-start;
+    }
+
+    .packs-sold-card .packs-sold-count {
+        font-size: 1.8em;
+    }
+}

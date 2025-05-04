@@ -1,0 +1,37 @@
+/* Specific styles for drivers page */
+
+/* Status colors */
+.status-available {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.status-not-available {
+    color: #F44336;
+    font-weight: bold;
+}
+
+/* For when we might have other statuses in the future */
+.status-pending {
+    color: #FFC107;
+    font-weight: bold;
+}
+
+.status-on-trip {
+    color: #2196F3;
+    font-weight: bold;
+}
+
+/* Make sure our modal dialogs look nice */
+#statusModal .overlay-content {
+    width: 400px;
+}
+
+/* Ensure toast notifications are styled correctly for driver operations */
+.toast.available {
+    background-color: #4CAF50;
+}
+
+.toast.not-available {
+    background-color: #F44336;
+}
