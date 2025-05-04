@@ -333,12 +333,18 @@ require_once 'header.php';
         align-items: center;
         min-height: 400px;
     }
+    /* Text column */
     .banner_section .row > .col-sm-6:first-child {
         display: flex;
         flex-direction: column;
         justify-content: center;
         height: 100%;
         padding-right: 30px;
+        text-align: left; /* Explicitly left align */
+    }
+    /* Image column */
+    .banner_section .carousel-item .row > .col-sm-6:last-child {
+        text-align: center; /* Center content (the banner_img div) */
     }
     .banner_taital {
         font-size: 2.8rem;
@@ -367,12 +373,16 @@ require_once 'header.php';
         background-color: #c35a10;
         color: white;
     }
+    .banner_img {
+       display: inline-block; /* Needed for text-align:center on parent */
+    }
     .banner_img img {
         max-width: 100%;
         height: auto;
         max-height: 350px;
         object-fit: contain;
         border-radius: 8px;
+        display: block; /* Ensure image behaves like a block */
     }
     .banner_section .carousel-control-prev,
     .banner_section .carousel-control-next {
@@ -417,23 +427,23 @@ require_once 'header.php';
         justify-content: center;
         z-index: 15;
     }
-    .banner_section .carousel-indicators li {
-        box-sizing: content-box;
+    .banner_section .carousel#carouselExampleIndicators .carousel-indicators li {
+        box-sizing: border-box;
         flex: 0 1 auto;
-        width: 24px;  /* Consistent size */
-        height: 10px; /* Consistent size */
+        width: 10px;
+        height: 10px;
+        padding: 0;
         margin: 0 5px;
         text-indent: -999px;
         cursor: pointer;
         background-color: rgba(0, 0, 0, 0.2);
         background-clip: padding-box;
-        border: 0;
-        border-radius: 50%; /* Ensure circle */
+        border: 0 solid transparent;
+        border-radius: 50%;
         opacity: 0.6;
-        transition: opacity 0.6s ease, background-color 0.6s ease; /* Removed width/height transition */
+        transition: opacity 0.6s ease, background-color 0.6s ease;
     }
-    .banner_section .carousel-indicators .active {
-        /* Keep same size as inactive */
+    .banner_section .carousel#carouselExampleIndicators .carousel-indicators li.active {
         background-color: #e46c1d;
         opacity: 1;
     }
@@ -461,7 +471,7 @@ require_once 'header.php';
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Experience the authentic taste of our handcrafted siopao, made with premium ingredients and traditional recipes passed down through generations.</p>
                             <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '/LandingPage/ordering.php' : '/LandingPage/login.php'; ?>">Order Now</a></div>
                         </div>
-                        <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
+                        <div class="col-sm-6">
                             <div class="banner_img"><img src="/LandingPage/images/Siopao.png" alt="Premium Siopao"></div>
                         </div>
                     </div>
@@ -473,7 +483,7 @@ require_once 'header.php';
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our signature siomai combines premium pork with special seasonings, wrapped in thin, delicate wonton wrappers for the perfect bite.</p>
                             <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '/LandingPage/ordering.php' : '/LandingPage/login.php'; ?>">Order Now</a></div>
                         </div>
-                        <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
+                        <div class="col-sm-6">
                             <div class="banner_img"><img src="/LandingPage/images/Sioma1.png" alt="Delicious Siomai"></div>
                         </div>
                     </div>
@@ -485,7 +495,7 @@ require_once 'header.php';
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our special blend of sauces enhances every bite. Made from premium ingredients and secret recipes passed down through generations.</p>
                             <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '/LandingPage/ordering.php' : '/LandingPage/login.php'; ?>">Order Now</a></div>
                         </div>
-                        <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
+                        <div class="col-sm-6">
                             <div class="banner_img"><img src="/LandingPage/images/Sauces.png" alt="Flavorful Sauces"></div>
                         </div>
                     </div>
@@ -497,7 +507,7 @@ require_once 'header.php';
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Made from the finest ingredients, our noodles maintain perfect texture and absorb flavors beautifully for your favorite noodle dishes.</p>
                             <div class="started_text" data-aos="fade-up" data-aos-delay="400"><a href="<?php echo isset($_SESSION['username']) ? '/LandingPage/ordering.php' : '/LandingPage/login.php'; ?>">Order Now</a></div>
                         </div>
-                        <div class="col-sm-6" data-aos="zoom-in" data-aos-delay="300">
+                        <div class="col-sm-6">
                             <div class="banner_img"><img src="/LandingPage/images/Noodles.png" alt="Quality Noodles"></div>
                         </div>
                     </div>
