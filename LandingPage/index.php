@@ -100,7 +100,7 @@ require_once 'header.php';
     .product-price {
         font-size: 1.25rem;
         font-weight: bold;
-        color: #e46c1d; /* UPDATED */
+        color: #e46c1d;
         margin-bottom: 12px;
     }
     .product-description {
@@ -163,7 +163,7 @@ require_once 'header.php';
         width: 100%;
         height: 100%;
         position: relative;
-        border-left: 5px solid #e46c1d; /* UPDATED */
+        border-left: 5px solid #e46c1d;
     }
     .testimonial-text {
         font-style: italic;
@@ -197,7 +197,7 @@ require_once 'header.php';
         display: none;
         width: 40px;
         height: 40px;
-        background-color: rgba(228, 108, 29, 0.7); /* UPDATED */
+        background-color: rgba(228, 108, 29, 0.7);
         color: white;
         text-align: center;
         line-height: 40px;
@@ -209,7 +209,7 @@ require_once 'header.php';
         visibility: hidden;
     }
     .back-to-top:hover {
-        background-color: rgba(228, 108, 29, 1); /* UPDATED */
+        background-color: rgba(228, 108, 29, 1);
         color: white;
     }
     .back-to-top.visible {
@@ -248,7 +248,7 @@ require_once 'header.php';
     }
     .feature-icon {
         font-size: 2.5rem;
-        color: #e46c1d; /* UPDATED */
+        color: #e46c1d;
         margin-bottom: 15px;
     }
     .feature-title {
@@ -299,7 +299,7 @@ require_once 'header.php';
     .newsletter-form .btn {
         height: 55px;
         border-radius: 0 30px 30px 0 !important;
-        background-color: #e46c1d; /* UPDATED */
+        background-color: #e46c1d;
         color: white;
         border: none;
         padding: 0 30px;
@@ -309,13 +309,13 @@ require_once 'header.php';
         transition: background-color 0.3s ease;
     }
     .newsletter-form .btn:hover {
-        background-color: #c35a10; /* UPDATED */
+        background-color: #c35a10;
     }
 
     /* --- Hero Section / Banner Improvements --- */
     .banner_section {
         padding-top: 60px;
-        padding-bottom: 80px; /* Increased */
+        padding-bottom: 80px;
         position: relative;
         background-color: #f8f9fa;
         overflow: hidden;
@@ -323,8 +323,15 @@ require_once 'header.php';
     .banner_section .container {
         position: relative;
         z-index: 2;
-        padding-left: 40px; /* Added */
-        padding-right: 40px; /* Added */
+        padding-left: 40px;
+        padding-right: 40px;
+    }
+    .banner_section .carousel-item {
+        transition: transform .6s ease-in-out;
+    }
+    .banner_section .carousel-item .row {
+        align-items: center;
+        min-height: 400px; /* NEW */
     }
     .banner_section .row > .col-sm-6:first-child {
         display: flex;
@@ -332,25 +339,24 @@ require_once 'header.php';
         justify-content: center;
         height: 100%;
         padding-right: 30px;
-        min-height: 300px; /* Added */
     }
     .banner_taital {
-        font-size: 2.8rem; /* Adjusted */
+        font-size: 2.8rem;
         font-weight: 700;
         color: #333;
         margin-bottom: 15px;
         line-height: 1.2;
     }
     .banner_text {
-        font-size: 1.05rem; /* Adjusted */
+        font-size: 1.05rem;
         color: #555;
         line-height: 1.6;
-        margin-bottom: 30px; /* Adjusted */
+        margin-bottom: 30px;
     }
     .started_text a {
-        background-color: #e46c1d; /* UPDATED */
+        background-color: #e46c1d;
         color: white;
-        padding: 12px 28px; /* Adjusted */
+        padding: 12px 28px;
         border-radius: 5px;
         text-decoration: none;
         font-weight: 500;
@@ -358,12 +364,14 @@ require_once 'header.php';
         transition: background-color 0.3s ease;
     }
     .started_text a:hover {
-        background-color: #c35a10; /* UPDATED */
+        background-color: #c35a10;
         color: white;
     }
     .banner_img img {
         max-width: 100%;
         height: auto;
+        max-height: 350px;
+        object-fit: contain;
         border-radius: 8px;
     }
     .banner_section .carousel-control-prev,
@@ -371,11 +379,11 @@ require_once 'header.php';
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
-        width: 40px;   /* UPDATED */
-        height: 40px;  /* UPDATED */
-        background-color: rgba(0, 0, 0, 0.3); /* Adjusted */
+        width: 40px;
+        height: 40px;
+        background-color: rgba(0, 0, 0, 0.3);
         border-radius: 50%;
-        opacity: 0.7; /* Adjusted */
+        opacity: 0.7;
         transition: opacity 0.3s ease, background-color 0.3s ease;
         z-index: 5;
     }
@@ -385,44 +393,53 @@ require_once 'header.php';
         background-color: rgba(0, 0, 0, 0.5);
     }
     .banner_section .carousel-control-prev {
-        left: -10px; /* Adjusted */
+        left: -10px;
     }
     .banner_section .carousel-control-next {
-        right: -10px; /* Adjusted */
+        right: -10px;
     }
     .banner_section .carousel-control-prev-icon,
     .banner_section .carousel-control-next-icon {
-        width: 20px; /* UPDATED */
+        width: 20px;
         height: 20px;
         background-size: 100%, 100%;
     }
     .banner_section .carousel-indicators {
         position: absolute;
-        bottom: -50px; /* Adjusted */
+        bottom: -50px;
         left: 50%;
         transform: translateX(-50%);
         margin-left: 0;
         margin-right: 0;
+        padding-left: 0;
+        list-style: none;
+        display: flex;
+        justify-content: center;
         z-index: 15;
     }
     .banner_section .carousel-indicators li {
-        background-color: rgba(0, 0, 0, 0.2); /* Adjusted */
-        border-radius: 50%;
-        width: 10px; /* Adjusted */
-        height: 10px;
-        margin: 0 5px; /* Adjusted */
-        border: none;
-        opacity: 0.6; /* Adjusted */
-        transition: opacity 0.3s ease, background-color 0.3s ease;
+        box-sizing: content-box;
+        flex: 0 1 auto;
+        width: 10px;  /* UPDATED */
+        height: 10px; /* UPDATED */
+        margin: 0 5px;
+        text-indent: -999px;
+        cursor: pointer;
+        background-color: rgba(0, 0, 0, 0.2);
+        background-clip: padding-box;
+        border: 0;
+        border-radius: 50%; /* UPDATED */
+        opacity: 0.6;
+        transition: opacity 0.6s ease, background-color 0.6s ease, width 0.6s ease, height 0.6s ease;
     }
     .banner_section .carousel-indicators .active {
-        background-color: #e46c1d; /* UPDATED */
+        width: 12px;  /* UPDATED */
+        height: 12px; /* UPDATED */
+        background-color: #e46c1d;
         opacity: 1;
-        width: 12px; /* Added */
-        height: 12px;
     }
     .banner_section .carousel {
-        margin-bottom: 60px; /* Adjusted */
+        margin-bottom: 60px;
     }
 
 </style>
@@ -439,7 +456,7 @@ require_once 'header.php';
             </ol>
             <div class="carousel-inner">
                 <div class="carousel-item active">
-                    <div class="row align-items-center">
+                    <div class="row align-items-center"> <!-- Added align-items-center -->
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Premium Siopao</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Experience the authentic taste of our handcrafted siopao, made with premium ingredients and traditional recipes passed down through generations.</p>
@@ -451,7 +468,7 @@ require_once 'header.php';
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <div class="row align-items-center">
+                    <div class="row align-items-center"> <!-- Added align-items-center -->
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Delicious Siomai</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our signature siomai combines premium pork with special seasonings, wrapped in thin, delicate wonton wrappers for the perfect bite.</p>
@@ -463,7 +480,7 @@ require_once 'header.php';
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <div class="row align-items-center">
+                    <div class="row align-items-center"> <!-- Added align-items-center -->
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Flavorful Sauces</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our special blend of sauces enhances every bite. Made from premium ingredients and secret recipes passed down through generations.</p>
@@ -475,7 +492,7 @@ require_once 'header.php';
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <div class="row align-items-center">
+                    <div class="row align-items-center"> <!-- Added align-items-center -->
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Quality Noodles</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Made from the finest ingredients, our noodles maintain perfect texture and absorb flavors beautifully for your favorite noodle dishes.</p>
