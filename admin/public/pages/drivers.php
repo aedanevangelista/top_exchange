@@ -185,7 +185,7 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
         .filter-section select { padding: 6px 10px; font-size: 14px; margin-bottom: 0; margin-right: 10px; } /* Added margin-right */
         .accounts-table-container { overflow-x: auto; background-color: #fff; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); } /* Added background/shadow */
         .accounts-table { width: 100%; border-collapse: collapse; }
-        .accounts-table th, .accounts-table td { padding: 10px 12px; border-bottom: 1px solid #dee2e6; text-align: left; vertical-align: middle; }
+        .accounts-table th, .accounts-table td { padding: 10px 12px; border-bottom: 1px solid #dee2e6; text-align: center; vertical-align: middle; }
         .accounts-table th { background-color:rgb(32, 32, 32); font-weight: 600; border-top: 1px solid #dee2e6; }
         .accounts-table tr:last-child td { border-bottom: none; }
         .accounts-table tr:hover { background-color: #f1f3f5; }
