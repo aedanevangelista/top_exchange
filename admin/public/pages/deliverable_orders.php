@@ -1272,7 +1272,6 @@ $statusOptions = ['For Delivery', 'In Transit'];
         function assignDriver(driverIdParam) { 
     $('#driverConfirmationModal').hide(); 
     
-    // For debugging
     console.log("Assigning driver with PO Number:", currentPoNumber);
     console.log("Selected Driver ID:", driverIdParam);
     
@@ -1289,7 +1288,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
         return;
     }
     
-    // Create data object separately for clarity
+    // Create data object
     const requestData = {
         po_number: currentPoNumber,
         driver_id: driverIdParam
@@ -1308,13 +1307,16 @@ $statusOptions = ['For Delivery', 'In Transit'];
         return response.json();
     })
     .then(data => {
-        console.log("Response data:", data);
+        // Improved logging - show the full object details
+        console.log("Response data (full):", JSON.stringify(data)); 
+        
         if (data.success) {
             showToast(currentDriverId > 0 ? 'Driver changed successfully' : 'Driver assigned successfully', 'success');
             setTimeout(() => { window.location.reload(); }, 1000);
         } else {
+            // More detailed error message
+            console.error("Backend error details:", JSON.stringify(data));
             showToast('Error: ' + (data.message || 'Unknown error assigning driver'), 'error');
-            console.error("Backend error:", data);
         }
     })
     .catch(error => {
