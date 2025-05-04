@@ -332,8 +332,6 @@ require_once 'header.php';
     .banner_section .carousel-item .row {
         align-items: center;
         min-height: 400px;
-        padding-left:40px;
-        padding-right:40px;
     }
     /* Text column */
     .banner_section .row > .col-sm-6:first-child {
