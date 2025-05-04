@@ -17,6 +17,11 @@ require_once 'header.php';
 
 <!-- Added CSS Styles -->
 <style>
+    /* Prevent horizontal scroll */
+    body {
+        overflow-x: hidden;
+    }
+
     .cream_section .row {
         display: flex;
         flex-wrap: wrap;
@@ -318,7 +323,7 @@ require_once 'header.php';
         padding-bottom: 80px;
         position: relative;
         background-color: #f8f9fa;
-        overflow: hidden;
+        overflow: hidden; /* Crucial for containing arrows */
     }
     .banner_section .container {
         position: relative;
@@ -328,11 +333,10 @@ require_once 'header.php';
     }
     .banner_section .carousel-item {
         transition: transform .6s ease-in-out;
-        min-height: 400px; /* Base min-height */
+        min-height: 400px;
     }
     .banner_section .carousel-item .row {
         align-items: center;
-        /* min-height removed from here */
     }
     .banner_section .row > .col-sm-6:first-child {
         display: flex;
@@ -507,19 +511,21 @@ require_once 'header.php';
         }
         .banner_section .carousel-item {
             min-height: 550px; /* ** Adjust this value ** */
-            text-align: center;
+            /* text-align: center; Removed */
         }
         .banner_section .carousel-item .row {
-            align-items: normal; /* Reset */
+            align-items: normal;
         }
         .banner_section .row > .col-sm-6:first-child {
             padding-right: 0;
             min-height: auto;
-            text-align: center;
+            text-align: left; /* ** Ensure left align ** */
             margin-bottom: 20px;
         }
          .banner_section .carousel-item .row > .col-sm-6:last-child {
              text-align: center;
+             padding-left: 15px;
+             padding-right: 15px;
          }
         .banner_taital {
             font-size: 2rem;
@@ -536,12 +542,14 @@ require_once 'header.php';
         }
          .banner_img img {
             max-height: 200px;
+            width: auto; /* Added */
+            max-width: 100%; /* Added */
          }
         .banner_section .carousel-control-prev {
-            left: -5px;
+            left: 0px; /* Adjusted */
         }
         .banner_section .carousel-control-next {
-            right: -5px;
+            right: 0px; /* Adjusted */
         }
         .banner_section .carousel-indicators {
             bottom: -40px;

@@ -485,8 +485,8 @@ function truncate($text, $max = 15) {
         .modal-footer button { padding: 8px 16px; font-size: 14px; min-width: 100px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; border: none; margin: 0; font-weight: 500; }
         .save-btn { background-color: #4a90e2; color: white; }
         .save-btn:hover { background-color: #357abf; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .cancel-btn { background-color:rgb(80, 80, 80); color: #333; border: 1px solid #ccc; }
-        .cancel-btn:hover { background-color:rgb(53, 53, 53); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .cancel-btn { background-color:rgb(102, 102, 102); color: #333; border: 1px solid #ccc; }
+        .cancel-btn:hover { background-color:rgb(82, 82, 82); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .status-active { color: #28a745; font-weight: bold; }
         .status-pending { color: #ffc107; font-weight: bold; }
         .status-rejected { color: #dc3545; font-weight: bold; }
