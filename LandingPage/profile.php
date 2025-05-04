@@ -67,7 +67,8 @@ if ($result->num_rows > 0) {
                     COUNT(*) as total_orders,
                     SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending_orders,
                     SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed_orders,
-                    SUM(total_amount) as total_spent
+                    SUM(total_amount) as total_spent,
+                    SUM(CASE WHEN status IN ('Active', 'Completed') THEN total_amount ELSE 0 END) as current_balance
                    FROM orders
                    WHERE username = ?";
     $orderStmt = $conn->prepare($orderQuery);
@@ -77,6 +78,8 @@ if ($result->num_rows > 0) {
 
     if ($orderResult->num_rows > 0) {
         $orderStats = $orderResult->fetch_assoc();
+        // Update the balance to include active and completed orders
+        $balance = $orderStats['current_balance'] ?? 0;
     }
 
     // Get recent orders (limit to 3)
@@ -406,9 +409,9 @@ $conn->close();
                 </div>
                 <div class="col-md-4 text-center text-md-end mt-3 mt-md-0">
                     <div class="d-flex flex-column align-items-center align-items-md-end">
-                        <span class="text-white-50 mb-1" style="opacity: 0.8;">Account Balance</span>
+                        <span class="text-white-50 mb-1" style="opacity: 0.8;">Current Balance</span>
                         <span class="balance-display">₱<?php echo number_format($balance, 2); ?></span>
-                        <div class="mt-2">
+                        <div class="mt-1">
                             <span class="payment-status
                                 <?php
                                 if ($paymentStatus === 'Fully Paid') echo 'status-paid';
@@ -581,10 +584,11 @@ $conn->close();
                                                     </span>
                                                 </td>
                                                 <td class="text-end">
-                                                    <a href="/LandingPage/order_details.php?po_number=<?php echo urlencode($order['po_number']); ?>"
-                                                       class="btn btn-sm btn-outline-primary">
+                                                    <button type="button"
+                                                       class="btn btn-sm btn-outline-primary order-details-btn"
+                                                       data-po-number="<?php echo urlencode($order['po_number']); ?>">
                                                         Details
-                                                    </a>
+                                                    </button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -667,6 +671,134 @@ $conn->close();
         </div>
     </div>
 
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-file-invoice me-2"></i> Order Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="orderDetailsLoading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading order details...</p>
+                    </div>
+                    <div id="orderDetailsContent" class="d-none">
+                        <!-- Order Information -->
+                        <div class="card mb-4 border-0 shadow-sm">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>Order Information</span>
+                                <span id="orderStatus" class="badge rounded-pill"></span>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="fw-bold mb-1">Order Number</div>
+                                            <div id="orderNumber" class="text-muted"></div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="fw-bold mb-1">Order Date</div>
+                                            <div id="orderDate" class="text-muted"></div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="fw-bold mb-1">Delivery Date</div>
+                                            <div id="deliveryDate" class="text-muted"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="fw-bold mb-1">Payment Method</div>
+                                            <div id="paymentMethod" class="text-muted"></div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="fw-bold mb-1">Shipping Address</div>
+                                            <div id="shippingAddress" class="text-muted"></div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="fw-bold mb-1">Notes</div>
+                                            <div id="orderNotes" class="text-muted"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Order Items -->
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header">
+                                <span>Order Items</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Item</th>
+                                                <th>Quantity</th>
+                                                <th>Unit Price</th>
+                                                <th class="text-end">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="orderItemsTable">
+                                            <!-- Order items will be inserted here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Order Summary -->
+                        <div class="card mt-4 border-0 shadow-sm">
+                            <div class="card-header">
+                                <span>Order Summary</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="bg-light p-3 rounded">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Subtotal</span>
+                                        <span id="orderSubtotal"></span>
+                                    </div>
+                                    <div id="shippingFeeRow" class="d-flex justify-content-between mb-2 d-none">
+                                        <span>Shipping Fee</span>
+                                        <span id="shippingFee"></span>
+                                    </div>
+                                    <div id="taxRow" class="d-flex justify-content-between mb-2 d-none">
+                                        <span>Tax</span>
+                                        <span id="tax"></span>
+                                    </div>
+                                    <div id="discountRow" class="d-flex justify-content-between mb-2 d-none">
+                                        <span>Discount</span>
+                                        <span id="discount"></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between fw-bold pt-2 border-top mt-2">
+                                        <span>Total</span>
+                                        <span id="orderTotal"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="orderDetailsError" class="d-none">
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <span id="errorMessage">Failed to load order details.</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a id="viewFullOrderLink" href="#" class="btn btn-primary" target="_blank">
+                        <i class="fas fa-external-link-alt me-2"></i> View Full Details
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
@@ -685,6 +817,151 @@ $conn->close();
                     downloadLink.href = proofSrc;
                     downloadLink.setAttribute('download', proofSrc.split('/').pop());
                 });
+            }
+
+            // Order details functionality
+            const orderDetailsButtons = document.querySelectorAll('.order-details-btn');
+            const orderDetailsModal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
+
+            orderDetailsButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const poNumber = this.getAttribute('data-po-number');
+                    fetchOrderDetails(poNumber);
+                    document.getElementById('viewFullOrderLink').href = `order_details.php?po_number=${poNumber}`;
+                    orderDetailsModal.show();
+                });
+            });
+
+            function fetchOrderDetails(poNumber) {
+                // Show loading state
+                document.getElementById('orderDetailsLoading').classList.remove('d-none');
+                document.getElementById('orderDetailsContent').classList.add('d-none');
+                document.getElementById('orderDetailsError').classList.add('d-none');
+
+                // Fetch order details
+                fetch(`get_order_details.php?po_number=${poNumber}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            showError(data.error);
+                            return;
+                        }
+
+                        // Populate order details
+                        populateOrderDetails(data);
+
+                        // Hide loading, show content
+                        document.getElementById('orderDetailsLoading').classList.add('d-none');
+                        document.getElementById('orderDetailsContent').classList.remove('d-none');
+                    })
+                    .catch(error => {
+                        console.error('Error fetching order details:', error);
+                        showError('Failed to load order details. Please try again later.');
+                    });
+            }
+
+            function populateOrderDetails(data) {
+                const order = data.order;
+                const items = data.items;
+
+                // Order information
+                document.getElementById('orderNumber').textContent = order.po_number;
+                document.getElementById('orderDate').textContent = order.formatted_order_date;
+                document.getElementById('deliveryDate').textContent = order.formatted_delivery_date;
+                document.getElementById('paymentMethod').textContent = order.payment_method || 'Not specified';
+                document.getElementById('shippingAddress').textContent = order.shipping_address || 'Not specified';
+                document.getElementById('orderNotes').textContent = order.notes || 'No notes';
+
+                // Order status
+                const orderStatus = document.getElementById('orderStatus');
+                orderStatus.textContent = order.status;
+                orderStatus.className = 'badge rounded-pill';
+
+                if (order.status === 'Pending') {
+                    orderStatus.classList.add('badge-pending');
+                } else if (order.status === 'Active') {
+                    orderStatus.classList.add('badge-active');
+                } else if (order.status === 'Completed') {
+                    orderStatus.classList.add('badge-completed');
+                } else if (order.status === 'For Delivery') {
+                    orderStatus.classList.add('badge-delivery');
+                } else if (order.status === 'Rejected') {
+                    orderStatus.classList.add('badge-rejected');
+                }
+
+                // Order items
+                const orderItemsTable = document.getElementById('orderItemsTable');
+                orderItemsTable.innerHTML = '';
+
+                if (items.length > 0) {
+                    items.forEach(item => {
+                        const row = document.createElement('tr');
+
+                        const nameCell = document.createElement('td');
+                        nameCell.innerHTML = `<div class="fw-medium">${item.item_name}</div>`;
+                        if (item.item_description) {
+                            nameCell.innerHTML += `<small class="text-muted">${item.item_description}</small>`;
+                        }
+
+                        const quantityCell = document.createElement('td');
+                        quantityCell.textContent = item.quantity;
+
+                        const priceCell = document.createElement('td');
+                        priceCell.textContent = `₱${item.formatted_unit_price}`;
+
+                        const totalCell = document.createElement('td');
+                        totalCell.textContent = `₱${item.formatted_item_total}`;
+                        totalCell.className = 'text-end';
+
+                        row.appendChild(nameCell);
+                        row.appendChild(quantityCell);
+                        row.appendChild(priceCell);
+                        row.appendChild(totalCell);
+
+                        orderItemsTable.appendChild(row);
+                    });
+                } else {
+                    const emptyRow = document.createElement('tr');
+                    const emptyCell = document.createElement('td');
+                    emptyCell.colSpan = 4;
+                    emptyCell.className = 'text-center py-4';
+                    emptyCell.textContent = 'No items found for this order.';
+                    emptyRow.appendChild(emptyCell);
+                    orderItemsTable.appendChild(emptyRow);
+                }
+
+                // Order summary
+                document.getElementById('orderSubtotal').textContent = `₱${order.formatted_subtotal}`;
+                document.getElementById('orderTotal').textContent = `₱${order.formatted_total}`;
+
+                // Optional fields
+                if (order.shipping_fee) {
+                    document.getElementById('shippingFee').textContent = `₱${order.formatted_shipping_fee}`;
+                    document.getElementById('shippingFeeRow').classList.remove('d-none');
+                } else {
+                    document.getElementById('shippingFeeRow').classList.add('d-none');
+                }
+
+                if (order.tax) {
+                    document.getElementById('tax').textContent = `₱${order.formatted_tax}`;
+                    document.getElementById('taxRow').classList.remove('d-none');
+                } else {
+                    document.getElementById('taxRow').classList.add('d-none');
+                }
+
+                if (order.discount) {
+                    document.getElementById('discount').textContent = `-₱${order.formatted_discount}`;
+                    document.getElementById('discountRow').classList.remove('d-none');
+                } else {
+                    document.getElementById('discountRow').classList.add('d-none');
+                }
+            }
+
+            function showError(message) {
+                document.getElementById('errorMessage').textContent = message;
+                document.getElementById('orderDetailsLoading').classList.add('d-none');
+                document.getElementById('orderDetailsContent').classList.add('d-none');
+                document.getElementById('orderDetailsError').classList.remove('d-none');
             }
         });
     </script>

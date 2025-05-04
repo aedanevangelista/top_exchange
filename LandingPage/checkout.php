@@ -153,6 +153,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Close statement
         $stmt->close();
 
+        // Set a flag in session to indicate a new order was placed
+        $_SESSION['new_order'] = true;
+        $_SESSION['order_id'] = $orderId;
+
         // Redirect to confirmation page
         header("Location: order_confirmation.php?id=" . $orderId);
         exit();
@@ -253,7 +257,9 @@ if (isset($_SESSION['error'])) {
     <link rel="stylesheet" type="text/css" href="/LandingPage/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="/LandingPage/css/style.css">
     <link rel="stylesheet" href="/LandingPage/css/responsive.css">
-    <link rel="icon" href="/LandingPage/images/fevicon.png" type="image/gif" />
+    <link rel="icon" href="images/fevicon.png" type="image/gif" />
+    <!-- Fallback favicon -->
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
@@ -527,6 +533,51 @@ if (isset($_SESSION['error'])) {
 
         .confirmation-modal .btn-cancel:hover {
             background-color: #f1f1f1;
+        }
+
+        /* Password confirmation styling */
+        .confirmation-modal .form-group {
+            text-align: left;
+        }
+
+        .confirmation-modal .form-control {
+            border-radius: var(--border-radius);
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            transition: var(--transition);
+        }
+
+        .confirmation-modal .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(154, 116, 50, 0.25);
+        }
+
+        .confirmation-modal .form-control.is-invalid {
+            border-color: var(--accent-color);
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(.375em + .1875rem) center;
+            background-size: calc(.75em + .375rem) calc(.75em + .375rem);
+        }
+
+        .confirmation-modal .invalid-feedback {
+            display: none;
+            width: 100%;
+            margin-top: .25rem;
+            font-size: 80%;
+            color: var(--accent-color);
+        }
+
+        .confirmation-modal .form-control.is-invalid ~ .invalid-feedback {
+            display: block;
+        }
+
+        .confirmation-modal .form-control.is-valid {
+            border-color: #28a745;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(.375em + .1875rem) center;
+            background-size: calc(.75em + .375rem) calc(.75em + .375rem);
         }
 
         /* Payment info box styling */
@@ -899,7 +950,24 @@ if (isset($_SESSION['error'])) {
                         </div>
                     </div>
 
-                    <div class="text-center">
+                    <div class="form-group mt-4">
+                        <label for="confirm_password" class="text-left d-block">Enter your password to confirm:</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="confirm_password" placeholder="Your password" required>
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn">
+                                    <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="password_error" class="invalid-feedback">Please enter your password</div>
+                        <div class="custom-control custom-checkbox mt-2">
+                            <input type="checkbox" class="custom-control-input" id="rememberPassword">
+                            <label class="custom-control-label" for="rememberPassword">Remember password for future orders</label>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-3">
                         <button type="button" class="btn btn-secondary btn-cancel" data-dismiss="modal">Cancel</button>
                         <button type="button" id="confirmOrderBtn" class="btn btn-primary btn-confirm">Confirm Order</button>
                     </div>
@@ -926,6 +994,67 @@ if (isset($_SESSION['error'])) {
     <!-- sidebar -->
     <script src="/LandingPage/js/jquery.mCustomScrollbar.concat.min.js"></script>
     <script src="/LandingPage/js/custom.js"></script>
+    <!-- Password Manager -->
+    <script>
+    /**
+     * Password Manager for Order Confirmation
+     *
+     * This script handles the secure storage and retrieval of passwords
+     * for the order confirmation process.
+     */
+
+    // Use a namespace to avoid conflicts
+    const PasswordManager = {
+        // Key for storing the password in localStorage
+        storageKey: 'order_confirm_pwd',
+
+        // Save password to localStorage (encrypted)
+        savePassword: function(password) {
+            if (!password) return false;
+
+            try {
+                // Simple encryption (not truly secure, but better than plaintext)
+                // In a production environment, consider using a proper encryption library
+                const encryptedPassword = btoa(password.split('').reverse().join(''));
+                localStorage.setItem(this.storageKey, encryptedPassword);
+                return true;
+            } catch (e) {
+                console.error('Error saving password:', e);
+                return false;
+            }
+        },
+
+        // Get password from localStorage
+        getPassword: function() {
+            try {
+                const encryptedPassword = localStorage.getItem(this.storageKey);
+                if (!encryptedPassword) return null;
+
+                // Decrypt the password
+                return atob(encryptedPassword).split('').reverse().join('');
+            } catch (e) {
+                console.error('Error retrieving password:', e);
+                return null;
+            }
+        },
+
+        // Clear saved password
+        clearPassword: function() {
+            try {
+                localStorage.removeItem(this.storageKey);
+                return true;
+            } catch (e) {
+                console.error('Error clearing password:', e);
+                return false;
+            }
+        },
+
+        // Check if a password is saved
+        hasPassword: function() {
+            return localStorage.getItem(this.storageKey) !== null;
+        }
+    };
+    </script>
 
     <script>
         // Initialize AOS animation
@@ -987,21 +1116,140 @@ if (isset($_SESSION['error'])) {
 
                 // Show confirmation modal
                 $('#confirmationModal').modal('show');
+
+                // Check if we have a saved password
+                if (PasswordManager.hasPassword()) {
+                    // Pre-fill the password field
+                    $('#confirm_password').val(PasswordManager.getPassword());
+                    // Trigger input event to validate the password
+                    $('#confirm_password').trigger('input');
+                    // Check the remember password checkbox
+                    $('#rememberPassword').prop('checked', true);
+                }
             });
 
             // Handle confirm order button click
             $('#confirmOrderBtn').click(function() {
-                // Disable button to prevent multiple clicks
-                $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+                // Get the password
+                const password = $('#confirm_password').val();
 
-                // Submit the form
-                $('#checkoutForm').submit();
+                // Validate password
+                if (!password) {
+                    $('#confirm_password').addClass('is-invalid');
+                    $('#password_error').text('Please enter your password');
+                    return;
+                }
+
+                // Disable button to prevent multiple clicks
+                $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Verifying...');
+
+                // Verify password via AJAX
+                $.ajax({
+                    url: 'verify_password.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        password: password
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            // Check if we should remember the password
+                            if ($('#rememberPassword').is(':checked')) {
+                                PasswordManager.savePassword(password);
+                            } else {
+                                // Clear any saved password
+                                PasswordManager.clearPassword();
+                            }
+
+                            // Password verified, submit the form
+                            $('#checkoutForm').submit();
+                        } else {
+                            // Show error message
+                            $('#confirm_password').addClass('is-invalid');
+                            $('#password_error').text(response.message || 'Incorrect password');
+
+                            // Re-enable the button
+                            $('#confirmOrderBtn').prop('disabled', false).html('Confirm Order');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        // Show error message
+                        showPopup('Error verifying password. Please try again.', true);
+
+                        // Re-enable the button
+                        $('#confirmOrderBtn').prop('disabled', false).html('Confirm Order');
+                    }
+                });
             });
 
             // Remove invalid class when user starts typing
             $('input, textarea, select').on('input change', function() {
                 if ($(this).val()) {
                     $(this).removeClass('is-invalid');
+                }
+            });
+
+            // Live password validation
+            let passwordCheckTimeout;
+            $('#confirm_password').on('input', function() {
+                const password = $(this).val();
+
+                // Clear any existing timeout
+                clearTimeout(passwordCheckTimeout);
+
+                // Don't check empty passwords
+                if (!password) {
+                    return;
+                }
+
+                // Set a small delay to avoid too many requests
+                passwordCheckTimeout = setTimeout(function() {
+                    // Check password via AJAX
+                    $.ajax({
+                        url: 'verify_password.php',
+                        type: 'POST',
+                        dataType: 'json',
+                        data: {
+                            password: password
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Password is correct
+                                $('#confirm_password').removeClass('is-invalid').addClass('is-valid');
+                                $('#password_error').text('');
+                            } else {
+                                // Password is incorrect
+                                $('#confirm_password').removeClass('is-valid').addClass('is-invalid');
+                                $('#password_error').text(response.message || 'Incorrect password');
+                            }
+                        }
+                    });
+                }, 500); // 500ms delay
+            });
+
+            // Clear password field and error when modal is closed
+            $('#confirmationModal').on('hidden.bs.modal', function() {
+                $('#confirm_password').val('').removeClass('is-invalid is-valid');
+                $('#password_error').text('Please enter your password');
+                $('#confirmOrderBtn').prop('disabled', false).html('Confirm Order');
+                // Reset password visibility
+                $('#confirm_password').attr('type', 'password');
+                $('#togglePasswordIcon').removeClass('fa-eye-slash').addClass('fa-eye');
+                // Clear any pending password check
+                clearTimeout(passwordCheckTimeout);
+            });
+
+            // Toggle password visibility
+            $('#togglePasswordBtn').click(function() {
+                const passwordInput = $('#confirm_password');
+                const icon = $('#togglePasswordIcon');
+
+                if (passwordInput.attr('type') === 'password') {
+                    passwordInput.attr('type', 'text');
+                    icon.removeClass('fa-eye').addClass('fa-eye-slash');
+                } else {
+                    passwordInput.attr('type', 'password');
+                    icon.removeClass('fa-eye-slash').addClass('fa-eye');
                 }
             });
         });

@@ -119,51 +119,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $dbUser = $result->fetch_assoc();
             $storedPassword = $dbUser['password'];
 
-            // Debug: Log the comparison values (remove in production)
-            error_log("Current password entered: " . $currentPassword);
-            error_log("Stored password in DB: " . $storedPassword);
+            // Debug: Log for troubleshooting
+            error_log("Verifying password for user: " . $currentUser);
+            error_log("Password hash type: " . (password_get_info($storedPassword)['algo'] ? 'PHP password_hash' : 'Not PHP password_hash'));
 
             // Try multiple comparison methods to ensure compatibility
             $passwordMatches = false;
 
-            // Method 1: Direct comparison with trimming
-            if (trim($currentPassword) === trim($storedPassword)) {
+            // Method 1: Check if password is hashed with password_hash (recommended)
+            if (password_verify($currentPassword, $storedPassword)) {
+                $passwordMatches = true;
+                error_log("Password matched with password_verify");
+            }
+            // Method 2: Direct comparison with trimming
+            else if (trim($currentPassword) === trim($storedPassword)) {
                 $passwordMatches = true;
                 error_log("Password matched with direct comparison");
             }
-            // Method 2: Case-insensitive comparison (in case of case sensitivity issues)
+            // Method 3: Case-insensitive comparison (in case of case sensitivity issues)
             else if (strtolower(trim($currentPassword)) === strtolower(trim($storedPassword))) {
                 $passwordMatches = true;
                 error_log("Password matched with case-insensitive comparison");
             }
-            // Method 3: Check if password is stored as MD5 hash
+            // Method 4: Check if password is stored as MD5 hash
             else if (md5($currentPassword) === trim($storedPassword)) {
                 $passwordMatches = true;
                 error_log("Password matched with MD5 hash comparison");
             }
-            // Method 4: Check if password is stored with some other encoding
+            // Method 5: Check if password is stored with some other encoding
             else if (base64_encode($currentPassword) === trim($storedPassword)) {
                 $passwordMatches = true;
                 error_log("Password matched with base64 encoding comparison");
             }
 
-            if ($passwordMatches) {
-                if ($newPassword === $confirmPassword) {
-                    // Update the password
-                    $updateQuery = "UPDATE $table SET password = ? WHERE username = ?";
-                    $stmt = $conn->prepare($updateQuery);
-                    $stmt->bind_param("ss", $newPassword, $currentUser);
-
-                    if ($stmt->execute()) {
-                        $successMessage = "Password changed successfully!";
-                    } else {
-                        $errorMessage = "Error changing password: " . $conn->error;
-                    }
-                } else {
-                    $errorMessage = "New passwords do not match!";
-                }
-            } else {
-                // If all comparison methods fail, try a fallback approach
+            // If all previous methods fail, try a fallback direct database query
+            if (!$passwordMatches) {
                 // This is a special case for this specific system
                 $fallbackQuery = "SELECT * FROM $table WHERE username = ? AND password = ?";
                 $fallbackStmt = $conn->prepare($fallbackQuery);
@@ -173,27 +163,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($fallbackResult && $fallbackResult->num_rows > 0) {
                     // Fallback method worked
+                    $passwordMatches = true;
                     error_log("Password matched with direct database query");
+                } else {
+                    error_log("Password verification failed with all methods for user: " . $currentUser);
+                }
+            }
 
-                    if ($newPassword === $confirmPassword) {
-                        // Update the password
-                        $updateQuery = "UPDATE $table SET password = ? WHERE username = ?";
-                        $stmt = $conn->prepare($updateQuery);
-                        $stmt->bind_param("ss", $newPassword, $currentUser);
+            if ($passwordMatches) {
+                if ($newPassword === $confirmPassword) {
+                    // Hash the new password before storing it
+                    $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
 
-                        if ($stmt->execute()) {
-                            $successMessage = "Password changed successfully!";
-                        } else {
-                            $errorMessage = "Error changing password: " . $conn->error;
-                        }
+                    // Update the password with the hashed version
+                    $updateQuery = "UPDATE $table SET password = ? WHERE username = ?";
+                    $stmt = $conn->prepare($updateQuery);
+                    $stmt->bind_param("ss", $hashedPassword, $currentUser);
+
+                    if ($stmt->execute()) {
+                        $successMessage = "Password changed successfully!";
+                        error_log("Password updated successfully for user: " . $currentUser);
                     } else {
-                        $errorMessage = "New passwords do not match!";
+                        $errorMessage = "Error changing password: " . $conn->error;
+                        error_log("Error updating password: " . $conn->error);
                     }
                 } else {
-                    // Add more detailed error message
-                    $errorMessage = "Current password is incorrect! Please try again. Make sure you're using the correct password for your account.";
-                    error_log("Password verification failed for user: " . $currentUser);
+                    $errorMessage = "New passwords do not match!";
                 }
+            } else {
+                // Add more detailed error message
+                $errorMessage = "Current password is incorrect! Please try again. Make sure you're using the correct password for your account.";
+                error_log("Password verification failed for user: " . $currentUser);
             }
         }
     }

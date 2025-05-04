@@ -1,6 +1,20 @@
 <?php
-session_start();
+// Set page-specific variables before including header
+$pageTitle = "Order Confirmation | Top Exchange Food Corp";
+$pageDescription = "Order confirmation for Top Food Exchange Corp. - Premium Filipino food products since 1998.";
+
+// Start the session (will be ignored if already started in header.php)
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
 include_once('db_connection.php');
+
+// Check if user is logged in
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");
+    exit();
+}
 
 // Check if order ID is provided
 if (!isset($_GET['id'])) {
@@ -10,6 +24,18 @@ if (!isset($_GET['id'])) {
 
 $orderId = $_GET['id'];
 $username = $_SESSION['username'];
+
+// Include the email sending functionality
+require_once 'send_order_email.php';
+
+// Check if this is a new order that needs an email sent
+$sendEmail = false;
+if (isset($_SESSION['new_order']) && $_SESSION['new_order'] === true && isset($_SESSION['order_id']) && $_SESSION['order_id'] == $orderId) {
+    $sendEmail = true;
+    // Clear the flags to prevent sending duplicate emails on page refresh
+    $_SESSION['new_order'] = false;
+    unset($_SESSION['order_id']);
+}
 
 // Fetch order details
 $stmt = $conn->prepare("SELECT * FROM orders WHERE id = ? AND username = ?");
@@ -41,21 +67,22 @@ if (!empty($order['orders'])) {
         error_log("Raw JSON: " . $order['orders']);
     }
 }
+
+// Send order confirmation email if this is a new order
+if ($sendEmail) {
+    $emailSent = sendOrderConfirmationEmail($conn, $orderId, $username);
+
+    if ($emailSent) {
+        // Set a success message to display to the user
+        $emailSuccessMessage = "A confirmation email has been sent to your registered email address.";
+    } else {
+        // Set an error message
+        $emailErrorMessage = "We couldn't send a confirmation email. Please contact customer support if you don't receive your order details.";
+    }
+}
 ?>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Order Confirmation | Top Exchange Food Corp</title>
-    <link rel="stylesheet" type="text/css" href="/LandingPage/css/bootstrap.min.css">
-    <link rel="stylesheet" type="text/css" href="/LandingPage/css/style.css">
-    <link rel="stylesheet" href="/LandingPage/css/responsive.css">
-    <link rel="icon" href="/LandingPage/images/fevicon.png" type="image/gif" />
-    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<?php include 'header.php'; ?>
     <style>
         :root {
             --primary-color: #9a7432;
@@ -388,49 +415,7 @@ if (!empty($order['orders'])) {
     </style>
 </head>
 <body>
-    <div class="header_section">
-        <div class="container">
-            <nav class="navbar navbar-expand-lg navbar-light bg-light">
-                <a class="navbar-brand" href="index.php"><img src="/LandingPage/images/resized_food_corp_logo.png" alt="Top Food Exchange Corp. Logo"></a>
-                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <ul class="navbar-nav ml-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/LandingPage/index.php">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/LandingPage/about.php">About</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/LandingPage/ordering.php">Products</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/LandingPage/contact.php">Contact Us</a>
-                        </li>
-                    </ul>
-                    <form class="form-inline my-2 my-lg-0">
-                        <div class="login_bt">
-                            <?php if (isset($_SESSION['username'])): ?>
-                                <a href="#" class="cart-button" data-toggle="modal" data-target="#cartModal">
-                                    <span style="color: #222222;"><i class="fa fa-shopping-cart" aria-hidden="true"></i></span>
-                                    <span id="cart-count" class="badge badge-danger">0</span>
-                                </a>
-                                <a href="/LandingPage/logout.php">Logout (<?php echo htmlspecialchars($_SESSION['username']); ?>)
-                                    <span style="color: #222222;"><i class="fa fa-sign-out" aria-hidden="true"></i></span>
-                                </a>
-                            <?php else: ?>
-                                <a href="/LandingPage/login.php">Login
-                                    <span style="color: #222222;"><i class="fa fa-user" aria-hidden="true"></i></span>
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    </form>
-                </div>
-            </nav>
-        </div>
-    </div>
+
 
     <div class="confirmation-container">
         <!-- Order Steps -->
@@ -539,7 +524,13 @@ if (!empty($order['orders'])) {
         </div>
 
         <div style="text-align: center; margin-top: 30px; color: #666; font-size: 0.9rem;">
-            <p>A confirmation email has been sent to your registered email address.</p>
+            <?php if (isset($emailSuccessMessage)): ?>
+                <p class="email-success"><i class="fas fa-envelope-open-text" style="color: #28a745; margin-right: 5px;"></i> <?php echo $emailSuccessMessage; ?></p>
+            <?php elseif (isset($emailErrorMessage)): ?>
+                <p class="email-error" style="color: #dc3545;"><i class="fas fa-exclamation-circle" style="margin-right: 5px;"></i> <?php echo $emailErrorMessage; ?></p>
+            <?php else: ?>
+                <p>If you need a copy of your order, please contact our customer service.</p>
+            <?php endif; ?>
             <p>If you have any questions about your order, please contact our customer service at <strong>support@topexchange.com</strong></p>
         </div>
     </div>
