@@ -1269,57 +1269,65 @@ $statusOptions = ['For Delivery', 'In Transit'];
 
         // Function to make the backend call (Handles both Assign/Change)
         // *** MODIFIED TO ACCEPT driverIdParam ***
-        function assignDriver(driverIdParam) { // Accept the confirmed driver ID as a parameter
-            $('#driverConfirmationModal').hide(); // Hide confirmation modal first
-
-            // --- ADDED VALIDATION ---
-            if (!currentPoNumber) {
-                 showToast('Error: Order PO Number is missing.', 'error');
-                 console.error("assignDriver error: currentPoNumber is not set.");
-                 return;
-            }
-            if (!driverIdParam || driverIdParam === 0 || isNaN(driverIdParam)) {
-                 showToast('Error: Invalid Driver ID selected.', 'error');
-                 console.error("assignDriver error: driverIdParam is invalid:", driverIdParam);
-                 return;
-            }
-            // --- END VALIDATION ---
-
-
-            // Send request to assign driver using the passed driverIdParam and global currentPoNumber
-            fetch('/backend/assign_driver.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    po_number: currentPoNumber, // Use the globally set PO number
-                    driver_id: driverIdParam   // Use the ID passed as a parameter
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Use currentDriverId (original driver ID) to determine message
-                    showToast(currentDriverId > 0 ? 'Driver changed successfully' : 'Driver assigned successfully', 'success');
-                    setTimeout(() => { window.location.reload(); }, 1000);
-                } else {
-                    // Display specific backend error message
-                    showToast('Error: ' + (data.message || 'Unknown error assigning driver'), 'error');
-                    console.error("Backend error:", data); // Log backend error details
-                }
-            })
-            .catch(error => {
-                console.error('Assign Driver Fetch Error:', error);
-                showToast('Error: Failed to communicate with server', 'error');
-            })
-            .finally(() => {
-                 // Reset global state after completion or error
-                 currentPoNumber = '';
-                 currentDriverId = 0;
-                 // Reset the confirm button's onclick to prevent accidental calls
-                 const confirmBtn = document.querySelector('#driverConfirmationModal .confirm-yes');
-                 if (confirmBtn) confirmBtn.onclick = null;
-            });
+        function assignDriver(driverIdParam) { 
+    $('#driverConfirmationModal').hide(); 
+    
+    // For debugging
+    console.log("Assigning driver with PO Number:", currentPoNumber);
+    console.log("Selected Driver ID:", driverIdParam);
+    
+    // Validation
+    if (!currentPoNumber || currentPoNumber.trim() === '') {
+        showToast('Error: Order PO Number is missing.', 'error');
+        console.error("assignDriver error: currentPoNumber is not set or empty.");
+        return;
+    }
+    
+    if (!driverIdParam || driverIdParam === 0 || isNaN(driverIdParam)) {
+        showToast('Error: Invalid Driver ID selected.', 'error');
+        console.error("assignDriver error: driverIdParam is invalid:", driverIdParam);
+        return;
+    }
+    
+    // Create data object separately for clarity
+    const requestData = {
+        po_number: currentPoNumber,
+        driver_id: driverIdParam
+    };
+    
+    console.log("Sending request with data:", JSON.stringify(requestData));
+    
+    // Send request to assign driver
+    fetch('/backend/assign_driver.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => {
+        console.log("Response status:", response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log("Response data:", data);
+        if (data.success) {
+            showToast(currentDriverId > 0 ? 'Driver changed successfully' : 'Driver assigned successfully', 'success');
+            setTimeout(() => { window.location.reload(); }, 1000);
+        } else {
+            showToast('Error: ' + (data.message || 'Unknown error assigning driver'), 'error');
+            console.error("Backend error:", data);
         }
+    })
+    .catch(error => {
+        console.error('Assign Driver Fetch Error:', error);
+        showToast('Error: Failed to communicate with server', 'error');
+    })
+    .finally(() => {
+        currentPoNumber = '';
+        currentDriverId = 0;
+        const confirmBtn = document.querySelector('#driverConfirmationModal .confirm-yes');
+        if (confirmBtn) confirmBtn.onclick = null;
+    });
+}
         // --- End Driver Assignment Functions ---
 
 
