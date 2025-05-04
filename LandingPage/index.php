@@ -331,7 +331,7 @@ require_once 'header.php';
     }
     .banner_section .carousel-item .row {
         align-items: center;
-        min-height: 400px; /* NEW */
+        min-height: 400px;
     }
     .banner_section .row > .col-sm-6:first-child {
         display: flex;
@@ -420,21 +420,20 @@ require_once 'header.php';
     .banner_section .carousel-indicators li {
         box-sizing: content-box;
         flex: 0 1 auto;
-        width: 10px;  /* UPDATED */
-        height: 10px; /* UPDATED */
+        width: 10px;  /* Consistent size */
+        height: 10px; /* Consistent size */
         margin: 0 5px;
         text-indent: -999px;
         cursor: pointer;
         background-color: rgba(0, 0, 0, 0.2);
         background-clip: padding-box;
         border: 0;
-        border-radius: 50%; /* UPDATED */
+        border-radius: 50%; /* Ensure circle */
         opacity: 0.6;
-        transition: opacity 0.6s ease, background-color 0.6s ease, width 0.6s ease, height 0.6s ease;
+        transition: opacity 0.6s ease, background-color 0.6s ease; /* Removed width/height transition */
     }
     .banner_section .carousel-indicators .active {
-        width: 12px;  /* UPDATED */
-        height: 12px; /* UPDATED */
+        /* Keep same size as inactive */
         background-color: #e46c1d;
         opacity: 1;
     }
@@ -456,7 +455,7 @@ require_once 'header.php';
             </ol>
             <div class="carousel-inner">
                 <div class="carousel-item active">
-                    <div class="row align-items-center"> <!-- Added align-items-center -->
+                    <div class="row align-items-center">
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Premium Siopao</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Experience the authentic taste of our handcrafted siopao, made with premium ingredients and traditional recipes passed down through generations.</p>
@@ -468,7 +467,7 @@ require_once 'header.php';
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <div class="row align-items-center"> <!-- Added align-items-center -->
+                    <div class="row align-items-center">
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Delicious Siomai</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our signature siomai combines premium pork with special seasonings, wrapped in thin, delicate wonton wrappers for the perfect bite.</p>
@@ -480,7 +479,7 @@ require_once 'header.php';
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <div class="row align-items-center"> <!-- Added align-items-center -->
+                    <div class="row align-items-center">
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Flavorful Sauces</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our special blend of sauces enhances every bite. Made from premium ingredients and secret recipes passed down through generations.</p>
@@ -492,7 +491,7 @@ require_once 'header.php';
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <div class="row align-items-center"> <!-- Added align-items-center -->
+                    <div class="row align-items-center">
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Quality Noodles</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Made from the finest ingredients, our noodles maintain perfect texture and absorb flavors beautifully for your favorite noodle dishes.</p>
