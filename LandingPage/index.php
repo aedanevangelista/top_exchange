@@ -333,18 +333,16 @@ require_once 'header.php';
         align-items: center;
         min-height: 400px;
     }
-    /* Text column */
     .banner_section .row > .col-sm-6:first-child {
         display: flex;
         flex-direction: column;
         justify-content: center;
         height: 100%;
         padding-right: 30px;
-        text-align: left; /* Explicitly left align */
+        text-align: left;
     }
-    /* Image column */
     .banner_section .carousel-item .row > .col-sm-6:last-child {
-        text-align: center; /* Center content (the banner_img div) */
+        text-align: center;
     }
     .banner_taital {
         font-size: 2.8rem;
@@ -374,7 +372,7 @@ require_once 'header.php';
         color: white;
     }
     .banner_img {
-       display: inline-block; /* Needed for text-align:center on parent */
+       display: inline-block;
     }
     .banner_img img {
         max-width: 100%;
@@ -382,7 +380,7 @@ require_once 'header.php';
         max-height: 350px;
         object-fit: contain;
         border-radius: 8px;
-        display: block; /* Ensure image behaves like a block */
+        display: block;
     }
     .banner_section .carousel-control-prev,
     .banner_section .carousel-control-next {
@@ -449,6 +447,51 @@ require_once 'header.php';
     }
     .banner_section .carousel {
         margin-bottom: 60px;
+    }
+
+    /* --- About Section Improvements --- */
+    .about_section {
+        background-color: #fff;
+    }
+    .about_section .row {
+        align-items: center; /* Vertically center columns */
+    }
+    .about_img img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 10px; /* Rounded corners */
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    }
+    .about_taital {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 20px;
+        line-height: 1.3;
+    }
+    .about_text {
+        font-size: 1rem;
+        color: #555;
+        line-height: 1.7;
+        margin-bottom: 18px;
+    }
+    .about_text strong {
+        color: #333;
+    }
+    .read_bt_1 a {
+        background-color: #e46c1d; /* Orange color */
+        color: white;
+        padding: 10px 25px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-block;
+        transition: background-color 0.3s ease;
+        margin-top: 15px;
+    }
+    .read_bt_1 a:hover {
+        background-color: #c35a10; /* Darker orange hover */
+        color: white;
     }
 
 </style>
@@ -570,7 +613,8 @@ require_once 'header.php';
 <!-- About Section -->
 <div class="about_section layout_padding" style="background-color: #fff;">
     <div class="container">
-        <div class="row">
+        <!-- Added align-items-center to the row -->
+        <div class="row align-items-center">
             <div class="col-md-6" data-aos="fade-right">
                 <div class="about_img"><img src="/LandingPage/images/about_image_1.png" alt="About Top Food Exchange Corp." class="img-fluid"></div>
             </div>
