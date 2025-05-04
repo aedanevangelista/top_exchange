@@ -485,8 +485,8 @@ function truncate($text, $max = 15) {
         .modal-footer button { padding: 8px 16px; font-size: 14px; min-width: 100px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; border: none; margin: 0; font-weight: 500; }
         .save-btn { background-color: #4a90e2; color: white; }
         .save-btn:hover { background-color: #357abf; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .cancel-btn { background-color: #f1f1f1; color: #333; border: 1px solid #ccc; }
-        .cancel-btn:hover { background-color: #e1e1e1; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .cancel-btn { background-color:rgb(80, 80, 80); color: #333; border: 1px solid #ccc; }
+        .cancel-btn:hover { background-color:rgb(53, 53, 53); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .status-active { color: #28a745; font-weight: bold; }
         .status-pending { color: #ffc107; font-weight: bold; }
         .status-rejected { color: #dc3545; font-weight: bold; }
@@ -860,7 +860,6 @@ function truncate($text, $max = 15) {
              <div class="modal-buttons">
                  <button class="approve-btn" onclick="changeStatus('Active')"><i class="fas fa-check"></i> Active</button>
                  <button class="reject-btn" onclick="changeStatus('Rejected')"><i class="fas fa-times"></i> Reject</button>
-                 <button class="pending-btn" onclick="changeStatus('Pending')"><i class="fas fa-hourglass-half"></i> Pending</button>
                  <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Archive</button>
              </div>
              <div class="modal-buttons single-button">
