@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: May 04, 2025 at 05:34 AM
+-- Generation Time: May 04, 2025 at 10:06 AM
 -- Server version: 10.11.10-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -66,6 +66,14 @@ CREATE TABLE `balance_history` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `balance_history`
+--
+
+INSERT INTO `balance_history` (`id`, `username`, `amount`, `notes`, `created_by`, `created_at`) VALUES
+(8, 'Jericho', 20.00, 'test', 'system', '2025-05-04 07:53:51'),
+(9, 'Jericho', 203.00, '', 'system', '2025-05-04 07:54:25');
+
 -- --------------------------------------------------------
 
 --
@@ -102,7 +110,8 @@ INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, 
 (39, 'Boters', '$2y$10$iXUK/0cO4xRYMz/arXwZq.0HQ7lPeZgMEHbe9WTi3YzuZBg8tDT/q', 'jefferson45santonia@gmail.com', '09185585149', '130000000', 'Quezon City', 'Meow', 'asdsadsadsad', 'sadsadsadsadassa', '[]', 'Active', 0.00, '2025-05-01 21:22:49', NULL, NULL, NULL, NULL),
 (40, 'asdasda', '$2y$10$iwmbX5nwUnBrqXOfBf2T/OZgEeyFvjn5iEP1X1Rb/vS6a5ZxEYu8G', 'asdasdjkashd@gnauk.com', '12312312', '030000000', 'General Mamerto Natividad', 'asdasd', 'kajshdkjasdhjaksd', 'kajshdkjasdhjaksd', '[\"\\/admin\\/uploads\\/asdasda\\/asdasda_Screenshot_1_9003d37661.png\"]', 'Pending', 0.00, '2025-05-01 22:11:15', NULL, NULL, NULL, NULL),
 (41, 'HeyHeyHey', '$2y$10$2LxoSzE0WXY1FZlFw6iLPuLNBnfKl1yB31V85zUGHOlQdRmxx9anu', 'ryanfrancisrodriguez02@gmail.com', '09154864843', '130000000', 'Quezon City', 'C & C', '1-B Palomaria Street Veterans Village Quezon CIty', '1-B Palomaria Street Veterans Village Quezon CIty', '[]', 'Active', 0.00, '2025-05-02 02:18:11', NULL, NULL, NULL, NULL),
-(42, 'sheila', '$2y$10$W41rQDTCiov1ZCmWnFbRM.vEZOLNiI6OF.K4UxowSJvuQTbCJvFWK', 'sheilaboridor23@gmail.com', '099966043932', '130000000', 'Quezon City', 'CITY', '49 agno ext tatalon Quezon City', 'fnafasfaf', '[\"..\\/..\\/uploads\\/sheila\\/sheila_Screenshot_2025-04-22_163058_c7bfa78bf5.png\"]', 'Active', 0.00, '2025-05-02 05:24:15', NULL, NULL, NULL, NULL);
+(42, 'sheila', '$2y$10$W41rQDTCiov1ZCmWnFbRM.vEZOLNiI6OF.K4UxowSJvuQTbCJvFWK', 'sheilaboridor23@gmail.com', '099966043932', '130000000', 'Quezon City', 'CITY', '49 agno ext tatalon Quezon City', 'fnafasfaf', '[\"..\\/..\\/uploads\\/sheila\\/sheila_Screenshot_2025-04-22_163058_c7bfa78bf5.png\"]', 'Active', 0.00, '2025-05-02 05:24:15', NULL, NULL, NULL, NULL),
+(43, 'Jericho', '$2y$10$zfp4s8tN1g51wSF/ULoQ6u66/PFl2W9WPR1J.uLtWfho8ekqN0TyW', 'jericho.santoniax@gmail.com', '091234567890', '130000000', 'Quezon City', 'ES', '123 Sample Street', '123 Sample Street', '[\"..\\/..\\/uploads\\/Jericho\\/Jericho_1000005938_cd50044dbd.jpg\"]', 'Active', 223.00, '2025-05-04 07:18:49', NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -127,7 +136,8 @@ CREATE TABLE `drivers` (
 --
 
 INSERT INTO `drivers` (`id`, `name`, `address`, `contact_no`, `availability`, `area`, `current_deliveries`, `created_at`, `updated_at`) VALUES
-(1, 'Manong Ryan', 'Mexico St.', '092893749823', 'Available', 'North', 14, '2025-04-25 04:19:29', '2025-05-04 05:33:46');
+(1, 'Manong Ryan', 'Mexico St.', '092893749823', 'Available', 'North', 14, '2025-04-25 04:19:29', '2025-05-04 09:20:56'),
+(2, 'Aedan', '22 Blabla St.', '639384923843', 'Available', 'South', 0, '2025-05-04 08:32:15', '2025-05-04 09:20:12');
 
 -- --------------------------------------------------------
 
@@ -155,24 +165,12 @@ INSERT INTO `driver_assignments` (`id`, `po_number`, `driver_id`, `assigned_at`,
 (5, 'monalizareyes-1', 1, '2025-04-30 03:08:12', 'Assigned'),
 (7, 'monalizareyes-2', 1, '2025-04-30 08:26:50', ''),
 (9, 'PO-HeyHeyHey-001', 1, '2025-05-01 17:42:05', ''),
-(10, 'PO-Boters-001', 1, '2025-05-03 19:44:43', 'Assigned'),
+(10, 'PO-Boters-001', 1, '2025-05-03 19:44:43', ''),
 (11, 'PO-HeyHeyHey-002', 1, '2025-05-02 17:37:23', ''),
 (12, 'PO-Boters-012', 1, '2025-05-03 13:27:23', 'Assigned'),
 (13, 'PO-Boters-002', 1, '2025-05-04 05:13:14', 'Assigned'),
-(17, 'PO-Boters-003', 1, '2025-05-04 05:33:46', 'Assigned');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `driver_orders`
---
-
-CREATE TABLE `driver_orders` (
-  `id` int(11) NOT NULL,
-  `driver_id` int(11) NOT NULL,
-  `po_number` varchar(255) NOT NULL,
-  `assigned_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+(18, 'PO-Boters-003', 1, '2025-05-04 05:46:52', 'Assigned'),
+(19, 'PO-Jericho-001', 2, '2025-05-04 09:15:24', '');
 
 -- --------------------------------------------------------
 
@@ -325,7 +323,23 @@ INSERT INTO `inventory_movements` (`id`, `item_name`, `item_type`, `quantity`, `
 (127, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:33:32'),
 (128, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:33:32'),
 (129, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:33:32'),
-(130, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Activated', 'system', '2025-05-04 05:33:38');
+(130, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Activated', 'system', '2025-05-04 05:33:38'),
+(131, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(132, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(133, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(134, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(135, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(136, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(137, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(138, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(139, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(140, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(141, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(142, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(143, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(144, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(145, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Status Change Return', 'system', '2025-05-04 05:46:30'),
+(146, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-Boters-003', 'Order Activated', 'system', '2025-05-04 05:46:36');
 
 -- --------------------------------------------------------
 
@@ -395,7 +409,8 @@ CREATE TABLE `monthly_payments` (
 INSERT INTO `monthly_payments` (`id`, `username`, `month`, `year`, `total_amount`, `payment_status`, `created_at`, `updated_at`, `remaining_balance`, `proof_image`, `payment_method`, `payment_type`) VALUES
 (1, 'maamcristylen', 4, 2025, 4180.00, 'Unpaid', '2025-04-29 16:56:14', '2025-04-29 16:56:26', 4180.00, NULL, NULL, NULL),
 (830, 'aedanpogi', 1, 2025, 0.00, 'Fully Paid', '2025-04-24 02:11:24', '2025-04-24 02:11:24', 0.00, NULL, NULL, NULL),
-(831, 'maamcristylen', 3, 2025, 0.00, 'Unpaid', '2025-04-26 13:35:12', '2025-04-29 13:21:00', 0.00, 'payment_1745674511.jpg', NULL, 'Internal');
+(831, 'maamcristylen', 3, 2025, 0.00, 'Unpaid', '2025-04-26 13:35:12', '2025-04-29 13:21:00', 0.00, 'payment_1745674511.jpg', NULL, 'Internal'),
+(832, 'Jericho', 1, 2025, 0.00, 'For Approval', '2025-05-04 07:53:25', '2025-05-04 07:54:11', 0.00, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -430,9 +445,10 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `po_number`, `username`, `company`, `order_date`, `delivery_date`, `delivery_address`, `orders`, `total_amount`, `status`, `driver_assigned`, `contact_number`, `special_instructions`, `subtotal`, `progress`, `completed_items`, `item_progress_data`, `quantity_progress_data`, `item_progress_percentages`) VALUES
-(154, 'PO-Boters-001', 'Boters', 'Meow', '2025-05-04', '2025-05-05', 'asdsadsadsad', '[{\"product_id\":47,\"category\":\"Healthy Dimsum\",\"item_description\":\"Vegetable Dumpling (A)\",\"packaging\":\"12pcs/pack\",\"price\":190,\"quantity\":20}]', 3800.00, 'Active', 1, NULL, 'asd', 0.00, 0, NULL, NULL, NULL, NULL),
+(154, 'PO-Boters-001', 'Boters', 'Meow', '2025-05-04', '2025-05-05', 'asdsadsadsad', '[{\"product_id\":47,\"category\":\"Healthy Dimsum\",\"item_description\":\"Vegetable Dumpling (A)\",\"packaging\":\"12pcs/pack\",\"price\":190,\"quantity\":20}]', 3800.00, 'Completed', 1, NULL, 'asd', 0.00, 100, '[0]', NULL, '[[true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true]]', NULL),
 (155, 'PO-Boters-002', 'Boters', 'Meow', '2025-05-04', '2025-05-05', 'asdsadsadsad', '[{\"product_id\":31,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Beancurd Roll (A)\",\"packaging\":\"12pcs/pack\",\"price\":310,\"quantity\":1}]', 310.00, 'Active', 1, NULL, '', 0.00, 0, NULL, NULL, NULL, NULL),
-(156, 'PO-Boters-003', 'Boters', 'Meow', '2025-05-04', '2025-05-09', 'asdsadsadsad', '[{\"product_id\":31,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Beancurd Roll (A)\",\"packaging\":\"12pcs/pack\",\"price\":310,\"quantity\":1}]', 310.00, 'Active', 1, NULL, '', 0.00, 0, NULL, NULL, NULL, NULL);
+(156, 'PO-Boters-003', 'Boters', 'Meow', '2025-05-04', '2025-05-09', 'asdsadsadsad', '[{\"product_id\":31,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Beancurd Roll (A)\",\"packaging\":\"12pcs/pack\",\"price\":310,\"quantity\":1}]', 310.00, 'Pending', 1, NULL, '', 0.00, 0, NULL, NULL, NULL, NULL),
+(157, 'PO-Jericho-001', 'Jericho', NULL, '2025-05-04', '2025-05-05', '123 Sample Street', '[{\"product_id\":20,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Beef Siomai\",\"packaging\":\"20pcs\\/pack\",\"price\":250,\"quantity\":1}]', 250.00, 'Completed', 1, '091234567890', '', 250.00, 100, '[0]', NULL, '[[true]]', NULL);
 
 -- --------------------------------------------------------
 
@@ -542,7 +558,19 @@ INSERT INTO `order_status_logs` (`log_id`, `po_number`, `old_status`, `new_statu
 (86, 'PO-Boters-003', 'Active', 'Pending', 'system', '2025-05-04 05:30:34'),
 (87, 'PO-Boters-003', 'Pending', 'Active', 'system', '2025-05-04 05:30:38'),
 (88, 'PO-Boters-003', 'Active', 'Pending', 'system', '2025-05-04 05:33:32'),
-(89, 'PO-Boters-003', 'Pending', 'Active', 'system', '2025-05-04 05:33:38');
+(89, 'PO-Boters-003', 'Pending', 'Active', 'system', '2025-05-04 05:33:38'),
+(90, 'PO-Boters-003', 'Active', 'Pending', 'system', '2025-05-04 05:46:30'),
+(91, 'PO-Boters-003', 'Pending', 'Active', 'system', '2025-05-04 05:46:36'),
+(92, 'PO-Boters-003', 'Active', 'Pending', 'admin', '2025-05-04 06:50:05'),
+(93, 'PO-Jericho-001', 'Pending', 'Active', 'admin', '2025-05-04 07:51:28'),
+(94, 'PO-Jericho-001', 'Active', 'Pending', 'admin', '2025-05-04 08:20:22'),
+(95, 'PO-Jericho-001', 'Pending', 'Active', 'admin', '2025-05-04 08:25:43'),
+(96, 'PO-Jericho-001', 'Active', 'Pending', 'admin', '2025-05-04 08:31:34'),
+(97, 'PO-Jericho-001', 'Pending', 'Active', 'admin', '2025-05-04 08:31:38'),
+(98, 'PO-Jericho-001', 'Active', 'For Delivery', 'admin', '2025-05-04 09:19:31'),
+(99, 'PO-Jericho-001', 'For Delivery', 'Completed', 'system', '2025-05-04 09:20:12'),
+(100, 'PO-Boters-001', 'Active', 'For Delivery', 'admin', '2025-05-04 09:20:48'),
+(101, 'PO-Boters-001', 'For Delivery', 'Completed', 'system', '2025-05-04 09:20:56');
 
 -- --------------------------------------------------------
 
@@ -632,7 +660,11 @@ INSERT INTO `payment_status_history` (`id`, `username`, `month`, `year`, `old_st
 (19, 'maamcristylen', 3, 2025, 'Fully Paid', 'Unpaid', 'system', '2025-04-26 13:36:20'),
 (20, 'maamcristylen', 3, 2025, 'Fully Paid', 'Unpaid', 'system', '2025-04-29 12:48:30'),
 (21, 'maamcristylen', 4, 2025, 'Unpaid', 'Fully Paid', 'system', '2025-04-29 16:56:14'),
-(22, 'maamcristylen', 4, 2025, 'Fully Paid', 'Unpaid', 'system', '2025-04-29 16:56:26');
+(22, 'maamcristylen', 4, 2025, 'Fully Paid', 'Unpaid', 'system', '2025-04-29 16:56:26'),
+(26, 'Jericho', 1, 2025, 'Unpaid', 'For Approval', 'system', '2025-05-04 07:53:25'),
+(27, 'Jericho', 1, 2025, 'For Approval', 'Fully Paid', 'system', '2025-05-04 07:53:35'),
+(28, 'Jericho', 1, 2025, 'Fully Paid', 'Unpaid', 'system', '2025-05-04 07:53:38'),
+(29, 'Jericho', 1, 2025, 'Unpaid', 'For Approval', 'system', '2025-05-04 07:54:11');
 
 -- --------------------------------------------------------
 
@@ -688,7 +720,7 @@ INSERT INTO `products` (`product_id`, `category`, `product_name`, `item_descript
 (28, 'Dimsum & Dumplings', 'Polonchay Dumpling', 'Polonchay Dumpling (Min 6 Packs) (B)', '20pcs/pack', 470.00, 100, '', '/uploads/products/Polonchay_Dumpling__Min_6_Packs___B_/product_image.png', '[[\"Minced Pork\", 400], [\"Soy Sauce\", 20], [\"Flour\", 60]]'),
 (29, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (A)', '12pcs/pack', 330.00, 100, '', '/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___A_/product_image.png', '[[\"Minced Pork\", 216], [\"Shrimp\", 48], [\"Soy Sauce\", 12], [\"Flour\", 36]]'),
 (30, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (B)', '20pcs/pack', 530.00, 100, '', '/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___B_/product_image.png', '[[\"Minced Pork\", 360], [\"Shrimp\", 80], [\"Soy Sauce\", 20], [\"Flour\", 60]]'),
-(31, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 100, '', '/uploads/products/Beancurd_Roll__A_/product_image.png', '[[\"Minced Pork\",264],[\"Soy Sauce\",12],[\"Sugar\",6],[\"Veg. Spring Roll (Ham)\",36]]'),
+(31, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 114, '', '/uploads/products/Beancurd_Roll__A_/product_image.png', '[[\"Minced Pork\",264],[\"Soy Sauce\",12],[\"Sugar\",6],[\"Veg. Spring Roll (Ham)\",36]]'),
 (32, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (B)', '20pcs/pack', 500.00, 88, '', '/uploads/products/Beancurd_Roll__B_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Sugar\", 10], [\"Veg. Spring Roll (Ham)\", 60]]'),
 (33, 'Dimsum & Dumplings', 'Pork Gyoza Dumpling', 'Pork Gyoza Dumpling (A)', '20pcs/pack', 390.00, 100, '', '/uploads/products/Pork_Gyoza_Dumpling__A_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Crispy Powder\", 40], [\"Flour\", 60]]'),
 (34, 'Dimsum & Dumplings', 'Shanghai Dumpling', 'Shanghai Dumpling (A)', '20pcs/pack', 255.00, 100, '', '/uploads/products/Shanghai_Dumpling__A_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Sugar\", 10], [\"Flour\", 60]]'),
@@ -913,7 +945,7 @@ INSERT INTO `walkin_products` (`product_id`, `category`, `product_name`, `item_d
 (28, 'Dimsum & Dumplings', 'Polonchay Dumpling', 'Polonchay Dumpling (Min 6 Packs) (B)', '20pcs/pack', 470.00, 100, '', '/uploads/products/Polonchay_Dumpling__Min_6_Packs___B_/product_image.png', '[[\"Minced Pork\", 400], [\"Soy Sauce\", 20], [\"Flour\", 60]]'),
 (29, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (A)', '12pcs/pack', 330.00, 100, '', '/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___A_/product_image.png', '[[\"Minced Pork\", 216], [\"Shrimp\", 48], [\"Soy Sauce\", 12], [\"Flour\", 36]]'),
 (30, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (B)', '20pcs/pack', 530.00, 100, '', '/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___B_/product_image.png', '[[\"Minced Pork\", 360], [\"Shrimp\", 80], [\"Soy Sauce\", 20], [\"Flour\", 60]]'),
-(31, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 100, '', '/uploads/products/Beancurd_Roll__A_/product_image.png', '[[\"Minced Pork\",264],[\"Soy Sauce\",12],[\"Sugar\",6],[\"Veg. Spring Roll (Ham)\",36]]'),
+(31, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 0, '', '/uploads/products/Beancurd_Roll__A_/product_image.png', '[[\"Minced Pork\",264],[\"Soy Sauce\",12],[\"Sugar\",6],[\"Veg. Spring Roll (Ham)\",36]]'),
 (32, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (B)', '20pcs/pack', 500.00, 100, '', '/uploads/products/Beancurd_Roll__B_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Sugar\", 10], [\"Veg. Spring Roll (Ham)\", 60]]'),
 (33, 'Dimsum & Dumplings', 'Pork Gyoza Dumpling', 'Pork Gyoza Dumpling (A)', '20pcs/pack', 390.00, 100, '', '/uploads/products/Pork_Gyoza_Dumpling__A_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Crispy Powder\", 40], [\"Flour\", 60]]'),
 (34, 'Dimsum & Dumplings', 'Shanghai Dumpling', 'Shanghai Dumpling (A)', '20pcs/pack', 255.00, 100, '', '/uploads/products/Shanghai_Dumpling__A_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Sugar\", 10], [\"Flour\", 60]]'),
@@ -996,14 +1028,6 @@ ALTER TABLE `driver_assignments`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `po_number` (`po_number`),
   ADD KEY `driver_id` (`driver_id`);
-
---
--- Indexes for table `driver_orders`
---
-ALTER TABLE `driver_orders`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `driver_id` (`driver_id`),
-  ADD KEY `po_number` (`po_number`);
 
 --
 -- Indexes for table `inventory_movements`
@@ -1095,37 +1119,31 @@ ALTER TABLE `accounts`
 -- AUTO_INCREMENT for table `balance_history`
 --
 ALTER TABLE `balance_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `clients_accounts`
 --
 ALTER TABLE `clients_accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `drivers`
 --
 ALTER TABLE `drivers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `driver_assignments`
 --
 ALTER TABLE `driver_assignments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
-
---
--- AUTO_INCREMENT for table `driver_orders`
---
-ALTER TABLE `driver_orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `inventory_movements`
 --
 ALTER TABLE `inventory_movements`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=131;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=147;
 
 --
 -- AUTO_INCREMENT for table `manufacturing_logs`
@@ -1137,19 +1155,19 @@ ALTER TABLE `manufacturing_logs`
 -- AUTO_INCREMENT for table `monthly_payments`
 --
 ALTER TABLE `monthly_payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=832;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=833;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=157;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=158;
 
 --
 -- AUTO_INCREMENT for table `order_status_logs`
 --
 ALTER TABLE `order_status_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=90;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=102;
 
 --
 -- AUTO_INCREMENT for table `pages`
@@ -1167,7 +1185,7 @@ ALTER TABLE `payment_history`
 -- AUTO_INCREMENT for table `payment_status_history`
 --
 ALTER TABLE `payment_status_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT for table `products`
