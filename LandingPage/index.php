@@ -165,14 +165,13 @@ require_once 'header.php';
         position: relative;
         border-left: 5px solid #007bff;
     }
-    /* Removed .testimonial-card::before rule */
     .testimonial-text {
         font-style: italic;
         color: #555;
         margin-bottom: 15px;
         flex-grow: 1;
         line-height: 1.6;
-        padding-top: 15px; /* Adjusted padding after removing icon */
+        padding-top: 15px;
         position: relative;
         z-index: 1;
     }
@@ -277,7 +276,7 @@ require_once 'header.php';
         line-height: 1.3;
     }
     .newsletter-text {
-        color: #e9ecef; /* Brighter text color */
+        color: #e9ecef;
         margin-bottom: 20px;
         font-size: 1rem;
     }
@@ -313,12 +312,121 @@ require_once 'header.php';
         background-color: #0056b3;
     }
 
+    /* --- Hero Section / Banner Improvements --- */
+    .banner_section {
+        padding-top: 60px;
+        padding-bottom: 60px;
+        position: relative;
+        background-color: #f8f9fa;
+        overflow: hidden;
+    }
+    .banner_section .container {
+        position: relative;
+        z-index: 2;
+    }
+    .banner_section .row > .col-sm-6:first-child {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        height: 100%;
+        padding-right: 30px;
+    }
+    .banner_taital {
+        font-size: 3rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 15px;
+    }
+    .banner_text {
+        font-size: 1.1rem;
+        color: #555;
+        line-height: 1.6;
+        margin-bottom: 25px;
+    }
+    .started_text a {
+        background-color: #007bff;
+        color: white;
+        padding: 12px 25px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-block;
+        transition: background-color 0.3s ease;
+    }
+    .started_text a:hover {
+        background-color: #0056b3;
+        color: white;
+    }
+    .banner_img img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+    }
+    .banner_section .carousel-control-prev,
+    .banner_section .carousel-control-next {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 50px;
+        height: 50px;
+        background-color: rgba(0, 0, 0, 0.4);
+        border-radius: 50%;
+        opacity: 0.8;
+        transition: opacity 0.3s ease, background-color 0.3s ease;
+        z-index: 5;
+    }
+    .banner_section .carousel-control-prev:hover,
+    .banner_section .carousel-control-next:hover {
+        opacity: 1;
+        background-color: rgba(0, 0, 0, 0.6);
+    }
+    .banner_section .carousel-control-prev {
+        left: -25px; /* Adjust as needed */
+    }
+    .banner_section .carousel-control-next {
+        right: -25px; /* Adjust as needed */
+    }
+    .banner_section .carousel-control-prev-icon,
+    .banner_section .carousel-control-next-icon {
+        width: 25px;
+        height: 25px;
+        background-size: 100%, 100%;
+    }
+    .banner_section .carousel-indicators {
+        position: absolute;
+        bottom: -40px;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-left: 0;
+        margin-right: 0;
+        z-index: 15;
+    }
+    .banner_section .carousel-indicators li {
+        background-color: rgba(0, 0, 0, 0.3);
+        border-radius: 50%;
+        width: 12px;
+        height: 12px;
+        margin: 0 6px;
+        border: none;
+        opacity: 0.7;
+        transition: opacity 0.3s ease, background-color 0.3s ease;
+    }
+    .banner_section .carousel-indicators .active {
+        background-color: #007bff;
+        opacity: 1;
+    }
+    .banner_section .carousel {
+        margin-bottom: 50px; /* Space for indicators */
+    }
+
 </style>
 
 <!-- banner section start -->
 <div class="banner_section layout_padding">
     <div class="container">
+        <!-- Added margin-bottom to carousel div -->
         <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
+            <!-- Indicators should now be styled and positioned correctly via CSS -->
             <ol class="carousel-indicators">
                 <li data-target="#carouselExampleIndicators" data-slide-to="0" class="active"></li>
                 <li data-target="#carouselExampleIndicators" data-slide-to="1"></li>
@@ -327,7 +435,7 @@ require_once 'header.php';
             </ol>
             <div class="carousel-inner">
                 <div class="carousel-item active">
-                    <div class="row">
+                    <div class="row align-items-center"> <!-- Use align-items-center for vertical centering if needed -->
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Premium Siopao</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Experience the authentic taste of our handcrafted siopao, made with premium ingredients and traditional recipes passed down through generations.</p>
@@ -339,7 +447,7 @@ require_once 'header.php';
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <div class="row">
+                    <div class="row align-items-center">
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Delicious Siomai</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our signature siomai combines premium pork with special seasonings, wrapped in thin, delicate wonton wrappers for the perfect bite.</p>
@@ -351,7 +459,7 @@ require_once 'header.php';
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <div class="row">
+                    <div class="row align-items-center">
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Flavorful Sauces</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Our special blend of sauces enhances every bite. Made from premium ingredients and secret recipes passed down through generations.</p>
@@ -363,7 +471,7 @@ require_once 'header.php';
                     </div>
                 </div>
                 <div class="carousel-item">
-                    <div class="row">
+                    <div class="row align-items-center">
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Quality Noodles</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Made from the finest ingredients, our noodles maintain perfect texture and absorb flavors beautifully for your favorite noodle dishes.</p>
@@ -375,6 +483,7 @@ require_once 'header.php';
                     </div>
                 </div>
             </div>
+            <!-- Controls are now positioned and styled via CSS -->
             <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
                 <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                 <span class="sr-only">Previous</span>
@@ -651,7 +760,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         window.addEventListener('scroll', toggleVisibility);
-        toggleVisibility(); // Initial check
+        toggleVisibility();
     }
 
     if (typeof AOS !== 'undefined') {
