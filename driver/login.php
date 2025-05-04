@@ -1,14 +1,6 @@
 <?php
 session_start();
-// Adjust the path based on the final location of db_connection.php relative to driver/login.php
-// Assuming 'backend' is two levels up from 'driver'
-require_once __DIR__ . '/../../backend/db_connection.php';
 
-// If driver is already logged in, redirect to their dashboard
-if (isset($_SESSION['driver_id'])) {
-    header("Location: dashboard.php"); // Assuming dashboard.php will be in the same 'driver' folder
-    exit();
-}
 
 $error_message = '';
 $username_attempt = ''; // To repopulate username field on error
