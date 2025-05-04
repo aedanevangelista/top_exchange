@@ -318,13 +318,13 @@ require_once 'header.php';
         padding-bottom: 80px;
         position: relative;
         background-color: #f8f9fa;
-        overflow: hidden;
+        overflow: hidden; /* Keep overflow hidden */
     }
     .banner_section .container {
         position: relative;
         z-index: 2;
-        padding-left: 40px;
-        padding-right: 40px;
+        padding-left: 40px; /* Keep some padding */
+        padding-right: 40px; /* Keep some padding */
     }
     .banner_section .carousel-item {
         transition: transform .6s ease-in-out;
@@ -401,10 +401,10 @@ require_once 'header.php';
         background-color: rgba(0, 0, 0, 0.5);
     }
     .banner_section .carousel-control-prev {
-        left: -10px;
+        left: -25px; /* ** UPDATED: Moved further out ** */
     }
     .banner_section .carousel-control-next {
-        right: -10px;
+        right: -25px; /* ** UPDATED: Moved further out ** */
     }
     .banner_section .carousel-control-prev-icon,
     .banner_section .carousel-control-next-icon {
@@ -454,13 +454,13 @@ require_once 'header.php';
         background-color: #fff;
     }
     .about_section .row {
-        align-items: center; /* Vertically center columns */
+        align-items: center;
     }
     .about_img img {
         max-width: 100%;
         height: auto;
-        border-radius: 10px; /* Rounded corners */
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     }
     .about_taital {
         font-size: 2.5rem;
@@ -479,7 +479,7 @@ require_once 'header.php';
         color: #333;
     }
     .read_bt_1 a {
-        background-color: #e46c1d; /* Orange color */
+        background-color: #e46c1d;
         color: white;
         padding: 10px 25px;
         border-radius: 5px;
@@ -490,7 +490,7 @@ require_once 'header.php';
         margin-top: 15px;
     }
     .read_bt_1 a:hover {
-        background-color: #c35a10; /* Darker orange hover */
+        background-color: #c35a10;
         color: white;
     }
 
@@ -613,7 +613,6 @@ require_once 'header.php';
 <!-- About Section -->
 <div class="about_section layout_padding" style="background-color: #fff;">
     <div class="container">
-        <!-- Added align-items-center to the row -->
         <div class="row align-items-center">
             <div class="col-md-6" data-aos="fade-right">
                 <div class="about_img"><img src="/LandingPage/images/about_image_1.png" alt="About Top Food Exchange Corp." class="img-fluid"></div>
