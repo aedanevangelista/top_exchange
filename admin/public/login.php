@@ -32,12 +32,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             exit();
         } else {
             $_SESSION['error'] = "Incorrect password. Please try again.";
-            header("Location: /admin/public/login.php");
+            header("Location: /public/login.php");
             exit();
         }
     } else {
         $_SESSION['error'] = "User not found.";
-        header("Location: /admin/public/login.php");
+        header("Location: /public/login.php");
         exit();
     }
 
