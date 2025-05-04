@@ -274,7 +274,6 @@ require_once 'header.php';
         font-weight: 600;
         margin-bottom: 10px;
         line-height: 1.3;
-        color: white;
     }
     .newsletter-text {
         color: #e9ecef;
@@ -319,20 +318,21 @@ require_once 'header.php';
         padding-bottom: 80px;
         position: relative;
         background-color: #f8f9fa;
-        overflow: hidden; /* Keep overflow hidden */
+        overflow: hidden;
     }
     .banner_section .container {
         position: relative;
         z-index: 2;
-        padding-left: 40px; /* Keep some padding */
-        padding-right: 40px; /* Keep some padding */
+        padding-left: 40px;
+        padding-right: 40px;
     }
     .banner_section .carousel-item {
         transition: transform .6s ease-in-out;
+        min-height: 400px; /* Base min-height */
     }
     .banner_section .carousel-item .row {
         align-items: center;
-        min-height: 400px;
+        /* min-height removed from here */
     }
     .banner_section .row > .col-sm-6:first-child {
         display: flex;
@@ -402,10 +402,10 @@ require_once 'header.php';
         background-color: rgba(0, 0, 0, 0.5);
     }
     .banner_section .carousel-control-prev {
-        left: -25px; /* ** UPDATED: Moved further out ** */
+        left: -25px;
     }
     .banner_section .carousel-control-next {
-        right: -25px; /* ** UPDATED: Moved further out ** */
+        right: -25px;
     }
     .banner_section .carousel-control-prev-icon,
     .banner_section .carousel-control-next-icon {
@@ -495,7 +495,79 @@ require_once 'header.php';
         color: white;
     }
 
+    /* --- Responsive Adjustments for Mobile (e.g., screens < 768px) --- */
+    @media (max-width: 767.98px) {
+        .banner_section {
+            padding-top: 40px;
+            padding-bottom: 60px;
+        }
+        .banner_section .container {
+            padding-left: 25px;
+            padding-right: 25px;
+        }
+        .banner_section .carousel-item {
+            min-height: 550px; /* ** Adjust this value ** */
+            text-align: center;
+        }
+        .banner_section .carousel-item .row {
+            align-items: normal; /* Reset */
+        }
+        .banner_section .row > .col-sm-6:first-child {
+            padding-right: 0;
+            min-height: auto;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+         .banner_section .carousel-item .row > .col-sm-6:last-child {
+             text-align: center;
+         }
+        .banner_taital {
+            font-size: 2rem;
+        }
+        .banner_text {
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+        }
+        .started_text a {
+            padding: 10px 20px;
+        }
+        .banner_img {
+            margin-top: 15px;
+        }
+         .banner_img img {
+            max-height: 200px;
+         }
+        .banner_section .carousel-control-prev {
+            left: -5px;
+        }
+        .banner_section .carousel-control-next {
+            right: -5px;
+        }
+        .banner_section .carousel-indicators {
+            bottom: -40px;
+        }
+        .banner_section .carousel {
+            margin-bottom: 50px;
+        }
+
+        /* Adjust other sections for mobile if needed */
+        .section-title {
+            font-size: 2rem;
+        }
+        .section-subtitle {
+            font-size: 1rem;
+        }
+        .about_taital {
+             font-size: 2rem;
+        }
+        .newsletter-title {
+            font-size: 1.8rem;
+        }
+    }
+
 </style>
+
+<!-- (Rest of the HTML structure remains the same) -->
 
 <!-- banner section start -->
 <div class="banner_section layout_padding">
@@ -746,7 +818,7 @@ require_once 'header.php';
                 </div>
             </div>
         </div>
-        <div class="seemore_bt mb-5" data-aos="fade-up"><a href="/LandingPage/ordering.php">View All Products</a></div>
+        <div class="seemore_bt mt-5" data-aos="fade-up"><a href="/LandingPage/ordering.php">View All Products</a></div>
     </div>
 </div>
 
