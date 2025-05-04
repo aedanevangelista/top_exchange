@@ -933,7 +933,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .modal-cancel-btn { background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
         .modal-status-btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; margin: 5px; flex-grow: 1; text-align: center; }
         .modal-status-btn.delivery { background-color: #0dcaf0; color: white; }
-        .modal-status-btn.pending { background-color: #ffc107; color: black; }
+        .modal-status-btn.pending { background-color: #ffc107; color: white; }
         .modal-status-btn.rejected { background-color: #dc3545; color: white; }
         .modal-status-btn.active { background-color: #198754; color: white; }
         .modal-status-btn:disabled { background-color: #e9ecef; color: #6c757d; cursor: not-allowed; }
