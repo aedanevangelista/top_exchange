@@ -1,6 +1,8 @@
 <?php
+// Current Date: 2025-05-04 12:53:08 UTC
+// Author: aedanevangelista
 // Based on commit: e801e50...
-// Modifications: Re-added driver assignment/change functionality.
+// Modifications: Re-added driver assignment/change functionality. Corrected JS parameter passing for driver assignment.
 // Kept: No design changes, 100% progress logic (from orders.php context, though not directly applicable here), quantity limits (from orders.php context).
 
 session_start();
@@ -1188,7 +1190,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
 
         function closeOrderDetailsModal() { document.getElementById('orderDetailsModal').style.display = 'none'; }
 
-        // --- Driver Assignment Functions (Re-added/Modified) ---
+        // --- Driver Assignment Functions (Corrected) ---
         // Function to open modal for INITIAL assignment
         function confirmDriverAssign(poNumber) {
             currentPoNumber = poNumber;
@@ -1199,7 +1201,7 @@ $statusOptions = ['For Delivery', 'In Transit'];
             document.getElementById('driverModal').style.display = 'flex'; // Show the modal
         }
 
-        // Function to open modal for CHANGING driver (Kept as before)
+        // Function to open modal for CHANGING driver
         function openDriverModal(poNumber, driverId, driverName) {
             currentPoNumber = poNumber;
             currentDriverId = driverId; // Store the original driver ID
@@ -1210,16 +1212,20 @@ $statusOptions = ['For Delivery', 'In Transit'];
             document.getElementById('driverModal').style.display = 'flex';
         }
 
-        // Function to close the driver selection modal (Kept as before)
+        // Function to close the driver selection modal
         function closeDriverModal() {
             document.getElementById('driverModal').style.display = 'none';
-            currentDriverId = 0; // Reset current driver ID when closing
+            // Reset currentPoNumber and currentDriverId might be safer here if causing issues,
+            // but typically they should persist until the action is completed or cancelled fully.
+            // currentPoNumber = '';
+            // currentDriverId = 0;
         }
 
         // Function to show driver confirmation modal (Handles both Assign/Change)
+        // *** MODIFIED TO SET CONFIRM BUTTON ONCLICK ***
         function confirmDriverChangeAction() {
             const driverSelect = document.getElementById('driverSelect');
-            const selectedDriverId = parseInt(driverSelect.value);
+            const selectedDriverId = parseInt(driverSelect.value); // Get the ID selected in the modal
             const selectedDriverName = driverSelect.options[driverSelect.selectedIndex].text;
 
             if (selectedDriverId === 0 || isNaN(selectedDriverId)) {
@@ -1240,30 +1246,82 @@ $statusOptions = ['For Delivery', 'In Transit'];
                 msg = `Change driver for order ${currentPoNumber} to ${selectedDriverName}?`;
             }
 
+            // Set the message in the confirmation modal
             $('#driverConfirmationModal .confirmation-message').text(msg);
+
+            // *** Dynamically set the onclick for the "Yes" button ***
+            const confirmBtn = document.querySelector('#driverConfirmationModal .confirm-yes');
+            // Pass the *selectedDriverId* directly to assignDriver when "Yes" is clicked
+            confirmBtn.onclick = () => assignDriver(selectedDriverId);
+
             $('#driverConfirmationModal').show(); // Show the confirmation modal
             $('#driverModal').hide(); // Hide the selection modal
         }
 
-        // Function to close driver confirmation and reopen selection (Kept as before)
+        // Function to close driver confirmation and reopen selection
         function closeDriverConfirmation() {
             $('#driverConfirmationModal').hide();
+            // Reset the confirm button's onclick to prevent accidental calls
+            const confirmBtn = document.querySelector('#driverConfirmationModal .confirm-yes');
+            confirmBtn.onclick = null; // Reset onclick
             $('#driverModal').show(); // Re-show the selection modal
         }
 
         // Function to make the backend call (Handles both Assign/Change)
-        function assignDriver() {
+        // *** MODIFIED TO ACCEPT driverIdParam ***
+        function assignDriver(driverIdParam) { // Accept the confirmed driver ID as a parameter
             $('#driverConfirmationModal').hide(); // Hide confirmation modal first
-            const driverId = document.getElementById('driverSelect').value; // Get the selected ID again
-            if (driverId == 0) { showToast('Please select a driver', 'error'); return; }
 
-            // Send request to assign driver
-            fetch('/backend/assign_driver.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ po_number: currentPoNumber, driver_id: driverId }) })
+            // --- ADDED VALIDATION ---
+            if (!currentPoNumber) {
+                 showToast('Error: Order PO Number is missing.', 'error');
+                 console.error("assignDriver error: currentPoNumber is not set.");
+                 return;
+            }
+            if (!driverIdParam || driverIdParam === 0 || isNaN(driverIdParam)) {
+                 showToast('Error: Invalid Driver ID selected.', 'error');
+                 console.error("assignDriver error: driverIdParam is invalid:", driverIdParam);
+                 return;
+            }
+            // --- END VALIDATION ---
+
+
+            // Send request to assign driver using the passed driverIdParam and global currentPoNumber
+            fetch('/backend/assign_driver.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    po_number: currentPoNumber, // Use the globally set PO number
+                    driver_id: driverIdParam   // Use the ID passed as a parameter
+                })
+            })
             .then(response => response.json())
-            .then(data => { if (data.success) { showToast(currentDriverId > 0 ? 'Driver changed successfully' : 'Driver assigned successfully', 'success'); setTimeout(() => { window.location.reload(); }, 1000); } else { showToast('Error: ' + (data.message || 'Unknown error'), 'error'); } })
-            .catch(error => { console.error('Error:', error); showToast('Error: Failed to communicate with server', 'error'); });
+            .then(data => {
+                if (data.success) {
+                    // Use currentDriverId (original driver ID) to determine message
+                    showToast(currentDriverId > 0 ? 'Driver changed successfully' : 'Driver assigned successfully', 'success');
+                    setTimeout(() => { window.location.reload(); }, 1000);
+                } else {
+                    // Display specific backend error message
+                    showToast('Error: ' + (data.message || 'Unknown error assigning driver'), 'error');
+                    console.error("Backend error:", data); // Log backend error details
+                }
+            })
+            .catch(error => {
+                console.error('Assign Driver Fetch Error:', error);
+                showToast('Error: Failed to communicate with server', 'error');
+            })
+            .finally(() => {
+                 // Reset global state after completion or error
+                 currentPoNumber = '';
+                 currentDriverId = 0;
+                 // Reset the confirm button's onclick to prevent accidental calls
+                 const confirmBtn = document.querySelector('#driverConfirmationModal .confirm-yes');
+                 if (confirmBtn) confirmBtn.onclick = null;
+            });
         }
         // --- End Driver Assignment Functions ---
+
 
         function completeDelivery(poNumber) {
             closeCompleteModal();
