@@ -379,7 +379,7 @@ if ($main_list_result === false) {
         .order-items h4 { margin-top: 0; margin-bottom: 10px; font-size: 1em; color: #555; }
         .order-items table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
         .order-items th, .order-items td { padding: 6px; text-align: left; border: 1px solid #eee; }
-        .order-items th { background-color:rgb(27, 27, 27); color: white; font-weight: 500; }
+        .order-items th { background-color:rgb(71, 71, 71); color: white; font-weight: 500; }
         .expand-icon { margin-right: 5px; display: inline-block; transition: transform 0.2s; width: 1em; text-align: center; }
         .po-header.collapsed .expand-icon { transform: rotate(-90deg); }
         .deliveries-modal-content .modal-buttons { margin-top: auto; padding-top: 15px; border-top: 1px solid #eee; }
