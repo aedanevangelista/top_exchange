@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "../../backend/db_connection.php";
+include "../../backend/db_connection.php"; // Establishes $conn
 include "../../backend/check_role.php";
 checkRole('Orders');
 
@@ -19,9 +19,12 @@ if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
 $clients = [];
 $clients_with_company_address = [];
 $clients_with_company = [];
+// Use the $conn object established by db_connection.php
 $stmt = $conn->prepare("SELECT username, company_address, company FROM clients_accounts WHERE status = 'active'");
 if ($stmt === false) {
-    die('Prepare failed: ' . htmlspecialchars($conn->error));
+    // Log detailed error, show generic message
+    error_log("Prepare failed (clients): " . $conn->error);
+    die('Error preparing client data. Please try again later.');
 }
 $stmt->execute();
 $result = $stmt->get_result();
@@ -30,7 +33,7 @@ while ($row = $result->fetch_assoc()) {
     $clients_with_company_address[$row['username']] = $row['company_address'];
     $clients_with_company[$row['username']] = $row['company'];
 }
-$stmt->close();
+$stmt->close(); // Close the statement, NOT the connection
 
 $orders = [];
 $sql = "SELECT o.id, o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress,
@@ -45,10 +48,12 @@ if (in_array($sort_column, ['id', 'po_number', 'username', 'order_date', 'delive
 }
 $sql .= " ORDER BY {$orderByClause} {$sort_direction}";
 
-
+// Use the $conn object again
 $stmt = $conn->prepare($sql);
 if ($stmt === false) {
-     die('Prepare failed after correction: ' . htmlspecialchars($conn->error) . ' - SQL: ' . $sql);
+     // Log detailed error, show generic message
+     error_log("Prepare failed (orders): " . $conn->error . " - SQL: " . $sql);
+     die('Error preparing order data. Please try again later.');
 }
 $stmt->execute();
 $result = $stmt->get_result();
@@ -57,8 +62,9 @@ if ($result && $result->num_rows > 0) {
         $orders[] = $row;
     }
 }
-$stmt->close();
-$conn->close(); // Close connection after fetching all data
+$stmt->close(); // Close the statement, NOT the connection
+
+// --- REMOVED $conn->close(); from here ---
 
 function getSortUrl($column, $currentColumn, $currentDirection) {
     $newDirection = ($column === $currentColumn && $currentDirection === 'ASC') ? 'DESC' : 'ASC';
@@ -201,18 +207,16 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .cart-quantity { width: 60px; text-align: center; }
         #addOrderOverlay .overlay-content, #inventoryOverlay .overlay-content, #cartModal .overlay-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-height: 90vh; overflow-y: auto; margin: 0; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 80%; max-width: 800px; }
         #statusModal .modal-content, #pendingStatusModal .modal-content, #rejectedStatusModal .modal-content { max-height: 85vh; overflow-y: auto; }
-        /* Additional styling for progress bar in main table */
         .progress-bar-container { width: 100%; background-color: #e9ecef; border-radius: 0.25rem; overflow: hidden; position: relative; height: 20px; }
         .progress-bar { background-color: #0d6efd; height: 100%; line-height: 20px; color: white; text-align: center; white-space: nowrap; transition: width .6s ease; }
         .progress-text { position: absolute; width: 100%; text-align: center; line-height: 20px; color: #000; font-size: 12px; font-weight: bold; }
-        /* Styling for order details progress */
         .item-progress-bar-container { width: 100%; background-color: #e9ecef; border-radius: 4px; overflow: hidden; height: 16px; margin-top: 5px; position: relative; }
         .item-progress-bar { background-color: #198754; height: 100%; transition: width .3s ease; }
         .item-progress-text { position: absolute; width: 100%; text-align: center; line-height: 16px; color: #000; font-size: 10px; font-weight: bold; }
         .item-contribution-text { font-size: 9px; color: #6c757d; text-align: center; margin-top: 2px; }
         .status-cell { vertical-align: middle; }
-        .completed-item { background-color: #f0fff0 !important; } /* Light green background for completed items */
-        .completed { background-color: #e0ffe0 !important; } /* Lighter green for completed units */
+        .completed-item { background-color: #f0fff0 !important; }
+        .completed { background-color: #e0ffe0 !important; }
         .expand-units-btn { background: none; border: none; cursor: pointer; color: #0d6efd; padding: 0 5px; }
         .unit-row td { font-size: 0.9em; padding: 4px 8px 4px 30px; background-color: #fdfdfd; }
         .unit-action-row td { text-align: right; padding: 10px; background-color: #f8f9fa; }
@@ -245,7 +249,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .cancel-btn, .back-btn, .save-btn, .confirm-btn { border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 5px; }
         .cancel-btn:hover, .back-btn:hover { background-color: #5a6268; }
         .save-btn:hover, .confirm-btn:hover { background-color: #357abf; }
-        .order-form .left-section { width: 100%; } /* Adjust layout if needed */
+        .order-form .left-section { width: 100%; }
         .order-form label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
         .order-form input[type="text"], .order-form select, .order-form textarea { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
         .order-form input[readonly] { background-color: #e9ecef; cursor: not-allowed; }
@@ -253,7 +257,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .open-inventory-btn { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 14px; }
         .open-inventory-btn:hover { background-color: #218838; }
         .orders-table-container { width: 100%; overflow-x: auto; }
-        .orders-table { width: 100%; min-width: 1200px; /* Ensure minimum width for all columns */ border-collapse: collapse; }
+        .orders-table { width: 100%; min-width: 1200px; border-collapse: collapse; }
         .orders-table th, .orders-table td { padding: 10px 12px; border: 1px solid #dee2e6; text-align: left; font-size: 13px; vertical-align: middle; white-space: nowrap; }
         .orders-table thead th { background-color: #f8f9fa; font-weight: 600; position: sticky; top: 0; z-index: 10; }
         .orders-table tbody tr:hover { background-color: #f1f3f5; }
@@ -270,7 +274,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     </style>
 </head>
 <body>
-    <?php include '../sidebar.php'; ?>
+    <?php
+    // Include sidebar AFTER database operations for orders.php are done,
+    // but BEFORE the connection is closed (which we now removed anyway)
+    // The sidebar itself will use the still-open $conn
+    include '../sidebar.php';
+    ?>
     <div class="main-content">
         <div class="orders-header">
             <h1>Orders</h1>
@@ -357,7 +366,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="10" class="no-orders">No orders found.</td></tr>
+                        <tr><td colspan="10" class="no-orders">No orders found matching criteria.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -592,13 +601,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             formData.append('deduct_materials', deductMaterials ? '1' : '0');
             formData.append('return_materials', returnMaterials ? '1' : '0');
 
-            // If updating to 'For Delivery', also send the final progress (100)
-            // Assumes backend update_order_status.php can handle 'progress' parameter
             if (status === 'For Delivery') {
                  formData.append('progress', '100');
             }
 
-            console.log("Sending status update:", Object.fromEntries(formData)); // Log form data
+            console.log("Sending status update:", Object.fromEntries(formData));
 
             fetch('/backend/update_order_status.php', { method: 'POST', body: formData })
             .then(response => response.text().then(text => { try { const jsonData = JSON.parse(text); if (!response.ok) throw new Error(jsonData.message || jsonData.error || `Server error: ${response.status}`); return jsonData; } catch (e) { console.error('Invalid JSON:', text); throw new Error('Invalid server response.'); } }))
@@ -760,18 +767,14 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         function confirmSaveProgress() { $('#saveProgressConfirmationModal').css('display', 'block'); }
         function closeSaveProgressConfirmation() { $('#saveProgressConfirmationModal').css('display', 'none'); }
 
-        // --- MODIFIED saveProgressChanges ---
         function saveProgressChanges() {
             $('#saveProgressConfirmationModal').hide();
-            const finalProgress = updateOverallProgress(); // Calculate final progress percentage
+            const finalProgress = updateOverallProgress();
 
             if (finalProgress === 100) {
-                // If progress is 100%, trigger status update to 'For Delivery'
-                // This relies on updateOrderStatus sending the progress and the backend handling it.
                 showToast('Progress reached 100%. Updating status to For Delivery...', 'info');
-                updateOrderStatus('For Delivery', false, false); // No material change Active -> For Delivery
+                updateOrderStatus('For Delivery', false, false);
             } else {
-                // If progress is less than 100%, just update the progress details
                 fetch('/backend/update_order_progress.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -779,14 +782,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                         po_number: currentPoNumber,
                         completed_items: completedItems,
                         quantity_progress: quantityProgressData,
-                        overall_progress: finalProgress // Send the calculated progress
+                        overall_progress: finalProgress
                     })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         showToast('Progress updated successfully', 'success');
-                        // Optionally reload or update UI element showing progress
                         setTimeout(() => { window.location.reload(); }, 1000);
                     } else {
                         showToast('Error saving progress: ' + (data.message || 'Unknown error'), 'error');
@@ -798,7 +800,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 });
             }
         }
-        // --- END MODIFIED saveProgressChanges ---
 
         function confirmDownloadPO(...args) {
              poDownloadData = { poNumber: args[0], username: args[1], company: args[2], orderDate: args[3], deliveryDate: args[4], deliveryAddress: args[5], ordersJson: args[6], totalAmount: args[7], specialInstructions: args[8] };
@@ -920,8 +921,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         window.openCartModal = function() { $('#cartModal').css('display', 'flex'); updateCartDisplay(); }
         function closeCartModal() { $('#cartModal').hide(); }
         function updateCartDisplay() { const body = $('.cart').empty(); const msg = $('.no-products'); const totalEl = $('.total-amount'); let total = 0; if (cartItems.length === 0) { msg.show(); totalEl.text('PHP 0.00'); return; } msg.hide(); cartItems.forEach((item, index) => { total += item.price * item.quantity; body.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>PHP ${item.price.toFixed(2)}</td><td><input type="number" class="cart-quantity" value="${item.quantity}" min="1" max="100" data-index="${index}" onchange="updateCartItemQuantity(this)"></td><td><button class="remove-item-btn" onclick="removeCartItem(${index})"><i class="fas fa-trash"></i></button></td></tr>`); }); totalEl.text(`PHP ${total.toFixed(2)}`); }
-        function updateCartItemQuantity(input) { const idx = parseInt($(input).data('index')); let qty = parseInt($(input).val()); if (qty > 100) { showToast('Quantity cannot exceed 100.', 'error'); qty = 100; $(input).val(100); } if (isNaN(qty) || qty < 1) { showToast('Qty 1-100', 'error'); $(input).val(cartItems[idx].quantity); return; } cartItems[idx].quantity = qty; updateCartDisplay(); updateOrderSummary(); } // Also update summary
-        function removeCartItem(index) { if (index >= 0 && index < cartItems.length) { const removed = cartItems.splice(index, 1)[0]; showToast(`Removed ${removed.item_description}`, 'info'); updateCartDisplay(); updateCartItemCount(); updateOrderSummary();} } // Also update summary
+        function updateCartItemQuantity(input) { const idx = parseInt($(input).data('index')); let qty = parseInt($(input).val()); if (qty > 100) { showToast('Quantity cannot exceed 100.', 'error'); qty = 100; $(input).val(100); } if (isNaN(qty) || qty < 1) { showToast('Qty 1-100', 'error'); $(input).val(cartItems[idx].quantity); return; } cartItems[idx].quantity = qty; updateCartDisplay(); updateOrderSummary(); }
+        function removeCartItem(index) { if (index >= 0 && index < cartItems.length) { const removed = cartItems.splice(index, 1)[0]; showToast(`Removed ${removed.item_description}`, 'info'); updateCartDisplay(); updateCartItemCount(); updateOrderSummary();} }
         function saveCartChanges() { updateOrderSummary(); closeCartModal(); }
 
         $(document).ready(function() {
