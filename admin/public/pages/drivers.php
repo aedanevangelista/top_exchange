@@ -51,16 +51,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
     $checkStmt->close();
 
     $stmt = $conn->prepare("INSERT INTO drivers (name, address, contact_no, availability, area, current_deliveries) VALUES (?, ?, ?, ?, ?, 0)");
-    $stmt->bind_param("sssss", $name, $address, $contact_no, $availability, $area);
+    // Use $stmtAdd for clarity to avoid conflict with main list $stmt
+    $stmtAdd = $conn->prepare("INSERT INTO drivers (name, address, contact_no, availability, area, current_deliveries) VALUES (?, ?, ?, ?, ?, 0)");
+    if (!$stmtAdd) { // Check prepare result
+         error_log("Add Driver Prepare Error: " . $conn->error);
+         returnJsonResponse(false, false, 'Failed to prepare statement. Database error.');
+    }
+    $stmtAdd->bind_param("sssss", $name, $address, $contact_no, $availability, $area);
 
-    if ($stmt->execute()) {
+    if ($stmtAdd->execute()) {
         returnJsonResponse(true, true); // Success, trigger reload
     } else {
         // Provide specific error if possible, otherwise generic
-        error_log("Add Driver DB Error: " . $stmt->error);
+        error_log("Add Driver DB Error: " . $stmtAdd->error);
         returnJsonResponse(false, false, 'Failed to add driver. Database error.');
     }
-    $stmt->close();
+    $stmtAdd->close();
     exit; // Ensure exit after handling POST
 }
 
@@ -82,26 +88,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
         returnJsonResponse(false, false, 'Contact number must be 12 digits starting with 63.');
     }
 
+    // Check for existing name (excluding current driver)
     $checkStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ? AND id != ?");
+    if (!$checkStmt) {
+         error_log("Edit Driver Check Prepare Error: " . $conn->error);
+         returnJsonResponse(false, false, 'Database error checking name.');
+    }
     $checkStmt->bind_param("si", $name, $id);
     $checkStmt->execute();
     $checkStmt->store_result();
 
     if ($checkStmt->num_rows > 0) {
+        $checkStmt->close(); // Close check statement here
         returnJsonResponse(false, false, 'Driver name already exists.');
     }
-    $checkStmt->close();
+    $checkStmt->close(); // Also close if no rows found
 
-    $stmt = $conn->prepare("UPDATE drivers SET name = ?, address = ?, contact_no = ?, availability = ?, area = ? WHERE id = ?");
-    $stmt->bind_param("sssssi", $name, $address, $contact_no, $availability, $area, $id);
+    // Prepare update statement
+    // Use $stmtEdit for clarity
+    $stmtEdit = $conn->prepare("UPDATE drivers SET name = ?, address = ?, contact_no = ?, availability = ?, area = ? WHERE id = ?");
+    if (!$stmtEdit) {
+        error_log("Edit Driver Prepare Error: " . $conn->error);
+        returnJsonResponse(false, false, 'Failed to prepare update. Database error.');
+    }
+    $stmtEdit->bind_param("sssssi", $name, $address, $contact_no, $availability, $area, $id);
 
-    if ($stmt->execute()) {
+    if ($stmtEdit->execute()) {
         returnJsonResponse(true, true); // Success, trigger reload
     } else {
-        error_log("Edit Driver DB Error: " . $stmt->error);
+        error_log("Edit Driver DB Error: " . $stmtEdit->error);
         returnJsonResponse(false, false, 'Failed to update driver. Database error.');
     }
-    $stmt->close();
+    $stmtEdit->close();
     exit; // Ensure exit after handling POST
 }
 
@@ -119,17 +137,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['fo
          returnJsonResponse(false, false, 'Invalid status provided.');
     }
 
-    $stmt = $conn->prepare("UPDATE drivers SET availability = ? WHERE id = ?");
-    $stmt->bind_param("si", $status, $id);
+    // Use $stmtStatus for clarity
+    $stmtStatus = $conn->prepare("UPDATE drivers SET availability = ? WHERE id = ?");
+    if (!$stmtStatus) {
+         error_log("Change Driver Status Prepare Error: " . $conn->error);
+         returnJsonResponse(false, false, 'Failed to prepare status update.');
+    }
+    $stmtStatus->bind_param("si", $status, $id);
 
-    if ($stmt->execute()) {
+    if ($stmtStatus->execute()) {
         returnJsonResponse(true, true); // Success, trigger reload
     } else {
-        error_log("Change Driver Status DB Error: " . $stmt->error);
+        error_log("Change Driver Status DB Error: " . $stmtStatus->error);
         returnJsonResponse(false, false, 'Failed to change status. Database error.');
     }
 
-    $stmt->close();
+    $stmtStatus->close();
     exit; // Ensure exit after handling POST
 }
 
@@ -149,8 +172,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
         exit;
     }
 
-    // Uses 'driver_assignments da' and filters by relevant order statuses
-    $stmt = $conn->prepare("
+    // Use $stmtModal for clarity
+    $stmtModal = $conn->prepare("
         SELECT da.po_number, o.orders, o.delivery_date, o.delivery_address, o.status, o.username
         FROM driver_assignments da
         JOIN orders o ON da.po_number = o.po_number
@@ -160,37 +183,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
     ");
 
     // Check if prepare failed
-    if (!$stmt) {
+    if (!$stmtModal) {
         error_log("[drivers.php get_deliveries] Prepare failed: " . $conn->error);
         // Output valid JSON error for the frontend
         echo json_encode(['success' => false, 'message' => 'Database query preparation failed. Check logs.']);
         exit;
     }
 
-    $stmt->bind_param("i", $driver_id);
+    $stmtModal->bind_param("i", $driver_id);
 
     // Check if execute failed
-    if (!$stmt->execute()) {
-        error_log("[drivers.php get_deliveries] Execute failed: " . $stmt->error);
+    if (!$stmtModal->execute()) {
+        error_log("[drivers.php get_deliveries] Execute failed: " . $stmtModal->error);
          // Output valid JSON error for the frontend
         echo json_encode(['success' => false, 'message' => 'Database query execution failed. Check logs.']);
-        $stmt->close();
+        $stmtModal->close();
         exit;
     }
 
-    $result = $stmt->get_result();
+    $resultModal = $stmtModal->get_result(); // Use $resultModal
 
-    // Check if get_result failed (less common)
-    if ($result === false) {
-         error_log("[drivers.php get_deliveries] Get result failed: " . $stmt->error);
+    // Check if get_result failed
+    if ($resultModal === false) {
+         error_log("[drivers.php get_deliveries] Get result failed: " . $stmtModal->error);
           // Output valid JSON error for the frontend
          echo json_encode(['success' => false, 'message' => 'Failed to retrieve query results. Check logs.']);
-         $stmt->close();
+         $stmtModal->close();
          exit;
     }
 
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
+    if ($resultModal->num_rows > 0) {
+        while ($row = $resultModal->fetch_assoc()) {
             // Parse the JSON orders data with error checking
             $orderItems = json_decode($row['orders'], true);
             if (json_last_error() !== JSON_ERROR_NONE) {
@@ -213,7 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
         echo json_encode(['success' => true, 'deliveries' => []]);
     }
 
-    $stmt->close();
+    $stmtModal->close();
     exit; // Important to stop script execution here
 }
 
@@ -224,6 +247,7 @@ $status_filter = $_GET['status'] ?? '';
 $area_filter = $_GET['area'] ?? '';
 $params = [];
 $types = "";
+$main_list_result = null; // Initialize result variable
 
 // Query to fetch drivers and calculate their active deliveries
 $sql = "SELECT
@@ -254,29 +278,40 @@ $sql .= " GROUP BY d.id, d.name, d.address, d.contact_no, d.availability, d.area
 $sql .= " ORDER BY d.name ASC";
 
 
-$stmt = $conn->prepare($sql);
-if (!$stmt) {
-    // Handle prepare error - log it and maybe show a message
+// Use $stmtMain for the main list query
+$stmtMain = $conn->prepare($sql);
+if (!$stmtMain) {
     error_log("Prepare failed for main driver list: " . $conn->error);
     die("Error preparing driver list. Please check server logs."); // Simple error for now
 }
 
 // Bind parameters if any filters were applied
 if (!empty($types)) {
-    $stmt->bind_param($types, ...$params);
+    // Add error check for bind_param
+    if (!$stmtMain->bind_param($types, ...$params)) {
+         error_log("Bind param failed for main driver list: " . $stmtMain->error);
+         $stmtMain->close(); // Close on error
+         die("Error binding parameters. Please check server logs.");
+    }
 }
 
-if(!$stmt->execute()) {
-    error_log("Execute failed for main driver list: " . $stmt->error);
+// Add error check for execute
+if(!$stmtMain->execute()) {
+    error_log("Execute failed for main driver list: " . $stmtMain->error);
+    $stmtMain->close(); // Close on error
     die("Error executing driver list query. Please check server logs.");
 }
 
-$result = $stmt->get_result();
-if ($result === false) {
-    error_log("Get result failed for main driver list: " . $stmt->error);
+$main_list_result = $stmtMain->get_result(); // Assign to $main_list_result
+
+// Add error check for get_result
+if ($main_list_result === false) {
+    error_log("Get result failed for main driver list: " . $stmtMain->error);
+    $stmtMain->close(); // Close on error
     die("Error retrieving driver list results. Please check server logs.");
 }
-// $result now holds the data for the main table display
+// $main_list_result now holds the data for the main table display
+// $stmtMain is still open here and will be closed after the loop/else block
 ?>
 
 <!DOCTYPE html>
@@ -285,77 +320,46 @@ if ($result === false) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drivers List</title>
-    <link rel="stylesheet" href="/css/accounts.css"> <!-- Assuming shared styles -->
-    <link rel="stylesheet" href="/css/drivers.css"> <!-- Specific driver styles -->
+    <!-- Link your existing CSS files -->
+    <link rel="stylesheet" href="/css/accounts.css">
+    <link rel="stylesheet" href="/css/drivers.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" href="/css/toast.css">
     <style>
-        /* --- Basic Styles --- */
-        :root {
-             /* Define variables if not already done in linked CSS */
-             --primary-color: #007bff;
-             --primary-hover: #0056b3;
-             --accent-color: #dc3545;
-             --success-color: #28a745;
-             --warning-color: #ffc107;
-             --info-color: #17a2b8;
-             --light-gray: #f8f9fa;
-             --medium-gray: #dee2e6;
-             --dark-gray: #6c757d;
-        }
-        body { font-family: sans-serif; margin: 0; background-color: #f4f6f9; }
-        .main-content { margin-left: 250px; /* Adjust according to sidebar width */ padding: 20px; }
-        .accounts-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-        .accounts-header h1 { margin: 0; }
-        .filter-section { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .filter-section label { font-weight: 500; }
-        .filter-section select { padding: 5px 8px; border: 1px solid var(--medium-gray); border-radius: 4px; }
-        .add-account-btn { background-color: var(--primary-color); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; font-size: 14px; }
-        .add-account-btn:hover { background-color: var(--primary-hover); }
-        .accounts-table-container { background-color: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow-x: auto; }
-        .accounts-table { width: 100%; border-collapse: collapse; }
-        .accounts-table th, .accounts-table td { padding: 12px 15px; border-bottom: 1px solid var(--medium-gray); text-align: left; white-space: nowrap; }
-        .accounts-table th { background-color: var(--light-gray); font-weight: 600; }
-        .accounts-table tbody tr:hover { background-color: #f1f1f1; }
-        .no-accounts { text-align: center; padding: 20px; color: var(--dark-gray); }
-        .action-buttons button { margin-right: 5px; padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 13px; }
-        .edit-btn { background-color: var(--warning-color); color: #333; }
-        .status-btn { background-color: var(--info-color); color: white; }
-
-        /* --- Specific Driver Styles --- */
+        /* --- Minimal Styles Needed for Functionality --- */
+        .overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; padding: 20px; }
+        .overlay-content { background-color: #fefefe; margin: auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .overlay-content h2 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; font-size: 1.5rem; }
+        .close-btn { color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; }
+        .account-form label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .account-form input[type="text"], .account-form select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .form-buttons { text-align: right; margin-top: 20px; }
+        .form-buttons button { margin-left: 10px; padding: 10px 20px; border-radius: 4px; border: none; cursor: pointer; font-size: 14px; }
+        .cancel-btn { background-color: #6c757d; color: white; }
+        .save-btn, .approve-btn { background-color: #28a745; color: white; }
+        .reject-btn { background-color: #dc3545; color: white; }
+        .modal-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+        .modal-buttons.single-button { justify-content: flex-end; }
         .required-asterisk { color: red; margin-left: 3px; }
         .error-message { color: red; margin-bottom: 10px; font-size: 0.9em; display: block; min-height: 1em; }
         .form-field-error { border: 1px solid red !important; }
-        .delivery-count { font-weight: bold; padding: 3px 8px; border-radius: 10px; display: inline-block; text-align: center; margin-right: 5px; min-width: 40px; /* Ensure consistent width */ }
+
+        /* Styles for Delivery Count and List */
+        .delivery-count { font-weight: bold; padding: 3px 8px; border-radius: 10px; display: inline-block; text-align: center; margin-right: 5px; min-width: 40px; }
         .delivery-count-low { background-color: #d4edda; color: #155724; }
         .delivery-count-medium { background-color: #fff3cd; color: #856404; }
         .delivery-count-high { background-color: #f8d7da; color: #721c24; }
-        .see-deliveries-btn { background-color: var(--dark-gray); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; font-size: 14px; vertical-align: middle; }
+        .see-deliveries-btn { background-color: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; font-size: 14px; vertical-align: middle; }
         .see-deliveries-btn:hover { background-color: #5a6268; }
-        .status-available { color: #155724; font-weight: bold; }
-        .status-not-available { color: #721c24; font-weight: bold; }
+        .status-available { color: #155724; font-weight: bold; } /* From your original */
+        .status-not-available { color: #721c24; font-weight: bold; } /* From your original */
 
-        /* --- Modal Styles --- */
-        .overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; padding: 20px; }
-        .overlay-content { background-color: #fefefe; margin: auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .overlay-content h2 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid var(--medium-gray); padding-bottom: 10px; font-size: 1.5rem; }
-        .account-form label { display: block; margin-bottom: 5px; font-weight: 500; }
-        .account-form input[type="text"], .account-form select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid var(--medium-gray); border-radius: 4px; box-sizing: border-box; }
-        .form-buttons { text-align: right; margin-top: 20px; }
-        .form-buttons button { margin-left: 10px; padding: 10px 20px; border-radius: 4px; border: none; cursor: pointer; font-size: 14px; }
-        .cancel-btn { background-color: var(--dark-gray); color: white; }
-        .save-btn, .approve-btn { background-color: var(--success-color); color: white; }
-        .reject-btn { background-color: var(--accent-color); color: white; }
-        .modal-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
-        .modal-buttons.single-button { justify-content: flex-end; } /* For single close button */
-        .close-btn { color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer; }
-        .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; }
-
-        /* --- Deliveries Modal Specific Styles --- */
+        /* Deliveries Modal Specific */
         .deliveries-modal-content { max-width: 900px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
-        .deliveries-table-container { overflow-y: auto; flex-grow: 1; margin-bottom: 15px; border: 1px solid var(--medium-gray); border-radius: 4px; }
+        .deliveries-table-container { overflow-y: auto; flex-grow: 1; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
         .deliveries-table { width: 100%; border-collapse: collapse; }
         .deliveries-table th, .deliveries-table td { padding: 8px 10px; border: 1px solid #ddd; text-align: left; vertical-align: top; }
         .deliveries-table th { background-color: #f2f2f2; position: sticky; top: 0; z-index: 1; }
@@ -370,8 +374,8 @@ if ($result === false) {
         .po-header { background-color: #f9f9f9; cursor: pointer; transition: background-color 0.2s; }
         .po-header:hover { background-color: #f0f0f0; }
         .order-items-row { /* Initially hidden by JS */ }
-        .order-items-row.collapsed .order-items { display: none; } /* Redundant if row hidden, but safe */
-        .order-items { padding: 10px 15px; background-color: #fff; border-left: 3px solid var(--info-color); } /* Indent items */
+        .order-items-row.collapsed .order-items { display: none; }
+        .order-items { padding: 10px 15px; background-color: #fff; border-left: 3px solid #17a2b8; } /* Indent items */
         .order-items h4 { margin-top: 0; margin-bottom: 10px; font-size: 1em; color: #555; }
         .order-items table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
         .order-items th, .order-items td { padding: 6px; text-align: left; border: 1px solid #eee; }
@@ -379,6 +383,8 @@ if ($result === false) {
         .expand-icon { margin-right: 5px; display: inline-block; transition: transform 0.2s; width: 1em; text-align: center; }
         .po-header.collapsed .expand-icon { transform: rotate(-90deg); }
         .deliveries-modal-content .modal-buttons { margin-top: auto; padding-top: 15px; border-top: 1px solid #eee; }
+
+        /* Add other necessary styles from your original CSS files if needed */
 
     </style>
 </head>
@@ -421,8 +427,10 @@ if ($result === false) {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if ($result && $result->num_rows > 0): ?>
-                        <?php while ($row = $result->fetch_assoc()):
+                    <?php
+                    // Use the result fetched earlier ($main_list_result)
+                    if ($main_list_result && $main_list_result->num_rows > 0):
+                        while ($row = $main_list_result->fetch_assoc()):
                             // Use calculated count for display
                             $active_delivery_count = $row['calculated_deliveries'];
 
@@ -435,7 +443,7 @@ if ($result === false) {
                             }
                             // Determine CSS class for availability status
                             $availability_class = 'status-' . strtolower(str_replace(' ', '-', $row['availability']));
-                        ?>
+                    ?>
                             <tr>
                                 <td><?= htmlspecialchars($row['name']) ?></td>
                                 <td><?= htmlspecialchars($row['address']) ?></td>
@@ -462,15 +470,20 @@ if ($result === false) {
                                     </button>
                                 </td>
                             </tr>
-                        <?php endwhile; ?>
-                        <?php $stmt->close(); // Close statement after loop ?>
-                    <?php else: ?>
+                    <?php
+                        endwhile;
+                    else: // No rows found
+                    ?>
                         <tr>
                             <td colspan="7" class="no-accounts">No drivers found matching criteria.</td>
                         </tr>
-                         <?php if(isset($stmt)) $stmt->close(); // Close statement if loop was skipped but stmt was prepared ?>
-                    <?php endif; ?>
-                    <?php $conn->close(); // Close DB connection ?>
+                    <?php
+                    endif;
+                    // Close the main statement *ONCE* after the loop/else block
+                    if (isset($stmtMain)) $stmtMain->close();
+                    // Close the database connection
+                    $conn->close();
+                    ?>
                 </tbody>
             </table>
         </div>
@@ -630,7 +643,8 @@ if ($result === false) {
              const itemsRow = headerRow.nextElementSibling;
              if (itemsRow && itemsRow.classList.contains('order-items-row')) {
                   headerRow.classList.toggle('collapsed');
-                  itemsRow.style.display = headerRow.classList.contains('collapsed') ? 'none' : 'table-row';
+                  // Toggle display using jQuery for consistency
+                  $(itemsRow).toggle(!headerRow.classList.contains('collapsed'));
              }
         }
         function formatDate(dateStr) { if (!dateStr) return 'N/A'; try { const date = new Date(dateStr); if (isNaN(date.getTime())) return 'Invalid Date'; return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { console.error("Error formatting date:", dateStr, e); return 'Invalid Date'; } }
@@ -642,6 +656,7 @@ if ($result === false) {
             const tableBody = $('#deliveriesTableBody');
             tableBody.html('<tr><td colspan="4" class="no-deliveries"><i class="fas fa-spinner fa-spin"></i> Loading deliveries...</td></tr>');
 
+            // Fetch using the GET handler in this same file
             fetch(`drivers.php?driver_id=${id}&action=get_deliveries`)
                 .then(response => { if (!response.ok) { return response.text().then(text => { console.error("Server response:", text); throw new Error(`Server error: ${response.status}`); }); } return response.json(); })
                 .then(data => {
@@ -650,7 +665,8 @@ if ($result === false) {
                         if (data.deliveries.length > 0) {
                             let html = '';
                             data.deliveries.forEach((delivery) => {
-                                let statusClass = 'status-' + (delivery.status ? delivery.status.toLowerCase().replace(/\s+/g, '-') : 'unknown'); // Replace spaces too
+                                let statusClass = 'status-' + (delivery.status ? delivery.status.toLowerCase().replace(/\s+/g, '-') : 'unknown');
+                                // Ensure rows start collapsed and items row is hidden
                                 html += `<tr class="po-header collapsed" onclick="toggleOrderItems(this)">
                                             <td><span class="expand-icon">▼</span> ${delivery.po_number}</td>
                                             <td>${formatDate(delivery.delivery_date)}</td>
@@ -689,7 +705,6 @@ if ($result === false) {
         function filterDrivers() {
             const status = document.getElementById('statusFilter').value;
             const area = document.getElementById('areaFilter').value;
-            // Use window.location.search to preserve other potential query params
             const params = new URLSearchParams(window.location.search);
             params.set('status', status);
             params.set('area', area);
@@ -724,7 +739,7 @@ if ($result === false) {
             // AJAX form submission for Add Driver
             $('#addDriverForm').on('submit', function(e) {
                 e.preventDefault();
-                const contactInput = document.getElementById('add-contact_no');
+                const contactInput = document.getElementById('add-contact_no'); // Use specific ID
                 if (!validateContactNumber(contactInput, document.getElementById('contactError'))) { showToast('Please correct errors.', 'warning'); return false; }
                 $.ajax({
                     url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
@@ -736,7 +751,7 @@ if ($result === false) {
             // AJAX form submission for Edit Driver
             $('#editDriverForm').on('submit', function(e) {
                 e.preventDefault();
-                const contactInput = document.getElementById('edit-contact_no');
+                const contactInput = document.getElementById('edit-contact_no'); // Use specific ID
                 if (!validateContactNumber(contactInput, document.getElementById('editContactError'))) { showToast('Please correct errors.', 'warning'); return false; }
                 $.ajax({
                     url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
