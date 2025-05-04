@@ -746,7 +746,7 @@ require_once 'header.php';
                 </div>
             </div>
         </div>
-        <div class="seemore_bt mt-5" data-aos="fade-up"><a href="/LandingPage/ordering.php">View All Products</a></div>
+        <div class="seemore_bt mb-5" data-aos="fade-up"><a href="/LandingPage/ordering.php">View All Products</a></div>
     </div>
 </div>
 
