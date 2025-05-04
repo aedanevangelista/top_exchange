@@ -316,8 +316,8 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
          .order-details-container { margin-bottom: 15px; }
          .order-details-table { width: 100%; border-collapse: collapse; }
          .order-details-table th, .order-details-table td { padding: 8px; border: 1px solid #ddd; text-align: left; }
-         .order-details-table th { background-color: #f2f2f2; }
-         .item-header-row.completed-item { background-color: #e9f7ef; }
+         .order-details-table th { background-color:rgb(19, 18, 18); }
+         .item-header-row.completed-item { background-color:rgb(147, 231, 184); }
          .unit-row.completed { background-color: #f0fff8; }
          .status-cell { text-align: center; vertical-align: middle; }
          .item-status-checkbox { margin-right: 5px; }
