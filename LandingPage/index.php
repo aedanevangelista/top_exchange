@@ -274,6 +274,7 @@ require_once 'header.php';
         font-weight: 600;
         margin-bottom: 10px;
         line-height: 1.3;
+        color: white;
     }
     .newsletter-text {
         color: #e9ecef;
