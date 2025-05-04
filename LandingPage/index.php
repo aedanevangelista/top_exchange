@@ -65,7 +65,7 @@ require_once 'header.php';
         position: absolute;
         top: 10px;
         left: 10px;
-        background-color: rgba(0, 123, 255, 0.8);
+        background-color: rgba(0, 123, 255, 0.8); /* Default badge color if needed */
         color: white;
         padding: 3px 8px;
         font-size: 0.75rem;
@@ -100,7 +100,7 @@ require_once 'header.php';
     .product-price {
         font-size: 1.25rem;
         font-weight: bold;
-        color: #007bff;
+        color: #e46c1d; /* UPDATED */
         margin-bottom: 12px;
     }
     .product-description {
@@ -163,7 +163,7 @@ require_once 'header.php';
         width: 100%;
         height: 100%;
         position: relative;
-        border-left: 5px solid #007bff;
+        border-left: 5px solid #e46c1d; /* UPDATED */
     }
     .testimonial-text {
         font-style: italic;
@@ -197,7 +197,7 @@ require_once 'header.php';
         display: none;
         width: 40px;
         height: 40px;
-        background-color: rgba(0, 123, 255, 0.7);
+        background-color: rgba(228, 108, 29, 0.7); /* UPDATED */
         color: white;
         text-align: center;
         line-height: 40px;
@@ -209,7 +209,7 @@ require_once 'header.php';
         visibility: hidden;
     }
     .back-to-top:hover {
-        background-color: rgba(0, 123, 255, 1);
+        background-color: rgba(228, 108, 29, 1); /* UPDATED */
         color: white;
     }
     .back-to-top.visible {
@@ -248,7 +248,7 @@ require_once 'header.php';
     }
     .feature-icon {
         font-size: 2.5rem;
-        color: #007bff;
+        color: #e46c1d; /* UPDATED */
         margin-bottom: 15px;
     }
     .feature-title {
@@ -299,7 +299,7 @@ require_once 'header.php';
     .newsletter-form .btn {
         height: 55px;
         border-radius: 0 30px 30px 0 !important;
-        background-color: #007bff;
+        background-color: #e46c1d; /* UPDATED */
         color: white;
         border: none;
         padding: 0 30px;
@@ -309,13 +309,13 @@ require_once 'header.php';
         transition: background-color 0.3s ease;
     }
     .newsletter-form .btn:hover {
-        background-color: #0056b3;
+        background-color: #c35a10; /* UPDATED */
     }
 
     /* --- Hero Section / Banner Improvements --- */
     .banner_section {
         padding-top: 60px;
-        padding-bottom: 60px;
+        padding-bottom: 80px; /* Increased */
         position: relative;
         background-color: #f8f9fa;
         overflow: hidden;
@@ -323,6 +323,8 @@ require_once 'header.php';
     .banner_section .container {
         position: relative;
         z-index: 2;
+        padding-left: 40px; /* Added */
+        padding-right: 40px; /* Added */
     }
     .banner_section .row > .col-sm-6:first-child {
         display: flex;
@@ -330,23 +332,25 @@ require_once 'header.php';
         justify-content: center;
         height: 100%;
         padding-right: 30px;
+        min-height: 300px; /* Added */
     }
     .banner_taital {
-        font-size: 3rem;
+        font-size: 2.8rem; /* Adjusted */
         font-weight: 700;
         color: #333;
         margin-bottom: 15px;
+        line-height: 1.2;
     }
     .banner_text {
-        font-size: 1.1rem;
+        font-size: 1.05rem; /* Adjusted */
         color: #555;
         line-height: 1.6;
-        margin-bottom: 25px;
+        margin-bottom: 30px; /* Adjusted */
     }
     .started_text a {
-        background-color: #007bff;
+        background-color: #e46c1d; /* UPDATED */
         color: white;
-        padding: 12px 25px;
+        padding: 12px 28px; /* Adjusted */
         border-radius: 5px;
         text-decoration: none;
         font-weight: 500;
@@ -354,7 +358,7 @@ require_once 'header.php';
         transition: background-color 0.3s ease;
     }
     .started_text a:hover {
-        background-color: #0056b3;
+        background-color: #c35a10; /* UPDATED */
         color: white;
     }
     .banner_img img {
@@ -367,34 +371,34 @@ require_once 'header.php';
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
-        width: 50px;
-        height: 50px;
-        background-color: rgba(0, 0, 0, 0.4);
+        width: 40px;   /* UPDATED */
+        height: 40px;  /* UPDATED */
+        background-color: rgba(0, 0, 0, 0.3); /* Adjusted */
         border-radius: 50%;
-        opacity: 0.8;
+        opacity: 0.7; /* Adjusted */
         transition: opacity 0.3s ease, background-color 0.3s ease;
         z-index: 5;
     }
     .banner_section .carousel-control-prev:hover,
     .banner_section .carousel-control-next:hover {
         opacity: 1;
-        background-color: rgba(0, 0, 0, 0.6);
+        background-color: rgba(0, 0, 0, 0.5);
     }
     .banner_section .carousel-control-prev {
-        left: -25px; /* Adjust as needed */
+        left: -10px; /* Adjusted */
     }
     .banner_section .carousel-control-next {
-        right: -25px; /* Adjust as needed */
+        right: -10px; /* Adjusted */
     }
     .banner_section .carousel-control-prev-icon,
     .banner_section .carousel-control-next-icon {
-        width: 25px;
-        height: 25px;
+        width: 20px; /* UPDATED */
+        height: 20px;
         background-size: 100%, 100%;
     }
     .banner_section .carousel-indicators {
         position: absolute;
-        bottom: -40px;
+        bottom: -50px; /* Adjusted */
         left: 50%;
         transform: translateX(-50%);
         margin-left: 0;
@@ -402,21 +406,23 @@ require_once 'header.php';
         z-index: 15;
     }
     .banner_section .carousel-indicators li {
-        background-color: rgba(0, 0, 0, 0.3);
+        background-color: rgba(0, 0, 0, 0.2); /* Adjusted */
         border-radius: 50%;
-        width: 12px;
-        height: 12px;
-        margin: 0 6px;
+        width: 10px; /* Adjusted */
+        height: 10px;
+        margin: 0 5px; /* Adjusted */
         border: none;
-        opacity: 0.7;
+        opacity: 0.6; /* Adjusted */
         transition: opacity 0.3s ease, background-color 0.3s ease;
     }
     .banner_section .carousel-indicators .active {
-        background-color: #007bff;
+        background-color: #e46c1d; /* UPDATED */
         opacity: 1;
+        width: 12px; /* Added */
+        height: 12px;
     }
     .banner_section .carousel {
-        margin-bottom: 50px; /* Space for indicators */
+        margin-bottom: 60px; /* Adjusted */
     }
 
 </style>
@@ -424,9 +430,7 @@ require_once 'header.php';
 <!-- banner section start -->
 <div class="banner_section layout_padding">
     <div class="container">
-        <!-- Added margin-bottom to carousel div -->
         <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
-            <!-- Indicators should now be styled and positioned correctly via CSS -->
             <ol class="carousel-indicators">
                 <li data-target="#carouselExampleIndicators" data-slide-to="0" class="active"></li>
                 <li data-target="#carouselExampleIndicators" data-slide-to="1"></li>
@@ -435,7 +439,7 @@ require_once 'header.php';
             </ol>
             <div class="carousel-inner">
                 <div class="carousel-item active">
-                    <div class="row align-items-center"> <!-- Use align-items-center for vertical centering if needed -->
+                    <div class="row align-items-center">
                         <div class="col-sm-6">
                             <h1 class="banner_taital" data-aos="fade-down">Premium Siopao</h1>
                             <p class="banner_text" data-aos="fade-right" data-aos-delay="200">Experience the authentic taste of our handcrafted siopao, made with premium ingredients and traditional recipes passed down through generations.</p>
@@ -483,7 +487,6 @@ require_once 'header.php';
                     </div>
                 </div>
             </div>
-            <!-- Controls are now positioned and styled via CSS -->
             <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
                 <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                 <span class="sr-only">Previous</span>
