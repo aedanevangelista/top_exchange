@@ -1,5 +1,5 @@
 <?php
-// UTC: 2025-05-04 07:05:07
+// UTC: 2025-05-04 07:15:14
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
@@ -72,8 +72,8 @@ if ($conn) {
                 echo "</div>";
                 break;
 
-            // **** NEW CASE for Sales by Client ****
             case 'sales_by_client':
+                // --- Sales by Client Logic (As provided before) ---
                 $query = "SELECT
                             username,
                             COUNT(*) as order_count,
@@ -84,7 +84,7 @@ if ($conn) {
                 $types = "";
                 if ($startDate) { $query .= " AND order_date >= ?"; $params[] = $startDate; $types .= "s"; }
                 if ($endDate) { $query .= " AND order_date <= ?"; $params[] = $endDate; $types .= "s"; }
-                $query .= " GROUP BY username ORDER BY total_revenue DESC"; // Order by revenue
+                $query .= " GROUP BY username ORDER BY total_revenue DESC";
 
                 $stmt = $conn->prepare($query);
                 if ($stmt === false) throw new Exception("Prepare failed (Sales by Client): " . $conn->error);
@@ -92,7 +92,6 @@ if ($conn) {
                 $stmt->execute();
                 $result = $stmt->get_result();
 
-                // --- Generate HTML for Sales by Client ---
                 echo "<div class='report-container'>";
                 echo "<h2>Sales by Client Report</h2>";
                  if ($startDate || $endDate) {
@@ -122,33 +121,66 @@ if ($conn) {
                 $stmt->close();
                 break;
 
+            // **** CORRECTED CASE for Inventory Status ****
             case 'inventory_status':
-                // --- ADAPT THIS SECTION with your actual Low Inventory logic ---
-                // Example structure (assumes 'inventory' table and 'low_stock_threshold' column)
-                 $query = "SELECT product_id, item_description, packaging, category, quantity_in_stock, low_stock_threshold
-                           FROM inventory -- <<< ADAPT Table Name
-                           WHERE quantity_in_stock <= low_stock_threshold AND quantity_in_stock >= 0 -- <<< ADAPT Columns/Logic
-                           ORDER BY category, item_description";
-                 $stmt = $conn->prepare($query);
-                 if ($stmt === false) throw new Exception("Prepare failed (Inventory Status): " . $conn->error);
-                 $stmt->execute();
-                 $result = $stmt->get_result();
+                // Define a default low stock threshold
+                $defaultLowStockThreshold = 10; // You can change this value
+
+                // Use the correct table and column names from your schema
+                $query = "SELECT
+                            p.product_id,         -- From products table
+                            p.item_description,   -- From products table
+                            p.packaging,          -- From products table
+                            p.category,           -- From products table
+                            p.stock_quantity      -- From products table
+                          FROM products p         -- Correct table name
+                          WHERE p.stock_quantity <= ? -- Compare against the default threshold
+                            AND p.stock_quantity >= 0 -- Show low stock, including zero
+                          ORDER BY p.category, p.item_description";
+
+                $stmt = $conn->prepare($query);
+                // Check prepare statement success
+                if ($stmt === false) {
+                     // Include query in error message for easier debugging
+                     throw new Exception("Prepare failed (Inventory Status): " . $conn->error . " | Query: " . $query);
+                }
+
+                // Bind the default threshold value to the placeholder '?'
+                $stmt->bind_param("i", $defaultLowStockThreshold);
+
+                $stmt->execute();
+                $result = $stmt->get_result();
 
                  // --- Generate HTML ---
                  echo "<div class='report-container'>";
                  echo "<h2>Low Inventory Status Report</h2>";
-                 // No date range typically needed for current status
+                 // Display the threshold being used
+                 echo "<p class='report-period'>Showing items with stock at or below threshold (" . $defaultLowStockThreshold . ")</p>";
+
                  if ($result && $result->num_rows > 0) {
                     echo "<table class='report-table'>";
-                    echo "<thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Qty in Stock</th><th>Low Stock Threshold</th></tr></thead>";
+                    // Header row without the threshold column
+                    echo "<thead><tr><th>Category</th><th>Product Description</th><th>Packaging</th><th>Qty in Stock</th></tr></thead>";
                     echo "<tbody>";
                     while ($row = $result->fetch_assoc()) {
-                        echo "<tr style='" . ($row['quantity_in_stock'] <= 0 ? "color:red; font-weight:bold;" : ($row['quantity_in_stock'] <= $row['low_stock_threshold'] ? "color:orange;" : "")) . "'>"; // Example styling
+                        // Use the default threshold for styling comparison
+                        $threshold = $defaultLowStockThreshold;
+
+                        // Style row based on stock level
+                        $style = '';
+                        if ($row['stock_quantity'] <= 0) {
+                            $style = 'color:red; font-weight:bold;'; // Out of stock
+                        } elseif ($row['stock_quantity'] <= $threshold) {
+                            $style = 'color:orange;'; // Low stock
+                        }
+
+                        echo "<tr style='" . $style . "'>";
                         echo "<td>" . htmlspecialchars($row['category'] ?? 'N/A') . "</td>";
+                        // Use item_description as the main product identifier here
                         echo "<td>" . htmlspecialchars($row['item_description']) . "</td>";
                         echo "<td>" . htmlspecialchars($row['packaging'] ?? 'N/A') . "</td>";
-                        echo "<td>" . number_format($row['quantity_in_stock']) . "</td>";
-                        echo "<td>" . number_format($row['low_stock_threshold']) . "</td>";
+                        // Use stock_quantity column
+                        echo "<td>" . number_format($row['stock_quantity']) . "</td>";
                         echo "</tr>";
                     }
                     echo "</tbody>";
@@ -169,11 +201,9 @@ if ($conn) {
                  $conditions = [];
                  if ($startDate) { $conditions[] = "order_date >= ?"; $params[] = $startDate; $types .= "s"; }
                  if ($endDate) { $conditions[] = "order_date <= ?"; $params[] = $endDate; $types .= "s"; }
-                 // Add more filters if needed (e.g., by status, by client)
-                 // if (!empty($_POST['filter_status'])) { ... }
 
                  if (!empty($conditions)) { $query .= " WHERE " . implode(" AND ", $conditions); }
-                 $query .= " ORDER BY order_date DESC"; // Example sort
+                 $query .= " ORDER BY order_date DESC";
 
                  $stmt = $conn->prepare($query);
                  if ($stmt === false) throw new Exception("Prepare failed (Order Listing): " . $conn->error);
@@ -192,11 +222,10 @@ if ($conn) {
                     echo "<p class='report-period'>" . htmlspecialchars($period) . "</p>";
                  }
                  if ($result && $result->num_rows > 0) {
-                    echo "<table class='report-table'>"; // Consider adding 'sortable' class if using JS sorting
+                    echo "<table class='report-table'>";
                     echo "<thead><tr><th>PO Number</th><th>Client</th><th>Order Date</th><th>Delivery Date</th><th>Total (PHP)</th><th>Status</th></tr></thead>";
                     echo "<tbody>";
                     while ($row = $result->fetch_assoc()) {
-                        // Add status class for potential styling
                         $statusClass = 'status-' . strtolower(str_replace(' ', '-', $row['status']));
                         echo "<tr>";
                         echo "<td>" . htmlspecialchars($row['po_number']) . "</td>";
@@ -204,7 +233,7 @@ if ($conn) {
                         echo "<td>" . htmlspecialchars($row['order_date']) . "</td>";
                         echo "<td>" . htmlspecialchars($row['delivery_date']) . "</td>";
                         echo "<td>" . number_format($row['total_amount'], 2) . "</td>";
-                        echo "<td><span class='status-badge " . $statusClass . "'>" . htmlspecialchars($row['status']) . "</span></td>"; // Example using status badge
+                        echo "<td><span class='status-badge " . $statusClass . "'>" . htmlspecialchars($row['status']) . "</span></td>";
                         echo "</tr>";
                     }
                     echo "</tbody>";
@@ -222,7 +251,8 @@ if ($conn) {
                 break;
         }
     } catch (Exception $e) {
-        error_log("Report Generation Error (" . $reportType . "): " . $e->getMessage()); // Log the detailed error
+        // Log the detailed error to the server's error log
+        error_log("Report Generation Error (" . $reportType . "): " . $e->getMessage());
         http_response_code(500); // Internal Server Error
         // Send a user-friendly error message using the CSS class
         echo "<div class='report-error-message'>Error generating report: " . htmlspecialchars($e->getMessage()) . "</div>";
