@@ -1,0 +1,22 @@
+/**
+ * Notification Header Override
+ * This file removes the "Mark all as read" button from the notification header
+ */
+
+/* Hide the mark all as read button */
+.mark-all-read {
+    display: none !important;
+}
+
+/* Adjust the notification header to center the title */
+.notifications-header {
+    justify-content: center !important;
+    padding: 15px !important;
+}
+
+/* Make sure the notification header title is properly centered */
+.notifications-header h3 {
+    margin: 0 !important;
+    text-align: center !important;
+    width: 100% !important;
+}
