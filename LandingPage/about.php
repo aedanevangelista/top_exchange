@@ -22,11 +22,20 @@ body {
     overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
+/* REMOVED padding from the main wrapper */
 .about_section {
-    padding-top: var(--section-padding-y);
-    padding-bottom: var(--section-padding-y);
+    /* No top/bottom padding here */
+    background-color: #fff; /* Ensure intro background is white */
 }
-/* Add consistent top padding to subsequent sections */
+
+/* ADD padding specifically to the first container (intro) */
+.about_section > .container:first-of-type {
+     padding-top: var(--section-padding-y);
+     padding-bottom: var(--section-padding-y);
+}
+
+
+/* Keep consistent padding for subsequent sections */
 .history-section,
 .team-section,
 .achievements-section,
@@ -383,7 +392,9 @@ body {
 </style>
 
 <!-- about section start -->
-<div class="about_section layout_padding" style="background-color: #fff;">
+<!-- Removed layout_padding style from here -->
+<div class="about_section" style="background-color: #fff;">
+    <!-- This container gets padding from CSS -->
     <div class="container">
         <!-- Added class="intro-row" -->
         <div class="row intro-row">
@@ -637,7 +648,7 @@ body {
             </div>
         </div> <!-- End testimonials-section -->
 
-</div> <!-- about section end (Original main wrapper - might not be needed) -->
+</div> <!-- about section end (Original main wrapper) -->
 
 <?php
 // Include the footer
