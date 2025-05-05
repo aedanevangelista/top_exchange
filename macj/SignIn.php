@@ -3,7 +3,7 @@ session_start();
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Connect to production database
     try {
-        $conn = new mysqli("151.106.122.5", "u701062148_macj", "Macjpestcontrol123", "u701062148_macj");
+        $conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
     } catch (Exception $e) {
         die("Connection failed: " . $e->getMessage());
     }

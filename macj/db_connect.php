@@ -7,7 +7,7 @@ ini_set('display_errors', 1);
 try {
     // Connect to the production server
     error_log("Attempting to connect to production database");
-    $conn = new mysqli("151.106.122.5", "u701062148_macj", "Macjpestcontrol123", "u701062148_macj");
+    $conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
     error_log("Connected to production database");
 } catch (Exception $e) {
     error_log("Failed to connect to production database: " . $e->getMessage());

@@ -44,7 +44,7 @@ error_log("isPrimary value: " . ($isPrimary ? 'true' : 'false'));
 
 try {
     // Connect to the database
-    $conn = new mysqli("151.106.122.5", "u701062148_macj", "Macjpestcontrol123", "u701062148_macj");
+    $conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
 
     // Check connection
     if ($conn->connect_error) {
