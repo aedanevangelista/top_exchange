@@ -436,7 +436,7 @@ $conn->close();
 
         <?php if (empty($orders)): ?>
             <div class="no-orders">
-                <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: 15px; opacity: 0.5;"></i>
+                <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: 15px; opacity: 1;"></i>
                 <p>You have no active deliveries assigned.</p>
                 <p style="font-size: 0.9rem; margin-top: 10px;">Pull down to refresh the page when new deliveries are assigned.</p>
             </div>
@@ -720,7 +720,7 @@ $conn->close();
                                         if ($('.order-card').length === 0) {
                                             $('.orders-list').html(`
                                                 <div class="no-orders">
-                                                    <i class="fas fa-check-circle fa-2x" style="margin-bottom: 15px; color: #28a745; opacity: 0.8;"></i>
+                                                    <i class="fas fa-check-circle fa-2x" style="margin-bottom: 15px; color: #28a745; opacity: 1;"></i>
                                                     <p>All deliveries completed! Great job!</p>
                                                     <p style="font-size: 0.9rem; margin-top: 10px;">Pull down to refresh when new deliveries are assigned.</p>
                                                 </div>
