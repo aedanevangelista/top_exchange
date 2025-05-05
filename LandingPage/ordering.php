@@ -869,7 +869,7 @@ $(document).ready(function() {
         $('#modal-product-name').text('Loading...');
         // <<< FIX PATH HERE: Update '/LandingPage/images/loading.gif' to the correct path for your loading image >>>
         $('#modal-product-image').attr('src', '/LandingPage/images/loading.gif').attr('alt', 'Loading Product Image');
-        $('#modal-variant-select').html('<option>Loading variants...</option>').prop('disabled', true); // Reset variants
+        $('#modal-variant-select').html('').prop('disabled', true); // Clear options and disable
         $('#modal-variant-select-group').show(); // Show variant group initially
         $('#modal-product-packaging .info-value').text('-');
         $('#modal-product-price .info-value').text('-');
@@ -897,83 +897,128 @@ $(document).ready(function() {
                 product_name: productName, // Send base product name
                 category: category
             },
+            // **** START: Updated AJAX Success Block with Detailed Logging ****
             success: function(response) {
-                console.log('Product modal data received:', response);
+                console.log('Product modal data received:', response); // Existing log
 
-                // --- Start: Keep this error checking ---
+                // --- Start: Error checking ---
                 if (response && response.success) {
-                    const mainProduct = response.main_product; // This is the first variant (e.g., lowest price)
-                    const variants = response.variants; // Array of all variant objects
+                    const mainProduct = response.main_product;
+                    const variants = response.variants;
 
-                    if (!mainProduct || !variants || !Array.isArray(variants) || variants.length === 0) { // Added isArray check
-                         console.error('Incomplete or invalid data received:', response);
-                         $('#modal-product-name').text('Error Loading Data');
-                         showGlobalPopup('Error: Could not load product details.', true);
+                    // Enhanced check for variants array
+                    if (!mainProduct || !variants || !Array.isArray(variants) || variants.length === 0) {
+                         console.error('Incomplete or invalid variants array received:', response);
+                         $('#modal-product-name').text('Error Loading Variants');
+                         showGlobalPopup('Error: Could not load product variants.', true);
                          $('#modal-add-to-cart-btn').prop('disabled', true).text('Error');
-                         return; // Stop processing
+                         return;
                     }
-                    // --- End: Keep this error checking ---
-
+                    // --- End: Error checking ---
 
                     // --- Populate Modal ---
-                    $('#productDetailModalLabel').text(productName); // Set modal title to base product name
-                    $('#modal-product-name').text(productName); // Display base product name
+                    $('#productDetailModalLabel').text(productName);
+                    $('#modal-product-name').text(productName);
 
-                    // Populate variant dropdown
                     const variantSelect = $('#modal-variant-select');
                     variantSelect.empty(); // Clear previous options
+                    console.log("Cleared variant select dropdown."); // Log clearance
 
+                    let optionsAppended = 0; // Counter for appended options
+
+                    // --- Loop through variants ---
+                    console.log(`Looping through ${variants.length} variants...`);
                     variants.forEach(function(variant, index) {
-                        // Basic check for essential variant data
+                        console.log(`Processing variant ${index}:`, variant); // Log each variant object
+
+                        // --- Validation Check ---
                         if (!variant || typeof variant.product_id === 'undefined' || typeof variant.item_description === 'undefined' || typeof variant.price === 'undefined') {
-                            console.warn("Skipping invalid variant data:", variant);
+                            // Log specific missing fields if possible
+                            let missing = [];
+                            if (!variant) missing.push("variant object");
+                            else {
+                                if (typeof variant.product_id === 'undefined') missing.push("product_id");
+                                if (typeof variant.item_description === 'undefined') missing.push("item_description");
+                                if (typeof variant.price === 'undefined') missing.push("price");
+                            }
+                            console.warn(`Skipping variant ${index} due to missing data: ${missing.join(', ')}`, variant);
                             return; // Skip this iteration
                         }
-                        variantSelect.append(
-                            $('<option></option>')
-                                .val(variant.product_id)
-                                // Display item_description (specific variant name) and price
-                                .text(variant.item_description + ' - ₱' + parseFloat(variant.price).toFixed(2))
-                                // Store all variant data on the option element
-                                .data('price', variant.price)
-                                .data('packaging', variant.packaging)
-                                .data('image', variant.product_image || '/LandingPage/images/default-product.jpg')
-                                .data('name', variant.item_description) // Specific variant name
-                                .data('description', variant.additional_description)
-                                .data('ingredients', variant.ingredients_array || []) // Ensure it's an array
-                                .data('stock', variant.stock_quantity) // Store stock
-                        );
-                    });
+                        // --- End Validation Check ---
+
+                        console.log(`Variant ${index} passed validation. Appending option...`);
+
+                        try {
+                            // --- Append Option ---
+                            variantSelect.append(
+                                $('<option></option>')
+                                    .val(variant.product_id)
+                                    .text(variant.item_description + ' - ₱' + parseFloat(variant.price).toFixed(2))
+                                    .data('price', variant.price)
+                                    .data('packaging', variant.packaging)
+                                    .data('image', variant.product_image || '/LandingPage/images/default-product.jpg')
+                                    .data('name', variant.item_description)
+                                    .data('description', variant.additional_description)
+                                    .data('ingredients', variant.ingredients_array || [])
+                                    .data('stock', variant.stock_quantity)
+                            );
+                            optionsAppended++; // Increment counter
+                            console.log(`Successfully appended option for variant ${index}: ${variant.item_description}`);
+                            // --- End Append Option ---
+                        } catch (e) {
+                             console.error(`Error appending option for variant ${index}:`, e, variant);
+                        }
+
+                    }); // --- End loop ---
+
+                    console.log(`Finished looping. Total options appended: ${optionsAppended}`);
 
                     // --- Handle Single vs Multiple Variants ---
-                    if (variants.length <= 1) {
-                        // If only one variant, hide the dropdown group
+                    if (optionsAppended <= 1) { // Check based on appended count
+                        console.log("Hiding variant select group (<= 1 option appended).");
                         $('#modal-variant-select-group').hide();
-                         variantSelect.prop('disabled', true); // Also disable it
+                        variantSelect.prop('disabled', true);
                     } else {
-                        // If multiple variants, ensure dropdown is visible and enabled
+                        console.log("Showing variant select group (> 1 option appended).");
                         $('#modal-variant-select-group').show();
                         variantSelect.prop('disabled', false);
                     }
 
                     // --- Explicitly Update Modal ---
-                    // Call updateModalFromVariant directly to load the first variant's details
-                    updateModalFromVariant();
-
-
-                    // Enable Add to Cart button (only if user is logged in)
-                    if (isLoggedIn) {
-                         $('#modal-add-to-cart-btn').prop('disabled', false).html('<i class="fas fa-cart-plus mr-2"></i> Add to Cart');
+                    if (optionsAppended > 0) {
+                        console.log("Calling updateModalFromVariant().");
+                        updateModalFromVariant(); // Only call if options were actually added
+                    } else {
+                         console.warn("No options were appended, skipping updateModalFromVariant(). Modal might remain in loading state.");
+                         // Optionally update parts of the modal to show an error/empty state
+                         $('#modal-product-packaging .info-value').text('N/A');
+                         $('#modal-product-price .info-value').text('N/A');
+                         $('#modal-product-image').attr('src', '/LandingPage/images/default-product.jpg').attr('alt', 'No variants available');
                     }
-                    // If not logged in, button remains disabled with 'Login to Add' text
 
-                } else {
+
+                    // --- Enable Add to Cart button ---
+                    // Enable only if options were appended and user is logged in
+                    if (optionsAppended > 0 && isLoggedIn) {
+                         console.log("Enabling Add to Cart button.");
+                         $('#modal-add-to-cart-btn').prop('disabled', false).html('<i class="fas fa-cart-plus mr-2"></i> Add to Cart');
+                    } else if (!isLoggedIn) {
+                         console.log("Add to Cart button remains disabled (User not logged in).");
+                         $('#modal-add-to-cart-btn').prop('disabled', true).html('<i class="fas fa-lock mr-2"></i> Login to Add');
+                    } else { // Logged in but no options appended
+                         console.log("Add to Cart button remains disabled (No variants appended).");
+                         $('#modal-add-to-cart-btn').prop('disabled', true).html('<i class="fas fa-times-circle mr-2"></i> Not Available');
+                    }
+
+
+                } else { // AJAX response.success was false
                     console.error('Error fetching product details from server:', response ? response.error : 'Unknown error');
                     $('#modal-product-name').text('Error Loading Details');
                     showGlobalPopup(response.error || 'Error loading product details. Please try again.', true);
                      $('#modal-add-to-cart-btn').prop('disabled', true).text('Error');
                 }
             }, // End success function
+            // **** END: Updated AJAX Success Block ****
             error: function(xhr, status, error) {
                 console.error('AJAX error fetching product details:', status, error, xhr.responseText);
                 $('#modal-product-name').text('AJAX Error');
@@ -1047,9 +1092,7 @@ $(document).ready(function() {
         // Reset quantity input to 1 when variant changes
         $('#modal-quantity-input').val(1);
 
-        // Optional: Stock Checking Logic
-        // Implement based on how you want to handle stock_quantity
-        // Example:
+        // Optional: Stock Checking Logic (Example)
         // if (stock !== null && stock <= 0) {
         //     $('#modal-quantity-input').prop('disabled', true).val(0);
         //     $('#modal-quantity-decrease, #modal-quantity-increase').prop('disabled', true);
