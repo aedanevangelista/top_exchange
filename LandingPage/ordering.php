@@ -668,7 +668,7 @@ if ($debug_mode) {
 
     <?php if (!isset($_SESSION['username'])): ?>
     <div class="alert login-alert" role="alert" style="margin-bottom: 20px;">
-        <i class="fas fa-info-circle mr-2"></i> Please <a href="/LandingPage/login.php" class="alert-link">login</a> or <a href="/LandingPage/register.php" class="alert-link">register</a> to add products to your cart.
+        <i class="fas fa-info-circle mr-2"></i> Please <a href="/LandingPage/login.php" class="alert-link">login</a> or <a href="/LandingPage/register.php" class="alert-link">register</a> to add items to your cart.
     </div>
     <?php endif; ?>
 
@@ -973,38 +973,46 @@ $(document).ready(function() {
 
             // --- Loop through variants and Append Options ---
             console.log(`Looping through ${variants.length} variants (in shown.bs.modal)...`);
+            
+            // FIXED CODE FOR VARIANT OPTIONS
             variants.forEach(function(variant, index) {
                 console.log(`Processing variant ${index}:`, variant);
 
-                // Validation Check
-                if (!variant || typeof variant.product_id === 'undefined' || typeof variant.item_description === 'undefined' || typeof variant.price === 'undefined') {
-                    console.warn(`Skipping variant ${index} due to missing data (in shown.bs.modal).`, variant);
+                // Skip invalid variants but with less strict validation
+                if (!variant || !variant.product_id) {
+                    console.warn(`Skipping invalid variant ${index}`, variant);
                     return;
                 }
 
-                console.log(`Variant ${index} passed validation. Appending option...`);
-                try {
-                    variantSelect.append(
-                        $('<option></option>')
-                            .val(variant.product_id)
-                            .text(variant.item_description + ' - ₱' + parseFloat(variant.price).toFixed(2))
-                            .data('price', variant.price)
-                            .data('packaging', variant.packaging)
-                            .data('image', variant.product_image || '/LandingPage/images/default-product.jpg')
-                            .data('name', variant.item_description)
-                            .data('description', variant.additional_description)
-                            .data('ingredients', variant.ingredients_array || [])
-                            .data('stock', variant.stock_quantity)
-                    );
-                    optionsAppended++;
-                    console.log(`Successfully appended option for variant ${index}: ${variant.item_description} (in shown.bs.modal)`);
-
-                } catch (appendError) {
-                    console.error(`Error appending option for variant ${index} (in shown.bs.modal):`, appendError, variant);
+                // Create the option text with fallbacks for missing data
+                const optionText = variant.item_description || 'Unknown Variant';
+                const optionPrice = variant.price ? ` - ₱${parseFloat(variant.price).toFixed(2)}` : '';
+                
+                // Create the option element directly
+                const option = document.createElement('option');
+                option.value = variant.product_id;
+                option.textContent = optionText + optionPrice;
+                
+                // Set data attributes using dataset
+                option.dataset.price = variant.price || '';
+                option.dataset.packaging = variant.packaging || '';
+                option.dataset.image = variant.product_image || '/LandingPage/images/default-product.jpg';
+                option.dataset.name = variant.item_description || '';
+                option.dataset.description = variant.additional_description || '';
+                option.dataset.stock = variant.stock_quantity || 0;
+                
+                // Store ingredients as a string to avoid issues with complex data
+                if (variant.ingredients_array && Array.isArray(variant.ingredients_array)) {
+                    option.dataset.ingredients = JSON.stringify(variant.ingredients_array);
+                } else {
+                    option.dataset.ingredients = JSON.stringify([]);
                 }
-            }); // End forEach loop
-
-            console.log(`Finished looping (in shown.bs.modal). Total options appended: ${optionsAppended}`);
+                
+                // Append the option directly to the select element
+                document.getElementById('modal-variant-select').appendChild(option);
+                optionsAppended++;
+                console.log(`Successfully appended option for variant ${index}: ${optionText}`);
+            });
 
             // --- Handle Single vs Multiple Variants ---
             if (optionsAppended <= 1) {
@@ -1076,7 +1084,6 @@ $(document).ready(function() {
 
 
     // --- Function to update modal content based on selected variant ---
-    // (This function remains largely the same as before)
     function updateModalFromVariant() {
         const selectedOption = $('#modal-variant-select option:selected');
         if (!selectedOption.length) {
@@ -1089,8 +1096,17 @@ $(document).ready(function() {
         const packaging = selectedOption.data('packaging');
         const imagePath = selectedOption.data('image');
         const description = selectedOption.data('description');
-        const ingredients = selectedOption.data('ingredients');
-        // const stock = selectedOption.data('stock'); // Uncomment if using stock logic
+        
+        // Parse the ingredients from the JSON string
+        let ingredients = [];
+        try {
+            if (selectedOption.data('ingredients')) {
+                ingredients = JSON.parse(selectedOption.data('ingredients'));
+            }
+        } catch (e) {
+            console.error('Error parsing ingredients:', e);
+        }
+        
         const productId = selectedOption.val();
         const variantName = selectedOption.data('name');
 
@@ -1130,7 +1146,6 @@ $(document).ready(function() {
 
 
     // --- Function to render ingredients list ---
-    // (This function remains the same)
     function renderIngredients(ingredients) {
         const ingredientsList = $('#modal-ingredients-list');
         ingredientsList.empty();
@@ -1170,7 +1185,6 @@ $(document).ready(function() {
     }
 
     // --- Modal Quantity Controls ---
-    // (These remain the same)
     $('#modal-quantity-decrease').on('click', function() {
         const input = $('#modal-quantity-input');
         let quantity = parseInt(input.val());
@@ -1202,7 +1216,6 @@ $(document).ready(function() {
     });
 
     // --- Modal Add to Cart Button ---
-    // (This remains the same)
     $('#modal-add-to-cart-btn').on('click', function() {
          if (!isLoggedIn) {
              showGlobalPopup('Please login to add items to cart.', true);
@@ -1229,7 +1242,7 @@ $(document).ready(function() {
          console.log('Adding to cart (from modal):', { product_id: productId, product_name: productName, price: productPrice, quantity: quantity, image_path: productImage, packaging: productPackaging, category: productCategory });
 
          $.ajax({
-             url: '/LandingPage/add_to_cart.php', // Verify path
+             url: '/LandingPage/add_to_cart.php',
              type: 'POST',
              dataType: 'json',
              data: { product_id: productId, product_name: productName, price: productPrice, image_path: productImage, packaging: productPackaging, category: productCategory, quantity: quantity },
@@ -1254,7 +1267,6 @@ $(document).ready(function() {
      });
 
     // --- Search and Filter Logic ---
-    // (These remain the same)
     function updateFilterDisplay() {
         const searchTerm = $('#searchInput').val().trim();
         const selectedCategory = $('#categoryFilter').val();
@@ -1288,7 +1300,6 @@ $(document).ready(function() {
     function debounce(func, wait) { let timeout; return function executedFunction(...args) { const later = () => { clearTimeout(timeout); func(...args); }; clearTimeout(timeout); timeout = setTimeout(later, wait); }; }
 
     // --- Global Popup Function ---
-    // (This remains the same)
     function showGlobalPopup(message, isError = false) {
         let popup = $('#globalPopup');
         if (!popup.length) { console.error("Global popup element #globalPopup not found."); alert(message); return; }
