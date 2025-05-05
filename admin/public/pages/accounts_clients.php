@@ -862,8 +862,7 @@ function truncate($text, $max = 15) {
              <div class="modal-buttons">
                  <button class="approve-btn" onclick="changeStatus('Active')"><i class="fas fa-check"></i> Active</button>
                  <button class="reject-btn" onclick="changeStatus('Rejected')"><i class="fas fa-times"></i> Reject</button>
-                 <button class="pending-btn" onclick="changeStatus('Pending')"><i class="fas fa-clock"></i> Pending</button> <!-- Added Pending Option -->
-                 <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Inactive</button> <!-- Changed Archive to Inactive -->
+                 <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Inactive</button> 
              </div>
              <div class="modal-buttons single-button">
                  <button class="cancel-btn" onclick="closeStatusModal()"><i class="fas fa-times"></i> Cancel</button>
