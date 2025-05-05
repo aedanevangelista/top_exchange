@@ -17,62 +17,6 @@ require_once 'header.php';
 
 <!-- Added CSS Styles -->
 <style>
-    /* Prevent horizontal scroll */
-    body {
-        overflow-x: hidden;
-    }
-
-    /* --- Navbar Mobile Fixes --- */
-    .navbar .container,
-    .navbar .container-fluid {
-        padding-left: 15px;
-        padding-right: 15px;
-        width: 100%;
-        flex-wrap: nowrap;
-    }
-    .navbar-brand {
-        margin-right: 10px;
-        flex-shrink: 0;
-    }
-    .navbar-toggler {
-        margin-left: auto;
-        padding: .25rem .5rem;
-        font-size: 1rem;
-    }
-    .navbar-collapse {
-        width: 100%;
-    }
-    .navbar-nav {
-        width: 100%;
-    }
-    .navbar-nav .nav-item {
-       width: 100%;
-       text-align: left;
-    }
-     .navbar-nav .nav-link {
-        padding: 10px 15px;
-        width: 100%;
-     }
-    @media (max-width: 991.98px) {
-        .navbar .container,
-        .navbar .container-fluid {
-             max-width: none;
-        }
-        .navbar-collapse {
-            background-color: #f8f9fa; /* Match your navbar or choose a suitable color */
-            margin-top: 10px;
-            border-top: 1px solid #dee2e6;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-            /* Ensure position is correct if fixed-top */
-            /* position: absolute; */
-            /* top: 100%; */
-            /* left: 0; */
-            /* right: 0; */
-            /* z-index: 1029; */ /* Lower than navbar itself if fixed */
-        }
-    }
-
-    /* (Keep all other existing styles from previous steps below) */
     .cream_section .row {
         display: flex;
         flex-wrap: wrap;
@@ -374,7 +318,7 @@ require_once 'header.php';
         padding-bottom: 80px;
         position: relative;
         background-color: #f8f9fa;
-        overflow: hidden; /* Crucial */
+        overflow: hidden;
     }
     .banner_section .container {
         position: relative;
@@ -384,10 +328,11 @@ require_once 'header.php';
     }
     .banner_section .carousel-item {
         transition: transform .6s ease-in-out;
-        min-height: 400px;
+        min-height: 400px; /* Base min-height */
     }
     .banner_section .carousel-item .row {
         align-items: center;
+        /* min-height removed from here */
     }
     .banner_section .row > .col-sm-6:first-child {
         display: flex;
@@ -562,21 +507,19 @@ require_once 'header.php';
         }
         .banner_section .carousel-item {
             min-height: 550px; /* ** Adjust this value ** */
-             /* text-align: center; Removed */
+            text-align: center;
         }
         .banner_section .carousel-item .row {
-            align-items: normal;
+            align-items: normal; /* Reset */
         }
         .banner_section .row > .col-sm-6:first-child {
             padding-right: 0;
             min-height: auto;
-            text-align: left; /* ** Ensure left align ** */
+            text-align: center;
             margin-bottom: 20px;
         }
          .banner_section .carousel-item .row > .col-sm-6:last-child {
              text-align: center;
-             padding-left: 15px;
-             padding-right: 15px;
          }
         .banner_taital {
             font-size: 2rem;
@@ -593,14 +536,12 @@ require_once 'header.php';
         }
          .banner_img img {
             max-height: 200px;
-            width: auto; /* Added */
-            max-width: 100%; /* Added */
          }
         .banner_section .carousel-control-prev {
-            left: 0px; /* Adjusted */
+            left: -5px;
         }
         .banner_section .carousel-control-next {
-            right: 0px; /* Adjusted */
+            right: -5px;
         }
         .banner_section .carousel-indicators {
             bottom: -40px;
@@ -619,31 +560,9 @@ require_once 'header.php';
         .about_taital {
              font-size: 2rem;
         }
-         .about_section .row {
-             flex-direction: column; /* Stack about section on mobile */
-         }
-         .about_section .col-md-6 {
-             width: 100%; /* Ensure full width */
-             margin-bottom: 30px; /* Add space between stacked items */
-         }
-          .about_section .col-md-6:last-child {
-             margin-bottom: 0;
-         }
-
         .newsletter-title {
             font-size: 1.8rem;
         }
-        .newsletter-section .row {
-             flex-direction: column; /* Stack newsletter section */
-             text-align: center;
-        }
-         .newsletter-section .col-md-6 {
-             width: 100%;
-             margin-bottom: 20px;
-         }
-         .newsletter-section .col-md-6:last-child {
-             margin-bottom: 0;
-         }
     }
 
 </style>
@@ -767,7 +686,7 @@ require_once 'header.php';
 <!-- About Section -->
 <div class="about_section layout_padding" style="background-color: #fff;">
     <div class="container">
-        <div class="row align-items-center"> <!-- Note: align-items-center might not be needed if stacking -->
+        <div class="row align-items-center">
             <div class="col-md-6" data-aos="fade-right">
                 <div class="about_img"><img src="/LandingPage/images/about_image_1.png" alt="About Top Food Exchange Corp." class="img-fluid"></div>
             </div>
