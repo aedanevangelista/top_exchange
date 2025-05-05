@@ -18,34 +18,6 @@ function generateVerificationCode() {
     }
 }
 
-// reCAPTCHA verification function
-function verifyReCaptcha($recaptcha_response) {
-    // Your reCAPTCHA secret key
-    $secret_key = '6Lf33C0rAAAAAJi4-UDk93nFJfnmMdFld8vu4OXc';
-
-    // Make a POST request to the Google reCAPTCHA API
-    $url = 'https://www.google.com/recaptcha/api/siteverify';
-    $data = [
-        'secret' => $secret_key,
-        'response' => $recaptcha_response
-    ];
-
-    // Use cURL to make the request
-    $options = [
-        'http' => [
-            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
-            'method' => 'POST',
-            'content' => http_build_query($data)
-        ]
-    ];
-    $context = stream_context_create($options);
-    $verify_response = file_get_contents($url, false, $context);
-    $response_data = json_decode($verify_response);
-
-    // Return true if the reCAPTCHA verification was successful
-    return $response_data->success;
-}
-
 function sendVerificationEmail($email, $code) {
     $subject = "Your Top Food Exchange Corp Login Verification Code";
 
@@ -173,15 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         $form_errors['login_password'] = "Password is required";
     }
 
-    // Verify reCAPTCHA
-    if (!isset($_POST['g-recaptcha-response']) || empty($_POST['g-recaptcha-response'])) {
-        $form_errors['recaptcha'] = "Please verify that you are not a robot";
-    } else {
-        $recaptcha_response = $_POST['g-recaptcha-response'];
-        if (!verifyReCaptcha($recaptcha_response)) {
-            $form_errors['recaptcha'] = "reCAPTCHA verification failed. Please try again";
-        }
-    }
+
 
     if (empty($form_errors)) {
         // Check if the user exists in the accounts table (for admins, managers, etc.)
