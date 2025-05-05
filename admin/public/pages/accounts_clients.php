@@ -170,7 +170,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
 
             // Encode paths and insert into DB
             $business_proof_json = json_encode($business_proof_paths);
-            $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')"); // Default status to Pending
+            // *** MODIFICATION: Set default status to 'Active' ***
+            $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')");
             $stmt->bind_param("ssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json);
 
             if ($stmt->execute()) {
@@ -329,7 +330,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $status = $_POST['status'] ?? '';
             if (empty($id)) { throw new Exception("Invalid account ID."); }
 
-            $allowed_statuses = ['Active', 'Rejected', 'Pending', 'Inactive']; // Added 'Pending' back if needed
+            // *** MODIFICATION: Removed 'Pending' from allowed statuses ***
+            $allowed_statuses = ['Active', 'Rejected', 'Inactive'];
             if (!in_array($status, $allowed_statuses)) { throw new Exception('Invalid status value provided.'); }
 
             $stmt = $conn->prepare("UPDATE clients_accounts SET status = ? WHERE id = ?");
@@ -362,12 +364,13 @@ $accounts_data = [];
 $error_message = null;
 try {
     $status_filter = $_GET['status'] ?? '';
-    $sql = "SELECT id, username, email, phone, region, city, company, company_address, bill_to_address, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'"; // Assuming 'Inactive' means archived
+    $sql = "SELECT id, username, email, phone, region, city, company, company_address, bill_to_address, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
     $params = [];
     $types = "";
 
     if (!empty($status_filter)) {
-        $allowed_filters = ['Pending', 'Active', 'Rejected', 'Inactive']; // Match allowed statuses
+        // *** MODIFICATION: Removed 'Pending' from allowed filters ***
+        $allowed_filters = ['Active', 'Rejected', 'Inactive'];
          if (in_array($status_filter, $allowed_filters)) {
             $sql .= " AND status = ?";
             $params[] = $status_filter;
@@ -376,7 +379,8 @@ try {
              $status_filter = ''; // Ignore invalid filter
          }
     }
-    $sql .= " ORDER BY CASE status WHEN 'Pending' THEN 1 WHEN 'Active' THEN 2 WHEN 'Rejected' THEN 3 WHEN 'Inactive' THEN 4 ELSE 5 END, created_at DESC";
+    // *** MODIFICATION: Adjusted ORDER BY CASE to remove Pending ***
+    $sql .= " ORDER BY CASE status WHEN 'Active' THEN 1 WHEN 'Rejected' THEN 2 WHEN 'Inactive' THEN 3 ELSE 4 END, created_at DESC";
 
     $stmt = $conn->prepare($sql);
     if (!empty($types)) {
@@ -427,7 +431,7 @@ function truncate($text, $max = 15) {
         .form-column { display: flex; flex-direction: column; }
         .form-full-width { grid-column: 1 / span 2; }
         .required { color: #ff0000; font-weight: bold; }
-        .overlay-content { max-width: 800px; width: 90%; max-height: 95vh; display: flex; flex-direction: column; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; } /* Centered */
+        .overlay-content { max-width: 800px; width: 90%; max-height: 95vh; display: flex; flex-direction: column; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; } /* Adjusted */
         .two-column-form input, .two-column-form textarea, .two-column-form select { width: 100%; box-sizing: border-box; }
         textarea#company_address, textarea#edit-company_address, textarea#bill_to_address, textarea#edit-bill_to_address { height: 60px; padding: 8px; font-size: 14px; resize: vertical; min-height: 60px; }
         input, textarea, select { border: 1px solid #ccc; border-radius: 4px; padding: 6px 10px; transition: border-color 0.3s; outline: none; font-size: 14px; margin-bottom: 10px; }
@@ -477,7 +481,7 @@ function truncate($text, $max = 15) {
         .address-group h3 { margin-top: 0; color: #4a90e2; font-size: 15px; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
         .modal-header { background-color: #ffffff; padding: 15px 20px; /* Adjusted padding */ text-align: center; border-radius: 8px 8px 0 0; border-bottom: 1px solid #ddd; /* Lighter border */ position: sticky; top: 0; z-index: 1; }
         .modal-header h2 { margin: 0; padding: 0; font-size: 18px; font-weight: 600; } /* Adjusted font */
-        .modal-footer { background-color: #f7f7f7; /* Lighter footer */ padding: 12px 20px; border-top: 1px solid #ddd; text-align: center; border-radius: 0 0 8px 8px; position: sticky; bottom: 0; z-index: 10; display: flex; justify-content: flex-end; /* Align buttons right */ gap: 10px; margin-top: auto; }
+        .modal-footer { background-color: #f7f7f7; /* Lighter footer */ padding: 12px 20px; border-top: 1px solid #ddd; text-align: center; border-radius: 0 0 8px 8px; position: sticky; bottom: 0; z-index: 1; }
         .modal-body { padding: 20px; overflow-y: auto; max-height: calc(85vh - 120px); /* Adjusted calc */ height: auto; }
         .form-modal-content { display: flex; flex-direction: column; max-height: 85vh; height: auto; width: 90%; /* More responsive */ max-width: 650px; background-color: #fff; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: modalFadeIn 0.3s ease-out; }
         label { display: block; font-size: 14px; margin-bottom: 5px; /* Slightly more space */ font-weight: 500; }
@@ -488,7 +492,7 @@ function truncate($text, $max = 15) {
         .cancel-btn { background-color:rgb(102, 102, 102); color: white; border: 1px solid #ccc; } /* White text */
         .cancel-btn:hover { background-color:rgb(82, 82, 82); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .status-active { color: #28a745; font-weight: bold; }
-        .status-pending { color: #ffc107; font-weight: bold; }
+        .status-pending { color: #ffc107; font-weight: bold; } /* Style kept just in case, but should not be used */
         .status-rejected { color: #dc3545; font-weight: bold; }
         .status-inactive { color: #6c757d; font-weight: bold; }
         .password-note { font-size: 12px; color: #666; margin-top: 4px; margin-bottom: 10px; /* Added bottom margin */ font-style: italic; }
@@ -541,7 +545,7 @@ function truncate($text, $max = 15) {
         #statusModal .modal-buttons button { flex-grow: 1; padding: 10px 15px; cursor: pointer; border: none; border-radius: 4px; transition: background-color 0.2s, box-shadow 0.2s; color: white; font-size: 14px; min-width: 100px; }
         #statusModal .approve-btn { background-color: #28a745; } #statusModal .approve-btn:hover { background-color: #218838; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
         #statusModal .reject-btn { background-color: #dc3545; } #statusModal .reject-btn:hover { background-color: #c82333; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
-        #statusModal .pending-btn { background-color: #ffc107; color: #333; } #statusModal .pending-btn:hover { background-color: #e0a800; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+        /* #statusModal .pending-btn { background-color: #ffc107; color: #333; } #statusModal .pending-btn:hover { background-color: #e0a800; box-shadow: 0 2px 4px rgba(0,0,0,0.15); } */ /* Pending button style removed */
         #statusModal .inactive-btn { background-color: #6c757d; } #statusModal .inactive-btn:hover { background-color: #5a6268; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
         #statusModal .single-button { text-align: center; margin-top: 10px; }
         #statusModal .single-button button { width: auto; min-width: 120px; }
@@ -560,7 +564,7 @@ function truncate($text, $max = 15) {
                 <label for="statusFilter">Filter by Status:</label>
                 <select id="statusFilter" onchange="filterByStatus()">
                     <option value="">All</option>
-                    <option value="Pending" <?= ($status_filter ?? '') == 'Pending' ? 'selected' : '' ?>>Pending</option>
+                    <!-- *** MODIFICATION: Removed 'Pending' option *** -->
                     <option value="Active" <?= ($status_filter ?? '') == 'Active' ? 'selected' : '' ?>>Active</option>
                     <option value="Rejected" <?= ($status_filter ?? '') == 'Rejected' ? 'selected' : '' ?>>Rejected</option>
                     <option value="Inactive" <?= ($status_filter ?? '') == 'Inactive' ? 'selected' : '' ?>>Inactive</option>
@@ -632,7 +636,8 @@ function truncate($text, $max = 15) {
                                     }
                                     ?>
                                 </td>
-                                <td class="<?= 'status-' . strtolower(htmlspecialchars($row['status'] ?? 'pending')) ?>"><?= htmlspecialchars($row['status'] ?? 'Pending') ?></td>
+                                <!-- *** NOTE: The CSS class 'status-pending' might still exist but won't be used if no data has 'Pending' status *** -->
+                                <td class="<?= 'status-' . strtolower(htmlspecialchars($row['status'] ?? 'inactive')) ?>"><?= htmlspecialchars($row['status'] ?? 'Inactive') ?></td>
                                 <td class="action-buttons">
                                     <?php
                                     // Pass the raw (but potentially null) proof string to htmlspecialchars
@@ -854,32 +859,23 @@ function truncate($text, $max = 15) {
              </div>
          </div>
      </div>
-     <!-- Status Change Modal (Selection) -->
+     <!-- Status Change Modal -->
      <div id="statusModal" class="overlay" style="display: none;"> <!-- Initially hidden -->
-         <div class="overlay-content"> <!-- Removed form-modal-content to use specific styling -->
+         <div class="overlay-content">
              <h2>Change Status</h2>
              <p id="statusMessage"></p>
              <div class="modal-buttons">
+                 <!-- *** MODIFICATION: Removed 'Pending' button (wasn't here, but confirming) *** -->
                  <button class="approve-btn" onclick="changeStatus('Active')"><i class="fas fa-check"></i> Active</button>
                  <button class="reject-btn" onclick="changeStatus('Rejected')"><i class="fas fa-times"></i> Reject</button>
-                 <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Inactive</button> 
+                 <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Inactive</button> <!-- Changed Archive to Inactive -->
              </div>
              <div class="modal-buttons single-button">
                  <button class="cancel-btn" onclick="closeStatusModal()"><i class="fas fa-times"></i> Cancel</button>
              </div>
          </div>
      </div>
-     <!-- Status Change Confirmation Modal -->
-     <div id="statusConfirmationModal" class="confirmation-modal" style="display: none;"> <!-- Initially hidden -->
-         <div class="confirmation-content">
-             <div class="confirmation-title">Confirm Status Change</div>
-             <div class="confirmation-message" id="statusConfirmMessage"></div>
-             <div class="confirmation-buttons">
-                 <button class="confirm-no" onclick="closeStatusConfirmation()">No, Cancel</button>
-                 <button class="confirm-yes" id="confirmStatusChangeBtn">Yes, Change</button> <!-- Button ID added -->
-             </div>
-         </div>
-     </div>
+     <!-- *** NOTE: The confirmation modal logic from the previous step is NOT included here as it wasn't in your latest code snippet. If you want that back, let me know. *** -->
      <!-- Image Zoom Modal -->
      <div id="myModal" class="modal" style="display: none;"> <!-- Initially hidden -->
          <span class="close" onclick="closeModal()">&times;</span>
@@ -894,8 +890,7 @@ function truncate($text, $max = 15) {
     <!-- <script src="/js/toast.js"></script> Assuming this initializes toastr -->
     <script>
         // --- Global Vars ---
-        let currentAccountId = 0; // Used temporarily by status modals
-        let pendingStatusChange = { id: null, status: null, username: '' }; // Store status change details
+        let currentAccountId = 0; // Used temporarily by status modal
         let regionCityMap = new Map();
 
         // --- Utility Functions ---
@@ -1242,80 +1237,50 @@ function truncate($text, $max = 15) {
         }
 
         // --- Status Change ---
-        function openStatusModal(id, username, email) {
+        function openStatusModal(id, username, email) { /* Unchanged */
             const modal = document.getElementById("statusModal");
             const messageEl = document.getElementById("statusMessage");
             if (modal && messageEl) {
                 currentAccountId = id; // Store ID temporarily
-                pendingStatusChange.username = username; // Store username for confirmation message
                 messageEl.innerHTML = `Change status for <strong>${username}</strong> (${email})`; // Use innerHTML for bold
                 $(modal).css('display', 'flex');
             }
         }
-        function closeStatusModal() {
+        function closeStatusModal() { /* Unchanged */
             $('#statusModal').hide();
             currentAccountId = 0; // Reset temporary ID
-            // Don't reset pendingStatusChange here, it might be needed for confirmation
         }
-
-        // Called when a status button in statusModal is clicked
+        // *** NOTE: This function now directly makes the AJAX call. If you want the confirmation modal back, let me know. ***
         function changeStatus(newStatus) {
             if (!currentAccountId) return;
-            // Store details for confirmation
-            pendingStatusChange.id = currentAccountId;
-            pendingStatusChange.status = newStatus;
 
-            // Populate and show the confirmation modal
-            const confirmMsg = document.getElementById('statusConfirmMessage');
-            const confirmBtn = document.getElementById('confirmStatusChangeBtn');
-            if (confirmMsg && confirmBtn) {
-                confirmMsg.innerHTML = `Are you sure you want to change the status for <strong>${pendingStatusChange.username}</strong> to <strong>${newStatus}</strong>?`;
-                // Set the action for the Yes button dynamically
-                confirmBtn.onclick = submitStatusChange;
-                $('#statusConfirmationModal').css('display', 'flex');
-            }
-             closeStatusModal(); // Close the initial status selection modal
-        }
-
-        // Closes the status *confirmation* modal
-        function closeStatusConfirmation() {
-            $('#statusConfirmationModal').hide();
-            // Optionally clear pending status if confirmation is cancelled
-            // pendingStatusChange = { id: null, status: null, username: '' };
-        }
-
-        // Called when the "Yes" button in the status *confirmation* modal is clicked
-        function submitStatusChange() {
-            closeStatusConfirmation(); // Close the confirmation modal first
-            const { id, status } = pendingStatusChange;
-            if (!id || !status) {
-                console.error("Missing ID or Status for status change submission.");
-                return;
-            }
+            // Optional: Add confirmation logic here if desired, otherwise proceeds directly
 
             // showLoadingIndicator(); // Optional: Add a visual indicator
             $.ajax({
                 url: window.location.pathname,
                 type: 'POST',
-                data: { ajax: true, formType: 'status', id: id, status: status },
+                data: { ajax: true, formType: 'status', id: currentAccountId, status: newStatus },
                 dataType: 'json',
                 success: function(response) {
                     if (response && response.success) {
-                        showToast(`Status changed to ${status}!`, 'success');
+                        showToast(`Status changed to ${newStatus}!`, 'success');
+                        closeStatusModal(); // Close the selection modal
                         setTimeout(() => window.location.reload(), 1500); // Reload page after success
                     } else {
                         showToast(response?.message || 'Error changing status.', 'error');
+                        // Optionally close modal on failure too, or leave it open
+                        // closeStatusModal();
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error("Change Status AJAX Error:", status, error, xhr.responseText);
                     showToast('Server error occurred while changing status.', 'error');
+                    closeStatusModal(); // Close modal on error
                 },
                 complete: function() {
                     // hideLoadingIndicator(); // Optional: Hide visual indicator
-                    // Reset pending change info and temporary ID
-                    pendingStatusChange = { id: null, status: null, username: '' };
-                    currentAccountId = 0;
+                    currentAccountId = 0; // Reset temporary ID after call completes
                 }
             });
         }
@@ -1369,7 +1334,8 @@ function truncate($text, $max = 15) {
                  if ($(event.target).is('#addConfirmationModal')) closeAddConfirmation();
                  if ($(event.target).is('#editConfirmationModal')) closeEditConfirmation();
                  if ($(event.target).is('#statusModal')) closeStatusModal();
-                 if ($(event.target).is('#statusConfirmationModal')) closeStatusConfirmation(); // Close status confirm modal
+                 // If status confirmation modal exists, add its check here:
+                 // if ($(event.target).is('#statusConfirmationModal')) closeStatusConfirmation();
                  if ($(event.target).is('#addressInfoModal')) closeAddressInfoModal();
                  if ($(event.target).is('#contactInfoModal')) closeContactInfoModal();
                  if ($(event.target).is('#myModal')) closeModal(); // Close image zoom modal
