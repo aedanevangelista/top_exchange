@@ -383,6 +383,28 @@ $conn->close();
                 padding: 12px;
             }
 
+            /* --- Toastr Mobile Overrides --- */
+            #toast-container {
+                /* Override default positions (like top-right, bottom-right) */
+                top: 15px; /* Position from the top */
+                left: 50%; /* Start at horizontal center */
+                transform: translateX(-50%); /* Shift left by half its width to truly center */
+                right: auto; /* Remove right positioning */
+                bottom: auto; /* Remove bottom positioning */
+                width: 90%; /* Make container slightly less than full width */
+                max-width: 400px; /* Optional: Prevent it getting too wide on large phones */
+                margin: 0 auto; /* Ensure centering if width is constrained */
+            }
+
+            /* Ensure full opacity for individual toasts */
+            #toast-container > .toast {
+                opacity: 1 !important; /* Use !important to override potential inline styles from Toastr JS */
+                /* Optional: Adjust width if needed, default is often fine */
+                 width: 100%;
+                 max-width: 100%; /* Allow toast to fill the container */
+            }
+            /* --- End Toastr Mobile Overrides --- */
+
         }
 
         /* Optional: Styles for very small screens (e.g., less than 480px) */
@@ -436,7 +458,7 @@ $conn->close();
 
         <?php if (empty($orders)): ?>
             <div class="no-orders">
-                <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: 15px; opacity: 1;"></i>
+                <i class="fas fa-clipboard-list fa-2x" style="margin-bottom: 15px; opacity: 0.5;"></i>
                 <p>You have no active deliveries assigned.</p>
                 <p style="font-size: 0.9rem; margin-top: 10px;">Pull down to refresh the page when new deliveries are assigned.</p>
             </div>
@@ -510,14 +532,15 @@ $conn->close();
 
     <script>
         $(document).ready(function() {
-            // Initialize toastr with bottom-right position
+            // Initialize toastr with a default position (e.g., top-right)
+            // CSS overrides will handle mobile centering
             if (typeof toastr !== 'undefined') {
                 toastr.options = {
                     "closeButton": true,
                     "debug": false,
                     "newestOnTop": false,
                     "progressBar": true,
-                    "positionClass": "toast-bottom-right", // Changed to bottom-right
+                    "positionClass": "toast-top-right", // Default position
                     "preventDuplicates": false,
                     "onclick": null,
                     "showDuration": "300",
@@ -528,6 +551,7 @@ $conn->close();
                     "hideEasing": "linear",
                     "showMethod": "fadeIn",
                     "hideMethod": "fadeOut"
+                    // Opacity is controlled via CSS override now
                 };
             } else {
                 console.error("Toastr library not loaded correctly.");
@@ -720,7 +744,7 @@ $conn->close();
                                         if ($('.order-card').length === 0) {
                                             $('.orders-list').html(`
                                                 <div class="no-orders">
-                                                    <i class="fas fa-check-circle fa-2x" style="margin-bottom: 15px; color: #28a745; opacity: 1;"></i>
+                                                    <i class="fas fa-check-circle fa-2x" style="margin-bottom: 15px; color: #28a745; opacity: 0.8;"></i>
                                                     <p>All deliveries completed! Great job!</p>
                                                     <p style="font-size: 0.9rem; margin-top: 10px;">Pull down to refresh when new deliveries are assigned.</p>
                                                 </div>
