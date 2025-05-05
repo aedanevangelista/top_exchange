@@ -12,10 +12,10 @@ if (isset($_SESSION['new_order']) || isset($_SESSION['order_id']) || isset($_SES
 }
 
 // Database connection - we need to reconnect because header.php might have closed the connection
-require_once 'db_connection.php';
+require_once 'db_connection.php'; // Verify this path
 
 // Fetch all products from the database
-$products = [];
+$products = []; // Keep for category filter population if needed
 $groupedProducts = []; // For storing products grouped by name
 $query = "SELECT * FROM products ORDER BY category, product_name, price ASC"; // Ensure consistent grouping
 
@@ -25,13 +25,15 @@ try {
 
     if ($result && $result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-            // Store in regular category-based array (might be less useful now)
-            // $products[$row['category']][] = $row;
-
             // Group by product name for variant handling
-            // Use product_name if available, otherwise try to derive from item_description (less reliable)
             $productName = !empty($row['product_name']) ? $row['product_name'] : preg_replace('/\s*\([A-Z][^)]*\)$/', '', $row['item_description']);
             $category = $row['category'];
+
+            // Populate category list for filter dropdown
+            if (!isset($products[$category])) {
+                $products[$category] = [];
+            }
+            // $products[$category][] = $row; // Optional: keep if needed elsewhere
 
             if (!isset($groupedProducts[$category][$productName])) {
                 // Initialize the group with the first product found as 'main_product'
@@ -42,24 +44,24 @@ try {
             } else {
                 // If the group already exists, just add this row as another variant
                 $groupedProducts[$category][$productName]['variants'][] = $row;
-                // Optionally update main_product if needed based on some logic, but using the first is simple
             }
         }
     } else {
-        // Log the error or display a message for debugging
         error_log("No products found or query failed: " . $conn->error);
     }
 } catch (Exception $e) {
-    // Log the exception
     error_log("Exception in ordering.php database query: " . $e->getMessage());
 }
 
 // Close the connection after we're done with it
 $conn->close();
 
-// Make sure we have at least an empty array to avoid errors
+// Ensure arrays exist to prevent errors in loops/keys
 if (empty($groupedProducts)) {
     $groupedProducts = [];
+}
+if (empty($products)) {
+    $products = []; // Used for category filter
 }
 
 // Debug information - set to true to enable debugging
@@ -73,7 +75,6 @@ if ($debug_mode) {
     echo '<pre>'; print_r($_SESSION); echo '</pre>';
     echo '<h5>Grouped Products Data:</h5>';
     echo '<pre>'; print_r($groupedProducts); echo '</pre>';
-    // Note: $conn is closed, cannot check status here
     echo '</div>';
 }
 ?>
@@ -186,6 +187,11 @@ if ($debug_mode) {
         font-size: 0.9rem;
         margin-bottom: 10px;
         line-height: 1.4;
+        /* Limit description lines */
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* Limit to 2 lines */
+        -webkit-box-orient: vertical;
     }
 
     .product-description p {
@@ -209,8 +215,6 @@ if ($debug_mode) {
         color: white;
         border-color: #9a7432;
     }
-
-    /* Removed redundant price/packaging/variant selectors from card - details in modal */
 
     /* Login indicator for add to cart button (if needed on card) */
     .add-to-cart-btn.login-required {
@@ -301,6 +305,7 @@ if ($debug_mode) {
         display: flex;
         align-items: center;
         gap: 10px;
+        flex-wrap: wrap; /* Allow wrapping */
     }
     #active-filters .badge {
         font-size: 0.9rem;
@@ -319,19 +324,38 @@ if ($debug_mode) {
         background-color: rgba(0,0,0,0.1); /* Subtle background */
         border-radius: 50%;
         opacity: 0.7;
+        cursor: pointer;
     }
      #active-filters .badge .close:hover {
         opacity: 1;
         background-color: rgba(0,0,0,0.2);
      }
+     #clearFilters {
+         margin-left: auto; /* Push clear button to the right */
+     }
 
     /* Product Modal Styling */
+    .modal-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .modal-title {
+        color: #495057;
+    }
+    .modal-content {
+        border-radius: 0.3rem;
+        border: none;
+    }
+    .modal-body {
+        padding: 1.5rem; /* More padding */
+    }
+
     .product-modal-image-container {
         height: 300px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: #f9f9f9;
+        background-color: #fff; /* White background */
         border-radius: 8px;
         overflow: hidden;
         margin-bottom: 20px; /* Increased margin */
@@ -350,14 +374,16 @@ if ($debug_mode) {
         font-weight: 700;
         border-bottom: 2px solid #f0f0f0;
         padding-bottom: 10px;
-        margin-bottom: 15px; /* Spacing below name */
+        margin-bottom: 20px; /* Spacing below name */
+        font-size: 1.75rem; /* Larger name */
     }
 
     /* Styling for modal info sections */
     .modal-info-section {
-        margin-bottom: 15px;
+        margin-bottom: 12px; /* Consistent spacing */
         display: flex;
         align-items: baseline; /* Align text nicely */
+        min-height: 24px; /* Ensure consistent height */
     }
     .modal-info-section .info-label {
         font-weight: 600;
@@ -386,24 +412,34 @@ if ($debug_mode) {
     #modal-description-container {
         margin-top: 15px; /* Space above description */
     }
+     #modal-description-container .info-label {
+        display: block; /* Make label block */
+        margin-bottom: 5px;
+     }
     #modal-product-description {
         background-color: #f8f9fa;
-        padding: 10px;
+        padding: 10px 15px;
         border-radius: 4px;
         font-size: 0.9rem;
         color: #555;
         border-left: 3px solid #9a7432;
-        margin-top: 5px; /* Space below label */
+        line-height: 1.5;
     }
 
     /* Modal Variant Selector */
     #modal-variant-select-group label {
         font-weight: 600;
         color: #555;
+        margin-bottom: 0.3rem; /* Space below label */
+        display: block;
     }
     #modal-variant-select {
         background-color: #fff;
         border-color: #ced4da;
+    }
+    #modal-variant-select:disabled {
+        background-color: #e9ecef;
+        opacity: 0.7;
     }
 
     /* Modal Quantity Controls */
@@ -412,9 +448,7 @@ if ($debug_mode) {
         display: flex;
         align-items: center;
     }
-    .modal-quantity-controls label {
-         font-weight: 600;
-         color: #555;
+    .modal-quantity-controls label { /* Using .info-label class */
          margin-right: 10px;
          margin-bottom: 0; /* Remove default margin */
     }
@@ -468,7 +502,7 @@ if ($debug_mode) {
         background-color: #f8f9fa;
         padding: 15px;
         border-radius: 8px;
-        margin-top: 20px;
+        margin-top: 25px; /* More space above */
         border: 1px solid #eee;
     }
     #modal-ingredients-container h5 {
@@ -476,6 +510,7 @@ if ($debug_mode) {
         border-bottom: 1px solid #e0e0e0;
         padding-bottom: 8px;
         margin-bottom: 15px; /* Space below title */
+        font-weight: 600;
     }
     .ingredient-item {
         display: flex;
@@ -492,7 +527,7 @@ if ($debug_mode) {
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     .ingredient-name {
-        font-weight: 600;
+        font-weight: 500; /* Slightly lighter */
         color: #555;
         flex-grow: 1; /* Take available space */
     }
@@ -512,7 +547,7 @@ if ($debug_mode) {
         transition: all 0.3s ease;
         font-size: 1.1rem; /* Slightly larger text */
     }
-    #modal-add-to-cart-btn:hover {
+    #modal-add-to-cart-btn:hover:not(:disabled) { /* Add :not(:disabled) */
         background-color: #8a6422;
         border-color: #8a6422;
         transform: translateY(-2px);
@@ -522,18 +557,29 @@ if ($debug_mode) {
         background-color: #c0a16b; /* Lighter color when disabled */
         border-color: #c0a16b;
         cursor: not-allowed;
+        opacity: 0.65;
      }
 
     /* Responsive adjustments */
+    @media (max-width: 991px) { /* Adjust breakpoint for modal layout */
+        .modal-body .row {
+            flex-direction: column; /* Stack image and info vertically */
+        }
+         .modal-body .col-md-5, .modal-body .col-md-7 {
+            width: 100%;
+            max-width: 100%;
+            flex: 0 0 100%;
+         }
+         .product-modal-image-container {
+            height: 250px; /* Adjust height */
+         }
+    }
     @media (max-width: 768px) {
         .product-grid {
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         }
         .page-title {
             font-size: 2rem;
-        }
-        .product-modal-image-container {
-            height: 250px; /* Adjusted height */
         }
         .modal-dialog {
             max-width: 95%; /* Wider modal on smaller screens */
@@ -552,18 +598,15 @@ if ($debug_mode) {
             width: 100%;
             min-width: unset;
         }
+         #clearFilters {
+             margin-left: 0; /* Align left on small screens */
+             margin-top: 10px;
+             width: 100%;
+         }
         .modal-dialog {
             margin: 0.5rem; /* Smaller margin */
             max-width: calc(100% - 1rem); /* Full width minus margin */
         }
-        .modal-body .row {
-            flex-direction: column; /* Stack image and info vertically */
-        }
-         .modal-body .col-md-5, .modal-body .col-md-7 {
-            width: 100%;
-            max-width: 100%;
-            flex: 0 0 100%;
-         }
          .product-modal-image-container {
             height: 200px;
          }
@@ -573,13 +616,17 @@ if ($debug_mode) {
          .modal-info-section .info-label {
             width: 80px; /* Adjust label width */
          }
+         #modal-ingredients-container .row .col-md-4 {
+            flex: 0 0 50%; /* 2 columns on small screens */
+            max-width: 50%;
+         }
     }
 
     /* No results message */
     #no-results-message {
-        background-color: #e9ecef;
-        color: #495057;
-        border-color: #dee2e6;
+        background-color: #fff3cd; /* Warning background */
+        color: #664d03; /* Warning text */
+        border-color: #ffecb5; /* Warning border */
     }
 
     /* Login Alert */
@@ -591,6 +638,27 @@ if ($debug_mode) {
     .login-alert .alert-link {
         color: #004085;
         font-weight: 600;
+    }
+
+    /* Global Popup Style */
+    #globalPopup {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1060; /* Above modals */
+        padding: 1rem 1.5rem;
+        border-radius: 0.25rem;
+        color: white;
+        display: none;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        min-width: 250px;
+        text-align: center;
+    }
+    #globalPopup.alert-success {
+        background-color: #28a745; /* Bootstrap success green */
+    }
+    #globalPopup.alert-danger {
+         background-color: #dc3545; /* Bootstrap danger red */
     }
 
 </style>
@@ -607,7 +675,7 @@ if ($debug_mode) {
     <div class="search-filter-section">
         <div class="search-box">
             <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" class="form-control" placeholder="Search products by name or category...">
+            <input type="text" id="searchInput" class="form-control" placeholder="Search products by name...">
             <button type="button" id="clearSearch" class="clear-search" style="display: none;" aria-label="Clear search">
                 <i class="fas fa-times"></i>
             </button>
@@ -615,7 +683,7 @@ if ($debug_mode) {
         <div class="category-filter">
             <select id="categoryFilter" class="form-control">
                 <option value="">All Categories</option>
-                <?php foreach (array_keys($groupedProducts) as $category): ?>
+                <?php foreach (array_keys($products) as $category): ?>
                     <option value="<?php echo htmlspecialchars($category); ?>"><?php echo htmlspecialchars($category); ?></option>
                 <?php endforeach; ?>
             </select>
@@ -635,7 +703,7 @@ if ($debug_mode) {
                 <span aria-hidden="true">&times;</span>
             </button>
         </span>
-         <button type="button" id="clearFilters" class="btn btn-sm btn-outline-danger ml-auto" style="display: none;">
+         <button type="button" id="clearFilters" class="btn btn-sm btn-outline-danger" style="display: none;">
             <i class="fas fa-times-circle mr-1"></i> Clear All Filters
         </button>
     </div>
@@ -675,8 +743,8 @@ if ($debug_mode) {
 
                                 <?php if (!empty($mainProduct['additional_description'])): ?>
                                 <div class="product-description">
-                                    <p><?php echo htmlspecialchars(substr($mainProduct['additional_description'], 0, 80)); ?>
-                                    <?php if (strlen($mainProduct['additional_description']) > 80): ?>...<?php endif; ?></p>
+                                    <!-- Use paragraph for description -->
+                                    <p><?php echo htmlspecialchars($mainProduct['additional_description']); ?></p>
                                 </div>
                                 <?php endif; ?>
 
@@ -709,17 +777,19 @@ if ($debug_mode) {
                 <div class="row">
                     <div class="col-md-5">
                         <div class="product-modal-image-container">
-                            <img src="/LandingPage/images/loading.gif" alt="Loading Product Image" id="modal-product-image" class="img-fluid">
+                             <!-- Initial state handled by JS -->
+                            <img src="" alt="" id="modal-product-image" class="img-fluid">
                         </div>
                     </div>
                     <div class="col-md-7">
-                        <h3 id="modal-product-name" class="mb-3">Loading...</h3>
+                         <!-- Initial state handled by JS -->
+                        <h3 id="modal-product-name" class="mb-3"></h3>
 
                         <!-- Variant Selector -->
                         <div class="form-group mb-3" id="modal-variant-select-group">
                             <label for="modal-variant-select" class="info-label">Variant:</label>
                             <select class="form-control" id="modal-variant-select">
-                                <option>Loading variants...</option>
+                                <!-- Options populated by JS -->
                             </select>
                         </div>
 
@@ -737,7 +807,7 @@ if ($debug_mode) {
 
                         <!-- Description -->
                         <div id="modal-description-container" style="display: none;">
-                            <span class="info-label">Description:</span>
+                            <span class="info-label d-block mb-1">Description:</span>
                             <p id="modal-product-description" class="mt-1"></p>
                         </div>
 
@@ -753,8 +823,7 @@ if ($debug_mode) {
 
                         <!-- Add to Cart Button -->
                         <button type="button" class="btn btn-primary btn-block" id="modal-add-to-cart-btn" <?php echo !isset($_SESSION['username']) ? 'disabled' : ''; ?>>
-                            <i class="fas fa-cart-plus mr-2"></i>
-                            <?php echo isset($_SESSION['username']) ? 'Add to Cart' : 'Login to Add'; ?>
+                            <!-- Text/Icon set by JS -->
                         </button>
                          <?php if (!isset($_SESSION['username'])): ?>
                             <small class="form-text text-muted text-center mt-2">You must be logged in to add items to the cart.</small>
@@ -766,13 +835,16 @@ if ($debug_mode) {
                 <div class="mt-4" id="modal-ingredients-container" style="display: none;">
                     <h5 class="mb-3">Ingredients</h5>
                     <div id="modal-ingredients-list" class="row">
-                        <p class="col-12 text-muted">Loading ingredients...</p>
+                        <!-- Content populated by JS -->
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Global Popup Placeholder (can be added here or in footer) -->
+<div id="globalPopup"></div>
 
 
 <script>
@@ -795,7 +867,8 @@ $(document).ready(function() {
         // --- Reset and Show Modal ---
         $('#productDetailModalLabel').text('Product Details'); // Reset title
         $('#modal-product-name').text('Loading...');
-        $('#modal-product-image').attr('src', '/LandingPage/images/loading.gif').attr('alt', 'Loading Product Image'); // Loading image
+        // <<< FIX PATH HERE: Update '/LandingPage/images/loading.gif' to the correct path for your loading image >>>
+        $('#modal-product-image').attr('src', '/LandingPage/images/loading.gif').attr('alt', 'Loading Product Image');
         $('#modal-variant-select').html('<option>Loading variants...</option>').prop('disabled', true); // Reset variants
         $('#modal-variant-select-group').show(); // Show variant group initially
         $('#modal-product-packaging .info-value').text('-');
@@ -805,14 +878,19 @@ $(document).ready(function() {
         $('#modal-ingredients-list').html('<p class="col-12 text-muted">Loading ingredients...</p>');
         $('#modal-ingredients-container').hide();
         $('#modal-quantity-input').val(1); // Reset quantity
-        $('#modal-add-to-cart-btn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Loading...'); // Disable button
+        // Set initial button state based on login
+        const initialBtnText = isLoggedIn ? '<i class="fas fa-spinner fa-spin mr-2"></i> Loading...' : '<i class="fas fa-lock mr-2"></i> Login to Add';
+        $('#modal-add-to-cart-btn').prop('disabled', true).html(initialBtnText);
+
+        // Store category in modal data for potential use later (e.g., add to cart)
+        $('#productDetailModal').data('category', category);
 
         // Show the modal
         $('#productDetailModal').modal('show');
 
         // --- Fetch Product Data via AJAX ---
         $.ajax({
-            url: '/LandingPage/get_product_modal_data.php', // Ensure this path is correct
+            url: '/LandingPage/get_product_modal_data.php', // <<< Verify this path
             type: 'POST',
             dataType: 'json', // Expect JSON response
             data: {
@@ -822,17 +900,20 @@ $(document).ready(function() {
             success: function(response) {
                 console.log('Product modal data received:', response);
 
+                // --- Start: Keep this error checking ---
                 if (response && response.success) {
                     const mainProduct = response.main_product; // This is the first variant (e.g., lowest price)
                     const variants = response.variants; // Array of all variant objects
 
-                    if (!mainProduct || !variants || variants.length === 0) {
-                         console.error('Incomplete data received:', response);
+                    if (!mainProduct || !variants || !Array.isArray(variants) || variants.length === 0) { // Added isArray check
+                         console.error('Incomplete or invalid data received:', response);
                          $('#modal-product-name').text('Error Loading Data');
                          showGlobalPopup('Error: Could not load product details.', true);
                          $('#modal-add-to-cart-btn').prop('disabled', true).text('Error');
                          return; // Stop processing
                     }
+                    // --- End: Keep this error checking ---
+
 
                     // --- Populate Modal ---
                     $('#productDetailModalLabel').text(productName); // Set modal title to base product name
@@ -843,6 +924,11 @@ $(document).ready(function() {
                     variantSelect.empty(); // Clear previous options
 
                     variants.forEach(function(variant, index) {
+                        // Basic check for essential variant data
+                        if (!variant || typeof variant.product_id === 'undefined' || typeof variant.item_description === 'undefined' || typeof variant.price === 'undefined') {
+                            console.warn("Skipping invalid variant data:", variant);
+                            return; // Skip this iteration
+                        }
                         variantSelect.append(
                             $('<option></option>')
                                 .val(variant.product_id)
@@ -863,21 +949,23 @@ $(document).ready(function() {
                     if (variants.length <= 1) {
                         // If only one variant, hide the dropdown group
                         $('#modal-variant-select-group').hide();
+                         variantSelect.prop('disabled', true); // Also disable it
                     } else {
                         // If multiple variants, ensure dropdown is visible and enabled
                         $('#modal-variant-select-group').show();
                         variantSelect.prop('disabled', false);
                     }
 
-                    // --- Trigger Change & Update ---
-                    variantSelect.trigger('change'); // Trigger change to load the first/default variant's details
+                    // --- Explicitly Update Modal ---
+                    // Call updateModalFromVariant directly to load the first variant's details
+                    updateModalFromVariant();
 
-                    // Enable Add to Cart button (if user is logged in)
+
+                    // Enable Add to Cart button (only if user is logged in)
                     if (isLoggedIn) {
                          $('#modal-add-to-cart-btn').prop('disabled', false).html('<i class="fas fa-cart-plus mr-2"></i> Add to Cart');
-                    } else {
-                         $('#modal-add-to-cart-btn').prop('disabled', true).html('<i class="fas fa-lock mr-2"></i> Login to Add');
                     }
+                    // If not logged in, button remains disabled with 'Login to Add' text
 
                 } else {
                     console.error('Error fetching product details from server:', response ? response.error : 'Unknown error');
@@ -885,7 +973,7 @@ $(document).ready(function() {
                     showGlobalPopup(response.error || 'Error loading product details. Please try again.', true);
                      $('#modal-add-to-cart-btn').prop('disabled', true).text('Error');
                 }
-            },
+            }, // End success function
             error: function(xhr, status, error) {
                 console.error('AJAX error fetching product details:', status, error, xhr.responseText);
                 $('#modal-product-name').text('AJAX Error');
@@ -897,6 +985,7 @@ $(document).ready(function() {
 
     // Handle variant selection change in modal
     $('#modal-variant-select').on('change', function() {
+        // Call the update function when the user changes the selection
         updateModalFromVariant();
     });
 
@@ -904,9 +993,14 @@ $(document).ready(function() {
     function updateModalFromVariant() {
         const selectedOption = $('#modal-variant-select option:selected');
 
-        // Check if an option is actually selected
+        // Check if an option is actually selected (should always be true after population)
         if (!selectedOption.length) {
+             // This case should ideally not happen after the fix, but keep warning for safety
             console.warn('No variant selected, cannot update modal.');
+            // Optionally reset parts of the modal or show an error state
+             $('#modal-product-packaging .info-value').text('-');
+             $('#modal-product-price .info-value').text('-');
+             $('#modal-product-image').attr('src', '/LandingPage/images/default-product.jpg').attr('alt', 'Select a variant');
             return;
         }
 
@@ -914,21 +1008,21 @@ $(document).ready(function() {
         const price = selectedOption.data('price');
         const packaging = selectedOption.data('packaging');
         const imagePath = selectedOption.data('image');
-        // const variantName = selectedOption.data('name'); // Specific variant name
         const description = selectedOption.data('description');
         const ingredients = selectedOption.data('ingredients');
         const stock = selectedOption.data('stock');
         const productId = selectedOption.val(); // Get the product_id
+        const variantName = selectedOption.data('name'); // Specific variant name
 
         console.log('Updating modal for variant:', selectedOption.data());
 
-        // Update modal content
+        // Update modal content fields
         $('#modal-product-packaging .info-value').text(packaging || '-');
         $('#modal-product-price .info-value').text(price ? '₱' + parseFloat(price).toFixed(2) : '-');
 
         // Update image
         $('#modal-product-image').attr('src', imagePath || '/LandingPage/images/default-product.jpg');
-        $('#modal-product-image').attr('alt', selectedOption.text()); // Use option text for alt
+        $('#modal-product-image').attr('alt', variantName || $('#modal-product-name').text()); // Use variant name or base name for alt
 
         // Update description
         if (description) {
@@ -939,28 +1033,34 @@ $(document).ready(function() {
             $('#modal-description-container').hide();
         }
 
-        // Update ingredients
+        // Update ingredients display
         renderIngredients(ingredients); // This function handles showing/hiding the container
 
         // Update add to cart button data attributes (important for adding the correct item)
         const addToCartBtn = $('#modal-add-to-cart-btn');
         addToCartBtn.data('product-id', productId);
-        addToCartBtn.data('product-name', selectedOption.data('name')); // Use specific variant name
+        addToCartBtn.data('product-name', variantName); // Use specific variant name
         addToCartBtn.data('product-price', price);
         addToCartBtn.data('product-image', imagePath);
         addToCartBtn.data('product-packaging', packaging);
 
-        // Optional: Disable quantity/add to cart if out of stock
-        // Note: Your schema has stock_quantity, but it's often 0 or 99/100. Implement based on actual stock logic.
-        // if (stock <= 0) {
+        // Reset quantity input to 1 when variant changes
+        $('#modal-quantity-input').val(1);
+
+        // Optional: Stock Checking Logic
+        // Implement based on how you want to handle stock_quantity
+        // Example:
+        // if (stock !== null && stock <= 0) {
         //     $('#modal-quantity-input').prop('disabled', true).val(0);
         //     $('#modal-quantity-decrease, #modal-quantity-increase').prop('disabled', true);
-        //     addToCartBtn.prop('disabled', true).text('Out of Stock');
+        //     addToCartBtn.prop('disabled', true).html('<i class="fas fa-times-circle mr-2"></i> Out of Stock');
         // } else {
         //     $('#modal-quantity-input').prop('disabled', false);
         //     $('#modal-quantity-decrease, #modal-quantity-increase').prop('disabled', false);
-        //     if (isLoggedIn) { // Only enable if logged in
+        //     if (isLoggedIn) { // Only enable if logged in and in stock
         //          addToCartBtn.prop('disabled', false).html('<i class="fas fa-cart-plus mr-2"></i> Add to Cart');
+        //     } else {
+        //          addToCartBtn.prop('disabled', true).html('<i class="fas fa-lock mr-2"></i> Login to Add');
         //     }
         // }
     }
@@ -973,25 +1073,27 @@ $(document).ready(function() {
         if (ingredients && Array.isArray(ingredients) && ingredients.length > 0) {
             let hasValidIngredient = false;
             ingredients.forEach(function(ingredient) {
-                // Check if ingredient is a valid array [name, amount]
+                // Check if ingredient is a valid array [name, amount] or just [name]
                 if (Array.isArray(ingredient) && ingredient.length >= 1 && ingredient[0]) {
                     hasValidIngredient = true;
                     const name = ingredient[0];
                     // Amount is optional
-                    const amount = (ingredient.length >= 2 && ingredient[1]) ? ingredient[1] : null;
+                    const amount = (ingredient.length >= 2 && (ingredient[1] || ingredient[1] === 0)) ? ingredient[1] : null; // Allow 0 amount
 
                     const ingredientItemCol = $('<div class="col-md-4 col-6 mb-2"></div>'); // Responsive columns
                     const itemContent = $('<div class="ingredient-item"></div>');
 
                     itemContent.append($('<span class="ingredient-name"></span>').text(name)); // Use .text() for safety
                     if (amount !== null) {
-                        // Assuming amount is grams if numeric, otherwise display as is
+                        // Display amount nicely
                         let amountDisplay = (typeof amount === 'number') ? `(${amount}g)` : `(${amount})`;
                         itemContent.append($('<span class="ingredient-amount"></span>').text(amountDisplay));
                     }
 
                     ingredientItemCol.append(itemContent);
                     ingredientsList.append(ingredientItemCol);
+                } else {
+                     console.warn("Skipping invalid ingredient format:", ingredient);
                 }
             });
 
@@ -999,11 +1101,13 @@ $(document).ready(function() {
             if (hasValidIngredient) {
                 $('#modal-ingredients-container').show();
             } else {
-                 $('#modal-ingredients-container').hide(); // Hide if only invalid data
+                 // If loop finished but no valid ingredients added, hide container
+                 $('#modal-ingredients-container').hide();
+                 ingredientsList.append('<p class="col-12 text-muted">No valid ingredient data available.</p>'); // Optional message
             }
 
         } else {
-            // Hide container if no ingredients data
+            // Hide container if no ingredients data or not an array
             $('#modal-ingredients-container').hide();
         }
     }
@@ -1012,7 +1116,7 @@ $(document).ready(function() {
     $('#modal-quantity-decrease').on('click', function() {
         const input = $('#modal-quantity-input');
         let quantity = parseInt(input.val());
-        if (quantity > 1) {
+        if (!isNaN(quantity) && quantity > 1) { // Check if !isNaN
             input.val(quantity - 1).trigger('change'); // Trigger change event
         }
     });
@@ -1021,27 +1125,45 @@ $(document).ready(function() {
         const input = $('#modal-quantity-input');
         let quantity = parseInt(input.val());
         const maxQuantity = 100; // Define max quantity
-        if (quantity < maxQuantity) {
+        if (!isNaN(quantity) && quantity < maxQuantity) { // Check if !isNaN
             input.val(quantity + 1).trigger('change'); // Trigger change event
+        } else if (isNaN(quantity)) {
+             input.val(1).trigger('change'); // Reset to 1 if NaN
         }
     });
 
-    $('#modal-quantity-input').on('change', function() {
+    $('#modal-quantity-input').on('change input', function() { // Handle both change and input events
         let quantity = parseInt($(this).val());
         const minQuantity = 1;
         const maxQuantity = 100;
 
         if (isNaN(quantity) || quantity < minQuantity) {
-            $(this).val(minQuantity);
+            // Allow user to clear input temporarily, but reset on blur or if invalid persists
+            if ($(this).val() !== '') { // Don't reset if user just cleared it
+                 $(this).val(minQuantity);
+            }
         } else if (quantity > maxQuantity) {
             $(this).val(maxQuantity);
         }
         // Future: Could add stock checking here
+    }).on('blur', function() { // Reset to min if left empty or invalid on blur
+         let quantity = parseInt($(this).val());
+         const minQuantity = 1;
+         if (isNaN(quantity) || quantity < minQuantity) {
+             $(this).val(minQuantity);
+         }
     });
+
 
     // --- Modal Add to Cart Button ---
     $('#modal-add-to-cart-btn').on('click', function() {
-        // Button should already be disabled if not logged in via PHP check
+        // Double check login status client-side (though button state should reflect it)
+        if (!isLoggedIn) {
+             showGlobalPopup('Please login to add items to cart.', true);
+             // Optionally redirect after delay
+             // setTimeout(() => { window.location.href = '/LandingPage/login.php'; }, 2000);
+             return;
+        }
 
         const button = $(this);
         // Get data stored on the button itself (updated by updateModalFromVariant)
@@ -1050,14 +1172,13 @@ $(document).ready(function() {
         const productPrice = button.data('product-price');
         const productImage = button.data('product-image');
         const productPackaging = button.data('product-packaging');
-        // Get category from the modal's context if possible, or fallback
-        const productCategory = $('#productDetailModal').data('category') || ''; // Might need better way to pass category if needed by add_to_cart.php
+        const productCategory = $('#productDetailModal').data('category') || ''; // Get category stored on modal
         const quantity = parseInt($('#modal-quantity-input').val());
 
-        // Basic validation
-        if (!productId || !productName || !productPrice || isNaN(quantity) || quantity < 1) {
+        // Robust validation
+        if (!productId || !productName || typeof productPrice === 'undefined' || isNaN(quantity) || quantity < 1) {
             console.error('Missing or invalid data for add to cart:', { productId, productName, productPrice, quantity });
-            showGlobalPopup('Error: Could not add item. Invalid data.', true);
+            showGlobalPopup('Error: Could not add item. Invalid data selected.', true);
             return;
         }
 
@@ -1070,14 +1191,13 @@ $(document).ready(function() {
             product_name: productName,
             price: productPrice,
             quantity: quantity,
-            // Include other data if your add_to_cart.php needs it
             image_path: productImage,
             packaging: productPackaging,
             category: productCategory
         });
 
         $.ajax({
-            url: '/LandingPage/add_to_cart.php', // Ensure this path is correct
+            url: '/LandingPage/add_to_cart.php', // <<< Verify this path
             type: 'POST',
             dataType: 'json',
             data: {
@@ -1092,7 +1212,7 @@ $(document).ready(function() {
             success: function(response) {
                 console.log('Add to cart response:', response);
                 if (response && response.success) {
-                    // Update cart count in header (assuming #cart-count exists)
+                    // Update cart count in header (assuming #cart-count exists in header.php)
                     $('#cart-count').text(response.cart_count || 0);
                     showGlobalPopup('Item added to cart successfully!');
                     $('#productDetailModal').modal('hide'); // Close modal on success
@@ -1101,6 +1221,7 @@ $(document).ready(function() {
                     // if ($('#cartModal').hasClass('show')) { updateCartModal(); }
 
                 } else {
+                    // Show specific error from server if available
                     showGlobalPopup(response.message || 'Error adding item to cart.', true);
                 }
             },
@@ -1109,11 +1230,12 @@ $(document).ready(function() {
                 showGlobalPopup('Error contacting server: ' + error, true);
             },
             complete: function() {
-                // Re-enable button (only if user is logged in)
+                // Re-enable button only if user is logged in
+                // No need to check stock here unless stock check logic is fully implemented
                 if (isLoggedIn) {
                     button.prop('disabled', false).html('<i class="fas fa-cart-plus mr-2"></i> Add to Cart');
                 }
-                // If not logged in, it stays disabled with the 'Login to Add' text
+                // If not logged in, it stays disabled
             }
         });
     });
@@ -1137,7 +1259,9 @@ $(document).ready(function() {
 
         // Category badge
         if (selectedCategory !== '') {
-            $('#category-display').text(selectedCategory);
+            // Get display text from selected option
+            const categoryText = $('#categoryFilter option:selected').text();
+            $('#category-display').text(categoryText);
             $('#category-filter-badge').show();
             filtersActive = true;
         } else {
@@ -1160,8 +1284,10 @@ $(document).ready(function() {
     // Function to perform filtering
     function applyFilters() {
         const searchTerm = $('#searchInput').val().toLowerCase().trim();
-        const selectedCategory = $('#categoryFilter').val();
+        const selectedCategory = $('#categoryFilter').val(); // Value is category name
         let resultsFound = false;
+
+        console.log(`Applying filters - Search: '${searchTerm}', Category: '${selectedCategory}'`);
 
         // Iterate over product cards
         $('.product-card').each(function() {
@@ -1169,16 +1295,16 @@ $(document).ready(function() {
             const productName = card.data('name').toLowerCase();
             const productCategory = card.data('category'); // Category from data attribute
 
-            // Category check
+            // Category check: True if no category selected OR card's category matches selection
             const categoryMatch = (selectedCategory === '' || productCategory === selectedCategory);
 
-            // Search term check (check against product name)
+            // Search term check: True if no search term OR product name includes search term
             const searchMatch = (searchTerm === '' || productName.includes(searchTerm));
 
             // Show/hide card based on both filters
             if (categoryMatch && searchMatch) {
                 card.show();
-                resultsFound = true;
+                resultsFound = true; // Mark true if at least one card is shown
             } else {
                 card.hide();
             }
@@ -1187,12 +1313,8 @@ $(document).ready(function() {
         // Show/hide category sections based on visible products within them
         $('.category-section').each(function() {
             const section = $(this);
-            // Show section if it matches the filter OR if no category is selected,
-            // AND if it contains any visible product cards after search filtering.
-            const sectionCategory = section.data('category');
-            const categoryVisible = (selectedCategory === '' || sectionCategory === selectedCategory);
-
-            if (categoryVisible && section.find('.product-card:visible').length > 0) {
+            // Show section if it contains any visible product cards after filtering.
+            if (section.find('.product-card:visible').length > 0) {
                 section.show();
             } else {
                 section.hide();
@@ -1203,7 +1325,7 @@ $(document).ready(function() {
         // Show/hide no results message
         $('#no-results-message').toggle(!resultsFound);
 
-        updateFilterDisplay();
+        updateFilterDisplay(); // Update badges and clear button visibility
     }
 
     // Search input event
@@ -1225,7 +1347,7 @@ $(document).ready(function() {
         showGlobalPopup('All filters cleared');
     });
 
-    // Initial filter application on load (optional, if needed)
+    // Initial filter application on load (optional, if needed - uncomment if filters might be pre-set)
     // applyFilters();
 
     // Debounce function to limit rapid execution
@@ -1242,33 +1364,32 @@ $(document).ready(function() {
     }
 
     // --- Global Popup Function (ensure this exists, maybe in footer.php) ---
-    // Example implementation (replace or use existing one):
     function showGlobalPopup(message, isError = false) {
-        // Check if a popup element exists, otherwise create one
         let popup = $('#globalPopup');
         if (!popup.length) {
-            $('body').append('<div id="globalPopup" style="position: fixed; top: 20px; right: 20px; z-index: 1060; padding: 15px; border-radius: 5px; color: white; display: none; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"></div>');
-            popup = $('#globalPopup');
+            console.error("Global popup element #globalPopup not found.");
+            alert(message); // Fallback to simple alert
+            return;
         }
 
         // Set style and message
         popup.removeClass('alert-success alert-danger').addClass(isError ? 'alert-danger' : 'alert-success');
-        popup.text(message);
+        popup.text(message); // Use text() for safety
 
         // Show and auto-hide
-        popup.fadeIn();
-        setTimeout(function() {
-            popup.fadeOut();
-        }, 3000); // Hide after 3 seconds
+        popup.stop(true, true).fadeIn(200).delay(3000).fadeOut(400); // More robust animation handling
     }
 
     // Make showGlobalPopup globally accessible if needed elsewhere
     window.showGlobalPopup = showGlobalPopup;
+
+     // Initialize Bootstrap tooltips if used
+     $('[data-toggle="tooltip"]').tooltip();
 
 }); // End $(document).ready()
 </script>
 
 <?php
 // Include the footer
-require_once 'footer.php';
+require_once 'footer.php'; // Verify this path
 ?>
