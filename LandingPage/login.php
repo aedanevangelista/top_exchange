@@ -250,8 +250,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <!-- AOS Animation -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    <!-- Google reCAPTCHA -->
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
     <style>
         :root {
@@ -529,14 +527,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
 
                     <div class="forgot-password">
                         <a href="forgot_password.php">Forgot Password?</a>
-                    </div>
-
-                    <!-- Google reCAPTCHA widget -->
-                    <div class="form-group">
-                        <div class="g-recaptcha" data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"></div>
-                        <?php if (isset($form_errors['recaptcha'])): ?>
-                            <span class="error-message"><?php echo $form_errors['recaptcha']; ?></span>
-                        <?php endif; ?>
                     </div>
 
                     <button type="submit" name="login" class="btn btn-login">Login</button>
