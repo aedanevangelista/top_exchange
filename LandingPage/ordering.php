@@ -2,6 +2,11 @@
 // Include the header
 require_once 'header.php';
 
+// Define the base URL for admin-served assets
+// *** IMPORTANT: Make sure this is the correct URL for your admin assets ***
+// Use https:// if your admin site uses SSL
+define('ADMIN_ASSET_URL', 'http://admin.topexchangefood.com'); 
+
 // Clear any leftover order session variables to prevent checkout issues
 if (isset($_SESSION['new_order']) || isset($_SESSION['order_id']) || isset($_SESSION['redirect'])) {
     // Clear these variables as we're starting a new ordering process
@@ -26,7 +31,7 @@ try {
     if ($result && $result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
             // Group by product name for variant handling
-            $productName = !empty($row['product_name']) ? $row['product_name'] : preg_replace('/\s*\([A-Z][^)]*\)$/', '', $row['item_description']);
+            $productName = !empty($row['product_name']) ? $row['product_name'] : preg_replace('/\\s*\\([A-Z][^)]*\\)$/', '', $row['item_description']);
             $category = $row['category'];
 
             // Populate category list for filter dropdown
@@ -730,12 +735,27 @@ if ($debug_mode) {
                             $mainProduct = $productGroup['main_product'];
                             $variants = $productGroup['variants']; // We know variants exist from the grouping logic
                             $displayProductName = $productName; // Use the grouped product name
+
+                            // *** FIX APPLIED HERE ***
+                            // Construct the full image URL using the ADMIN_ASSET_URL constant
+                            // Assumes $mainProduct['product_image'] stores a path like 'uploads/products/image.png'
+                            // or '/uploads/products/image.png'. Adjust ltrim if your path is different.
+                            $relative_image_path = $mainProduct['product_image'] ? ltrim($mainProduct['product_image'], '/') : null;
+                            $image_url = $relative_image_path ? (ADMIN_ASSET_URL . '/' . $relative_image_path) : null;
+
+                            // --- Alternative for Option 2 (if admin is just /admin/ directory) ---
+                            // Comment out the two lines above and uncomment the two lines below if needed:
+                            // $relative_image_path = $mainProduct['product_image'] ? ltrim($mainProduct['product_image'], '/') : null;
+                            // $image_url = $relative_image_path ? ('/admin/' . $relative_image_path) : null;
+                            // --- End Alternative ---
+
                         ?>
                         <div class="product-card"
                              data-name="<?php echo htmlspecialchars($displayProductName); ?>"
                              data-category="<?php echo htmlspecialchars($category); ?>">
                             <div class="product-image-container">
-                                <img src="<?php echo htmlspecialchars($mainProduct['product_image'] ?: '/LandingPage/images/default-product.jpg'); ?>"
+                                <!-- Use the constructed $image_url -->
+                                <img src="<?php echo htmlspecialchars($image_url ?: '/LandingPage/images/default-product.jpg'); ?>"
                                      alt="<?php echo htmlspecialchars($displayProductName); ?>"
                                      class="product-image">
                             </div>
@@ -852,7 +872,26 @@ if ($debug_mode) {
 $(document).ready(function() {
     // Check if user is logged in
     const isLoggedIn = <?php echo isset($_SESSION['username']) ? 'true' : 'false'; ?>;
-    
+    // Define admin asset URL for JS usage (ensure consistency with PHP)
+    const adminAssetUrl = '<?php echo ADMIN_ASSET_URL; ?>'; 
+    const fallbackImageUrl = '/LandingPage/images/default-product.jpg';
+
+    // Helper function to build the correct image URL in JS
+    function buildImageUrl(imagePath) {
+        if (!imagePath) {
+            return fallbackImageUrl;
+        }
+        // Remove potential leading slash from DB path
+        const relativePath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+        // Combine with admin base URL
+        return `${adminAssetUrl}/${relativePath}`;
+        
+        // --- Alternative for Option 2 (if admin is just /admin/ directory) ---
+        // Comment out the line above and uncomment the line below if needed:
+        // return `/admin/${relativePath}`; 
+        // --- End Alternative ---
+    }
+
     // --- Product Card Click Handler ---
     $(document).on('click', '.product-card', function(e) {
         if ($(e.target).closest('button, a, input, select').length) {
@@ -882,7 +921,8 @@ $(document).ready(function() {
     function resetModalToLoadingState() {
         $('#productDetailModalLabel').text('Product Details');
         $('#modal-product-name').text('Loading...');
-        $('#modal-product-image').attr('src', '/LandingPage/images/default-product.jpg').attr('alt', 'Loading Product Image');
+        // Use fallback image initially
+        $('#modal-product-image').attr('src', fallbackImageUrl).attr('alt', 'Loading Product Image');
         
         // Clear and disable variant dropdown
         const variantSelect = $('#modal-variant-select');
@@ -910,7 +950,7 @@ $(document).ready(function() {
         console.log(`Fetching data for: ${productName} in ${category}`);
         
         $.ajax({
-            url: '/LandingPage/get_product_modal_data.php',
+            url: '/LandingPage/get_product_modal_data.php', // *** Ensure this endpoint returns CORRECTLY PREFIXED image paths ***
             type: 'POST',
             dataType: 'json',
             data: {
@@ -921,7 +961,8 @@ $(document).ready(function() {
                 console.log('AJAX success: Product data received');
                 
                 if (response && response.success && response.variants && Array.isArray(response.variants)) {
-                    populateModalWithProductData(response, productName);
+                    // Pass the raw response, populateModal will handle URL construction
+                    populateModalWithProductData(response, productName); 
                 } else {
                     handleProductDataError(response?.error || 'Invalid data received', productName);
                 }
@@ -962,11 +1003,12 @@ $(document).ready(function() {
         variantSelect.empty();
         
         // Populate variant dropdown
-        populateVariantDropdown(variants, variantSelect);
+        // *** Pass the buildImageUrl function so it can construct URLs correctly ***
+        populateVariantDropdown(variants, variantSelect, buildImageUrl); 
         
         // Update modal content based on first variant
         if (variantSelect.find('option').length > 0) {
-            updateModalFromVariant();
+            updateModalFromVariant(); // This will now use the correctly stored URLs
             
             // Enable Add to Cart button if user is logged in
             if (isLoggedIn) {
@@ -977,7 +1019,7 @@ $(document).ready(function() {
             // No valid variants
             $('#modal-product-packaging .info-value').text('N/A');
             $('#modal-product-price .info-value').text('N/A');
-            $('#modal-product-image').attr('src', '/LandingPage/images/default-product.jpg')
+            $('#modal-product-image').attr('src', fallbackImageUrl) // Use fallback
                 .attr('alt', 'No variants available');
             
             const buttonText = !isLoggedIn ? 
@@ -988,7 +1030,8 @@ $(document).ready(function() {
     }
     
     // --- Function to populate the variant dropdown ---
-    function populateVariantDropdown(variants, variantSelect) {
+    // *** Added urlBuilder function as parameter ***
+    function populateVariantDropdown(variants, variantSelect, urlBuilder) { 
         let optionsCount = 0;
         
         // Sort variants by item_description to ensure consistent order
@@ -1012,10 +1055,13 @@ $(document).ready(function() {
             const priceDisplay = variant.price ? ` - ₱${parseFloat(variant.price).toFixed(2)}` : '';
             option.textContent = variantName + priceDisplay;
             
+            // *** Use the urlBuilder to store the CORRECT, full image URL ***
+            const correctImageUrl = urlBuilder(variant.product_image); 
+            
             // Store variant data as attributes for easy access
             option.setAttribute('data-price', variant.price || '');
             option.setAttribute('data-packaging', variant.packaging || '');
-            option.setAttribute('data-image', variant.product_image || '/LandingPage/images/default-product.jpg');
+            option.setAttribute('data-image', correctImageUrl); // Store the corrected URL
             option.setAttribute('data-name', variantName);
             option.setAttribute('data-description', variant.additional_description || '');
             option.setAttribute('data-stock', variant.stock_quantity || 0);
@@ -1057,7 +1103,8 @@ $(document).ready(function() {
         const variantName = selectedOption.data('name');
         const price = selectedOption.data('price');
         const packaging = selectedOption.data('packaging');
-        const imagePath = selectedOption.data('image');
+        // *** Get the CORRECT image path stored in the data attribute ***
+        const imagePath = selectedOption.data('image'); 
         const description = selectedOption.data('description');
         
         // Parse ingredients from data attribute
@@ -1076,7 +1123,8 @@ $(document).ready(function() {
         // Update UI elements
         $('#modal-product-packaging .info-value').text(packaging || '-');
         $('#modal-product-price .info-value').text(price ? '₱' + parseFloat(price).toFixed(2) : '-');
-        $('#modal-product-image').attr('src', imagePath || '/LandingPage/images/default-product.jpg')
+        // *** Use the correct imagePath directly ***
+        $('#modal-product-image').attr('src', imagePath || fallbackImageUrl) 
                                .attr('alt', variantName || 'Product Image');
         
         // Update description
@@ -1096,7 +1144,8 @@ $(document).ready(function() {
         addToCartBtn.data('product-id', productId);
         addToCartBtn.data('product-name', variantName);
         addToCartBtn.data('product-price', price);
-        addToCartBtn.data('product-image', imagePath);
+        // *** Store the correct image path for the cart ***
+        addToCartBtn.data('product-image', imagePath); 
         addToCartBtn.data('product-packaging', packaging);
         
         // Reset quantity to 1 when variant changes
@@ -1196,7 +1245,8 @@ $(document).ready(function() {
         const productId = button.data('product-id');
         const productName = button.data('product-name');
         const productPrice = button.data('product-price');
-        const productImage = button.data('product-image');
+        // *** Get the CORRECT image path from button data ***
+        const productImage = button.data('product-image'); 
         const productPackaging = button.data('product-packaging');
         const productCategory = $('#productDetailModal').data('category') || '';
         const quantity = parseInt($('#modal-quantity-input').val());
@@ -1220,13 +1270,14 @@ $(document).ready(function() {
         
         // Send to server
         $.ajax({
-            url: '/LandingPage/add_to_cart.php',
+            url: '/LandingPage/add_to_cart.php', // *** Ensure this endpoint can handle the CORRECT image path ***
             type: 'POST',
             dataType: 'json',
             data: { 
                 product_id: productId, 
                 product_name: productName, 
                 price: productPrice, 
+                // *** Send the corrected image path ***
                 image_path: productImage, 
                 packaging: productPackaging, 
                 category: productCategory, 
@@ -1354,7 +1405,7 @@ $(document).ready(function() {
         showGlobalPopup('All filters cleared');
     });
     
-    // --- Global Popup Function ---
+    // --- Global Popup Function ---\
     function showGlobalPopup(message, isError = false) {
         let popup = $('#globalPopup');
         
