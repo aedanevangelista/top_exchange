@@ -445,14 +445,9 @@ try {
             <div class="chemicals-content">
                 <div class="chemicals-header">
                     <h1><i class="fas fa-flask"></i> Chemical Inventory</h1>
-                    <div>
-                        <a href="chemical_archive.php" class="btn btn-secondary mr-2">
-                            <i class="fas fa-archive"></i> View Archive
-                        </a>
-                        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#chemicalModal">
-                            <i class="fas fa-plus"></i> Add New Chemical
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#chemicalModal">
+                        <i class="fas fa-plus"></i> Add New Chemical
+                    </button>
                 </div>
 
                 <!-- Inventory Summary -->
@@ -1103,8 +1098,8 @@ try {
             if (typeof fetchNotifications === 'function') {
                 fetchNotifications();
 
-                // Set up periodic notification checks for real-time updates
-                setInterval(fetchNotifications, 5000); // Check every 5 seconds
+                // Set up periodic notification checks
+                setInterval(fetchNotifications, 60000); // Check every minute
             } else {
                 console.error("fetchNotifications function not found");
             }

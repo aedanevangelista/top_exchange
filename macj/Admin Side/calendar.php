@@ -1368,12 +1368,7 @@ if (count($calendarEvents) > 0) {
                 <div id="assignSection" style="display: none;" class="detail-section">
                     <h4><i class="fas fa-user-plus"></i> <span id="assignSectionTitle">Assign Technicians</span></h4>
 
-                    <!-- Completed inspection message (shown when inspection is completed) -->
-                    <div id="completedInspectionMessage" style="display: none;" class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> This inspection has been completed. Technician assignments are disabled.
-                    </div>
-
-                    <!-- Technician assignment form (shown when no technician is assigned and inspection is not completed) -->
+                    <!-- Technician assignment form (shown when no technician is assigned) -->
                     <div id="assignForm" class="assign-form">
                         <select id="technicianSelect" class="form-control">
                             <option value="">Select technician...</option>
@@ -1386,7 +1381,7 @@ if (count($calendarEvents) > 0) {
                         </button>
                     </div>
 
-                    <!-- Assigned technicians info (shown when technicians are assigned and inspection is not completed) -->
+                    <!-- Assigned technicians info (shown when technicians are assigned) -->
                     <div id="assignedInfo" style="display: none;" class="assigned-tech-info">
                         <div id="assignedTechList">
                             <!-- Technician badges will be added here dynamically -->
@@ -1394,7 +1389,9 @@ if (count($calendarEvents) > 0) {
                         <div class="assign-form" style="margin-top: 10px;">
                             <select id="additionalTechnicianSelect" class="form-control">
                                 <option value="">Add another technician...</option>
-                                <!-- Technician options will be populated dynamically -->
+                                <?php foreach ($technicians as $tech): ?>
+                                <option value="<?= $tech['technician_id'] ?>"><?= htmlspecialchars($tech['username']) ?></option>
+                                <?php endforeach; ?>
                             </select>
                             <button type="button" class="btn btn-primary" onclick="assignAdditionalTechnician()">
                                 <i class="fas fa-plus"></i> Add
@@ -1462,7 +1459,9 @@ if (count($calendarEvents) > 0) {
                         <div class="assign-form" style="margin-top: 10px;">
                             <select id="jobAdditionalTechnicianSelect" class="form-control">
                                 <option value="">Add another technician...</option>
-                                <!-- Technician options will be populated dynamically -->
+                                <?php foreach ($technicians as $tech): ?>
+                                <option value="<?= $tech['technician_id'] ?>"><?= htmlspecialchars($tech['username']) ?></option>
+                                <?php endforeach; ?>
                             </select>
                             <button type="button" class="btn btn-primary" onclick="assignAdditionalJobTechnician()">
                                 <i class="fas fa-plus"></i> Add
@@ -1491,22 +1490,14 @@ if (count($calendarEvents) > 0) {
             <!-- Reschedule Form (Hidden by default) -->
             <div id="rescheduleForm" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
                 <h4><i class="fas fa-calendar-plus"></i> Reschedule Appointment</h4>
-                <div style="margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px; border-left: 4px solid #3b82f6;">
-                    <p style="margin: 0; font-size: 0.85rem; color: #4b5563;">
-                        <i class="fas fa-info-circle" style="color: #3b82f6;"></i> <strong>Rescheduling Rules:</strong>
-                        <br>• You cannot reschedule for a past date
-                        <br>• When rescheduling for today, the time must be at least 30 minutes after the current time
-                        <br>• Times are rounded up to the next 30-minute interval (e.g., 9:00 AM, 9:30 AM, 10:00 AM)
-                    </p>
-                </div>
                 <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                     <div style="flex: 1;">
                         <label for="newDate" style="display: block; margin-bottom: 5px; font-size: 0.9rem; color: #4b5563;">New Date:</label>
-                        <input type="date" id="newDate" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;" min="<?php echo date('Y-m-d'); ?>">
+                        <input type="date" id="newDate" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
                     </div>
                     <div style="flex: 1;">
                         <label for="newTime" style="display: block; margin-bottom: 5px; font-size: 0.9rem; color: #4b5563;">New Time:</label>
-                        <input type="time" id="newTime" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;" step="1800">
+                        <input type="time" id="newTime" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
                     </div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px;">
@@ -1556,26 +1547,6 @@ if (count($calendarEvents) > 0) {
                 // Hide the modal actions and show the reschedule form
                 document.getElementById('modalActions').style.display = 'none';
                 document.getElementById('rescheduleForm').style.display = 'block';
-
-                // Set minimum date to today
-                const today = new Date().toISOString().split('T')[0];
-                document.getElementById('newDate').min = today;
-
-                // If the current value is before today, update it to today
-                const currentDateValue = document.getElementById('newDate').value;
-                if (currentDateValue < today) {
-                    document.getElementById('newDate').value = today;
-                }
-
-                // Set up time validation for today
-                const dateInput = document.getElementById('newDate');
-                const timeInput = document.getElementById('newTime');
-
-                // Initial setup of min time if date is today
-                updateMinTime();
-
-                // Add event listener to update min time when date changes
-                dateInput.addEventListener('change', updateMinTime);
             });
 
             // Add click event listener to the cancel reschedule button
@@ -1668,78 +1639,37 @@ if (count($calendarEvents) > 0) {
                         // Show the assign section regardless of whether a technician is assigned
                         document.getElementById('assignSection').style.display = 'block';
 
-                        // Check if the inspection is completed
-                        const isCompleted = props.status === 'completed';
-
-                        if (isCompleted) {
-                            // If inspection is completed, show the completed message and hide all assignment UI
-                            document.getElementById('assignSectionTitle').textContent = 'Technician Assignment';
-                            document.getElementById('completedInspectionMessage').style.display = 'block';
+                        // If a technician is assigned, show the assigned info and hide the form
+                        if (props.technician_id) {
+                            document.getElementById('assignSectionTitle').textContent = 'Assigned Technicians';
                             document.getElementById('assignForm').style.display = 'none';
                             document.getElementById('assignHelp').style.display = 'none';
-                            document.getElementById('assignedInfo').style.display = 'none';
+                            document.getElementById('assignedInfo').style.display = 'block';
 
-                            // Still fetch technicians to display them, but don't allow modifications
-                            if (props.technician_id) {
-                                fetch(`get_appointment_technicians.php?appointment_id=${currentAppointmentId.replace('appt_', '')}`)
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.success) {
-                                            // Store the technicians in our array
-                                            appointmentTechnicians = data.technicians;
+                            // Fetch all assigned technicians for this appointment
+                            fetch(`get_appointment_technicians.php?appointment_id=${currentAppointmentId.replace('appt_', '')}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        // Store the technicians in our array
+                                        appointmentTechnicians = data.technicians;
 
-                                            // Just update the technician display, but don't show the edit UI
-                                            const technicianNames = appointmentTechnicians.map(tech => tech.name).join(', ');
-                                            document.getElementById('apptTechnician').textContent = technicianNames;
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error('Error fetching technicians:', error);
-                                    });
-                            }
+                                        // Update the technician list
+                                        updateAppointmentTechniciansList();
+
+                                        // Update the additional technician dropdown
+                                        updateAdditionalTechnicianDropdown();
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error fetching technicians:', error);
+                                });
                         } else {
-                            // If inspection is not completed, show normal assignment UI
-                            document.getElementById('completedInspectionMessage').style.display = 'none';
-
-                            // If a technician is assigned, show the assigned info and hide the form
-                            if (props.technician_id) {
-                                document.getElementById('assignSectionTitle').textContent = 'Assigned Technicians';
-                                document.getElementById('assignForm').style.display = 'none';
-                                document.getElementById('assignHelp').style.display = 'none';
-                                document.getElementById('assignedInfo').style.display = 'block';
-
-                                // Fetch all assigned technicians for this appointment
-                                fetch(`get_appointment_technicians.php?appointment_id=${currentAppointmentId.replace('appt_', '')}`)
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.success) {
-                                            // Store the technicians in our array
-                                            appointmentTechnicians = data.technicians.map(tech => ({
-                                                id: parseInt(tech.id), // Ensure IDs are integers
-                                                name: tech.name,
-                                                isPrimary: tech.isPrimary
-                                            }));
-
-                                            // Update the technician list
-                                            updateAppointmentTechniciansList();
-
-                                            // Update the additional technician dropdown
-                                            updateAdditionalTechnicianDropdown();
-
-                                            // Log the assigned technicians for debugging
-                                            console.log('Assigned technicians:', appointmentTechnicians);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error('Error fetching technicians:', error);
-                                    });
-                            } else {
-                                // If no technician is assigned, show the form and hide the assigned info
-                                document.getElementById('assignSectionTitle').textContent = 'Assign Technicians';
-                                document.getElementById('assignForm').style.display = 'flex';
-                                document.getElementById('assignHelp').style.display = 'block';
-                                document.getElementById('assignedInfo').style.display = 'none';
-                            }
+                            // If no technician is assigned, show the form and hide the assigned info
+                            document.getElementById('assignSectionTitle').textContent = 'Assign Technicians';
+                            document.getElementById('assignForm').style.display = 'flex';
+                            document.getElementById('assignHelp').style.display = 'block';
+                            document.getElementById('assignedInfo').style.display = 'none';
                         }
                     } else {
                         const props = event.extendedProps;
@@ -1789,20 +1719,13 @@ if (count($calendarEvents) > 0) {
                                     .then(data => {
                                         if (data.success) {
                                             // Store the technicians in our array
-                                            jobOrderTechnicians = data.technicians.map(tech => ({
-                                                id: parseInt(tech.id), // Ensure IDs are integers
-                                                name: tech.name,
-                                                isPrimary: tech.isPrimary
-                                            }));
+                                            jobOrderTechnicians = data.technicians;
 
                                             // Update the technician list
                                             updateJobOrderTechniciansList();
 
                                             // Update the additional technician dropdown
                                             updateJobAdditionalTechnicianDropdown();
-
-                                            // Log the assigned technicians for debugging
-                                            console.log('Job Order Technicians:', jobOrderTechnicians);
                                         }
                                     })
                                     .catch(error => {
@@ -1838,16 +1761,6 @@ if (count($calendarEvents) > 0) {
                 return;
             }
 
-            // Check if any technicians are already assigned
-            if (appointmentTechnicians.length > 0) {
-                // Check if this specific technician is already assigned
-                const assignedIds = appointmentTechnicians.map(tech => tech.id);
-                if (assignedIds.includes(parseInt(selectedTechId))) {
-                    alert('This technician is already assigned to this inspection.');
-                    return;
-                }
-            }
-
             // Show loading state
             const assignButton = document.querySelector('#assignForm button');
             const originalButtonText = assignButton.innerHTML;
@@ -1868,9 +1781,6 @@ if (count($calendarEvents) > 0) {
                 is_primary: isPrimary
             };
             console.log('Request data:', requestData);
-
-            // Add debug info to help diagnose issues
-            showDebugInfo(`Request data: ${JSON.stringify(requestData)}`);
 
             // Try the new version first
             tryAssignTechnician('assign_technician_new.php', requestData, assignButton, originalButtonText)
@@ -1895,35 +1805,12 @@ if (count($calendarEvents) > 0) {
 
         function tryAssignTechnician(url, requestData, assignButton, originalButtonText) {
             return new Promise((resolve, reject) => {
-                // Check if the technician is already assigned
-                const techId = parseInt(requestData.technician_id);
-                const assignedIds = appointmentTechnicians.map(tech => tech.id);
-
-                if (assignedIds.includes(techId)) {
-                    // Reset button state
-                    assignButton.innerHTML = originalButtonText;
-                    assignButton.disabled = false;
-
-                    // Reject with an error message
-                    reject(new Error('This technician is already assigned to this inspection.'));
-                    return;
-                }
-
-                // Make sure isPrimary is explicitly set to true for the first technician
-                if (!requestData.hasOwnProperty('is_primary')) {
-                    requestData.is_primary = true;
-                }
-
-                // Log the request data for debugging
-                console.log('Sending request data:', requestData);
-                showDebugInfo(`Sending to ${url}: ${JSON.stringify(requestData)}`);
-
                 fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestData)
                 })
-                .then(response => {
+            .then(response => {
                     console.log('Response status:', response.status);
                     console.log('Response headers:', [...response.headers.entries()]);
 
@@ -1942,7 +1829,7 @@ if (count($calendarEvents) > 0) {
 
                     return response.json();
                 })
-                .then(data => {
+            .then(data => {
                     console.log('Assignment response:', data);
                     showDebugInfo(data);
 
@@ -1968,7 +1855,7 @@ if (count($calendarEvents) > 0) {
 
                         // Add the technician to our array
                         appointmentTechnicians = [{
-                            id: parseInt(data.technician_id),
+                            id: data.technician_id,
                             name: data.technician_name,
                             isPrimary: true
                         }];
@@ -2010,13 +1897,6 @@ if (count($calendarEvents) > 0) {
             const selectedTechId = document.getElementById('additionalTechnicianSelect').value;
             if (!selectedTechId) {
                 alert('Please select a technician');
-                return;
-            }
-
-            // Check if the technician is already assigned
-            const assignedIds = appointmentTechnicians.map(tech => tech.id);
-            if (assignedIds.includes(parseInt(selectedTechId))) {
-                alert('This technician is already assigned to this inspection.');
                 return;
             }
 
@@ -2071,7 +1951,7 @@ if (count($calendarEvents) > 0) {
                 if(data.success) {
                     // Add the technician to our array
                     appointmentTechnicians.push({
-                        id: parseInt(data.technician_id),
+                        id: data.technician_id,
                         name: data.technician_name,
                         isPrimary: false
                     });
@@ -2160,11 +2040,7 @@ if (count($calendarEvents) > 0) {
 
         function updateAdditionalTechnicianDropdown() {
             const dropdown = document.getElementById('additionalTechnicianSelect');
-            if (!dropdown) return; // Safety check
-
-            // Get array of assigned technician IDs
             const assignedIds = appointmentTechnicians.map(tech => tech.id);
-            console.log('Filtering dropdown. Assigned IDs:', assignedIds);
 
             // Clear existing options except the first one
             while (dropdown.options.length > 1) {
@@ -2173,20 +2049,13 @@ if (count($calendarEvents) > 0) {
 
             // Add technicians that aren't already assigned
             <?php foreach ($technicians as $tech): ?>
-            {
-                const techId = <?= $tech['technician_id'] ?>;
-                if (!assignedIds.includes(techId)) {
-                    const option = document.createElement('option');
-                    option.value = techId;
-                    option.textContent = '<?= htmlspecialchars($tech['username']) ?>';
-                    dropdown.appendChild(option);
-                } else {
-                    console.log('Excluding already assigned technician:', techId, '<?= htmlspecialchars($tech['username']) ?>');
-                }
+            if (!assignedIds.includes(<?= $tech['technician_id'] ?>)) {
+                const option = document.createElement('option');
+                option.value = <?= $tech['technician_id'] ?>;
+                option.textContent = '<?= $tech['username'] ?>';
+                dropdown.appendChild(option);
             }
             <?php endforeach; ?>
-
-            console.log('Dropdown updated with filtered technicians. Options count:', dropdown.options.length);
         }
 
         function setAppointmentPrimaryTechnician(techId) {
@@ -2305,16 +2174,6 @@ if (count($calendarEvents) > 0) {
                 return;
             }
 
-            // Check if any technicians are already assigned
-            if (jobOrderTechnicians.length > 0) {
-                // Check if this specific technician is already assigned
-                const assignedIds = jobOrderTechnicians.map(tech => tech.id);
-                if (assignedIds.includes(parseInt(selectedTechId))) {
-                    alert('This technician is already assigned to this job order.');
-                    return;
-                }
-            }
-
             // Show loading state
             const assignButton = document.querySelector('#jobAssignSection button');
             const originalButtonText = assignButton.innerHTML;
@@ -2357,7 +2216,7 @@ if (count($calendarEvents) > 0) {
 
                     // Add the technician to our array
                     jobOrderTechnicians = [{
-                        id: parseInt(data.technician_id),
+                        id: data.technician_id,
                         name: data.technician_name,
                         isPrimary: true
                     }];
@@ -2405,13 +2264,6 @@ if (count($calendarEvents) > 0) {
                 return;
             }
 
-            // Check if the technician is already assigned
-            const assignedIds = jobOrderTechnicians.map(tech => tech.id);
-            if (assignedIds.includes(parseInt(selectedTechId))) {
-                alert('This technician is already assigned to this job order.');
-                return;
-            }
-
             // Show loading state
             const assignButton = document.querySelector('#jobAssignedInfo .assign-form button');
             const originalButtonText = assignButton.innerHTML;
@@ -2446,7 +2298,7 @@ if (count($calendarEvents) > 0) {
                 if(data.success) {
                     // Add the technician to our array
                     jobOrderTechnicians.push({
-                        id: parseInt(data.technician_id),
+                        id: data.technician_id,
                         name: data.technician_name,
                         isPrimary: false
                     });
@@ -2520,11 +2372,7 @@ if (count($calendarEvents) > 0) {
 
         function updateJobAdditionalTechnicianDropdown() {
             const dropdown = document.getElementById('jobAdditionalTechnicianSelect');
-            if (!dropdown) return; // Safety check
-
-            // Get array of assigned technician IDs
             const assignedIds = jobOrderTechnicians.map(tech => tech.id);
-            console.log('Filtering job dropdown. Assigned IDs:', assignedIds);
 
             // Clear existing options except the first one
             while (dropdown.options.length > 1) {
@@ -2533,20 +2381,13 @@ if (count($calendarEvents) > 0) {
 
             // Add technicians that aren't already assigned
             <?php foreach ($technicians as $tech): ?>
-            {
-                const techId = <?= $tech['technician_id'] ?>;
-                if (!assignedIds.includes(techId)) {
-                    const option = document.createElement('option');
-                    option.value = techId;
-                    option.textContent = '<?= htmlspecialchars($tech['username']) ?>';
-                    dropdown.appendChild(option);
-                } else {
-                    console.log('Excluding already assigned technician from job dropdown:', techId, '<?= htmlspecialchars($tech['username']) ?>');
-                }
+            if (!assignedIds.includes(<?= $tech['technician_id'] ?>)) {
+                const option = document.createElement('option');
+                option.value = <?= $tech['technician_id'] ?>;
+                option.textContent = '<?= $tech['username'] ?>';
+                dropdown.appendChild(option);
             }
             <?php endforeach; ?>
-
-            console.log('Job dropdown updated with filtered technicians. Options count:', dropdown.options.length);
         }
 
         function setJobOrderPrimaryTechnician(techId) {
@@ -2667,40 +2508,6 @@ if (count($calendarEvents) > 0) {
                 return;
             }
 
-            // Client-side validation for past dates
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Set to beginning of day for date comparison
-
-            // Format today's date as YYYY-MM-DD for direct string comparison
-            const todayFormatted = today.toISOString().split('T')[0];
-
-            if (newDate < todayFormatted) {
-                alert('Cannot reschedule for a past date.');
-                return;
-            }
-
-            // Client-side validation for same-day scheduling (30-minute interval rule)
-            if (newDate === todayFormatted) {
-                const currentTime = new Date();
-                const selectedDateTime = new Date(newDate + 'T' + newTime);
-
-                // Calculate minimum allowed time (current time rounded up to next 30-minute interval)
-                const minAllowedTime = new Date();
-                const currentMinutes = minAllowedTime.getMinutes();
-                const roundedMinutes = currentMinutes < 30 ? 30 : 60;
-
-                // Set to the next 30-minute interval
-                minAllowedTime.setMinutes(roundedMinutes);
-                minAllowedTime.setSeconds(0);
-                minAllowedTime.setMilliseconds(0);
-
-                if (selectedDateTime < minAllowedTime) {
-                    const minTimeStr = minAllowedTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    alert(`When rescheduling for today, the time must be at least 30 minutes after current time, rounded to the next 30-minute interval (${minTimeStr} onwards).`);
-                    return;
-                }
-            }
-
             // Show loading state
             const confirmBtn = document.getElementById('confirmRescheduleBtn');
             const originalBtnText = confirmBtn.innerHTML;
@@ -2798,17 +2605,9 @@ if (count($calendarEvents) > 0) {
             appointmentTechnicians = [];
             jobOrderTechnicians = [];
 
-            console.log('Modal closed. Technician arrays reset.');
-
             // Reset reschedule form
             document.getElementById('rescheduleForm').style.display = 'none';
             document.getElementById('modalActions').style.display = 'flex';
-
-            // Remove event listener for date change to prevent memory leaks
-            const dateInput = document.getElementById('newDate');
-            if (dateInput) {
-                dateInput.removeEventListener('change', updateMinTime);
-            }
 
             // Reset appointment form elements
             const technicianSelect = document.getElementById('technicianSelect');
@@ -2881,42 +2680,6 @@ if (count($calendarEvents) > 0) {
             dateInput.style.display = filterSelect.value === 'date' ? 'inline-block' : 'none';
         }
 
-        // Function to update minimum time when date is today
-        function updateMinTime() {
-            const dateInput = document.getElementById('newDate');
-            const timeInput = document.getElementById('newTime');
-            const today = new Date().toISOString().split('T')[0];
-
-            // Only apply min time restriction if the selected date is today
-            if (dateInput.value === today) {
-                const now = new Date();
-                const currentMinutes = now.getMinutes();
-                const roundedMinutes = currentMinutes < 30 ? 30 : 60;
-
-                // Create a new date with rounded minutes
-                const minTime = new Date();
-                minTime.setMinutes(roundedMinutes);
-                minTime.setSeconds(0);
-                minTime.setMilliseconds(0);
-
-                // Format as HH:MM for the min attribute
-                const hours = minTime.getHours().toString().padStart(2, '0');
-                const minutes = minTime.getMinutes().toString().padStart(2, '0');
-                timeInput.min = `${hours}:${minutes}`;
-
-                // If current value is less than min, update it
-                if (timeInput.value && timeInput.value < timeInput.min) {
-                    timeInput.value = timeInput.min;
-                }
-
-                // Show a message about the time restriction
-                console.log(`Time restricted to ${hours}:${minutes} or later for today`);
-            } else {
-                // No restriction for future dates
-                timeInput.min = '';
-            }
-        }
-
         // Debug helper function - only logs to console now
         function showDebugInfo(info) {
             // Only log to console for debugging
@@ -2973,8 +2736,8 @@ if (count($calendarEvents) > 0) {
             if (typeof fetchNotifications === 'function') {
                 fetchNotifications();
 
-                // Set up periodic notification checks for real-time updates
-                setInterval(fetchNotifications, 5000); // Check every 5 seconds
+                // Set up periodic notification checks
+                setInterval(fetchNotifications, 60000); // Check every minute
             } else {
                 console.error("fetchNotifications function not found");
             }

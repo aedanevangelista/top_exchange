@@ -351,6 +351,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+} elseif (isset($_GET['delete'])) {
+    $id = (int)$_GET['delete'];
+    $conn->query("DELETE FROM technicians WHERE technician_id=$id");
 }
 
 $technicians = $conn->query("SELECT * FROM technicians ORDER BY technician_id");
@@ -547,14 +550,9 @@ $technicians = $conn->query("SELECT * FROM technicians ORDER BY technician_id");
             <div class="technicians-content">
                 <div class="technicians-header">
                     <h1>Technicians Management</h1>
-                    <div>
-                        <a href="technicians_archive.php" class="btn btn-secondary mr-2">
-                            <i class="fas fa-archive"></i> View Archive
-                        </a>
-                        <button type="button" class="btn btn-primary add-tech-btn" onclick="openModal('add')">
-                            <i class="fas fa-plus"></i> Add New Technician
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-primary add-tech-btn" onclick="openModal('add')">
+                        <i class="fas fa-plus"></i> Add New Technician
+                    </button>
                 </div>
 
                 <!-- Technicians Summary -->
@@ -897,27 +895,27 @@ $technicians = $conn->query("SELECT * FROM technicians ORDER BY technician_id");
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title"><i class="fas fa-archive"></i> Archive Technician</h5>
+                            <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Delete Technician</h5>
                             <button type="button" class="close" data-dismiss="modal">&times;</button>
                         </div>
                         <div class="modal-body">
-                            <div class="alert alert-warning">
+                            <div class="alert alert-danger">
                                 <i class="fas fa-exclamation-triangle"></i>
                                 <div>
-                                    <strong>Note:</strong> This technician will be moved to the archive. You can restore them from the archive within 30 days.
+                                    <strong>Warning:</strong> This action cannot be undone. All data associated with this technician will be permanently removed.
                                 </div>
                             </div>
 
                             <div class="detail-section">
-                                <h3><i class="fas fa-archive"></i> Archive Confirmation</h3>
-                                <p class="text-center">Are you sure you want to archive this technician?</p>
+                                <h3><i class="fas fa-user-slash"></i> Delete Confirmation</h3>
+                                <p class="text-center">Are you sure you want to delete this technician?</p>
                                 <div id="deleteTechnicianName" class="text-center" style="font-weight: bold; font-size: 1.2rem; margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 8px;"></div>
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                             <a href="#" id="confirmDeleteBtn" class="btn btn-danger">
-                                <i class="fas fa-archive"></i> Archive Technician
+                                <i class="fas fa-trash"></i> Delete Permanently
                             </a>
                         </div>
                     </div>
@@ -1208,66 +1206,12 @@ $technicians = $conn->query("SELECT * FROM technicians ORDER BY technician_id");
             // Set the technician name in the modal
             document.getElementById('deleteTechnicianName').textContent = techName;
 
-            // Store the technician ID in a data attribute
-            document.getElementById('confirmDeleteBtn').setAttribute('data-tech-id', techId);
-
-            // Remove the href attribute to prevent direct navigation
-            document.getElementById('confirmDeleteBtn').removeAttribute('href');
+            // Set the delete confirmation button href
+            document.getElementById('confirmDeleteBtn').href = '?delete=' + techId;
 
             // Show the modal
             $('#deleteModal').modal('show');
         };
-
-        // Add click handler for the delete confirmation button
-        $('#confirmDeleteBtn').on('click', function(e) {
-            e.preventDefault();
-
-            const techId = $(this).data('tech-id');
-            const deleteBtn = $(this);
-            const originalBtnText = deleteBtn.html();
-
-            // Show loading indicator
-            deleteBtn.html('<i class="fas fa-spinner fa-spin"></i> Deleting...');
-            deleteBtn.prop('disabled', true);
-
-            // Send AJAX request to archive_technician.php
-            $.ajax({
-                url: 'archive_technician.php?id=' + techId,
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    // Reset button
-                    deleteBtn.html(originalBtnText);
-                    deleteBtn.prop('disabled', false);
-
-                    if (response.success) {
-                        // Close the modal and reload the page
-                        $('#deleteModal').modal('hide');
-                        location.reload();
-                    } else {
-                        // Show error message
-                        alert('Error: ' + (response.error || 'Failed to delete technician'));
-                    }
-                },
-                error: function(xhr, status, error) {
-                    // Reset button
-                    deleteBtn.html(originalBtnText);
-                    deleteBtn.prop('disabled', false);
-
-                    console.error('AJAX Error:', xhr.responseText);
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        if (response && response.error) {
-                            alert('Error: ' + response.error);
-                        } else {
-                            alert('Error: Unable to process your request. Please try again.');
-                        }
-                    } catch (e) {
-                        alert('Error: Unable to process your request. Please try again.');
-                    }
-                }
-            });
-        });
 
         // Define viewTechnicianJobs function inside document ready
         window.viewTechnicianJobs = function(techId, techName) {
@@ -1614,8 +1558,8 @@ $technicians = $conn->query("SELECT * FROM technicians ORDER BY technician_id");
             if (typeof fetchNotifications === 'function') {
                 fetchNotifications();
 
-                // Set up periodic notification checks for real-time updates
-                setInterval(fetchNotifications, 5000); // Check every 5 seconds
+                // Set up periodic notification checks
+                setInterval(fetchNotifications, 60000); // Check every minute
             } else {
                 console.error("fetchNotifications function not found");
             }

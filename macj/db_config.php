@@ -1,13 +1,12 @@
 <?php
-$dbname = 'u701062148_top_exchange';
-$user = 'u701062148_top_exchange';
-$pass = 'Aedanpogi123';
-$servername = 'localhost';
+$dbname = 'macj_pest_control';
+$user = 'root';
+$pass = '';
 
-// Connect to production database
+// Connect to database
 try {
-    // Connect to the production server
-    $pdo = new PDO("mysql:host=$servername;dbname=$dbname", $user, $pass);
+    // Connect to the server
+    $pdo = new PDO("mysql:host=localhost;dbname=$dbname", $user, $pass);
 } catch(PDOException $e) {
     die("Could not connect to the database: " . $e->getMessage());
 }

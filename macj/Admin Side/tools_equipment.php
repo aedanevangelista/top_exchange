@@ -248,14 +248,9 @@ try {
             <div class="tools-content">
                 <div class="tools-header">
                     <h1>Tools and Equipment</h1>
-                    <div>
-                        <a href="tools_archive.php" class="btn btn-secondary mr-2">
-                            <i class="fas fa-archive"></i> View Archive
-                        </a>
-                        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#toolModal">
-                            <i class="fas fa-plus"></i> Add New Tool/Equipment
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#toolModal">
+                        <i class="fas fa-plus"></i> Add New Tool/Equipment
+                    </button>
                 </div>
 
                 <!-- Inventory Summary -->
@@ -586,8 +581,8 @@ try {
             if (typeof fetchNotifications === 'function') {
                 fetchNotifications();
 
-                // Set up periodic notification checks for real-time updates
-                setInterval(fetchNotifications, 5000); // Check every 5 seconds
+                // Set up periodic notification checks
+                setInterval(fetchNotifications, 60000); // Check every minute
             } else {
                 console.error("fetchNotifications function not found");
             }

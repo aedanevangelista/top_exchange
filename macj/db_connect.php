@@ -3,12 +3,12 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Connect to remote database
+// Connect to local database
 try {
-    // Connect to the production server
-    error_log("Attempting to connect to production database");
-    $conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
-    error_log("Connected to production database");
+    // Connect to localhost
+    error_log("Attempting to connect to local database");
+    $conn = new mysqli("localhost", "root", "", "macj_pest_control");
+    error_log("Connected to local database");
 } catch (Exception $e) {
     error_log("Failed to connect to production database: " . $e->getMessage());
     die("Could not connect to the database: " . $e->getMessage());

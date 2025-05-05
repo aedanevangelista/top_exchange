@@ -37,37 +37,6 @@ if (!preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $newTime)) {
     exit;
 }
 
-// Get current date and time in Asia/Manila timezone
-$currentDateTime = new DateTime('now', new DateTimeZone('Asia/Manila'));
-$selectedDateTime = new DateTime($newDate . ' ' . $newTime, new DateTimeZone('Asia/Manila'));
-$todayDate = new DateTime('today', new DateTimeZone('Asia/Manila'));
-
-// Check if the selected date is in the past
-if ($newDate < $todayDate->format('Y-m-d')) {
-    echo json_encode(['success' => false, 'message' => 'Cannot reschedule for a past date']);
-    exit;
-}
-
-// If rescheduling for today, check if the time is in the future with proper interval
-if ($newDate == $todayDate->format('Y-m-d')) {
-    // Current time plus 30 minutes, rounded up to the next 30-minute interval
-    $minAllowedTime = clone $currentDateTime;
-    $minutes = (int)$minAllowedTime->format('i');
-    $roundedMinutes = $minutes < 30 ? 30 : 60;
-    $minAllowedTime->setTime(
-        (int)$minAllowedTime->format('H'),
-        $roundedMinutes - $minutes,
-        0
-    );
-
-    // Check if selected time is at least at the next 30-minute interval
-    if ($selectedDateTime < $minAllowedTime) {
-        $minTimeStr = $minAllowedTime->format('g:i A');
-        echo json_encode(['success' => false, 'message' => "When rescheduling for today, the time must be at least 30 minutes after current time, rounded to the next 30-minute interval ($minTimeStr onwards)"]);
-        exit;
-    }
-}
-
 try {
     // Start a transaction
     $conn->begin_transaction();

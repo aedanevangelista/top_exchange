@@ -41,37 +41,6 @@ try {
         exit;
     }
 
-    // Get current date and time in Asia/Manila timezone
-    $currentDateTime = new DateTime('now', new DateTimeZone('Asia/Manila'));
-    $selectedDateTime = new DateTime($newDate . ' ' . $newTime, new DateTimeZone('Asia/Manila'));
-    $todayDate = new DateTime('today', new DateTimeZone('Asia/Manila'));
-
-    // Check if the selected date is in the past
-    if ($newDate < $todayDate->format('Y-m-d')) {
-        echo json_encode(['success' => false, 'message' => 'Cannot reschedule for a past date']);
-        exit;
-    }
-
-    // If rescheduling for today, check if the time is in the future with proper interval
-    if ($newDate == $todayDate->format('Y-m-d')) {
-        // Current time plus 30 minutes, rounded up to the next 30-minute interval
-        $minAllowedTime = clone $currentDateTime;
-        $minutes = (int)$minAllowedTime->format('i');
-        $roundedMinutes = $minutes < 30 ? 30 : 60;
-        $minAllowedTime->setTime(
-            (int)$minAllowedTime->format('H'),
-            $roundedMinutes - $minutes,
-            0
-        );
-
-        // Check if selected time is at least at the next 30-minute interval
-        if ($selectedDateTime < $minAllowedTime) {
-            $minTimeStr = $minAllowedTime->format('g:i A');
-            echo json_encode(['success' => false, 'message' => "When rescheduling for today, the time must be at least 30 minutes after current time, rounded to the next 30-minute interval ($minTimeStr onwards)"]);
-            exit;
-        }
-    }
-
     // Get the current job order details
     $stmt = $conn->prepare("
         SELECT
@@ -79,7 +48,6 @@ try {
             j.preferred_time,
             j.type_of_work,
             j.status AS job_status,
-            j.client_approval_status,
             a.client_id,
             a.client_name,
             a.location_address
@@ -106,7 +74,6 @@ try {
     $typeOfWork = $jobOrder['type_of_work'];
     $location = $jobOrder['location_address'];
     $jobStatus = $jobOrder['job_status'];
-    $clientApprovalStatus = $jobOrder['client_approval_status'];
 
     // Check if the job order is already completed
     if ($jobStatus === 'completed') {
@@ -115,20 +82,10 @@ try {
         exit;
     }
 
-    // Check if we need to update the client_approval_status
-    $clientApprovalStatusUpdated = false;
-    if ($clientApprovalStatus === 'pending') {
-        // Update the job order with the new date and time and set client_approval_status to 'approved'
-        $stmt = $conn->prepare("UPDATE job_order SET preferred_date = ?, preferred_time = ?, status = 'rescheduled', client_approval_status = 'approved' WHERE job_order_id = ?");
-        $stmt->bind_param("ssi", $newDate, $newTime, $jobOrderId);
-        $result = $stmt->execute();
-        $clientApprovalStatusUpdated = true;
-    } else {
-        // Update the job order with just the new date and time
-        $stmt = $conn->prepare("UPDATE job_order SET preferred_date = ?, preferred_time = ?, status = 'rescheduled' WHERE job_order_id = ?");
-        $stmt->bind_param("ssi", $newDate, $newTime, $jobOrderId);
-        $result = $stmt->execute();
-    }
+    // Update the job order with the new date and time
+    $stmt = $conn->prepare("UPDATE job_order SET preferred_date = ?, preferred_time = ?, status = 'rescheduled' WHERE job_order_id = ?");
+    $stmt->bind_param("ssi", $newDate, $newTime, $jobOrderId);
+    $result = $stmt->execute();
 
     if (!$result) {
         $conn->rollback();
@@ -199,7 +156,6 @@ try {
         'job_order_id' => $jobOrderId,
         'new_date' => $newDate,
         'new_time' => $newTime,
-        'client_approval_status_updated' => $clientApprovalStatusUpdated,
         'client_notification_sent' => $clientNotificationSent,
         'technician_notifications_sent' => $technicianNotificationsSent
     ]);

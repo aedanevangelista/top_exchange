@@ -38,13 +38,9 @@ $appointmentId = $data['appointment_id'];
 $technicianId = $data['technician_id'];
 $isPrimary = isset($data['is_primary']) ? (bool)$data['is_primary'] : false;
 
-// Debug information
-error_log("Received request: " . json_encode($data));
-error_log("isPrimary value: " . ($isPrimary ? 'true' : 'false'));
-
 try {
     // Connect to the database
-    $conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
+    $conn = new mysqli("localhost", "root", "", "macj_pest_control");
 
     // Check connection
     if ($conn->connect_error) {
@@ -69,10 +65,8 @@ try {
     $technicianName = $techData['username'];
     $techStmt->close();
 
-    // Check if the appointment exists and if it's completed
-    $apptStmt = $conn->prepare("SELECT a.*,
-        (SELECT COUNT(*) FROM assessment_report ar WHERE ar.appointment_id = a.appointment_id) as has_report
-        FROM appointments a WHERE a.appointment_id = ?");
+    // Check if the appointment exists
+    $apptStmt = $conn->prepare("SELECT * FROM appointments WHERE appointment_id = ?");
     if (!$apptStmt) {
         throw new Exception("Error preparing appointment statement: " . $conn->error);
     }
@@ -83,14 +77,6 @@ try {
 
     if ($apptResult->num_rows === 0) {
         throw new Exception("Appointment not found");
-    }
-
-    // Get appointment data
-    $appointmentData = $apptResult->fetch_assoc();
-
-    // Check if the inspection is completed
-    if ($appointmentData['status'] === 'completed' || $appointmentData['has_report'] > 0) {
-        throw new Exception("Cannot assign technicians to a completed inspection");
     }
 
     $apptStmt->close();
@@ -177,19 +163,14 @@ try {
 
     // Insert the technician assignment into the appointment_technicians table
     try {
-        // Log the values being inserted
-        error_log("Inserting into appointment_technicians: appointment_id=$appointmentId, technician_id=$technicianId, is_primary=" . ($isPrimary ? '1' : '0'));
-
         // First try with is_primary column
         $insertStmt = $conn->prepare("INSERT INTO appointment_technicians (appointment_id, technician_id, is_primary) VALUES (?, ?, ?)");
-        $isPrimaryInt = $isPrimary ? 1 : 0; // Convert boolean to integer for MySQL
-        $insertStmt->bind_param("iii", $appointmentId, $technicianId, $isPrimaryInt);
+        $insertStmt->bind_param("iii", $appointmentId, $technicianId, $isPrimary);
 
         if (!$insertStmt->execute()) {
             // If it fails, try without is_primary column
             if (strpos($insertStmt->error, "Unknown column 'is_primary'") !== false) {
                 $insertStmt->close();
-                error_log("is_primary column not found, trying without it");
 
                 $insertStmt = $conn->prepare("INSERT INTO appointment_technicians (appointment_id, technician_id) VALUES (?, ?)");
                 $insertStmt->bind_param("ii", $appointmentId, $technicianId);
@@ -205,14 +186,9 @@ try {
         $insertStmt->close();
     } catch (Exception $e) {
         // If all else fails, try a direct query
-        error_log("Trying direct query as last resort");
-        $isPrimaryInt = $isPrimary ? 1 : 0;
-        $insertSQL = "INSERT INTO appointment_technicians (appointment_id, technician_id, is_primary) VALUES ($appointmentId, $technicianId, $isPrimaryInt)";
+        $insertSQL = "INSERT INTO appointment_technicians (appointment_id, technician_id) VALUES ($appointmentId, $technicianId)";
         if (!$conn->query($insertSQL)) {
-            $insertSQL = "INSERT INTO appointment_technicians (appointment_id, technician_id) VALUES ($appointmentId, $technicianId)";
-            if (!$conn->query($insertSQL)) {
-                throw new Exception("Failed to assign technician: " . $conn->error);
-            }
+            throw new Exception("Failed to assign technician: " . $conn->error);
         }
     }
 

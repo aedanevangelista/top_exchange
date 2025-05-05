@@ -208,9 +208,6 @@ if (!$clients) {
                 <div class="clients-header">
                     <h1><i class="fas fa-users"></i> Client Management</h1>
                     <div class="header-actions">
-                        <a href="clients_archive.php" class="btn btn-secondary mr-2">
-                            <i class="fas fa-archive"></i> View Archive
-                        </a>
                         <div class="search-container">
                             <input type="text" id="clientSearch" placeholder="Search clients...">
                             <i class="fas fa-search search-icon"></i>
@@ -372,8 +369,8 @@ if (!$clients) {
             if (typeof fetchNotifications === 'function') {
                 fetchNotifications();
 
-                // Set up periodic notification checks for real-time updates
-                setInterval(fetchNotifications, 5000); // Check every 5 seconds
+                // Set up periodic notification checks
+                setInterval(fetchNotifications, 60000); // Check every minute
             } else {
                 console.error("fetchNotifications function not found");
             }

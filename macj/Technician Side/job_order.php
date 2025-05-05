@@ -75,8 +75,7 @@ $whereClause = $technicianColumn ? "jo.$technicianColumn = ?" : "1=1";
 
 // Add status condition only if the status column exists
 // Include 'completed' status to show finished job orders
-// Also include 'rescheduled' status to show rescheduled job orders
-$statusCondition = $hasStatusColumn ? "AND (jo.status = 'approved' OR jo.status = 'scheduled' OR jo.status = 'completed' OR jo.status = 'rescheduled' OR jo.status IS NULL)" : "";
+$statusCondition = $hasStatusColumn ? "AND (jo.status = 'approved' OR jo.status = 'scheduled' OR jo.status = 'completed' OR jo.status IS NULL)" : "";
 
 // Add client approval condition to only show approved job orders
 $clientApprovalCondition = "AND (jo.client_approval_status = 'approved' OR jo.client_approval_status = 'one-time')";
@@ -1769,15 +1768,6 @@ if ($result) {
     <script src="js/notifications.js"></script>
     <script src="js/tools-checklist.js"></script>
 
-    <!-- Pass PHP job arrays to JavaScript -->
-    <script>
-        // Make job arrays available to JavaScript
-        const todayJobOrders = <?= json_encode($todayJobOrders) ?>;
-        const upcomingJobOrders = <?= json_encode($upcomingJobOrders) ?>;
-        const finishedJobOrders = <?= json_encode($finishedJobOrders) ?>;
-        const pastDueJobOrders = <?= json_encode($pastDueJobOrders) ?>;
-    </script>
-
     <!-- Debug script for sidebar toggle -->
     <script>
         // Add debug logging for sidebar toggle
@@ -1810,37 +1800,6 @@ if ($result) {
 
             // Set up date checking and auto-refresh
             setupDateRefresh();
-
-            // Check if there's a job_id parameter in the URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const jobId = urlParams.get('job_id');
-
-            if (jobId) {
-                console.log('Job ID found in URL:', jobId);
-                // Find the job with the matching ID
-                const allJobSections = [
-                    ...todayJobOrders,
-                    ...upcomingJobOrders,
-                    ...finishedJobOrders,
-                    ...pastDueJobOrders
-                ];
-
-                const job = allJobSections.find(job => job.job_order_id == jobId);
-
-                if (job) {
-                    console.log('Found job:', job);
-                    // Open the job details modal
-                    setTimeout(() => {
-                        openJobDetails(job);
-                        // After opening the details, open the report form
-                        setTimeout(() => {
-                            openReportForm();
-                        }, 500);
-                    }, 500);
-                } else {
-                    console.error('Job not found with ID:', jobId);
-                }
-            }
         });
 
         // Function to set up date checking and auto-refresh

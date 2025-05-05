@@ -16,18 +16,14 @@ if (!$job_order_id || !$technician_id) {
     exit;
 }
 
-// Get job order details and technician name, and check if the inspection is completed
+// Get job order details and technician name
 $jobStmt = $conn->prepare("SELECT
     j.preferred_date,
     j.preferred_time,
     j.type_of_work,
-    j.client_approval_status,
     a.client_name,
     a.location_address,
-    t.username as technician_name,
-    (SELECT COUNT(*) FROM technician_feedback tf
-     JOIN assessment_report ar2 ON tf.report_id = ar2.report_id
-     WHERE ar2.report_id = ar.report_id AND tf.technician_arrived = 1 AND tf.job_completed = 1) as is_verified
+    t.username as technician_name
 FROM job_order j
 JOIN assessment_report ar ON j.report_id = ar.report_id
 JOIN appointments a ON ar.appointment_id = a.appointment_id
@@ -50,16 +46,6 @@ if ($jobResult->num_rows === 0) {
 
 $jobData = $jobResult->fetch_assoc();
 $jobStmt->close();
-
-// Check if the inspection is completed
-$isCompleted = ($jobData['is_verified'] > 0);
-if ($isCompleted) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Cannot assign technicians to a completed inspection'
-    ]);
-    exit;
-}
 
 // Check if the job_order_technicians table has the is_primary column
 $columnCheckQuery = "SHOW COLUMNS FROM job_order_technicians LIKE 'is_primary'";
@@ -107,23 +93,12 @@ if ($checkResult->num_rows > 0) {
         $updateStmt->execute();
     }
 
-    // Check if the job order is in 'pending' status and update it to 'approved'
-    if (isset($jobData['client_approval_status']) && $jobData['client_approval_status'] === 'pending') {
-        $updateJobStmt = $conn->prepare("UPDATE job_order SET client_approval_status = 'approved' WHERE job_order_id = ?");
-        $updateJobStmt->bind_param("i", $job_order_id);
-        $updateJobStmt->execute();
-        $clientStatusUpdated = true;
-    } else {
-        $clientStatusUpdated = false;
-    }
-
     $response = [
         'success' => true,
         'job_order_id' => $job_order_id,
         'technician_id' => $technician_id,
         'technician_name' => $jobData['technician_name'],
         'is_primary' => $isPrimary,
-        'client_approval_status_updated' => $clientStatusUpdated,
         'message' => 'Technician is already assigned to this job order'
     ];
 
@@ -144,14 +119,6 @@ if ($stmt->execute()) {
     $response['technician_id'] = $technician_id;
     $response['technician_name'] = $jobData['technician_name'];
     $response['is_primary'] = $isPrimary;
-
-    // Check if the job order is in 'pending' status and update it to 'approved'
-    if (isset($jobData['client_approval_status']) && $jobData['client_approval_status'] === 'pending') {
-        $updateJobStmt = $conn->prepare("UPDATE job_order SET client_approval_status = 'approved' WHERE job_order_id = ?");
-        $updateJobStmt->bind_param("i", $job_order_id);
-        $updateJobStmt->execute();
-        $response['client_approval_status_updated'] = true;
-    }
 
     // Try to create notification for technician
     try {

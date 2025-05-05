@@ -1472,32 +1472,6 @@ while ($client = $client_result->fetch_assoc()) {
             flex: 1;
         }
 
-        /* Disabled technician badge styles */
-        .assigned-tech-badge.disabled {
-            opacity: 0.7;
-            background-color: #f8f9fa;
-            border-color: #e9ecef;
-            cursor: not-allowed;
-            position: relative;
-        }
-
-        .assigned-tech-badge.disabled::after {
-            content: '(Completed)';
-            font-size: 0.8em;
-            color: #6c757d;
-            margin-left: 5px;
-            font-style: italic;
-        }
-
-        /* Add a lock icon to indicate the technician assignment is locked */
-        .assigned-tech-badge.disabled::before {
-            content: '\f023';
-            font-family: 'Font Awesome 5 Free';
-            font-weight: 900;
-            margin-right: 5px;
-            color: #6c757d;
-        }
-
         .work-type-actions {
             display: flex;
             gap: 10px;
@@ -2446,14 +2420,6 @@ while ($client = $client_result->fetch_assoc()) {
                                 <div class="approval-date" id="detailApprovalDate" style="font-size: 0.85rem; color: #666;"></div>
                             </div>
                         </div>
-                        <div class="detail-item" id="completedStatusContainer" style="display: none;">
-                            <div class="detail-label"><i class="fas fa-info-circle"></i> Status:</div>
-                            <div class="detail-value" style="padding: 0; background: none; border: none;">
-                                <div class="alert alert-info" style="margin: 0; padding: 8px 12px;">
-                                    <i class="fas fa-lock"></i> This inspection is completed. Technician reassignment is not available.
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Chemical Recommendations Section -->
@@ -2648,44 +2614,8 @@ while ($client = $client_result->fetch_assoc()) {
                     const chemicalRecommendations = this.getAttribute('data-chemical-recommendations');
                     const jobOrderCost = this.getAttribute('data-job-order-cost');
 
-                    // Check if the inspection is completed
-                    const isCompleted = (technicianArrived == 1 && jobCompleted == 1) ||
-                                       (feedbackRating && feedbackRating.trim() !== '');
-                    const completedStatusContainer = document.getElementById('completedStatusContainer');
-
                     if (jobOrderId && jobOrderId.trim() !== '') {
                         jobOrderSection.style.display = 'block';
-
-                        // Show completed status message if inspection is completed
-                        if (isCompleted && completedStatusContainer) {
-                            completedStatusContainer.style.display = 'block';
-
-                            // Disable technician assignment controls if inspection is completed
-                            const assignedTechList = document.getElementById('assignedTechList');
-                            const assignForm = document.querySelector('.assign-form');
-
-                            if (assignedTechList) {
-                                // Add a disabled appearance to the technician badges
-                                const techBadges = assignedTechList.querySelectorAll('.assigned-tech-badge');
-                                techBadges.forEach(badge => {
-                                    badge.classList.add('disabled');
-                                    // Remove click event by adding pointer-events: none
-                                    badge.style.pointerEvents = 'none';
-                                    // Remove the remove button
-                                    const removeBtn = badge.querySelector('.remove-tech');
-                                    if (removeBtn) {
-                                        removeBtn.remove();
-                                    }
-                                });
-                            }
-
-                            if (assignForm) {
-                                // Hide the form to add more technicians
-                                assignForm.style.display = 'none';
-                            }
-                        } else if (completedStatusContainer) {
-                            completedStatusContainer.style.display = 'none';
-                        }
                         // Display job types as a list if there are multiple types
                         const jobTypes = jobOrderType.split(',').map(type => type.trim());
                         const jobTypeElement = document.getElementById('detailJobType');
@@ -2878,19 +2808,8 @@ while ($client = $client_result->fetch_assoc()) {
                         createJobFromDetailsBtn.style.display = 'none';
                     } else {
                         jobOrderSection.style.display = 'none';
-
-                        // Only show Create Job Order button if inspection is not completed
-                        if (!isCompleted) {
-                            createJobFromDetailsBtn.style.display = 'inline-flex';
-                            createJobFromDetailsBtn.setAttribute('data-report-id', reportId);
-                        } else {
-                            createJobFromDetailsBtn.style.display = 'none';
-
-                            // Show completed status message even if no job order exists yet
-                            if (completedStatusContainer) {
-                                completedStatusContainer.style.display = 'block';
-                            }
-                        }
+                        createJobFromDetailsBtn.style.display = 'inline-flex';
+                        createJobFromDetailsBtn.setAttribute('data-report-id', reportId);
                     }
 
                     // Handle verification
@@ -4030,8 +3949,8 @@ while ($client = $client_result->fetch_assoc()) {
             if (typeof fetchNotifications === 'function') {
                 fetchNotifications();
 
-                // Set up periodic notification checks for real-time updates
-                setInterval(fetchNotifications, 5000); // Check every 5 seconds
+                // Set up periodic notification checks
+                setInterval(fetchNotifications, 60000); // Check every minute
             } else {
                 console.error("fetchNotifications function not found");
             }

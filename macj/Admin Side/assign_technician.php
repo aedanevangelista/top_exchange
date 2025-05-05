@@ -49,12 +49,8 @@ $appointmentId = $data['appointment_id'];
 $technicianId = $data['technician_id'];
 $isPrimary = isset($data['is_primary']) ? (bool)$data['is_primary'] : false;
 
-// Get appointment details, technician name, and check if the appointment is completed
-$clientStmt = $conn->prepare("SELECT a.preferred_date, a.preferred_time, a.client_name, a.email, a.status, t.username,
-                            (SELECT COUNT(*) FROM assessment_report ar WHERE ar.appointment_id = a.appointment_id) as has_report,
-                            (SELECT COUNT(*) FROM technician_feedback tf
-                             JOIN assessment_report ar ON tf.report_id = ar.report_id
-                             WHERE ar.appointment_id = a.appointment_id AND tf.technician_arrived = 1 AND tf.job_completed = 1) as is_verified
+// Get appointment details and technician name
+$clientStmt = $conn->prepare("SELECT a.preferred_date, a.preferred_time, a.client_name, a.email, t.username
                             FROM appointments a
                             JOIN technicians t ON t.technician_id = ?
                             WHERE a.appointment_id = ?");
@@ -74,17 +70,6 @@ $appointmentData = $clientResult->fetch_assoc();
 if (!$appointmentData) {
     $response['message'] = 'Could not find appointment or technician data';
     echo json_encode($response);
-    exit;
-}
-
-// Check if the inspection is completed
-$isCompleted = ($appointmentData['is_verified'] > 0);
-if ($isCompleted) {
-    ob_end_clean();
-    echo json_encode([
-        'success' => false,
-        'message' => 'Cannot assign technicians to a completed inspection'
-    ]);
     exit;
 }
 

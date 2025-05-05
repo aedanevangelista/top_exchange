@@ -71,15 +71,13 @@ $jobOrdersQuery = "
         a.kind_of_place,
         a.notes,
         c.contact_number,
-        jo.status
+        'scheduled' as status
     FROM job_order jo
     JOIN job_order_technicians jot ON jo.job_order_id = jot.job_order_id
     JOIN assessment_report ar ON jo.report_id = ar.report_id
     JOIN appointments a ON ar.appointment_id = a.appointment_id
     LEFT JOIN clients c ON a.client_id = c.client_id
-    WHERE jot.technician_id = ?
-    AND jo.client_approval_status IN ('approved', 'one-time')
-    AND (jo.status = 'scheduled' OR jo.status = 'rescheduled' OR jo.status IS NULL)
+    WHERE jot.technician_id = ? AND jo.client_approval_status IN ('approved', 'one-time')
     ORDER BY jo.preferred_date ASC, jo.preferred_time ASC
 ";
 
@@ -697,12 +695,8 @@ foreach ($allSchedules as $schedule) {
                     </div>
                 `;
 
-                // Show action button for job orders
-                document.getElementById('actionButton').style.display = 'block';
-                document.getElementById('actionButtonText').textContent = 'Send Report';
-                document.getElementById('actionButton').onclick = function() {
-                    openJobOrderReportForm(schedule.id);
-                };
+                // Hide action button for job orders
+                document.getElementById('actionButton').style.display = 'none';
             }
 
             document.getElementById('scheduleModalContent').innerHTML = content;
@@ -715,14 +709,6 @@ foreach ($allSchedules as $schedule) {
 
             // Redirect to the inspection page
             window.location.href = 'inspection.php';
-        }
-
-        function openJobOrderReportForm(jobOrderId) {
-            // Close the details modal
-            bootstrap.Modal.getInstance(document.getElementById('scheduleDetailsModal')).hide();
-
-            // Redirect to the job order page with the job order ID
-            window.location.href = 'job_order.php?job_id=' + jobOrderId;
         }
 
         function formatTime(timeString) {

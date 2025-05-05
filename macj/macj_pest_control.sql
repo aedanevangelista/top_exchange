@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 04, 2025 at 02:40 PM
+-- Generation Time: May 02, 2025 at 04:57 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -59,107 +59,6 @@ CREATE TABLE `appointment_technicians` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `archived_chemical_inventory`
---
-
-CREATE TABLE `archived_chemical_inventory` (
-  `archive_id` int(11) NOT NULL,
-  `id` int(11) NOT NULL,
-  `chemical_name` varchar(255) NOT NULL,
-  `type` varchar(50) NOT NULL,
-  `quantity` decimal(10,2) NOT NULL,
-  `unit` enum('Liters','Kilograms','Grams','Pieces') NOT NULL,
-  `manufacturer` varchar(255) DEFAULT NULL,
-  `supplier` varchar(255) DEFAULT NULL,
-  `description` text DEFAULT NULL,
-  `safety_info` text DEFAULT NULL,
-  `expiration_date` date NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `target_pest` varchar(255) DEFAULT NULL,
-  `archived_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `scheduled_deletion_date` date NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `archived_clients`
---
-
-CREATE TABLE `archived_clients` (
-  `archive_id` int(11) NOT NULL,
-  `client_id` int(11) NOT NULL,
-  `first_name` varchar(50) NOT NULL,
-  `last_name` varchar(50) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `contact_number` varchar(20) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `registered_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `location_address` varchar(255) DEFAULT NULL,
-  `type_of_place` varchar(50) DEFAULT NULL,
-  `location_lat` varchar(20) DEFAULT NULL,
-  `location_lng` varchar(20) DEFAULT NULL,
-  `archived_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `scheduled_deletion_date` date NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `archived_technicians`
---
-
-CREATE TABLE `archived_technicians` (
-  `archive_id` int(11) NOT NULL,
-  `technician_id` int(11) NOT NULL,
-  `username` varchar(50) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `tech_contact_number` varchar(20) NOT NULL,
-  `tech_fname` varchar(50) NOT NULL,
-  `tech_lname` varchar(50) NOT NULL,
-  `technician_picture` varchar(255) NOT NULL,
-  `archived_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `scheduled_deletion_date` date NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `archived_technician_checklist_logs`
---
-
-CREATE TABLE `archived_technician_checklist_logs` (
-  `archive_id` int(11) NOT NULL,
-  `log_id` int(11) DEFAULT NULL,
-  `technician_id` int(11) DEFAULT NULL,
-  `checklist_date` datetime DEFAULT NULL,
-  `checked_items` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `scheduled_deletion_date` date DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `archived_tools_equipment`
---
-
-CREATE TABLE `archived_tools_equipment` (
-  `archive_id` int(11) NOT NULL,
-  `id` int(11) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `category` varchar(50) NOT NULL,
-  `quantity` int(11) NOT NULL DEFAULT 0,
-  `description` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `archived_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `scheduled_deletion_date` date NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `assessment_report`
 --
 
@@ -210,6 +109,7 @@ INSERT INTO `chemical_inventory` (`id`, `chemical_name`, `type`, `quantity`, `un
 (11, 'Alpha Cypermethrin', 'Insecticide', 2.00, 'Kilograms', '2', '2', '2', '2', '2025-04-07', '2025-04-01 10:07:42', 'Crawling & Flying Pest'),
 (14, 'Permethrin', 'Insecticide', 11.00, 'Kilograms', 'beer', 'jhkjhkj', 'kjhkjh', 'lmklkjlj', '2025-04-17', '2025-04-04 01:20:48', 'Crawling & Flying Pest'),
 (16, 'Cypermethrin', 'Insecticide', 12.00, 'Liters', 'Www', 'www', 'aaaa', 'wwwww', '2025-05-11', '2025-04-11 01:32:46', 'Crawling & Flying Pest'),
+(17, 'Cypermethrin', 'Rodenticide', 1.00, 'Liters', 'Www', 'www', 'awaw', 'awaw', '2025-04-24', '2025-04-14 02:01:17', 'Crawling & Flying Pest'),
 (18, 'Fipronil', 'Insecticide', 15.00, 'Liters', 'BASF', 'Pest Control Supplies Inc.', 'Effective against termites and other wood-destroying insects.', 'Use in well-ventilated areas. Avoid contact with skin, eyes, and clothing. Keep away from food and water sources.', '2026-04-27', '2025-04-27 10:41:32', 'Termites'),
 (19, 'Imidacloprid', 'Insecticide', 10.00, 'Kilograms', 'Bayer', 'Agri-Chem Distributors', 'Systemic insecticide effective for termite control and prevention.', 'Harmful if swallowed or inhaled. Avoid breathing dust. Wash thoroughly after handling.', '2026-04-27', '2025-04-27 10:41:32', 'Termites'),
 (20, 'Emamectin Benzoate', 'Insecticide', 20.00, 'Liters', 'Ginebra', 'Ginebra San Miguel', 'For Cockroach', 'Use with precaution', '2025-06-29', '2025-04-29 11:21:53', 'Cockroaches');
@@ -420,13 +320,12 @@ INSERT INTO `technician_checklist_logs` (`log_id`, `technician_id`, `checklist_d
 (12, 1, '2025-04-29', '[]', 0, 0, '2025-04-29 03:22:18'),
 (13, 16, '2025-04-29', '[]', 0, 0, '2025-04-29 05:08:37'),
 (14, 17, '2025-04-29', '[{\"id\":\"23\",\"name\":\"Bed Bug Monitor\"},{\"id\":\"22\",\"name\":\"Bed Bug Vacuum\"},{\"id\":\"20\",\"name\":\"Heat Treatment Unit\"},{\"id\":\"24\",\"name\":\"1\"},{\"id\":\"1\",\"name\":\"Backpack Sprayer\"},{\"id\":\"6\",\"name\":\"Bait Gun\"},{\"id\":\"7\",\"name\":\"Dust Applicator\"},{\"id\":\"11\",\"name\":\"Drill\"},{\"id\":\"12\",\"name\":\"Injection Rod\"},{\"id\":\"10\",\"name\":\"Moisture Meter\"},{\"id\":\"14\",\"name\":\"Foam Applicator\"},{\"id\":\"16\",\"name\":\"Soil Injector\"},{\"id\":\"17\",\"name\":\"Backpack Herbicide Sprayer\"},{\"id\":\"19\",\"name\":\"Spreader\"}]', 24, 14, '2025-04-29 12:52:03'),
+(15, 18, '2025-04-29', '[{\"id\":\"23\",\"name\":\"Bed Bug Monitor\"},{\"id\":\"22\",\"name\":\"Bed Bug Vacuum\"},{\"id\":\"20\",\"name\":\"Heat Treatment Unit\"},{\"id\":\"21\",\"name\":\"Mattress Encasement\"},{\"id\":\"11\",\"name\":\"Drill\"},{\"id\":\"12\",\"name\":\"Injection Rod\"},{\"id\":\"10\",\"name\":\"Moisture Meter\"},{\"id\":\"9\",\"name\":\"Termite Bait Station\"},{\"id\":\"13\",\"name\":\"Termite Inspection Tool Kit\"}]', 24, 9, '2025-04-29 13:04:27'),
+(16, 18, '2025-04-30', '[{\"id\":\"23\",\"name\":\"Bed Bug Monitor\"},{\"id\":\"22\",\"name\":\"Bed Bug Vacuum\"},{\"id\":\"20\",\"name\":\"Heat Treatment Unit\"},{\"id\":\"21\",\"name\":\"Mattress Encasement\"},{\"id\":\"11\",\"name\":\"Drill\"},{\"id\":\"12\",\"name\":\"Injection Rod\"},{\"id\":\"10\",\"name\":\"Moisture Meter\"},{\"id\":\"9\",\"name\":\"Termite Bait Station\"},{\"id\":\"13\",\"name\":\"Termite Inspection Tool Kit\"}]', 24, 9, '2025-04-30 02:59:35'),
 (17, 1, '2025-04-30', '[23,22,20,21,7,3,11,12,10,9,13]', 24, 11, '2025-04-30 09:13:25'),
 (18, 1, '2025-05-01', '[]', 0, 0, '2025-05-01 08:20:10'),
 (19, 1, '2025-05-02', '[]', 0, 0, '2025-05-02 13:08:11'),
-(20, 10, '2025-05-02', '[]', 0, 0, '2025-05-02 13:09:51'),
-(21, 1, '2025-05-03', '[]', 0, 0, '2025-05-03 05:17:37'),
-(22, 18, '2025-04-29', '[{\"id\":\"23\",\"name\":\"Bed Bug Monitor\"},{\"id\":\"22\",\"name\":\"Bed Bug Vacuum\"},{\"id\":\"20\",\"name\":\"Heat Treatment Unit\"},{\"id\":\"21\",\"name\":\"Mattress Encasement\"},{\"id\":\"11\",\"name\":\"Drill\"},{\"id\":\"12\",\"name\":\"Injection Rod\"},{\"id\":\"10\",\"name\":\"Moisture Meter\"},{\"id\":\"9\",\"name\":\"Termite Bait Station\"},{\"id\":\"13\",\"name\":\"Termite Inspection Tool Kit\"}]', 0, 0, '2025-05-03 17:17:41'),
-(23, 18, '2025-04-30', '[{\"id\":\"23\",\"name\":\"Bed Bug Monitor\"},{\"id\":\"22\",\"name\":\"Bed Bug Vacuum\"},{\"id\":\"20\",\"name\":\"Heat Treatment Unit\"},{\"id\":\"21\",\"name\":\"Mattress Encasement\"},{\"id\":\"11\",\"name\":\"Drill\"},{\"id\":\"12\",\"name\":\"Injection Rod\"},{\"id\":\"10\",\"name\":\"Moisture Meter\"},{\"id\":\"9\",\"name\":\"Termite Bait Station\"},{\"id\":\"13\",\"name\":\"Termite Inspection Tool Kit\"}]', 0, 0, '2025-05-03 17:17:41');
+(20, 10, '2025-05-02', '[]', 0, 0, '2025-05-02 13:09:51');
 
 -- --------------------------------------------------------
 
@@ -491,19 +390,7 @@ INSERT INTO `tools_equipment` (`id`, `name`, `category`, `quantity`, `descriptio
 (21, 'Mattress Encasement', 'Bed Bugs', 30, 'Protective covers to prevent bed bug infestations in mattresses', '2025-04-22 13:04:06', '2025-04-22 13:04:06'),
 (22, 'Bed Bug Vacuum', 'Bed Bugs', 5, 'Specialized vacuum with HEPA filter for bed bug removal', '2025-04-22 13:04:06', '2025-04-22 13:04:06'),
 (23, 'Bed Bug Monitor', 'Bed Bugs', 40, 'Passive monitoring device for detecting bed bug presence', '2025-04-22 13:04:06', '2025-04-22 13:04:06'),
-(24, '1', 'General Pest Control', 0, '', '0000-00-00 00:00:00', '2025-04-26 16:10:55');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `work_types`
---
-
-CREATE TABLE `work_types` (
-  `id` int(11) NOT NULL,
-  `type_name` varchar(255) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+(24, '1', 'General Pest Control', 0, '', '2025-04-26 16:10:55', '2025-04-26 16:10:55');
 
 --
 -- Indexes for dumped tables
@@ -522,36 +409,6 @@ ALTER TABLE `appointments`
 ALTER TABLE `appointment_technicians`
   ADD PRIMARY KEY (`appointment_id`,`technician_id`),
   ADD KEY `technician_id` (`technician_id`);
-
---
--- Indexes for table `archived_chemical_inventory`
---
-ALTER TABLE `archived_chemical_inventory`
-  ADD PRIMARY KEY (`archive_id`);
-
---
--- Indexes for table `archived_clients`
---
-ALTER TABLE `archived_clients`
-  ADD PRIMARY KEY (`archive_id`);
-
---
--- Indexes for table `archived_technicians`
---
-ALTER TABLE `archived_technicians`
-  ADD PRIMARY KEY (`archive_id`);
-
---
--- Indexes for table `archived_technician_checklist_logs`
---
-ALTER TABLE `archived_technician_checklist_logs`
-  ADD PRIMARY KEY (`archive_id`);
-
---
--- Indexes for table `archived_tools_equipment`
---
-ALTER TABLE `archived_tools_equipment`
-  ADD PRIMARY KEY (`archive_id`);
 
 --
 -- Indexes for table `assessment_report`
@@ -652,13 +509,6 @@ ALTER TABLE `tools_equipment`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `work_types`
---
-ALTER TABLE `work_types`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `type_name` (`type_name`);
-
---
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -666,43 +516,13 @@ ALTER TABLE `work_types`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
-
---
--- AUTO_INCREMENT for table `archived_chemical_inventory`
---
-ALTER TABLE `archived_chemical_inventory`
-  MODIFY `archive_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
---
--- AUTO_INCREMENT for table `archived_clients`
---
-ALTER TABLE `archived_clients`
-  MODIFY `archive_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
--- AUTO_INCREMENT for table `archived_technicians`
---
-ALTER TABLE `archived_technicians`
-  MODIFY `archive_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
-
---
--- AUTO_INCREMENT for table `archived_technician_checklist_logs`
---
-ALTER TABLE `archived_technician_checklist_logs`
-  MODIFY `archive_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
---
--- AUTO_INCREMENT for table `archived_tools_equipment`
---
-ALTER TABLE `archived_tools_equipment`
-  MODIFY `archive_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
 
 --
 -- AUTO_INCREMENT for table `assessment_report`
 --
 ALTER TABLE `assessment_report`
-  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
+  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `chemical_inventory`
@@ -726,19 +546,19 @@ ALTER TABLE `joborder_feedback`
 -- AUTO_INCREMENT for table `job_order`
 --
 ALTER TABLE `job_order`
-  MODIFY `job_order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=448;
+  MODIFY `job_order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=409;
 
 --
 -- AUTO_INCREMENT for table `job_order_report`
 --
 ALTER TABLE `job_order_report`
-  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=678;
+  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=542;
 
 --
 -- AUTO_INCREMENT for table `office_staff`
@@ -756,25 +576,19 @@ ALTER TABLE `technicians`
 -- AUTO_INCREMENT for table `technician_checklist_logs`
 --
 ALTER TABLE `technician_checklist_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `technician_feedback`
 --
 ALTER TABLE `technician_feedback`
-  MODIFY `feedback_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
+  MODIFY `feedback_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `tools_equipment`
 --
 ALTER TABLE `tools_equipment`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
-
---
--- AUTO_INCREMENT for table `work_types`
---
-ALTER TABLE `work_types`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables

@@ -17,9 +17,6 @@ $type = $data['type'];
 $technicianId = (int)$data['technician_id'];
 $response = ['success' => false];
 
-// Debug information
-error_log("set_primary_technician.php - Received request: " . json_encode($data));
-
 if ($type === 'appointment') {
     if (!isset($data['appointment_id'])) {
         echo json_encode(['success' => false, 'message' => 'Missing appointment_id parameter']);
@@ -33,18 +30,14 @@ if ($type === 'appointment') {
     $unsetStmt->bind_param("i", $appointmentId);
 
     if (!$unsetStmt->execute()) {
-        error_log("Failed to unset primary technicians: " . $conn->error);
         echo json_encode(['success' => false, 'message' => 'Failed to unset primary technicians: ' . $conn->error]);
         exit;
     }
-
-    error_log("Successfully unset all primary technicians for appointment ID: $appointmentId");
 
     // Now set the selected technician as primary
     $setStmt = $conn->prepare("UPDATE appointment_technicians SET is_primary = 1
                               WHERE appointment_id = ? AND technician_id = ?");
     $setStmt->bind_param("ii", $appointmentId, $technicianId);
-    error_log("Setting technician ID: $technicianId as primary for appointment ID: $appointmentId");
 
     if ($setStmt->execute()) {
         // For backward compatibility, also update the technician_id in the appointments table
@@ -114,7 +107,6 @@ if ($type === 'appointment') {
                 j.preferred_date,
                 j.preferred_time,
                 j.type_of_work,
-                j.client_approval_status,
                 a.client_name,
                 a.location_address
             FROM job_order j
@@ -128,14 +120,6 @@ if ($type === 'appointment') {
             $jobData = $jobResult->fetch_assoc();
 
             if ($jobData) {
-                // Check if the job order is in 'pending' status and update it to 'approved'
-                if (isset($jobData['client_approval_status']) && $jobData['client_approval_status'] === 'pending') {
-                    $updateJobStmt = $conn->prepare("UPDATE job_order SET client_approval_status = 'approved' WHERE job_order_id = ?");
-                    $updateJobStmt->bind_param("i", $jobOrderId);
-                    $updateJobStmt->execute();
-                    $response['client_approval_status_updated'] = true;
-                }
-
                 // Use the new notification function
                 $notificationResult = notifyTechnicianAboutJobOrderAssignment(
                     $technicianId,

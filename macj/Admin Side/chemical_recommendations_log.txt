@@ -8023,7 +8023,34 @@ Calculated dosage for Cypermethrin (type: Rodenticide, target: Crawling Pest): 2
 Using Cypermethrin rule: 20 ml/L × 1 L = 20 ml
 Calculated dosage for Permethrin (type: Insecticide, target: Crawling Pest): 20 ml for area 100 sqm using spray method
 Success: Returning 1 recommendation categories
-Chemical Recommendations Request: 2025-05-03 16:14:09
+Chemical Recommendations Request: 2025-05-05 06:36:28
+Received pest types: Flies
+Received area: 100
+Received application method: spray
+Parsed pest list: Array
+(
+    [0] => Flies
+)
+
+Mapped Flies to Flying Pest
+Target pests: Flying Pest
+Found 7 chemicals for target pest: Flying Pest
+Using Cypermethrin rule: 20 ml/L × 1 L = 20 ml
+Calculated dosage for Alpha Cypermethrin (type: Insecticide, target: Flying Pest): 20 ml for area 100 sqm using spray method
+Using Cypermethrin rule: 20 ml/L × 1 L = 20 ml
+Calculated dosage for Cypermethrin (type: Insecticide, target: Flying Pest): 20 ml for area 100 sqm using spray method
+Using Cypermethrin rule: 20 ml/L × 1 L = 20 ml
+Calculated dosage for Cypermethrin (type: Insecticide, target: Flying Pest): 20 ml for area 100 sqm using spray method
+Using Cypermethrin rule: 20 ml/L × 1 L = 20 ml
+Calculated dosage for Cypermethrin (type: Insecticide, target: Flying Pest): 20 ml for area 100 sqm using spray method
+Using Cypermethrin rule: 20 ml/L × 1 L = 20 ml
+Calculated dosage for Cypermethrin (type: Insecticide, target: Flying Pest): 20 ml for area 100 sqm using spray method
+Using Cypermethrin rule: 20 ml/L × 1 L = 20 ml
+Calculated dosage for Cypermethrin (type: Rodenticide, target: Flying Pest): 20 ml for area 100 sqm using spray method
+Using Cypermethrin rule: 20 ml/L × 1 L = 20 ml
+Calculated dosage for Permethrin (type: Insecticide, target: Flying Pest): 20 ml for area 100 sqm using spray method
+Success: Returning 1 recommendation categories
+Chemical Recommendations Request: 2025-05-05 06:41:10
 Received pest types: Flies
 Received area: 100
 Received application method: spray

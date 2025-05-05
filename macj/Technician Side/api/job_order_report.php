@@ -1,7 +1,6 @@
 <?php
 session_start();
 require_once '../../db_connect.php';
-require_once '../../notification_functions.php';
 
 // Set headers for JSON response
 header('Content-Type: application/json');
@@ -246,48 +245,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Get job order and client information for notifications
-        $jobOrderQuery = $conn->prepare("
-            SELECT
-                jo.client_id,
-                a.client_name,
-                jo.type_of_work,
-                t.username AS technician_name
-            FROM job_order jo
-            JOIN assessment_report ar ON jo.report_id = ar.report_id
-            JOIN appointments a ON ar.appointment_id = a.appointment_id
-            JOIN technicians t ON t.technician_id = ?
-            WHERE jo.job_order_id = ?
-        ");
-        $jobOrderQuery->bind_param("ii", $technician_id, $job_order_id);
-        $jobOrderQuery->execute();
-        $jobOrderResult = $jobOrderQuery->get_result();
-
-        // Send notifications to client and admin
-        if ($jobOrderResult && $jobOrderResult->num_rows > 0) {
-            $jobOrderData = $jobOrderResult->fetch_assoc();
-            $clientId = $jobOrderData['client_id'];
-            $clientName = $jobOrderData['client_name'];
-            $typeOfWork = $jobOrderData['type_of_work'];
-            $technicianName = $jobOrderData['technician_name'];
-
-            // Send notification to client
-            notifyClientAboutJobOrderReport($clientId, $job_order_id, $technicianName, $typeOfWork, $conn);
-            error_log("Sent notification to client ID: $clientId about completed job order ID: $job_order_id");
-
-            // Send notification to all admins
-            $adminQuery = $conn->query("SELECT staff_id FROM office_staff");
-            if ($adminQuery && $adminQuery->num_rows > 0) {
-                while ($adminRow = $adminQuery->fetch_assoc()) {
-                    $adminId = $adminRow['staff_id'];
-                    notifyAdminAboutJobOrderReport($adminId, $job_order_id, $technicianName, $clientName, $typeOfWork, $conn);
-                    error_log("Sent notification to admin ID: $adminId about completed job order ID: $job_order_id");
-                }
-            }
-        } else {
-            error_log("Could not find job order data for notifications. Job order ID: $job_order_id, Technician ID: $technician_id");
-        }
-
         // Commit transaction
         $conn->commit();
 
@@ -321,10 +278,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Exception $e) {
         // Rollback transaction on error
         $conn->rollback();
-
-        // Log the error
-        error_log("Error submitting job order report: " . $e->getMessage());
-
         echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     }
 

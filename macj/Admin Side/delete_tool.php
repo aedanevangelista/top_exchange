@@ -7,7 +7,6 @@ if ($_SESSION['role'] !== 'office_staff') {
 }
 
 require_once '../db_connect.php';
-require_once 'archive_functions.php';
 
 header('Content-Type: application/json');
 
@@ -24,13 +23,14 @@ if (!isset($_POST['id']) || empty($_POST['id'])) {
 $id = (int)$_POST['id'];
 
 try {
-    // Archive the tool instead of deleting it
-    $result = archiveTool($conn, $id);
+    $stmt = $conn->prepare("DELETE FROM tools_equipment WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
 
-    if ($result['success']) {
-        echo json_encode(['success' => true, 'message' => 'Tool archived successfully']);
+    if ($stmt->affected_rows > 0) {
+        echo json_encode(['success' => true, 'message' => 'Tool deleted successfully']);
     } else {
-        echo json_encode(['success' => false, 'error' => $result['error']]);
+        echo json_encode(['success' => false, 'error' => 'Tool not found']);
     }
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);

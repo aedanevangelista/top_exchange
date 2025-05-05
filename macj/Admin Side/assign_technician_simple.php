@@ -36,15 +36,10 @@ if (!isset($data['appointment_id']) || !isset($data['technician_id'])) {
 // Get the parameters
 $appointmentId = $data['appointment_id'];
 $technicianId = $data['technician_id'];
-$isPrimary = isset($data['is_primary']) ? (bool)$data['is_primary'] : true; // Default to true for backward compatibility
-
-// Debug information
-error_log("Simple assign - Received request: " . json_encode($data));
-error_log("Simple assign - isPrimary value: " . ($isPrimary ? 'true' : 'false'));
 
 try {
     // Connect to the database
-    $conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
+    $conn = new mysqli("localhost", "root", "", "macj_pest_control");
 
     // Check connection
     if ($conn->connect_error) {
@@ -69,13 +64,8 @@ try {
     $technicianName = $techData['username'];
     $techStmt->close();
 
-    // Check if the appointment exists and if it's completed
-    $apptStmt = $conn->prepare("SELECT a.*,
-        (SELECT COUNT(*) FROM assessment_report ar
-         JOIN technician_feedback tf ON ar.report_id = tf.report_id
-         WHERE ar.appointment_id = a.appointment_id
-         AND tf.technician_arrived = 1 AND tf.job_completed = 1) as is_verified
-        FROM appointments a WHERE a.appointment_id = ?");
+    // Check if the appointment exists
+    $apptStmt = $conn->prepare("SELECT * FROM appointments WHERE appointment_id = ?");
     if (!$apptStmt) {
         throw new Exception("Error preparing appointment statement: " . $conn->error);
     }
@@ -86,13 +76,6 @@ try {
 
     if ($apptResult->num_rows === 0) {
         throw new Exception("Appointment not found");
-    }
-
-    $appointmentData = $apptResult->fetch_assoc();
-
-    // Check if the inspection is completed
-    if ($appointmentData['is_verified'] > 0) {
-        throw new Exception("Cannot assign technicians to a completed inspection");
     }
 
     $apptStmt->close();

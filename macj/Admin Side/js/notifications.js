@@ -210,12 +210,8 @@ function formatTimeAgo(timestamp) {
     const date = new Date(timestamp);
     const diffInSeconds = Math.floor((now - date) / 1000);
 
-    if (diffInSeconds < 1) {
-        return 'Just now';
-    }
-
     if (diffInSeconds < 60) {
-        return `${diffInSeconds} second${diffInSeconds > 1 ? 's' : ''} ago`;
+        return 'Just now';
     }
 
     const diffInMinutes = Math.floor(diffInSeconds / 60);
@@ -288,6 +284,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial fetch of notifications
     fetchNotifications();
 
-    // Fetch notifications every 5 seconds for real-time updates
-    setInterval(fetchNotifications, 5000);
+    // Fetch notifications every 60 seconds
+    setInterval(fetchNotifications, 60000);
 });
