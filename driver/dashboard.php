@@ -261,6 +261,14 @@ $conn->close();
         .confirmation-modal .btn-cancel:hover { background-color: #e1e1e1; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         i.fas { margin-right: 5px; } /* Add space after icons */
 
+        /* --- Toastr Opacity Override --- */
+        /* Ensure full opacity for individual toasts on all screen sizes */
+        #toast-container > .toast {
+            opacity: 1 !important;
+        }
+        /* --- End Toastr Opacity Override --- */
+
+
         /* --- Responsive Design Adjustments --- */
 
         /* Common Mobile Styles (e.g., screens smaller than 768px) */
@@ -303,7 +311,6 @@ $conn->close();
 
             .order-card {
                 padding: 15px; /* Adjust card padding */
-                /* Remove grid-template-columns for cards on mobile if needed */
                 display: block; /* Ensure cards stack if grid isn't wrapping */
                 margin-bottom: 15px; /* Add space between stacked cards */
             }
@@ -383,27 +390,7 @@ $conn->close();
                 padding: 12px;
             }
 
-            /* --- Toastr Mobile Overrides --- */
-            #toast-container {
-                /* Override default positions (like top-right, bottom-right) */
-                top: 15px; /* Position from the top */
-                left: 50%; /* Start at horizontal center */
-                transform: translateX(-50%); /* Shift left by half its width to truly center */
-                right: auto; /* Remove right positioning */
-                bottom: auto; /* Remove bottom positioning */
-                width: 90%; /* Make container slightly less than full width */
-                max-width: 400px; /* Optional: Prevent it getting too wide on large phones */
-                margin: 0 auto; /* Ensure centering if width is constrained */
-            }
-
-            /* Ensure full opacity for individual toasts */
-            #toast-container > .toast {
-                opacity: 1 !important; /* Use !important to override potential inline styles from Toastr JS */
-                /* Optional: Adjust width if needed, default is often fine */
-                 width: 100%;
-                 max-width: 100%; /* Allow toast to fill the container */
-            }
-            /* --- End Toastr Mobile Overrides --- */
+            /* Removed the mobile-specific #toast-container centering rules */
 
         }
 
@@ -532,15 +519,15 @@ $conn->close();
 
     <script>
         $(document).ready(function() {
-            // Initialize toastr with a default position (e.g., top-right)
-            // CSS overrides will handle mobile centering
+            // Initialize toastr with bottom-right position
             if (typeof toastr !== 'undefined') {
                 toastr.options = {
                     "closeButton": true,
                     "debug": false,
                     "newestOnTop": false,
                     "progressBar": true,
-                    "positionClass": "toast-top-right", // Default position
+                    // *** POSITION SET HERE ***
+                    "positionClass": "toast-bottom-right",
                     "preventDuplicates": false,
                     "onclick": null,
                     "showDuration": "300",
@@ -551,7 +538,7 @@ $conn->close();
                     "hideEasing": "linear",
                     "showMethod": "fadeIn",
                     "hideMethod": "fadeOut"
-                    // Opacity is controlled via CSS override now
+                    // Opacity controlled via CSS
                 };
             } else {
                 console.error("Toastr library not loaded correctly.");
@@ -564,54 +551,41 @@ $conn->close();
             const $pullIndicator = $('#pullIndicator');
 
             document.addEventListener('touchstart', function(e) {
-                // Only track if the touch starts at the top of the scrollable area
                 if (window.scrollY === 0) {
                     touchStartY = e.touches[0].clientY;
                 } else {
-                    touchStartY = null; // Reset if not at top
+                    touchStartY = null;
                 }
-                touchEndY = 0; // Reset end Y on new touch
-            }, { passive: true }); // Use passive true for start
+                touchEndY = 0;
+            }, { passive: true });
 
             document.addEventListener('touchmove', function(e) {
-                if (touchStartY === null) return; // Don't track if touch didn't start at top
-
+                if (touchStartY === null) return;
                 touchEndY = e.touches[0].clientY;
                 const swipeDistance = touchEndY - touchStartY;
-
-                // Show pull indicator if user is pulling down from top of page
                 if (window.scrollY === 0 && swipeDistance > 30) {
                     $pullIndicator.addClass('active');
-                    // Don't prevent default here to allow some natural scroll feel,
-                    // but refresh logic is in touchend
                 } else {
-                    // If scrolling down or pull isn't significant, hide indicator
                     $pullIndicator.removeClass('active');
                 }
-            }, { passive: true }); // Use passive true for move as well
+            }, { passive: true });
 
             document.addEventListener('touchend', function(e) {
                  if (touchStartY === null || touchEndY === 0) {
-                     $pullIndicator.removeClass('active'); // Ensure indicator hides
-                     return; // Exit if touch didn't start at top or didn't move
+                     $pullIndicator.removeClass('active');
+                     return;
                  }
-
-                // Calculate the vertical distance
                 const swipeDistance = touchEndY - touchStartY;
-
-                // If we're at the top of the page and the pull is long enough, refresh
                 if (window.scrollY === 0 && swipeDistance > minSwipeDistance) {
                     $pullIndicator.html('<span class="spinner"></span> Refreshing...');
-                    $pullIndicator.addClass('active'); // Keep it visible while reloading
+                    $pullIndicator.addClass('active');
                     window.location.reload();
                 } else {
-                    // Hide indicator if swipe wasn't enough
                     $pullIndicator.removeClass('active');
                 }
-                // Reset positions for next touch
                 touchStartY = null;
                 touchEndY = 0;
-            }, { passive: true }); // Use passive true for end
+            }, { passive: true });
 
 
             // Variables for modal confirmation
@@ -635,7 +609,6 @@ $conn->close();
                 currentStatusSpan = currentOrderCard.find('.order-status');
                 const current_status = currentStatusSpan.text().trim();
 
-                // Skip modal if no change in status
                 if (new_status === current_status) {
                     if (typeof toastr !== 'undefined') {
                         toastr.info('Status remains unchanged.');
@@ -643,25 +616,18 @@ $conn->close();
                     return;
                 }
 
-                // Set up modal content
                 currentPoNumber = po_number;
                 currentNewStatus = new_status;
-
                 $modalPoNumber.text(po_number);
                 $modalNewStatus.text(new_status);
 
-                // Add special note if completing the order
-                $('.modal-note').remove(); // Clear previous notes first
+                $('.modal-note').remove();
                 if (new_status === 'Completed') {
                     $modalNewStatus.parent().append('<p class="modal-note" style="margin-top:10px;font-size:0.9em;color:#666;"><i class="fas fa-envelope"></i> An email notification will be sent to the customer.</p>');
                 }
 
-                // Set appropriate status class for pill
                 $modalNewStatus.removeClass().addClass('status-pill ' + new_status.toLowerCase().replace(/\s+/g, '-'));
-
-                // Show the confirmation modal using flex
                  $confirmationModal.css('display', 'flex').hide().fadeIn(200);
-
             });
 
             // Handle cancel button click
@@ -696,98 +662,64 @@ $conn->close();
             // Function to actually update the order status
             function updateOrderStatus(po_number, new_status, orderCard, statusSpan) {
                 const button = $(`.update-status-btn[data-po="${po_number}"]`);
-
-                button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...'); // Disable button and show spinner
+                button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
 
                 $.ajax({
-                    url: 'dashboard.php', // Post back to the same file
+                    url: 'dashboard.php',
                     type: 'POST',
-                    data: {
-                        action: 'update_status',
-                        po_number: po_number,
-                        new_status: new_status
-                    },
+                    data: { action: 'update_status', po_number: po_number, new_status: new_status },
                     dataType: 'json',
                     success: function(response) {
                         if (response.success) {
-                           if(typeof showToast === 'function') {
-                                showToast(response.message, 'success');
-                           } else if (typeof toastr !== 'undefined') {
-                                toastr.success(response.message);
-                           } else {
-                                alert(response.message); // Fallback alert
-                           }
+                           if(typeof showToast === 'function') { showToast(response.message, 'success'); }
+                           else if (typeof toastr !== 'undefined') { toastr.success(response.message); }
+                           else { alert(response.message); }
 
-                            // Update status display dynamically
                             statusSpan.text(new_status);
-                            // Update status class for color
-                            statusSpan.removeClass (function (index, className) {
-                                return (className.match (/(^|\s)status-\S+/g) || []).join(' ');
-                            }).addClass('status-' + new_status.toLowerCase().replace(/\s+/g, '-'));
+                            statusSpan.removeClass (function (index, className) { return (className.match (/(^|\s)status-\S+/g) || []).join(' '); })
+                                      .addClass('status-' + new_status.toLowerCase().replace(/\s+/g, '-'));
 
-                            // If status is 'Completed', maybe hide the card or move it after a short delay
                             if (new_status === 'Completed') {
-                                orderCard.addClass('order-completed-visual'); // Add class for styling fade/strike-through
-
-                                // Show special toast message for completed orders with email notification
-                                if(typeof toastr !== 'undefined' && response.message.includes("Completed")) { // Check if message confirms completion
-                                    setTimeout(() => {
-                                        toastr.info('<i class="fas fa-envelope"></i> Email notification sent to customer.', 'Notification Sent');
-                                    }, 1000);
+                                orderCard.addClass('order-completed-visual');
+                                if(typeof toastr !== 'undefined' && response.message.includes("Completed")) {
+                                    setTimeout(() => { toastr.info('<i class="fas fa-envelope"></i> Email notification sent to customer.', 'Notification Sent'); }, 1000);
                                 }
-
                                 setTimeout(() => {
-                                    // Remove the card with animation
                                     orderCard.fadeOut(500, function() {
                                         $(this).remove();
-                                         // Check if no orders left after removal
                                         if ($('.order-card').length === 0) {
                                             $('.orders-list').html(`
                                                 <div class="no-orders">
                                                     <i class="fas fa-check-circle fa-2x" style="margin-bottom: 15px; color: #28a745; opacity: 0.8;"></i>
                                                     <p>All deliveries completed! Great job!</p>
                                                     <p style="font-size: 0.9rem; margin-top: 10px;">Pull down to refresh when new deliveries are assigned.</p>
-                                                </div>
-                                            `);
+                                                </div>`);
                                         }
                                     });
-
-
-                                }, 1500); // Delay before removing
+                                }, 1500);
                             } else {
-                                // Re-enable button for non-completed updates
                                 button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update');
                             }
-
                         } else {
-                            if(typeof showToast === 'function') {
-                                showToast(response.message || 'Failed to update status.', 'error');
-                            } else if (typeof toastr !== 'undefined') {
-                                toastr.error(response.message || 'Failed to update status.');
-                            } else {
-                                alert(response.message || 'Failed to update status.'); // Fallback alert
-                            }
-                            button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update'); // Re-enable button on failure
+                            if(typeof showToast === 'function') { showToast(response.message || 'Failed to update status.', 'error'); }
+                            else if (typeof toastr !== 'undefined') { toastr.error(response.message || 'Failed to update status.'); }
+                            else { alert(response.message || 'Failed to update status.'); }
+                            button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update');
                         }
                     },
                     error: function(xhr, status, error) {
                         console.error("AJAX Error:", status, error, xhr.responseText);
-                        if(typeof showToast === 'function') {
-                            showToast('An error occurred while communicating with the server.', 'error');
-                        } else if (typeof toastr !== 'undefined') {
-                            toastr.error('An error occurred while communicating with the server.');
-                        } else {
-                            alert('An error occurred. Please check console.'); // Fallback alert
-                        }
-                        button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update'); // Re-enable button on error
+                        if(typeof showToast === 'function') { showToast('An error occurred while communicating with the server.', 'error'); }
+                        else if (typeof toastr !== 'undefined') { toastr.error('An error occurred while communicating with the server.'); }
+                        else { alert('An error occurred. Please check console.'); }
+                        button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Update');
                     },
                     complete: function() {
-                        resetModalVariables(); // Ensure variables are reset after AJAX call
+                        resetModalVariables();
                     }
                 });
             }
 
-            // Prevent zooming on iOS (already present, keeping it)
             document.addEventListener('gesturestart', function (e) {
                 e.preventDefault();
             });
