@@ -3,7 +3,7 @@ session_start();
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Connect to production database
     try {
-        $conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
+        $conn = new mysqli("151.106.122.5", "u701062148_macj", "Macjpestcontrol123", "u701062148_macj");
     } catch (Exception $e) {
         die("Connection failed: " . $e->getMessage());
     }
@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
               <div class="alert alert-danger"><?= $error ?></div>
             <?php endif; ?>
             <div class="text-center mb-3">
-              <a href="landing.php">
+              <a href="Landingpage/landing_updated.php">
                 <img src="Landingpage/assets/img/MACJLOGO.png" alt="Logo" width="175" height="57">
               </a>
             </div>

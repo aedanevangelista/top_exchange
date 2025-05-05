@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1:3306
--- Generation Time: May 05, 2025 at 03:32 AM
--- Server version: 10.11.10-MariaDB-log
--- PHP Version: 7.2.34
+-- Host: 127.0.0.1
+-- Generation Time: May 04, 2025 at 02:40 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `u701062148_top_exchange`
+-- Database: `macj_pest_control`
 --
 
 -- --------------------------------------------------------
@@ -210,7 +210,6 @@ INSERT INTO `chemical_inventory` (`id`, `chemical_name`, `type`, `quantity`, `un
 (11, 'Alpha Cypermethrin', 'Insecticide', 2.00, 'Kilograms', '2', '2', '2', '2', '2025-04-07', '2025-04-01 10:07:42', 'Crawling & Flying Pest'),
 (14, 'Permethrin', 'Insecticide', 11.00, 'Kilograms', 'beer', 'jhkjhkj', 'kjhkjh', 'lmklkjlj', '2025-04-17', '2025-04-04 01:20:48', 'Crawling & Flying Pest'),
 (16, 'Cypermethrin', 'Insecticide', 12.00, 'Liters', 'Www', 'www', 'aaaa', 'wwwww', '2025-05-11', '2025-04-11 01:32:46', 'Crawling & Flying Pest'),
-(17, 'Cypermethrin', 'Rodenticide', 1.00, 'Liters', 'Www', 'www', 'awaw', 'awaw', '2025-04-24', '2025-04-14 02:01:17', 'Crawling & Flying Pest'),
 (18, 'Fipronil', 'Insecticide', 15.00, 'Liters', 'BASF', 'Pest Control Supplies Inc.', 'Effective against termites and other wood-destroying insects.', 'Use in well-ventilated areas. Avoid contact with skin, eyes, and clothing. Keep away from food and water sources.', '2026-04-27', '2025-04-27 10:41:32', 'Termites'),
 (19, 'Imidacloprid', 'Insecticide', 10.00, 'Kilograms', 'Bayer', 'Agri-Chem Distributors', 'Systemic insecticide effective for termite control and prevention.', 'Harmful if swallowed or inhaled. Avoid breathing dust. Wash thoroughly after handling.', '2026-04-27', '2025-04-27 10:41:32', 'Termites'),
 (20, 'Emamectin Benzoate', 'Insecticide', 20.00, 'Liters', 'Ginebra', 'Ginebra San Miguel', 'For Cockroach', 'Use with precaution', '2025-06-29', '2025-04-29 11:21:53', 'Cockroaches');
@@ -247,11 +246,7 @@ INSERT INTO `clients` (`client_id`, `first_name`, `last_name`, `email`, `contact
 (12, 'Francis', 'Gernan', 'gernan1234@gmail.com', '09202544398', '$2y$10$LJbK8RUfNOrOWNyxvdSVK.JXBhdfbfx421j7J7.S6JfXQk5QZ9IrW', '2025-04-20 16:17:42', '55, Bahawan Street, Masambong, San Francisco del Monte, 1st District, Quezon City, Eastern Manila District, Metro Manila, 1105, Philippines [14.644037,121.008090]', 'House', '14.644037', '121.008090'),
 (13, 'Zak', 'Agbalo', 'agbalo@gmail.com', '123', '$2y$10$ag9fTlOPHilmG8PNr802kel2T8OkUqUF8Eu8aS5P3yNLaAATXohiW', '2025-04-21 08:19:11', 'Nexus Enterprises & Electrical Supply, Congressional Avenue, Ramon Magsaysay, Bago Bantay, 1st District, Quezon City, Eastern Manila District, Metro Manila, 1105, Philippines [14.658428,121.019301]', 'Restaurant', '14.658428', '121.019301'),
 (14, 'John', 'Jake', 'deguzman0361@gmail.com', '09202544398', '$2y$10$66vK96sWs6pjSoSjzIpojO3eMJotrJVrjNox6g2S5HHUys5tjb.ca', '2025-04-30 02:38:39', 'Halcon 2 Street, Santa Teresita, Santa Mesa Heights, 1st District, Quezon City, Eastern Manila District, Metro Manila, 1114, Philippines [14.619939,120.998061]', 'House', '14.619939', '120.998061'),
-(27, 'Klarence', 'de Guzman', 'blankusora@gmail.com', '09690381171', '$2y$10$psd2k2ChQj.cXn1rylRVGe8YLjPbFI9TJLpajurwRIrbnDAfEO.Em', '2025-05-04 03:38:48', 'Halcon 2 Street, Santa Teresita, Santa Mesa Heights, 1st District, Quezon City, Eastern Manila District, Metro Manila, 1114, Philippines', 'House', NULL, NULL),
-(28, 'Klarence', 'De Guzman', 'blankushiro0369@gmail.com', '09690381171', '$2y$10$84naFBUfggSZGv/mwFCUGuQnElIqi6LQQN2MOym8mVugPPex6Z/Q2', '2025-05-04 04:29:53', 'Halcon 2 Street, Santa Teresita, Santa Mesa Heights, 1st District, Quezon City, Eastern Manila District, Metro Manila, 1114, Philippines', 'House', NULL, NULL),
-(29, 'James', 'Bayatan', 'jamesbayatan@gmail.com', '09912312312', '$2y$10$s/iFLaIfwXf9AyEOLi9SceDBLVDD.xpmrL4xvdQ6nW8V8TfI8vLQq', '2025-05-04 05:28:35', 'Lourdes, Dalig, Antipolo, Rizal, Calabarzon, 1670, Philippines', 'House', '', ''),
-(30, 'Rean', 'Nartea', 'narteareanfredrick@gmail.com', '09202544398', '$2y$10$uI4BnnRYDfNK8jhkRiueiu2AXW9nryZPryzUKnOWC8XpaiWNDEcJC', '2025-05-05 00:48:44', 'Tropical Hut, Congressional Avenue, Ramon Magsaysay, Bago Bantay, 1st District, Quezon City, Eastern Manila District, Metro Manila, 1105, Philippines', 'Restaurant', NULL, NULL),
-(31, 'Cristylen', 'Esporsado', 'esporsadocristylen09@gmail.com', '09555107211', '$2y$10$ZHwqJUY115hS9akgcy.8BO7xzAkE/htUJ.akCrRL6Fr2ocC2/hVuK', '2025-05-05 02:51:59', 'Fooddale Negosyo Center, Congressional Avenue, Ramon Magsaysay, Bago Bantay, 1st District, Quezon City, Eastern Manila District, Metro Manila, 1105, Philippines', 'Office', NULL, NULL);
+(26, 'Rean', 'Nartea', 'narteareanfredrick@gmail.com', '09202544398', '$2y$10$a3Uc8jgesxvj1dKPMi3DVuC1WYSrYVfnKXd8heshDdtTlaD5T1jzS', '2025-05-01 15:49:24', '29, Bahawan Street, Masambong, San Francisco del Monte, 1st District, Quezon City, Eastern Manila District, Metro Manila, 1115, Philippines', 'House', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -393,8 +388,7 @@ INSERT INTO `technicians` (`technician_id`, `username`, `password`, `tech_contac
 (10, 'tech_two', '$2y$10$TjOGYB7t/ippfnDaT8DtHe7HRon.xypNWC63PfHl3bXJ.ohFGYgJu', '09690381171', 'John', 'Paul', 'uploads/technicians/67fe2d6221640_Screenshot 2025-04-12 141855.png'),
 (16, 'tech_three', '$2y$10$k4H1tq2BH917Ky8.yQz/2.tzYS7akR11qIpULjIHx.UcwD9u3CQlS', '09202544398', 'John', 'Jake', 'uploads/technicians/68105e2cec793_baby-elephant-3526681_1280.png'),
 (17, 'tech_four', '$2y$10$N6pAkmact.7kpxwJX9bnn.AzKgWNVSDGQ2Pzr6h8U/htb40.So78a', '09202544398', 'Four', 'Chan', 'uploads/technicians/6810c888d0288_cat-7563332_1280.png'),
-(18, 'tech_five', '$2y$10$kYI6gDSuvxz/du/QLZsS9uqc/zAAgOsLXhdLyUNWQymhnwZsKJ9wG', '0965385692', 'Five', 'Six', 'uploads/technicians/6810ce41c1249_Skunk.png'),
-(19, 'new_technicians', '$2y$10$z5sebj7qU71Owm27OOVPa.F3B7Cpe9IylRfQd7sNPwJ.EOLei24eC', '09458437093', 'Pol', 'Klarence', 'uploads/technicians/6818286985092_PILIPINAS.PNG');
+(18, 'tech_five', '$2y$10$kYI6gDSuvxz/du/QLZsS9uqc/zAAgOsLXhdLyUNWQymhnwZsKJ9wG', '0965385692', 'Five', 'Six', 'uploads/technicians/6810ce41c1249_Skunk.png');
 
 -- --------------------------------------------------------
 
@@ -432,9 +426,7 @@ INSERT INTO `technician_checklist_logs` (`log_id`, `technician_id`, `checklist_d
 (20, 10, '2025-05-02', '[]', 0, 0, '2025-05-02 13:09:51'),
 (21, 1, '2025-05-03', '[]', 0, 0, '2025-05-03 05:17:37'),
 (22, 18, '2025-04-29', '[{\"id\":\"23\",\"name\":\"Bed Bug Monitor\"},{\"id\":\"22\",\"name\":\"Bed Bug Vacuum\"},{\"id\":\"20\",\"name\":\"Heat Treatment Unit\"},{\"id\":\"21\",\"name\":\"Mattress Encasement\"},{\"id\":\"11\",\"name\":\"Drill\"},{\"id\":\"12\",\"name\":\"Injection Rod\"},{\"id\":\"10\",\"name\":\"Moisture Meter\"},{\"id\":\"9\",\"name\":\"Termite Bait Station\"},{\"id\":\"13\",\"name\":\"Termite Inspection Tool Kit\"}]', 0, 0, '2025-05-03 17:17:41'),
-(23, 18, '2025-04-30', '[{\"id\":\"23\",\"name\":\"Bed Bug Monitor\"},{\"id\":\"22\",\"name\":\"Bed Bug Vacuum\"},{\"id\":\"20\",\"name\":\"Heat Treatment Unit\"},{\"id\":\"21\",\"name\":\"Mattress Encasement\"},{\"id\":\"11\",\"name\":\"Drill\"},{\"id\":\"12\",\"name\":\"Injection Rod\"},{\"id\":\"10\",\"name\":\"Moisture Meter\"},{\"id\":\"9\",\"name\":\"Termite Bait Station\"},{\"id\":\"13\",\"name\":\"Termite Inspection Tool Kit\"}]', 0, 0, '2025-05-03 17:17:41'),
-(25, 1, '2025-05-04', '[23,22,20,21,24,1,6,7,5,3,8,2,4]', 24, 13, '2025-05-04 05:42:52'),
-(26, 1, '2025-05-05', '[]', 0, 0, '2025-05-05 00:44:02');
+(23, 18, '2025-04-30', '[{\"id\":\"23\",\"name\":\"Bed Bug Monitor\"},{\"id\":\"22\",\"name\":\"Bed Bug Vacuum\"},{\"id\":\"20\",\"name\":\"Heat Treatment Unit\"},{\"id\":\"21\",\"name\":\"Mattress Encasement\"},{\"id\":\"11\",\"name\":\"Drill\"},{\"id\":\"12\",\"name\":\"Injection Rod\"},{\"id\":\"10\",\"name\":\"Moisture Meter\"},{\"id\":\"9\",\"name\":\"Termite Bait Station\"},{\"id\":\"13\",\"name\":\"Termite Inspection Tool Kit\"}]', 0, 0, '2025-05-03 17:17:41');
 
 -- --------------------------------------------------------
 
@@ -674,13 +666,13 @@ ALTER TABLE `work_types`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
+  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
 -- AUTO_INCREMENT for table `archived_chemical_inventory`
 --
 ALTER TABLE `archived_chemical_inventory`
-  MODIFY `archive_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `archive_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `archived_clients`
@@ -698,7 +690,7 @@ ALTER TABLE `archived_technicians`
 -- AUTO_INCREMENT for table `archived_technician_checklist_logs`
 --
 ALTER TABLE `archived_technician_checklist_logs`
-  MODIFY `archive_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `archive_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `archived_tools_equipment`
@@ -710,7 +702,7 @@ ALTER TABLE `archived_tools_equipment`
 -- AUTO_INCREMENT for table `assessment_report`
 --
 ALTER TABLE `assessment_report`
-  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `chemical_inventory`
@@ -722,7 +714,7 @@ ALTER TABLE `chemical_inventory`
 -- AUTO_INCREMENT for table `clients`
 --
 ALTER TABLE `clients`
-  MODIFY `client_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `client_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `joborder_feedback`
@@ -746,7 +738,7 @@ ALTER TABLE `job_order_report`
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=721;
+  MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=678;
 
 --
 -- AUTO_INCREMENT for table `office_staff`
@@ -758,13 +750,13 @@ ALTER TABLE `office_staff`
 -- AUTO_INCREMENT for table `technicians`
 --
 ALTER TABLE `technicians`
-  MODIFY `technician_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `technician_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `technician_checklist_logs`
 --
 ALTER TABLE `technician_checklist_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `technician_feedback`

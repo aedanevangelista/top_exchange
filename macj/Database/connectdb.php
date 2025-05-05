@@ -1,10 +1,10 @@
 <?php
 function ConnectDB() {
     // Production database credentials
-    $hostname = "localhost";
-    $dbuser = "u701062148_top_exchange";
-    $dbname = "u701062148_top_exchange";
-    $dbpassword = "Aedanpogi123";
+    $hostname = "151.106.122.5";
+    $dbuser = "u701062148_macj";
+    $dbname = "u701062148_macj";
+    $dbpassword = "Macjpestcontrol123";
 
     try {
         $dsn = "mysql:host=$hostname;dbname=$dbname;charset=utf8mb4";

@@ -1,8 +1,8 @@
 <?php
-$dbname = 'u701062148_top_exchange';
-$user = 'u701062148_top_exchange';
-$pass = 'Aedanpogi123';
-$servername = 'localhost';
+$dbname = 'u701062148_macj';
+$user = 'u701062148_macj';
+$pass = 'Macjpestcontrol123';
+$servername = '151.106.122.5';
 
 // Connect to production database
 try {
