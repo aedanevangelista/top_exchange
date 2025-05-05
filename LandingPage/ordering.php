@@ -873,7 +873,7 @@ $(document).ready(function() {
     // Check if user is logged in
     const isLoggedIn = <?php echo isset($_SESSION['username']) ? 'true' : 'false'; ?>;
     // Define admin asset URL for JS usage (ensure consistency with PHP)
-    const adminAssetUrl = '<?php echo ADMIN_ASSET_URL; ?>'; 
+    const adminAssetUrl = '<?php echo ADMIN_ASSET_URL; ?>';
     const fallbackImageUrl = '/LandingPage/images/default-product.jpg';
 
     // Helper function to build the correct image URL in JS
@@ -885,10 +885,10 @@ $(document).ready(function() {
         const relativePath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
         // Combine with admin base URL
         return `${adminAssetUrl}/${relativePath}`;
-        
+
         // --- Alternative for Option 2 (if admin is just /admin/ directory) ---
         // Comment out the line above and uncomment the line below if needed:
-        // return `/admin/${relativePath}`; 
+        // return `/admin/${relativePath}`;
         // --- End Alternative ---
     }
 
@@ -901,34 +901,34 @@ $(document).ready(function() {
         const productCard = $(this);
         const productName = productCard.data('name');
         const category = productCard.data('category');
-        
+
         // Reset modal and show loading state
         resetModalToLoadingState();
-        
+
         // Store category and product name in the modal for reference
         const modal = $('#productDetailModal');
         modal.data('category', category);
         modal.data('product-name', productName);
-        
+
         // Show the modal while data loads
         modal.modal('show');
-        
+
         // Fetch product data
         fetchProductData(productName, category);
     });
-    
+
     // --- Function to reset the modal to loading state ---
     function resetModalToLoadingState() {
         $('#productDetailModalLabel').text('Product Details');
         $('#modal-product-name').text('Loading...');
         // Use fallback image initially
         $('#modal-product-image').attr('src', fallbackImageUrl).attr('alt', 'Loading Product Image');
-        
+
         // Clear and disable variant dropdown
         const variantSelect = $('#modal-variant-select');
         variantSelect.empty().html('<option>Loading variants...</option>').prop('disabled', true);
         $('#modal-variant-select-group').show();
-        
+
         // Reset other fields
         $('#modal-product-packaging .info-value').text('-');
         $('#modal-product-price .info-value').text('-');
@@ -937,18 +937,18 @@ $(document).ready(function() {
         $('#modal-ingredients-list').html('<p class="col-12 text-muted">Loading ingredients...</p>');
         $('#modal-ingredients-container').hide();
         $('#modal-quantity-input').val(1);
-        
+
         // Set button text based on login state
-        const initialBtnText = isLoggedIn ? 
-            '<i class="fas fa-spinner fa-spin mr-2"></i> Loading...' : 
+        const initialBtnText = isLoggedIn ?
+            '<i class="fas fa-spinner fa-spin mr-2"></i> Loading...' :
             '<i class="fas fa-lock mr-2"></i> Login to Add';
         $('#modal-add-to-cart-btn').prop('disabled', true).html(initialBtnText);
     }
-    
+
     // --- Function to fetch product data via AJAX ---
     function fetchProductData(productName, category) {
         console.log(`Fetching data for: ${productName} in ${category}`);
-        
+
         $.ajax({
             url: '/LandingPage/get_product_modal_data.php', // *** Ensure this endpoint returns CORRECTLY PREFIXED image paths ***
             type: 'POST',
@@ -959,10 +959,10 @@ $(document).ready(function() {
             },
             success: function(response) {
                 console.log('AJAX success: Product data received');
-                
+
                 if (response && response.success && response.variants && Array.isArray(response.variants)) {
                     // Pass the raw response, populateModal will handle URL construction
-                    populateModalWithProductData(response, productName); 
+                    populateModalWithProductData(response, productName);
                 } else {
                     handleProductDataError(response?.error || 'Invalid data received', productName);
                 }
@@ -973,7 +973,7 @@ $(document).ready(function() {
             }
         });
     }
-    
+
     // --- Function to handle product data errors ---
     function handleProductDataError(errorMessage, productName) {
         $('#productDetailModalLabel').text(productName || 'Error');
@@ -982,34 +982,34 @@ $(document).ready(function() {
         $('#modal-add-to-cart-btn').prop('disabled', true).text('Error');
         $('#modal-variant-select').empty().append('<option>Error</option>').prop('disabled', true);
     }
-    
+
     // --- Function to populate the modal with product data ---
     function populateModalWithProductData(data, productName) {
         const mainProduct = data.main_product;
         const variants = data.variants;
-        
+
         // Validate data again
         if (!mainProduct || !variants || !Array.isArray(variants) || variants.length === 0) {
             handleProductDataError('Invalid product data format received', productName);
             return;
         }
-        
+
         // Set product name
         $('#productDetailModalLabel').text(productName);
         $('#modal-product-name').text(productName);
-        
+
         // Clear variant select dropdown
         const variantSelect = $('#modal-variant-select');
         variantSelect.empty();
-        
+
         // Populate variant dropdown
         // *** Pass the buildImageUrl function so it can construct URLs correctly ***
-        populateVariantDropdown(variants, variantSelect, buildImageUrl); 
-        
+        populateVariantDropdown(variants, variantSelect, buildImageUrl);
+
         // Update modal content based on first variant
         if (variantSelect.find('option').length > 0) {
             updateModalFromVariant(); // This will now use the correctly stored URLs
-            
+
             // Enable Add to Cart button if user is logged in
             if (isLoggedIn) {
                 $('#modal-add-to-cart-btn').prop('disabled', false)
@@ -1021,43 +1021,43 @@ $(document).ready(function() {
             $('#modal-product-price .info-value').text('N/A');
             $('#modal-product-image').attr('src', fallbackImageUrl) // Use fallback
                 .attr('alt', 'No variants available');
-            
-            const buttonText = !isLoggedIn ? 
-                '<i class="fas fa-lock mr-2"></i> Login to Add' : 
+
+            const buttonText = !isLoggedIn ?
+                '<i class="fas fa-lock mr-2"></i> Login to Add' :
                 '<i class="fas fa-times-circle mr-2"></i> Not Available';
             $('#modal-add-to-cart-btn').prop('disabled', true).html(buttonText);
         }
     }
-    
+
     // --- Function to populate the variant dropdown ---
     // *** Added urlBuilder function as parameter ***
-    function populateVariantDropdown(variants, variantSelect, urlBuilder) { 
+    function populateVariantDropdown(variants, variantSelect, urlBuilder) {
         let optionsCount = 0;
-        
+
         // Sort variants by item_description to ensure consistent order
         variants.sort((a, b) => {
             if (a.item_description < b.item_description) return -1;
             if (a.item_description > b.item_description) return 1;
             return 0;
         });
-        
+
         // Create and append each option
         variants.forEach(function(variant) {
             // Skip invalid variants
             if (!variant || !variant.product_id) return;
-            
+
             // Create option element
             const option = document.createElement('option');
             option.value = variant.product_id;
-            
+
             // Set option text - show item description and price
             const variantName = variant.item_description || 'Unknown Variant';
             const priceDisplay = variant.price ? ` - ₱${parseFloat(variant.price).toFixed(2)}` : '';
             option.textContent = variantName + priceDisplay;
-            
+
             // *** Use the urlBuilder to store the CORRECT, full image URL ***
-            const correctImageUrl = urlBuilder(variant.product_image); 
-            
+            const correctImageUrl = urlBuilder(variant.product_image);
+
             // Store variant data as attributes for easy access
             option.setAttribute('data-price', variant.price || '');
             option.setAttribute('data-packaging', variant.packaging || '');
@@ -1065,19 +1065,19 @@ $(document).ready(function() {
             option.setAttribute('data-name', variantName);
             option.setAttribute('data-description', variant.additional_description || '');
             option.setAttribute('data-stock', variant.stock_quantity || 0);
-            
+
             // Store ingredients as JSON string
             if (variant.ingredients_array && Array.isArray(variant.ingredients_array)) {
                 option.setAttribute('data-ingredients', JSON.stringify(variant.ingredients_array));
             } else {
                 option.setAttribute('data-ingredients', '[]');
             }
-            
+
             // Append to select
             variantSelect.append(option);
             optionsCount++;
         });
-        
+
         // Show/hide variant selector based on number of options
         if (optionsCount <= 1) {
             $('#modal-variant-select-group').hide();
@@ -1086,10 +1086,10 @@ $(document).ready(function() {
             $('#modal-variant-select-group').show();
             variantSelect.prop('disabled', false);
         }
-        
+
         console.log(`Added ${optionsCount} variant options to dropdown`);
     }
-    
+
     // --- Function to update modal content based on selected variant ---
     function updateModalFromVariant() {
         const selectedOption = $('#modal-variant-select option:selected');
@@ -1097,16 +1097,16 @@ $(document).ready(function() {
             console.warn('updateModalFromVariant called but no option selected.');
             return;
         }
-        
+
         // Get data from selected option
         const productId = selectedOption.val();
         const variantName = selectedOption.data('name');
         const price = selectedOption.data('price');
         const packaging = selectedOption.data('packaging');
         // *** Get the CORRECT image path stored in the data attribute ***
-        const imagePath = selectedOption.data('image'); 
+        const imagePath = selectedOption.data('image');
         const description = selectedOption.data('description');
-        
+
         // Parse ingredients from data attribute
         let ingredients = [];
         try {
@@ -1117,16 +1117,16 @@ $(document).ready(function() {
         } catch (e) {
             console.error('Error parsing ingredients:', e);
         }
-        
+
         console.log(`Updating modal for variant: ${variantName}`);
-        
+
         // Update UI elements
         $('#modal-product-packaging .info-value').text(packaging || '-');
         $('#modal-product-price .info-value').text(price ? '₱' + parseFloat(price).toFixed(2) : '-');
         // *** Use the correct imagePath directly ***
-        $('#modal-product-image').attr('src', imagePath || fallbackImageUrl) 
+        $('#modal-product-image').attr('src', imagePath || fallbackImageUrl)
                                .attr('alt', variantName || 'Product Image');
-        
+
         // Update description
         if (description) {
             $('#modal-product-description').text(description);
@@ -1135,63 +1135,63 @@ $(document).ready(function() {
             $('#modal-product-description').text('');
             $('#modal-description-container').hide();
         }
-        
+
         // Render ingredients list
         renderIngredients(ingredients);
-        
+
         // Update Add to Cart button data
         const addToCartBtn = $('#modal-add-to-cart-btn');
         addToCartBtn.data('product-id', productId);
         addToCartBtn.data('product-name', variantName);
         addToCartBtn.data('product-price', price);
         // *** Store the correct image path for the cart ***
-        addToCartBtn.data('product-image', imagePath); 
+        addToCartBtn.data('product-image', imagePath);
         addToCartBtn.data('product-packaging', packaging);
-        
+
         // Reset quantity to 1 when variant changes
         $('#modal-quantity-input').val(1);
     }
-    
+
     // --- Handle variant selection change ---
     $('#modal-variant-select').on('change', function() {
         updateModalFromVariant();
     });
-    
+
     // --- Function to render ingredients list ---
     function renderIngredients(ingredients) {
         const ingredientsList = $('#modal-ingredients-list');
         ingredientsList.empty();
-        
+
         if (ingredients && Array.isArray(ingredients) && ingredients.length > 0) {
             let hasValidIngredient = false;
-            
+
             ingredients.forEach(function(ingredient) {
                 if (Array.isArray(ingredient) && ingredient.length >= 1 && ingredient[0]) {
                     hasValidIngredient = true;
                     const name = ingredient[0];
                     const amount = (ingredient.length >= 2 && (ingredient[1] || ingredient[1] === 0)) ? ingredient[1] : null;
-                    
+
                     const ingredientItemCol = $('<div class="col-md-4 col-6 mb-2"></div>');
                     const itemContent = $('<div class="ingredient-item"></div>');
-                    
+
                     itemContent.append($('<span class="ingredient-name"></span>').text(name));
-                    
+
                     if (amount !== null) {
                         let amountDisplay = (typeof amount === 'number') ? `(${amount}g)` : `(${amount})`;
                         itemContent.append($('<span class="ingredient-amount"></span>').text(amountDisplay));
                     }
-                    
+
                     ingredientItemCol.append(itemContent);
                     ingredientsList.append(ingredientItemCol);
                 }
             });
-            
+
             $('#modal-ingredients-container').toggle(hasValidIngredient);
         } else {
             $('#modal-ingredients-container').hide();
         }
     }
-    
+
     // --- Modal Quantity Controls ---
     $('#modal-quantity-decrease').on('click', function() {
         const input = $('#modal-quantity-input');
@@ -1200,24 +1200,24 @@ $(document).ready(function() {
             input.val(quantity - 1).trigger('change');
         }
     });
-    
+
     $('#modal-quantity-increase').on('click', function() {
         const input = $('#modal-quantity-input');
         let quantity = parseInt(input.val());
         const maxQuantity = 100;
-        
+
         if (!isNaN(quantity) && quantity < maxQuantity) {
             input.val(quantity + 1).trigger('change');
         } else if (isNaN(quantity)) {
             input.val(1).trigger('change');
         }
     });
-    
+
     $('#modal-quantity-input').on('change input', function() {
         let quantity = parseInt($(this).val());
         const minQuantity = 1;
         const maxQuantity = 100;
-        
+
         if (isNaN(quantity) || quantity < minQuantity) {
             if ($(this).val() !== '') {
                 $(this).val(minQuantity);
@@ -1228,60 +1228,60 @@ $(document).ready(function() {
     }).on('blur', function() {
         let quantity = parseInt($(this).val());
         const minQuantity = 1;
-        
+
         if (isNaN(quantity) || quantity < minQuantity) {
             $(this).val(minQuantity);
         }
     });
-    
+
     // --- Modal Add to Cart Button ---
     $('#modal-add-to-cart-btn').on('click', function() {
         if (!isLoggedIn) {
             showGlobalPopup('Please login to add items to cart.', true);
             return;
         }
-        
+
         const button = $(this);
         const productId = button.data('product-id');
         const productName = button.data('product-name');
         const productPrice = button.data('product-price');
         // *** Get the CORRECT image path from button data ***
-        const productImage = button.data('product-image'); 
+        const productImage = button.data('product-image');
         const productPackaging = button.data('product-packaging');
         const productCategory = $('#productDetailModal').data('category') || '';
         const quantity = parseInt($('#modal-quantity-input').val());
-        
+
         if (!productId || !productName || typeof productPrice === 'undefined' || isNaN(quantity) || quantity < 1) {
             console.error('Missing or invalid data for add to cart');
             showGlobalPopup('Error: Could not add item. Invalid data selected.', true);
             return;
         }
-        
+
         // Disable button and show loading state
         button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Adding...');
         showGlobalPopup('Adding item to cart...');
-        
-        console.log('Adding to cart:', { 
-            product_id: productId, 
-            product_name: productName, 
-            price: productPrice, 
-            quantity: quantity 
+
+        console.log('Adding to cart:', {
+            product_id: productId,
+            product_name: productName,
+            price: productPrice,
+            quantity: quantity
         });
-        
+
         // Send to server
         $.ajax({
             url: '/LandingPage/add_to_cart.php', // *** Ensure this endpoint can handle the CORRECT image path ***
             type: 'POST',
             dataType: 'json',
-            data: { 
-                product_id: productId, 
-                product_name: productName, 
-                price: productPrice, 
+            data: {
+                product_id: productId,
+                product_name: productName,
+                price: productPrice,
                 // *** Send the corrected image path ***
-                image_path: productImage, 
-                packaging: productPackaging, 
-                category: productCategory, 
-                quantity: quantity 
+                image_path: productImage,
+                packaging: productPackaging,
+                category: productCategory,
+                quantity: quantity
             },
             success: function(response) {
                 if (response && response.success) {
@@ -1304,13 +1304,13 @@ $(document).ready(function() {
             }
         });
     });
-    
+
     // --- Search and Filter Logic ---
     function updateFilterDisplay() {
         const searchTerm = $('#searchInput').val().trim();
         const selectedCategory = $('#categoryFilter').val();
         let filtersActive = false;
-        
+
         // Handle search filter badge
         if (searchTerm !== '') {
             $('#search-term-display').text(searchTerm);
@@ -1319,7 +1319,7 @@ $(document).ready(function() {
         } else {
             $('#search-filter-badge').hide();
         }
-        
+
         // Handle category filter badge
         if (selectedCategory !== '') {
             const categoryText = $('#categoryFilter option:selected').text();
@@ -1329,7 +1329,7 @@ $(document).ready(function() {
         } else {
             $('#category-filter-badge').hide();
         }
-        
+
         // Show/hide active filters area and clear button
         if (filtersActive) {
             $('#active-filters').slideDown(200);
@@ -1338,47 +1338,64 @@ $(document).ready(function() {
             $('#active-filters').slideUp(200);
             $('#clearFilters').hide();
         }
-        
+
         // Show/hide search clear button
         $('#clearSearch').toggle(searchTerm !== '');
     }
-    
+
+    // *** UPDATED applyFilters function START ***
     function applyFilters() {
         const searchTerm = $('#searchInput').val().toLowerCase().trim();
         const selectedCategory = $('#categoryFilter').val();
         let resultsFound = false;
-        
+
         console.log(`Applying filters - Search: '${searchTerm}', Category: '${selectedCategory}'`);
-        
-        // Filter product cards
-        $('.product-card').each(function() {
-            const card = $(this);
-            const productName = card.data('name').toLowerCase();
-            const productCategory = card.data('category');
-            
-            const categoryMatch = (selectedCategory === '' || productCategory === selectedCategory);
-            const searchMatch = (searchTerm === '' || productName.includes(searchTerm));
-            
-            if (categoryMatch && searchMatch) {
-                card.show();
-                resultsFound = true;
+
+        // Iterate through each category section
+        $('.category-section').each(function() {
+            const section = $(this);
+            const sectionCategory = section.data('category');
+            let sectionHasVisibleCards = false;
+
+            // Determine if this section *could* be visible based on the category filter
+            const categoryFilterMatch = (selectedCategory === '' || sectionCategory === selectedCategory);
+
+            // Iterate through product cards within this section
+            section.find('.product-card').each(function() {
+                const card = $(this);
+                const productName = card.data('name').toLowerCase();
+
+                // Determine if this card *could* be visible based on the search term
+                const searchFilterMatch = (searchTerm === '' || productName.includes(searchTerm));
+
+                // Card should be visible ONLY if its section matches the category filter
+                // AND the card itself matches the search filter.
+                if (categoryFilterMatch && searchFilterMatch) {
+                    card.show(); // Show the card
+                    sectionHasVisibleCards = true; // Mark that this section has at least one visible card
+                    resultsFound = true; // Mark that at least one result was found overall
+                } else {
+                    card.hide(); // Hide the card
+                }
+            });
+
+            // Now, show or hide the entire section based ONLY on whether it ended up
+            // having any visible cards inside it after applying both filters.
+            if (sectionHasVisibleCards) {
+                 section.show();
             } else {
-                card.hide();
+                 section.hide();
             }
         });
-        
-        // Show/hide category sections based on visible products
-        $('.category-section').each(function() {
-            $(this).toggle($(this).find('.product-card:visible').length > 0);
-        });
-        
-        // Show/hide no results message
+
+        // Show/hide the "no results" message based on the overall flag
         $('#no-results-message').toggle(!resultsFound);
-        
-        // Update filter display
+
+        // Update the filter badges display
         updateFilterDisplay();
     }
-    
+    // *** UPDATED applyFilters function END ***
+
     // Debounce function to prevent excessive filter application
     function debounce(func, wait) {
         let timeout;
@@ -1391,42 +1408,42 @@ $(document).ready(function() {
             timeout = setTimeout(later, wait);
         };
     }
-    
+
     // Bind filter events
     $('#searchInput').on('input', debounce(applyFilters, 300));
     $('#categoryFilter').on('change', applyFilters);
     $('#clearSearch').on('click', function() {
-        $('#searchInput').val('').trigger('input');
+        $('#searchInput').val('').trigger('input'); // Clears input and triggers the filter update
     });
     $('#clearFilters').on('click', function() {
         $('#searchInput').val('');
         $('#categoryFilter').val('');
-        applyFilters();
+        applyFilters(); // Apply empty filters
         showGlobalPopup('All filters cleared');
     });
-    
-    // --- Global Popup Function ---\
+
+    // --- Global Popup Function ---
     function showGlobalPopup(message, isError = false) {
         let popup = $('#globalPopup');
-        
+
         if (!popup.length) {
             console.error("Global popup element #globalPopup not found.");
             alert(message);
             return;
         }
-        
+
         popup.removeClass('alert-success alert-danger')
              .addClass(isError ? 'alert-danger' : 'alert-success');
         popup.text(message);
         popup.stop(true, true).fadeIn(200).delay(3000).fadeOut(400);
     }
-    
+
     // Make showGlobalPopup available globally
     window.showGlobalPopup = showGlobalPopup;
-    
+
     // Initialize Bootstrap tooltips
     $('[data-toggle="tooltip"]').tooltip();
-    
+
 }); // End $(document).ready()
 </script>
 <!-- **** END: COMPLETELY REWRITTEN JavaScript Block **** -->
