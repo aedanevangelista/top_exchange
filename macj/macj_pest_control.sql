@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `macj_pest_control`
+-- Database: `u701062148_top_exchange`
 --
 
 -- --------------------------------------------------------

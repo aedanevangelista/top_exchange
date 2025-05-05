@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
 
-$db = new PDO('mysql:host=localhost;dbname=macj_pest_control', 'root', '');
+$db = new PDO('mysql:host=localhost;dbname=u701062148_top_exchange', 'u701062148_top_exchange', 'Aedanpogi123');
 
 $data = [
     ':name' => $_POST['chemical_name'],

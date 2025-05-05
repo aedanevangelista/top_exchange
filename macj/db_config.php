@@ -1,7 +1,7 @@
 <?php
-$dbname = 'macj_pest_control';
-$user = 'root';
-$pass = '';
+$dbname = 'u701062148_top_exchange';
+$user = 'u701062148_top_exchange';
+$pass = 'Aedanpogi123';
 
 // Connect to database
 try {

@@ -1,7 +1,7 @@
 <?php
 session_start();
 $error = '';
-$conn = new mysqli("localhost", "root", "", "macj_pest_control");
+$conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
 require_once("FUNCTIONS/MAIL/SEND_EMAIL.php");
 
 // reCAPTCHA keys - Replace these with your actual keys from Google reCAPTCHA
