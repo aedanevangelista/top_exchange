@@ -330,8 +330,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $status = $_POST['status'] ?? '';
             if (empty($id)) { throw new Exception("Invalid account ID."); }
 
-            // *** MODIFICATION: Removed 'Pending' from allowed statuses ***
-            $allowed_statuses = ['Active', 'Rejected', 'Inactive'];
+            // *** MODIFICATION: Removed 'Rejected' from allowed statuses ***
+            $allowed_statuses = ['Active', 'Inactive'];
             if (!in_array($status, $allowed_statuses)) { throw new Exception('Invalid status value provided.'); }
 
             $stmt = $conn->prepare("UPDATE clients_accounts SET status = ? WHERE id = ?");
@@ -369,8 +369,8 @@ try {
     $types = "";
 
     if (!empty($status_filter)) {
-        // *** MODIFICATION: Removed 'Pending' from allowed filters ***
-        $allowed_filters = ['Active', 'Rejected', 'Inactive'];
+        // *** MODIFICATION: Removed 'Rejected' from allowed filters ***
+        $allowed_filters = ['Active', 'Inactive'];
          if (in_array($status_filter, $allowed_filters)) {
             $sql .= " AND status = ?";
             $params[] = $status_filter;
@@ -379,8 +379,8 @@ try {
              $status_filter = ''; // Ignore invalid filter
          }
     }
-    // *** MODIFICATION: Adjusted ORDER BY CASE to remove Pending ***
-    $sql .= " ORDER BY CASE status WHEN 'Active' THEN 1 WHEN 'Rejected' THEN 2 WHEN 'Inactive' THEN 3 ELSE 4 END, created_at DESC";
+    // *** MODIFICATION: Adjusted ORDER BY CASE to remove Rejected ***
+    $sql .= " ORDER BY CASE status WHEN 'Active' THEN 1 WHEN 'Inactive' THEN 2 ELSE 3 END, created_at DESC";
 
     $stmt = $conn->prepare($sql);
     if (!empty($types)) {
@@ -431,7 +431,7 @@ function truncate($text, $max = 15) {
         .form-column { display: flex; flex-direction: column; }
         .form-full-width { grid-column: 1 / span 2; }
         .required { color: #ff0000; font-weight: bold; }
-        .overlay-content { max-width: 800px; width: 90%; max-height: 95vh; display: flex; flex-direction: column; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; } /* Adjusted */
+        .overlay-content { max-width: 800px; width: 90%; max-height: 95vh; display: flex; flex-direction: column; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; } /* Adjusted for centering */
         .two-column-form input, .two-column-form textarea, .two-column-form select { width: 100%; box-sizing: border-box; }
         textarea#company_address, textarea#edit-company_address, textarea#bill_to_address, textarea#edit-bill_to_address { height: 60px; padding: 8px; font-size: 14px; resize: vertical; min-height: 60px; }
         input, textarea, select { border: 1px solid #ccc; border-radius: 4px; padding: 6px 10px; transition: border-color 0.3s; outline: none; font-size: 14px; margin-bottom: 10px; }
@@ -439,7 +439,7 @@ function truncate($text, $max = 15) {
         input::placeholder, textarea::placeholder { color: #aaa; padding: 4px; font-style: italic; }
         .view-address-btn, .view-contact-btn { background-color: #4a90e2; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 12px; transition: all 0.3s; }
         .view-address-btn:hover, .view-contact-btn:hover { background-color: #357abf; }
-        #addressInfoModal, #contactInfoModal { display: none; /* Hidden */ position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; }
+        #addressInfoModal, #contactInfoModal { display: none; /* Hidden */ position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
         .info-modal-content { background-color: #ffffff; margin: 0; padding: 0; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); width: 90%; max-width: 700px; max-height: 80vh; animation: modalFadeIn 0.3s ease-out; display: flex; flex-direction: column; }
         @keyframes modalFadeIn { from {opacity: 0; transform: scale(0.95);} to {opacity: 1; transform: scale(1);} }
         .info-modal-header { background-color: #4a90e2; color: #fff; padding: 15px 25px; position: relative; display: flex; align-items: center; border-radius: 10px 10px 0 0; }
@@ -453,11 +453,11 @@ function truncate($text, $max = 15) {
         .info-section-title { display: flex; align-items: center; color: #4a90e2; margin-top: 0; margin-bottom: 15px; font-size: 16px; padding-bottom: 10px; border-bottom: 1px solid #e0e0e0; }
         .info-section-title i { margin-right: 10px; width: 20px; text-align: center; }
         .info-table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-        .info-table th { text-align: left; background-color: #eef5ff; padding: 12px 15px; border: 1px solid #d1e1f9; width: 30%; vertical-align: top; color: #3a5d85; font-weight: 600; font-size: 14px; }
+        .info-table th { text-align: left; background-color: #eef5ff; padding: 12px 15px; border: 1px solid #d1e1f9; width: 30%; vertical-align: top; color: #3a5d85; font-weight: 600; font-size: 13px; }
         .info-table td { padding: 12px 15px; border: 1px solid #d1e1f9; word-break: break-word; vertical-align: top; line-height: 1.5; color: #333; background-color: #fff; font-size: 14px; }
         .contact-item { display: flex; align-items: center; padding: 15px; background-color: #fff; border-radius: 6px; margin-bottom: 15px; border: 1px solid #d1e1f9; }
         .contact-item:last-child { margin-bottom: 0; }
-        .contact-icon { width: 45px; height: 45px; background-color: #eef5ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #4a90e2; font-size: 18px; margin-right: 15px; flex-shrink: 0; }
+        .contact-icon { width: 45px; height: 45px; background-color: #eef5ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #4a90e2; font-size: 18px; margin-right: 15px; }
         .contact-text { flex: 1; }
         .contact-value { font-weight: bold; color: #333; font-size: 14px; word-break: break-all; }
         .contact-label { font-size: 13px; color: #777; display: block; margin-top: 5px; }
@@ -479,13 +479,13 @@ function truncate($text, $max = 15) {
         }
         .address-group { border: 1px solid #eee; padding: 12px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; }
         .address-group h3 { margin-top: 0; color: #4a90e2; font-size: 15px; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
-        .modal-header { background-color: #ffffff; padding: 15px 20px; /* Adjusted padding */ text-align: center; border-radius: 8px 8px 0 0; border-bottom: 1px solid #ddd; /* Lighter border */ position: sticky; top: 0; z-index: 1; }
+        .modal-header { background-color: #ffffff; padding: 15px 20px; /* Adjusted padding */ text-align: center; border-radius: 8px 8px 0 0; border-bottom: 1px solid #ddd; /* Lighter border */ position: sticky; top: 0; z-index: 10; }
         .modal-header h2 { margin: 0; padding: 0; font-size: 18px; font-weight: 600; } /* Adjusted font */
-        .modal-footer { background-color: #f7f7f7; /* Lighter footer */ padding: 12px 20px; border-top: 1px solid #ddd; text-align: center; border-radius: 0 0 8px 8px; position: sticky; bottom: 0; z-index: 10; display: flex; justify-content: flex-end; /* Align buttons right */ gap: 10px; margin-top: auto; }
+        .modal-footer { background-color: #f7f7f7; /* Lighter footer */ padding: 12px 20px; border-top: 1px solid #ddd; text-align: center; border-radius: 0 0 8px 8px; position: sticky; bottom: 0; z-index: 10; }
         .modal-body { padding: 20px; overflow-y: auto; max-height: calc(85vh - 120px); /* Adjusted calc */ height: auto; }
-        .form-modal-content { display: flex; flex-direction: column; max-height: 85vh; height: auto; width: 90%; /* More responsive */ max-width: 650px; background-color: #fff; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: modalFadeIn 0.3s ease-out; }
+        .form-modal-content { display: flex; flex-direction: column; max-height: 85vh; height: auto; width: 90%; /* More responsive */ max-width: 650px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); animation: modalPopIn 0.3s ease-out; }
         label { display: block; font-size: 14px; margin-bottom: 5px; /* Slightly more space */ font-weight: 500; }
-        .error-message { color: #D8000C; background-color: #FFD2D2; padding: 10px 15px; border-radius: 4px; border: 1px solid #FFB8B8; margin-top: 5px; margin-bottom: 15px; display: none; font-size: 13px; text-align: center; }
+        .error-message { color: #D8000C; background-color: #FFD2D2; padding: 10px 15px; border-radius: 4px; border: 1px solid #FFB8B8; margin-top: 5px; margin-bottom: 15px; display: none; font-size: 14px; text-align: left; }
         .modal-footer button { padding: 8px 16px; font-size: 14px; min-width: 100px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; border: none; margin: 0 5px; }
         .save-btn { background-color: #4a90e2; color: white; }
         .save-btn:hover { background-color: #357abf; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -493,12 +493,12 @@ function truncate($text, $max = 15) {
         .cancel-btn:hover { background-color:rgb(82, 82, 82); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .status-active { color: #28a745; font-weight: bold; }
         .status-pending { color: #ffc107; font-weight: bold; } /* Style kept just in case, but should not be used */
-        .status-rejected { color: #dc3545; font-weight: bold; }
+        .status-rejected { color: #dc3545; font-weight: bold; } /* Style kept as it doesn't harm */
         .status-inactive { color: #6c757d; font-weight: bold; }
         .password-note { font-size: 12px; color: #666; margin-top: 4px; margin-bottom: 10px; /* Added bottom margin */ font-style: italic; }
         .auto-generated { background-color: #f8f8f8; color: #888; cursor: not-allowed; }
         .password-container { position: relative; width: 100%; margin-bottom: 10px; }
-        .toggle-password { position: absolute; right: 1px; top: 1px; bottom: 1px; /* Align with input border */ display: flex; align-items: center; padding: 0 10px; cursor: pointer; color: #666; background: #fff; border-left: 1px solid #ccc; border-radius: 0 4px 4px 0; }
+        .toggle-password { position: absolute; right: 1px; top: 1px; bottom: 1px; /* Align with input border */ display: flex; align-items: center; padding: 0 10px; cursor: pointer; color: #666; background: #fff; border-left: 1px solid #ccc; border-radius: 0 3px 3px 0; }
         .toggle-password:hover { color: #333; }
         .switch-container { display: flex; align-items: center; margin-top: 8px; margin-bottom: 12px; }
         .switch-label { font-size: 13px; margin-left: 8px; color: #555; cursor: pointer; }
@@ -542,10 +542,10 @@ function truncate($text, $max = 15) {
         #statusModal h2 { margin-bottom: 15px; font-weight: 600; font-size: 20px; }
         #statusModal p { margin-bottom: 25px; color: #555; font-size: 15px; }
         #statusModal .modal-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        #statusModal .modal-buttons button { flex-grow: 1; padding: 10px 15px; cursor: pointer; border: none; border-radius: 4px; transition: background-color 0.2s, box-shadow 0.2s; color: white; font-size: 14px; min-width: 100px; }
+        #statusModal .modal-buttons button { flex-grow: 1; padding: 10px 15px; cursor: pointer; border: none; border-radius: 4px; transition: background-color 0.2s, box-shadow 0.2s; color: white; font-size: 14px; }
         #statusModal .approve-btn { background-color: #28a745; } #statusModal .approve-btn:hover { background-color: #218838; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
-        #statusModal .reject-btn { background-color: #dc3545; } #statusModal .reject-btn:hover { background-color: #c82333; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
-        /* #statusModal .pending-btn { background-color: #ffc107; color: #333; } #statusModal .pending-btn:hover { background-color: #e0a800; box-shadow: 0 2px 4px rgba(0,0,0,0.15); } */ /* Pending button style removed */
+        #statusModal .reject-btn { background-color: #dc3545; } #statusModal .reject-btn:hover { background-color: #c82333; box-shadow: 0 2px 4px rgba(0,0,0,0.15); } /* Style kept as it doesn't harm */
+        /* #statusModal .pending-btn { background-color: #ffc107; color: #333; } #statusModal .pending-btn:hover { background-color: #e0a800; box-shadow: 0 2px 4px rgba(0,0,0,0.15); } */ /* Pending button style (not used) */
         #statusModal .inactive-btn { background-color: #6c757d; } #statusModal .inactive-btn:hover { background-color: #5a6268; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
         #statusModal .single-button { text-align: center; margin-top: 10px; }
         #statusModal .single-button button { width: auto; min-width: 120px; }
@@ -566,7 +566,7 @@ function truncate($text, $max = 15) {
                     <option value="">All</option>
                     <!-- *** MODIFICATION: Removed 'Pending' option *** -->
                     <option value="Active" <?= ($status_filter ?? '') == 'Active' ? 'selected' : '' ?>>Active</option>
-                    <option value="Rejected" <?= ($status_filter ?? '') == 'Rejected' ? 'selected' : '' ?>>Rejected</option>
+                    <!-- *** MODIFICATION: Removed 'Rejected' option *** -->
                     <option value="Inactive" <?= ($status_filter ?? '') == 'Inactive' ? 'selected' : '' ?>>Inactive</option>
                 </select>
             </div>
@@ -734,9 +734,9 @@ function truncate($text, $max = 15) {
                      <div class="two-column-form">
                          <div class="form-column">
                              <label for="username">Username: <span class="required">*</span></label>
-                             <input type="text" id="username" name="username" required placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Use letters, numbers, underscores only (max 15)">
+                             <input type="text" id="username" name="username" required placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Use letters, numbers, underscores only. Max 15 chars.">
                              <label for="phone">Phone: <span class="required">*</span></label>
-                             <input type="tel" id="phone" name="phone" required placeholder="e.g., 09123456789" maxlength="12" pattern="[0-9]+" title="Numbers only, 7-12 digits" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                             <input type="tel" id="phone" name="phone" required placeholder="e.g., 09123456789" maxlength="12" pattern="[0-9]+" title="Numbers only, 7-12 digits" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                              <label for="password">Password:</label>
                              <input type="text" id="password" name="password" readonly class="auto-generated" placeholder="Auto-generated">
                              <div class="password-note">Auto: username + last 4 of phone</div>
@@ -795,9 +795,9 @@ function truncate($text, $max = 15) {
                      <div class="two-column-form">
                          <div class="form-column">
                              <label for="edit-username">Username: <span class="required">*</span></label>
-                             <input type="text" id="edit-username" name="username" required placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Use letters, numbers, underscores only (max 15)">
+                             <input type="text" id="edit-username" name="username" required placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Use letters, numbers, underscores only. Max 15 chars.">
                              <label for="edit-phone">Phone: <span class="required">*</span></label>
-                             <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 09123456789" maxlength="12" pattern="[0-9]+" title="Numbers only, 7-12 digits" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                             <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 09123456789" maxlength="12" pattern="[0-9]+" title="Numbers only, 7-12 digits" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                              <div class="switch-container">
                                  <label class="switch"><input type="checkbox" id="edit-password-toggle"><span class="slider"></span></label>
                                  <label for="edit-password-toggle" class="switch-label">Set Manual Password</label> <!-- Label for checkbox -->
@@ -867,7 +867,7 @@ function truncate($text, $max = 15) {
              <div class="modal-buttons">
                  <!-- *** MODIFICATION: Removed 'Pending' button (wasn't here, but confirming) *** -->
                  <button class="approve-btn" onclick="changeStatus('Active')"><i class="fas fa-check"></i> Active</button>
-                 <button class="reject-btn" onclick="changeStatus('Rejected')"><i class="fas fa-times"></i> Reject</button>
+                 <!-- *** MODIFICATION: Removed 'Reject' button *** -->
                  <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Inactive</button> <!-- Changed Archive to Inactive -->
              </div>
              <div class="modal-buttons single-button">
@@ -1019,7 +1019,7 @@ function truncate($text, $max = 15) {
                  if (selectedCityName) {
                      citySelect.value = selectedCityName;
                      if (citySelect.value !== selectedCityName) {
-                         console.warn(`City name "${selectedCityName}" not found in ${citySelectId} for region ${regionCode}.`);
+                         console.warn(`City name \"${selectedCityName}\" not found in ${citySelectId} for region ${regionCode}.`);
                      }
                  }
              } catch (error) {
