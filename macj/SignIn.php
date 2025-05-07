@@ -3,7 +3,7 @@ session_start();
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Connect to database
     try {
-      $conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
+        $conn = new mysqli("localhost", "root", "", "macj_pest_control");
     } catch (Exception $e) {
         die("Connection failed: " . $e->getMessage());
     }

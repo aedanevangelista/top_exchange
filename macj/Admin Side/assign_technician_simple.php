@@ -39,7 +39,7 @@ $technicianId = $data['technician_id'];
 
 try {
     // Connect to the database
-    $conn = new mysqli("localhost", "u701062148_top_exchange", "Aedanpogi123", "u701062148_top_exchange");
+    $conn = new mysqli("localhost", "root", "", "macj_pest_control");
 
     // Check connection
     if ($conn->connect_error) {
