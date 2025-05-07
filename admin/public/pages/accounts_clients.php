@@ -171,7 +171,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             // Encode paths and insert into DB
             $business_proof_json = json_encode($business_proof_paths);
             // *** MODIFICATION: Set default status to 'Active' ***
-            $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')");
+            $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, [...]
             $stmt->bind_param("ssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json);
 
             if ($stmt->execute()) {
@@ -298,7 +298,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $business_proof_json_to_save = json_encode($final_business_proof_paths);
 
             // --- Prepare and Execute Update Query ---
-            $sql = "UPDATE clients_accounts SET username = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to_address = ?, business_proof = ? $passwordSqlPart WHERE id = ?";
+            $sql = "UPDATE clients_accounts SET username = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to_address = ?, business_proof = ? $passwordSqlPar[...]
             $stmt = $conn->prepare($sql);
             $types = "sssssssss" . $passwordType . "i";
             $params = [$username, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json_to_save];
@@ -330,8 +330,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $status = $_POST['status'] ?? '';
             if (empty($id)) { throw new Exception("Invalid account ID."); }
 
-            // *** MODIFICATION: Removed 'Pending' from allowed statuses ***
-            $allowed_statuses = ['Active', 'Rejected', 'Inactive'];
+            // *** MODIFICATION: Removed 'Rejected' from allowed statuses ***
+            $allowed_statuses = ['Active', 'Inactive'];
             if (!in_array($status, $allowed_statuses)) { throw new Exception('Invalid status value provided.'); }
 
             $stmt = $conn->prepare("UPDATE clients_accounts SET status = ? WHERE id = ?");
@@ -369,8 +369,8 @@ try {
     $types = "";
 
     if (!empty($status_filter)) {
-        // *** MODIFICATION: Removed 'Pending' from allowed filters ***
-        $allowed_filters = ['Active', 'Rejected', 'Inactive'];
+        // *** MODIFICATION: Removed 'Rejected' from allowed filters ***
+        $allowed_filters = ['Active', 'Inactive'];
          if (in_array($status_filter, $allowed_filters)) {
             $sql .= " AND status = ?";
             $params[] = $status_filter;
@@ -379,8 +379,8 @@ try {
              $status_filter = ''; // Ignore invalid filter
          }
     }
-    // *** MODIFICATION: Adjusted ORDER BY CASE to remove Pending ***
-    $sql .= " ORDER BY CASE status WHEN 'Active' THEN 1 WHEN 'Rejected' THEN 2 WHEN 'Inactive' THEN 3 ELSE 4 END, created_at DESC";
+    // *** MODIFICATION: Adjusted ORDER BY CASE to remove Rejected ***
+    $sql .= " ORDER BY CASE status WHEN 'Active' THEN 1 WHEN 'Inactive' THEN 2 ELSE 3 END, created_at DESC";
 
     $stmt = $conn->prepare($sql);
     if (!empty($types)) {
@@ -431,16 +431,16 @@ function truncate($text, $max = 15) {
         .form-column { display: flex; flex-direction: column; }
         .form-full-width { grid-column: 1 / span 2; }
         .required { color: #ff0000; font-weight: bold; }
-        .overlay-content { max-width: 800px; width: 90%; max-height: 95vh; display: flex; flex-direction: column; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; } /* Adjusted */
+        .overlay-content { max-width: 800px; width: 90%; max-height: 95vh; display: flex; flex-direction: column; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; } /* [...]
         .two-column-form input, .two-column-form textarea, .two-column-form select { width: 100%; box-sizing: border-box; }
-        textarea#company_address, textarea#edit-company_address, textarea#bill_to_address, textarea#edit-bill_to_address { height: 60px; padding: 8px; font-size: 14px; resize: vertical; min-height: 60px; }
+        textarea#company_address, textarea#edit-company_address, textarea#bill_to_address, textarea#edit-bill_to_address { height: 60px; padding: 8px; font-size: 14px; resize: vertical; min-heigh[...]
         input, textarea, select { border: 1px solid #ccc; border-radius: 4px; padding: 6px 10px; transition: border-color 0.3s; outline: none; font-size: 14px; margin-bottom: 10px; }
         input:focus, textarea:focus, select:focus { border-color: #4a90fe; box-shadow: 0 0 5px rgba(77, 144, 254, 0.5); }
         input::placeholder, textarea::placeholder { color: #aaa; padding: 4px; font-style: italic; }
-        .view-address-btn, .view-contact-btn { background-color: #4a90e2; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 12px; transition: all 0.3s; }
+        .view-address-btn, .view-contact-btn { background-color: #4a90e2; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 12px; transition: all 0.3s[...]
         .view-address-btn:hover, .view-contact-btn:hover { background-color: #357abf; }
-        #addressInfoModal, #contactInfoModal { display: none; /* Hidden */ position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; }
-        .info-modal-content { background-color: #ffffff; margin: 0; padding: 0; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); width: 90%; max-width: 700px; max-height: 80vh; animation: modalFadeIn 0.3s ease-out; display: flex; flex-direction: column; }
+        #addressInfoModal, #contactInfoModal { display: none; /* Hidden */ position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(0,0[...]
+        .info-modal-content { background-color: #ffffff; margin: 0; padding: 0; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); width: 90%; max-width: 700px; max-height: 80vh; animat[...]
         @keyframes modalFadeIn { from {opacity: 0; transform: scale(0.95);} to {opacity: 1; transform: scale(1);} }
         .info-modal-header { background-color: #4a90e2; color: #fff; padding: 15px 25px; position: relative; display: flex; align-items: center; border-radius: 10px 10px 0 0; }
         .info-modal-header h2 { margin: 0; font-size: 20px; flex: 1; font-weight: 500; }
@@ -453,11 +453,11 @@ function truncate($text, $max = 15) {
         .info-section-title { display: flex; align-items: center; color: #4a90e2; margin-top: 0; margin-bottom: 15px; font-size: 16px; padding-bottom: 10px; border-bottom: 1px solid #e0e0e0; }
         .info-section-title i { margin-right: 10px; width: 20px; text-align: center; }
         .info-table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-        .info-table th { text-align: left; background-color: #eef5ff; padding: 12px 15px; border: 1px solid #d1e1f9; width: 30%; vertical-align: top; color: #3a5d85; font-weight: 600; font-size: 14px; }
+        .info-table th { text-align: left; background-color: #eef5ff; padding: 12px 15px; border: 1px solid #d1e1f9; width: 30%; vertical-align: top; color: #3a5d85; font-weight: 600; font-size: [...]
         .info-table td { padding: 12px 15px; border: 1px solid #d1e1f9; word-break: break-word; vertical-align: top; line-height: 1.5; color: #333; background-color: #fff; font-size: 14px; }
         .contact-item { display: flex; align-items: center; padding: 15px; background-color: #fff; border-radius: 6px; margin-bottom: 15px; border: 1px solid #d1e1f9; }
         .contact-item:last-child { margin-bottom: 0; }
-        .contact-icon { width: 45px; height: 45px; background-color: #eef5ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #4a90e2; font-size: 18px; margin-right: 15px; flex-shrink: 0; }
+        .contact-icon { width: 45px; height: 45px; background-color: #eef5ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #4a90e2; font-size: 18px; mar[...]
         .contact-text { flex: 1; }
         .contact-value { font-weight: bold; color: #333; font-size: 14px; word-break: break-all; }
         .contact-label { font-size: 13px; color: #777; display: block; margin-top: 5px; }
@@ -479,14 +479,14 @@ function truncate($text, $max = 15) {
         }
         .address-group { border: 1px solid #eee; padding: 12px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; }
         .address-group h3 { margin-top: 0; color: #4a90e2; font-size: 15px; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
-        .modal-header { background-color: #ffffff; padding: 15px 20px; /* Adjusted padding */ text-align: center; border-radius: 8px 8px 0 0; border-bottom: 1px solid #ddd; /* Lighter border */ position: sticky; top: 0; z-index: 1; }
+        .modal-header { background-color: #ffffff; padding: 15px 20px; /* Adjusted padding */ text-align: center; border-radius: 8px 8px 0 0; border-bottom: 1px solid #ddd; /* Lighter border */ p[...]
         .modal-header h2 { margin: 0; padding: 0; font-size: 18px; font-weight: 600; } /* Adjusted font */
-        .modal-footer { background-color: #f7f7f7; /* Lighter footer */ padding: 12px 20px; border-top: 1px solid #ddd; text-align: center; border-radius: 0 0 8px 8px; position: sticky; bottom: 0; z-index: 10; display: flex; justify-content: flex-end; /* Align buttons right */ gap: 10px; margin-top: auto; }
+        .modal-footer { background-color: #f7f7f7; /* Lighter footer */ padding: 12px 20px; border-top: 1px solid #ddd; text-align: center; border-radius: 0 0 8px 8px; position: sticky; bottom: 0[...]
         .modal-body { padding: 20px; overflow-y: auto; max-height: calc(85vh - 120px); /* Adjusted calc */ height: auto; }
-        .form-modal-content { display: flex; flex-direction: column; max-height: 85vh; height: auto; width: 90%; /* More responsive */ max-width: 650px; background-color: #fff; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: modalFadeIn 0.3s ease-out; }
+        .form-modal-content { display: flex; flex-direction: column; max-height: 85vh; height: auto; width: 90%; /* More responsive */ max-width: 650px; background-color: #fff; border-radius: 8px[...]
         label { display: block; font-size: 14px; margin-bottom: 5px; /* Slightly more space */ font-weight: 500; }
-        .error-message { color: #D8000C; background-color: #FFD2D2; padding: 10px 15px; border-radius: 4px; border: 1px solid #FFB8B8; margin-top: 5px; margin-bottom: 15px; display: none; font-size: 13px; text-align: center; }
-        .modal-footer button { padding: 8px 16px; font-size: 14px; min-width: 100px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; border: none; margin: 0 5px; }
+        .error-message { color: #D8000C; background-color: #FFD2D2; padding: 10px 15px; border-radius: 4px; border: 1px solid #FFB8B8; margin-top: 5px; margin-bottom: 15px; display: none; font-si[...]
+        .modal-footer button { padding: 8px 16px; font-size: 14px; min-width: 100px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; border: none; margin:[...]
         .save-btn { background-color: #4a90e2; color: white; }
         .save-btn:hover { background-color: #357abf; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .cancel-btn { background-color:rgb(102, 102, 102); color: white; border: 1px solid #ccc; } /* White text */
@@ -498,14 +498,14 @@ function truncate($text, $max = 15) {
         .password-note { font-size: 12px; color: #666; margin-top: 4px; margin-bottom: 10px; /* Added bottom margin */ font-style: italic; }
         .auto-generated { background-color: #f8f8f8; color: #888; cursor: not-allowed; }
         .password-container { position: relative; width: 100%; margin-bottom: 10px; }
-        .toggle-password { position: absolute; right: 1px; top: 1px; bottom: 1px; /* Align with input border */ display: flex; align-items: center; padding: 0 10px; cursor: pointer; color: #666; background: #fff; border-left: 1px solid #ccc; border-radius: 0 4px 4px 0; }
+        .toggle-password { position: absolute; right: 1px; top: 1px; bottom: 1px; /* Align with input border */ display: flex; align-items: center; padding: 0 10px; cursor: pointer; color: #666; [...]
         .toggle-password:hover { color: #333; }
         .switch-container { display: flex; align-items: center; margin-top: 8px; margin-bottom: 12px; }
         .switch-label { font-size: 13px; margin-left: 8px; color: #555; cursor: pointer; }
         .switch { position: relative; display: inline-block; width: 50px; height: 24px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 1px 3px rg[...]
         input:checked + .slider { background-color: #4a90e2; }
         input:focus + .slider { box-shadow: 0 0 1px #4a90e2; }
         input:checked + .slider:before { transform: translateX(26px); }
@@ -523,18 +523,18 @@ function truncate($text, $max = 15) {
             align-items: center;
             justify-content: center;
         }
-        .confirmation-content { background-color: #fefefe; padding: 25px 30px; border-radius: 8px; width: 380px; max-width: 90%; text-align: center; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); animation: modalPopIn 0.3s ease-out; }
+        .confirmation-content { background-color: #fefefe; padding: 25px 30px; border-radius: 8px; width: 380px; max-width: 90%; text-align: center; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); ani[...]
         @keyframes modalPopIn { from {transform: scale(0.8) translateY(20px); opacity: 0;} to {transform: scale(1) translateY(0); opacity: 1;} }
         .confirmation-title { font-size: 20px; margin-bottom: 15px; color: #333; font-weight: 600; }
         .confirmation-message { margin-bottom: 25px; color: #555; font-size: 14px; line-height: 1.5; }
         .confirmation-buttons { display: flex; justify-content: center; gap: 15px; }
-        .confirm-yes, .confirm-no { padding: 10px 25px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background-color 0.2s, box-shadow 0.2s; border: none; font-size: 14px; min-width: 100px; }
+        .confirm-yes, .confirm-no { padding: 10px 25px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background-color 0.2s, box-shadow 0.2s; border: none; font-size: 14px; [...]
         .confirm-yes { background-color: #4a90e2; color: white; }
         .confirm-yes:hover { background-color: #357abf; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .confirm-no { background-color: #f1f1f1; color: #333; border: 1px solid #ccc; }
         .confirm-no:hover { background-color: #e1e1e1; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         #toast-container .toast-close-button { display: none; }
-        #edit-business-proof-container { margin-bottom: 10px; padding: 10px; background-color: #f9f9f9; border: 1px dashed #ddd; border-radius: 4px; min-height: 50px; display: flex; flex-wrap: wrap; align-items: center; }
+        #edit-business-proof-container { margin-bottom: 10px; padding: 10px; background-color: #f9f9f9; border: 1px dashed #ddd; border-radius: 4px; min-height: 50px; display: flex; flex-wrap: wr[...]
         #edit-business-proof-container img { margin: 5px; border: 1px solid #ccc; padding: 2px; max-width: 60px; height: auto; background: #fff; border-radius: 3px; cursor: pointer; }
         #edit-business-proof-container h4 { width: 100%; margin-bottom: 5px; font-size: 14px; color: #555; font-weight: 500; }
         #edit-business-proof-container p { width: 100%; font-size: 13px; color: #888; margin: 5px 0; }
@@ -542,10 +542,10 @@ function truncate($text, $max = 15) {
         #statusModal h2 { margin-bottom: 15px; font-weight: 600; font-size: 20px; }
         #statusModal p { margin-bottom: 25px; color: #555; font-size: 15px; }
         #statusModal .modal-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        #statusModal .modal-buttons button { flex-grow: 1; padding: 10px 15px; cursor: pointer; border: none; border-radius: 4px; transition: background-color 0.2s, box-shadow 0.2s; color: white; font-size: 14px; min-width: 100px; }
+        #statusModal .modal-buttons button { flex-grow: 1; padding: 10px 15px; cursor: pointer; border: none; border-radius: 4px; transition: background-color 0.2s, box-shadow 0.2s; color: white;[...]
         #statusModal .approve-btn { background-color: #28a745; } #statusModal .approve-btn:hover { background-color: #218838; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
         #statusModal .reject-btn { background-color: #dc3545; } #statusModal .reject-btn:hover { background-color: #c82333; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
-        /* #statusModal .pending-btn { background-color: #ffc107; color: #333; } #statusModal .pending-btn:hover { background-color: #e0a800; box-shadow: 0 2px 4px rgba(0,0,0,0.15); } */ /* Pending button style removed */
+        /* #statusModal .pending-btn { background-color: #ffc107; color: #333; } #statusModal .pending-btn:hover { background-color: #e0a800; box-shadow: 0 2px 4px rgba(0,0,0,0.15); } */ /* Pendi[...]
         #statusModal .inactive-btn { background-color: #6c757d; } #statusModal .inactive-btn:hover { background-color: #5a6268; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
         #statusModal .single-button { text-align: center; margin-top: 10px; }
         #statusModal .single-button button { width: auto; min-width: 120px; }
@@ -564,9 +564,8 @@ function truncate($text, $max = 15) {
                 <label for="statusFilter">Filter by Status:</label>
                 <select id="statusFilter" onchange="filterByStatus()">
                     <option value="">All</option>
-                    <!-- *** MODIFICATION: Removed 'Pending' option *** -->
+                    <!-- *** MODIFICATION: Removed 'Rejected' option *** -->
                     <option value="Active" <?= ($status_filter ?? '') == 'Active' ? 'selected' : '' ?>>Active</option>
-                    <option value="Rejected" <?= ($status_filter ?? '') == 'Rejected' ? 'selected' : '' ?>>Rejected</option>
                     <option value="Inactive" <?= ($status_filter ?? '') == 'Inactive' ? 'selected' : '' ?>>Inactive</option>
                 </select>
             </div>
@@ -607,7 +606,7 @@ function truncate($text, $max = 15) {
                                 <td><?= truncate($row['company']) ?></td>
                                 <td>
                                     <button class="view-address-btn"
-                                        onclick='showAddressInfo(<?= json_encode($row["company_address"] ?? "N/A") ?>, <?= json_encode($row["region"] ?? "N/A") ?>, <?= json_encode($row["city"] ?? "N/A") ?>, <?= json_encode($row["bill_to_address"] ?? "N/A") ?>)'>
+                                        onclick='showAddressInfo(<?= json_encode($row["company_address"] ?? "N/A") ?>, <?= json_encode($row["region"] ?? "N/A") ?>, <?= json_encode($row["city"] ??[...]
                                         <i class="fas fa-eye"></i> View
                                     </button>
                                 </td>
@@ -636,7 +635,7 @@ function truncate($text, $max = 15) {
                                     }
                                     ?>
                                 </td>
-                                <!-- *** NOTE: The CSS class 'status-pending' might still exist but won't be used if no data has 'Pending' status *** -->
+                                <!-- *** NOTE: Removed status-rejected class reference *** -->
                                 <td class="<?= 'status-' . strtolower(htmlspecialchars($row['status'] ?? 'inactive')) ?>"><?= htmlspecialchars($row['status'] ?? 'Inactive') ?></td>
                                 <td class="action-buttons">
                                     <?php
@@ -658,7 +657,7 @@ function truncate($text, $max = 15) {
                                         )'>
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <button class="status-btn" onclick="openStatusModal(<?= intval($row['id']) ?>, <?= htmlspecialchars(json_encode($row['username'] ?? ''), ENT_QUOTES, 'UTF-8') ?>, <?= htmlspecialchars(json_encode($row['email'] ?? ''), ENT_QUOTES, 'UTF-8') ?>)">
+                                    <button class="status-btn" onclick="openStatusModal(<?= intval($row['id']) ?>, <?= htmlspecialchars(json_encode($row['username'] ?? ''), ENT_QUOTES, 'UTF-8') ?[...]
                                         <i class="fas fa-exchange-alt"></i> Status
                                     </button>
                                 </td>
@@ -734,9 +733,9 @@ function truncate($text, $max = 15) {
                      <div class="two-column-form">
                          <div class="form-column">
                              <label for="username">Username: <span class="required">*</span></label>
-                             <input type="text" id="username" name="username" required placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Use letters, numbers, underscores only (max 15)">
+                             <input type="text" id="username" name="username" required placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Use letters, numbers, underscore[...]
                              <label for="phone">Phone: <span class="required">*</span></label>
-                             <input type="tel" id="phone" name="phone" required placeholder="e.g., 09123456789" maxlength="12" pattern="[0-9]+" title="Numbers only, 7-12 digits" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                             <input type="tel" id="phone" name="phone" required placeholder="e.g., 09123456789" maxlength="12" pattern="[0-9]+" title="Numbers only, 7-12 digits" oninput="this.val[...]
                              <label for="password">Password:</label>
                              <input type="text" id="password" name="password" readonly class="auto-generated" placeholder="Auto-generated">
                              <div class="password-note">Auto: username + last 4 of phone</div>
@@ -795,9 +794,9 @@ function truncate($text, $max = 15) {
                      <div class="two-column-form">
                          <div class="form-column">
                              <label for="edit-username">Username: <span class="required">*</span></label>
-                             <input type="text" id="edit-username" name="username" required placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Use letters, numbers, underscores only (max 15)">
+                             <input type="text" id="edit-username" name="username" required placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Use letters, numbers, under[...]
                              <label for="edit-phone">Phone: <span class="required">*</span></label>
-                             <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 09123456789" maxlength="12" pattern="[0-9]+" title="Numbers only, 7-12 digits" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                             <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 09123456789" maxlength="12" pattern="[0-9]+" title="Numbers only, 7-12 digits" oninput="thi[...]
                              <div class="switch-container">
                                  <label class="switch"><input type="checkbox" id="edit-password-toggle"><span class="slider"></span></label>
                                  <label for="edit-password-toggle" class="switch-label">Set Manual Password</label> <!-- Label for checkbox -->
@@ -843,7 +842,7 @@ function truncate($text, $max = 15) {
                  </div>
                  <div class="modal-footer">
                      <button type="button" class="cancel-btn" onclick="closeEditAccountForm()"><i class="fas fa-times"></i> Cancel</button>
-                     <button type="button" class="save-btn" onclick="confirmEditAccount()"><i class="fas fa-save"></i> Save Changes</button>
+                                          <button type="button" class="save-btn" onclick="confirmEditAccount()"><i class="fas fa-save"></i> Save Changes</button>
                  </div>
              </form>
          </div>
@@ -865,17 +864,15 @@ function truncate($text, $max = 15) {
              <h2>Change Status</h2>
              <p id="statusMessage"></p>
              <div class="modal-buttons">
-                 <!-- *** MODIFICATION: Removed 'Pending' button (wasn't here, but confirming) *** -->
+                 <!-- Removed the Reject button -->
                  <button class="approve-btn" onclick="changeStatus('Active')"><i class="fas fa-check"></i> Active</button>
-                 <button class="reject-btn" onclick="changeStatus('Rejected')"><i class="fas fa-times"></i> Reject</button>
-                 <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Inactive</button> <!-- Changed Archive to Inactive -->
+                 <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Inactive</button>
              </div>
              <div class="modal-buttons single-button">
                  <button class="cancel-btn" onclick="closeStatusModal()"><i class="fas fa-times"></i> Cancel</button>
              </div>
          </div>
      </div>
-     <!-- *** NOTE: The confirmation modal logic from the previous step is NOT included here as it wasn't in your latest code snippet. If you want that back, let me know. *** -->
      <!-- Image Zoom Modal -->
      <div id="myModal" class="modal" style="display: none;"> <!-- Initially hidden -->
          <span class="close" onclick="closeModal()">&times;</span>
