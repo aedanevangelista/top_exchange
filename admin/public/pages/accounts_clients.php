@@ -84,8 +84,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $username = trim($_POST['username'] ?? '');
             $email = trim($_POST['email'] ?? '');
             $phone = preg_replace('/[^0-9]/', '', $_POST['phone'] ?? '');
-            $region_code = $_POST['region'] ?? ''; // This is the region code
-            $region_name = $_POST['region_name'] ?? $region_code; // Use submitted name, fallback to code if not sent
+            $region_code = $_POST['region'] ?? ''; 
+            $region_name = $_POST['region_name'] ?? $region_code; 
             $city = $_POST['city'] ?? '';
             $company = trim($_POST['company'] ?? '');
             $company_address = trim($_POST['company_address'] ?? '');
@@ -94,7 +94,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             if (empty($username) || !preg_match('/^[a-zA-Z0-9_]{1,15}$/', $username)) { throw new Exception("Invalid username format or length."); }
             if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) { throw new Exception("Invalid email address."); }
             if (empty($phone) || strlen($phone) < 7 || strlen($phone) > 12) { throw new Exception("Invalid phone number."); }
-            if (empty($region_code)) { throw new Exception("Region is required."); } // Validate code
+            if (empty($region_code)) { throw new Exception("Region is required."); } 
             if (empty($city)) { throw new Exception("City is required."); }
             if (empty($company)) { throw new Exception("Company Name is required."); }
             if (empty($company_address)) { throw new Exception("Ship to Address is required."); }
@@ -111,7 +111,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $business_proof_paths = [];
             $uploadBaseDir = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR;
             $userUploadDir = $uploadBaseDir . $username . DIRECTORY_SEPARATOR;
-            $userUploadUrl = '../../uploads/' . $username . '/';
 
             if (!is_dir($userUploadDir) && !mkdir($userUploadDir, 0775, true) && !is_dir($userUploadDir)) {
                  throw new Exception('Failed to create upload directory. Check server permissions.');
@@ -133,8 +132,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
 
                         $safeFilename = generateSafeFilename($username, $originalFilename);
                         $filesystemTargetPath = $userUploadDir . $safeFilename;
-                        // $urlPath = $userUploadUrl . $safeFilename; // Not directly used for DB, using formatted path
-
+                        
                         if (move_uploaded_file($tmp_name, $filesystemTargetPath)) {
                             $formattedUrlPath = '/admin/uploads/' . $username . '/' . $safeFilename;
                             $business_proof_paths[] = $formattedUrlPath;
@@ -150,7 +148,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             if ($uploaded_count === 0) { throw new Exception("No valid business proof files were uploaded."); }
 
             $business_proof_json = json_encode($business_proof_paths);
-            // Use $region_code for database insertion
             $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')");
             $stmt->bind_param("ssssssssss", $username, $hashedPassword, $email, $phone, $region_code, $city, $company, $company_address, $bill_to_address, $business_proof_json);
 
@@ -159,8 +156,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
 
                 $to = $email;
                 $subject = "Welcome to Top Exchange - Your Account Details";
-                
-                // Use $region_name for the email content
                 $message = <<<EOT
                 Hello {$username},
 
@@ -186,7 +181,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
                 Thank you,
                 The Top Exchange Team
                 EOT;
-
                 $headers = "From: noreply@yourexchange.com\r\n";
                 $headers .= "Reply-To: support@yourexchange.com\r\n";
                 $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
@@ -196,12 +190,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
                 } else {
                     error_log("Failed to send account creation email to: " . $to . ". PHP mail() error.");
                 }
-
             } else {
                 throw new Exception('Database error: Failed to add account. ' . $stmt->error);
             }
             $stmt->close();
-
         } catch (Exception $e) {
             error_log("Add Account Error: " . $e->getMessage());
             $response = ['success' => false, 'message' => $e->getMessage()];
@@ -218,9 +210,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $username = trim($_POST['username'] ?? '');
             $email = trim($_POST['email'] ?? '');
             $phone = preg_replace('/[^0-9]/', '', $_POST['phone'] ?? '');
-            $region_code = $_POST['region'] ?? ''; // Region code
-            // For edit, if region_name is not submitted, we might need to fetch it if email is sent here too.
-            // For now, this part is not sending emails, so only $region_code is used for DB.
+            $region_code = $_POST['region'] ?? ''; 
             $city = $_POST['city'] ?? '';
             $company = trim($_POST['company'] ?? '');
             $company_address = trim($_POST['company_address'] ?? '');
@@ -296,11 +286,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
                  if ($uploaded_count === 0) { throw new Exception("New files were selected, but none were uploaded successfully."); }
             }
              if (empty($final_business_proof_paths) && !$new_files_uploaded) {
-                 // Potentially re-check if proofs are mandatory if this state is problematic
+                 // If no new files and existing paths were empty, this might be an issue if proof is mandatory.
              }
             $business_proof_json_to_save = json_encode($final_business_proof_paths);
 
-            // Use $region_code for database update
             $sql = "UPDATE clients_accounts SET username = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to_address = ?, business_proof = ? $passwordSqlPart WHERE id = ?";
             $stmt = $conn->prepare($sql);
             $types = "sssssssss" . $passwordType . "i";
@@ -315,7 +304,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
                  throw new Exception('Database error: Failed to update account. ' . $stmt->error);
             }
             $stmt->close();
-
          } catch (Exception $e) {
              error_log("Edit Account Error (ID: $id): " . $e->getMessage());
              $response = ['success' => false, 'message' => $e->getMessage()];
@@ -378,9 +366,6 @@ try {
     $stmt->execute();
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
-        // Here, $row['region'] will be the code from DB. If displaying region name in table,
-        // you'd need a way to map code to name (e.g., join or separate query/mapping array).
-        // This change focuses on the email part.
         $accounts_data[] = $row;
     }
     $stmt->close();
@@ -407,7 +392,6 @@ function truncate($text, $max = 15) {
     <link rel="stylesheet" href="/css/accounts_clients.css">
     <link rel="stylesheet" href="/css/toast.css">
     <style>
-        /* Styles remain the same as previous version */
         #myModal { display: none; position: fixed; z-index: 9999; padding-top: 100px; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.9); }
         .modal-content { margin: auto; display: block; max-width: 80%; max-height: 80%; }
         #caption { margin: auto; display: block; width: 80%; max-width: 700px; text-align: center; color: #ccc; padding: 10px 0; height: 150px; }
@@ -561,7 +545,7 @@ function truncate($text, $max = 15) {
                                 <td><?= truncate($row['company']) ?></td>
                                 <td>
                                     <button class="view-address-btn"
-                                        onclick='showAddressInfo(<?= json_encode($row["company_address"] ?? "N/A") ?>, <?= json_encode($row["region"] ?? "N/A") // This will show region code in the modal ?>, <?= json_encode($row["city"] ?? "N/A") ?>, <?= json_encode($row["bill_to_address"] ?? "N/A") ?>)'>
+                                        onclick='showAddressInfo(<?= json_encode($row["company_address"] ?? "N/A") ?>, <?= json_encode($row["region"] ?? "N/A") ?>, <?= json_encode($row["city"] ?? "N/A") ?>, <?= json_encode($row["bill_to_address"] ?? "N/A") ?>)'>
                                         <i class="fas fa-eye"></i> View
                                     </button>
                                 </td>
@@ -571,12 +555,7 @@ function truncate($text, $max = 15) {
                                     if (json_last_error() === JSON_ERROR_NONE && is_array($proofs) && !empty($proofs)) {
                                         foreach ($proofs as $proof) {
                                             if (is_string($proof) && !empty($proof)) {
-                                                $imagePath = $proof;
-                                                if (strpos($proof, '../..') === 0) {
-                                                    $imagePath = str_replace('../../', '/admin/', $proof);
-                                                } else if (strpos($proof, '/admin/uploads/') !== 0) {
-                                                     $imagePath = '/admin/uploads/' . $row['username'] . '/' . basename($proof);
-                                                }
+                                                $imagePath = $proof; // Assuming paths like /admin/uploads/user/file.jpg are stored
                                                 echo '<img src="' . htmlspecialchars($imagePath, ENT_QUOTES, 'UTF-8') .
                                                     '" alt="Business Proof" width="50" onclick="openModal(this)">';
                                             }
@@ -588,21 +567,18 @@ function truncate($text, $max = 15) {
                                 </td>
                                 <td class="<?= 'status-' . strtolower(htmlspecialchars($row['status'] ?? 'inactive')) ?>"><?= htmlspecialchars($row['status'] ?? 'Inactive') ?></td>
                                 <td class="action-buttons">
-                                    <?php
-                                    $business_proof_json_for_js = htmlspecialchars($row['business_proof'] ?? '[]', ENT_QUOTES, 'UTF-8');
-                                    ?>
                                     <button class="edit-btn"
                                         onclick='openEditAccountForm(
                                             <?= intval($row["id"]) ?>,
                                             <?= json_encode($row["username"] ?? "") ?>,
                                             <?= json_encode($row["email"] ?? "") ?>,
                                             <?= json_encode($row["phone"] ?? "") ?>,
-                                            <?= json_encode($row["region"] ?? "") // Pass region code to edit form ?>,
+                                            <?= json_encode($row["region"] ?? "") ?>,
                                             <?= json_encode($row["city"] ?? "") ?>,
                                             <?= json_encode($row["company"] ?? "") ?>,
                                             <?= json_encode($row["company_address"] ?? "") ?>,
                                             <?= json_encode($row["bill_to_address"] ?? "") ?>,
-                                            <?= $business_proof_json_for_js ?>
+                                            <?= json_encode($row['business_proof'] ?? '[]') ?>
                                         )'>
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
@@ -670,14 +646,163 @@ function truncate($text, $max = 15) {
              </form>
          </div>
      </div>
-    <!-- Other Modals -->
-    <div id="contactInfoModal" class="overlay" style="display: none;"> <div class="info-modal-content"> <div class="info-modal-header"> <h2><i class="fas fa-address-card"></i> Contact Information</h2> <span class="info-modal-close" onclick="closeContactInfoModal()">&times;</span> </div> <div class="info-modal-body"> <div class="info-section"> <h3 class="info-section-title"><i class="fas fa-user"></i> Contact Details</h3> <div class="contact-item"> <div class="contact-icon"><i class="fas fa-envelope"></i></div> <div class="contact-text"> <div class="contact-value" id="modalEmail"></div> <div class="contact-label">Email Address</div> </div> </div> <div class="contact-item"> <div class="contact-icon"><i class="fas fa-phone"></i></div> <div class="contact-text"> <div class="contact-value" id="modalPhone"></div> <div class="contact-label">Phone Number</div> </div> </div> </div> </div> </div> </div>
-    <div id="addressInfoModal" class="overlay" style="display: none;"> <div class="info-modal-content"> <div class="info-modal-header"> <h2><i class="fas fa-map-marker-alt"></i> Address Information</h2> <span class="info-modal-close" onclick="closeAddressInfoModal()">&times;</span> </div> <div class="info-modal-body"> <div class="info-section"> <h3 class="info-section-title"><i class="fas fa-building"></i> Company Location</h3> <table class="info-table"> <tr><th>Ship to Address</th><td id="modalCompanyAddress"></td></tr> <tr><th>Bill To Address</th><td id="modalBillToAddress"></td></tr> <tr><th>Region</th><td id="modalRegion"></td></tr> <tr><th>City</th><td id="modalCity"></td></tr> </table> </div> </div> </div> </div>
-    <div id="addConfirmationModal" class="confirmation-modal" style="display: none;"> <div class="confirmation-content"> <div class="confirmation-title">Confirm Add Account</div> <div class="confirmation-message">Add this new client account?</div> <div class="confirmation-buttons"> <button class="confirm-no" onclick="closeAddConfirmation()">No</button> <button class="confirm-yes" onclick="submitAddAccount()">Yes, Add</button> </div> </div> </div>
-    <div id="editAccountOverlay" class="overlay" style="display: none;"> <div class="form-modal-content"> <div class="modal-header"><h2><i class="fas fa-edit"></i> Edit Account</h2></div> <form id="editAccountForm" method="POST" enctype="multipart/form-data" novalidate> <input type="hidden" name="formType" value="edit"><input type="hidden" id="edit-id" name="id"> <input type="hidden" id="existing-business-proof" name="existing_business_proof"> <input type="hidden" id="edit-original-region"><input type="hidden" id="edit-original-city"> <div class="modal-body"> <div id="editAccountError" class="error-message"></div> <div class="two-column-form"> <div class="form-column"> <label for="edit-username">Username: <span class="required">*</span></label> <input type="text" id="edit-username" name="username" required placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Use letters, numbers, underscores only. Max 15 chars."> <label for="edit-phone">Phone: <span class="required">*</span></label> <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 09123456789" maxlength="12" pattern="[0-9]+" title="Numbers only, 7-12 digits" oninput="this.value = this.value.replace(/[^0-9]/g, '');"> <div class="switch-container"> <label class="switch"><input type="checkbox" id="edit-password-toggle"><span class="slider"></span></label> <label for="edit-password-toggle" class="switch-label">Set Manual Password</label> </div> <div id="auto-password-container"> <label for="edit-auto-password">Password:</label> <input type="text" id="edit-auto-password" readonly class="auto-generated" placeholder="Password unchanged"> <div class="password-note">Leave toggle off to keep current password.</div> </div> <div id="manual-password-container" style="display: none;"> <label for="edit-manual-password">New Password: <span class="required">*</span></label> <div class="password-container"> <input type="password" id="edit-manual-password" name="manual_password" placeholder="Enter new password" minlength="6"> <span class="toggle-password" onclick="togglePasswordVisibility('edit-manual-password')"><i class="fas fa-eye"></i></span> </div> <div class="password-note">Min 6 characters.</div> </div> <label for="edit-email">Email: <span class="required">*</span></label> <input type="email" id="edit-email" name="email" required maxlength="40" placeholder="e.g., user@example.com"> </div> <div class="form-column"> <label for="edit-region">Region: <span class="required">*</span></label> <select id="edit-region" name="region" required><option value="">Select Region</option></select> <label for="edit-city">City: <span class="required">*</span></label> <select id="edit-city" name="city" required><option value="">Select City</option></select> <label for="edit-company">Company Name: <span class="required">*</span></label> <input type="text" id="edit-company" name="company" required maxlength="25" placeholder="e.g., Top Exchange Food Corp"> </div> <div class="form-full-width"> <div class="address-group"> <h3><i class="fas fa-building"></i> Company Address</h3> <label for="edit-company_address">Ship to Address: <span class="required">*</span></label> <textarea id="edit-company_address" name="company_address" required maxlength="100" placeholder="e.g., 123 Main St, Brgy, City"></textarea> <label for="edit-bill_to_address">Bill To Address: <span class="required">*</span></label> <textarea id="edit-bill_to_address" name="bill_to_address" required maxlength="100" placeholder="e.g., 456 Billing St, Brgy, City"></textarea> </div> <div id="edit-business-proof-container"></div> <label for="edit-business_proof">Upload New Business Proof: <span class="file-info">(Optional - Replaces existing)</span></label> <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple title="Max 3 images, 20MB/ea. Replaces existing proofs."> </div> </div> </div> <div class="modal-footer"> <button type="button" class="cancel-btn" onclick="closeEditAccountForm()"><i class="fas fa-times"></i> Cancel</button> <button type="button" class="save-btn" onclick="confirmEditAccount()"><i class="fas fa-save"></i> Save Changes</button> </div> </form> </div> </div>
-    <div id="editConfirmationModal" class="confirmation-modal" style="display: none;"> <div class="confirmation-content"> <div class="confirmation-title">Confirm Edit Account</div> <div class="confirmation-message">Save these changes?</div> <div class="confirmation-buttons"> <button class="confirm-no" onclick="closeEditConfirmation()">No</button> <button class="confirm-yes" onclick="submitEditAccount()">Yes, Save</button> </div> </div> </div>
-    <div id="statusModal" class="overlay" style="display: none;"> <div class="overlay-content"> <h2>Change Status</h2> <p id="statusMessage"></p> <div class="modal-buttons"> <button class="approve-btn" onclick="changeStatus('Active')"><i class="fas fa-check"></i> Active</button> <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Inactive</button> </div> <div class="modal-buttons single-button"> <button class="cancel-btn" onclick="closeStatusModal()"><i class="fas fa-times"></i> Cancel</button> </div> </div> </div>
-    <div id="myModal" class="modal" style="display: none;"> <span class="close" onclick="closeModal()">&times;</span> <img class="modal-content" id="img01"> <div id="caption"></div> </div>
+    <!-- Contact Info Modal -->
+    <div id="contactInfoModal" class="overlay" style="display: none;"> 
+        <div class="info-modal-content"> 
+            <div class="info-modal-header"> 
+                <h2><i class="fas fa-address-card"></i> Contact Information</h2> 
+                <span class="info-modal-close" onclick="closeContactInfoModal()">&times;</span> 
+            </div> 
+            <div class="info-modal-body"> 
+                <div class="info-section"> 
+                    <h3 class="info-section-title"><i class="fas fa-user"></i> Contact Details</h3> 
+                    <div class="contact-item"> 
+                        <div class="contact-icon"><i class="fas fa-envelope"></i></div> 
+                        <div class="contact-text"> 
+                            <div class="contact-value" id="modalEmail"></div> 
+                            <div class="contact-label">Email Address</div> 
+                        </div> 
+                    </div> 
+                    <div class="contact-item"> 
+                        <div class="contact-icon"><i class="fas fa-phone"></i></div> 
+                        <div class="contact-text"> 
+                            <div class="contact-value" id="modalPhone"></div> 
+                            <div class="contact-label">Phone Number</div> 
+                        </div> 
+                    </div> 
+                </div> 
+            </div> 
+        </div> 
+    </div>
+    <!-- Address Info Modal -->
+    <div id="addressInfoModal" class="overlay" style="display: none;"> 
+        <div class="info-modal-content"> 
+            <div class="info-modal-header"> 
+                <h2><i class="fas fa-map-marker-alt"></i> Address Information</h2> 
+                <span class="info-modal-close" onclick="closeAddressInfoModal()">&times;</span> 
+            </div> 
+            <div class="info-modal-body"> 
+                <div class="info-section"> 
+                    <h3 class="info-section-title"><i class="fas fa-building"></i> Company Location</h3> 
+                    <table class="info-table"> 
+                        <tr><th>Ship to Address</th><td id="modalCompanyAddress"></td></tr> 
+                        <tr><th>Bill To Address</th><td id="modalBillToAddress"></td></tr> 
+                        <tr><th>Region</th><td id="modalRegion"></td></tr> 
+                        <tr><th>City</th><td id="modalCity"></td></tr> 
+                    </table> 
+                </div> 
+            </div> 
+        </div> 
+    </div>
+    <!-- Add Confirmation Modal -->
+    <div id="addConfirmationModal" class="confirmation-modal" style="display: none;"> 
+        <div class="confirmation-content"> 
+            <div class="confirmation-title">Confirm Add Account</div> 
+            <div class="confirmation-message">Add this new client account?</div> 
+            <div class="confirmation-buttons"> 
+                <button class="confirm-no" onclick="closeAddConfirmation()">No</button> 
+                <button class="confirm-yes" onclick="submitAddAccount()">Yes, Add</button> 
+            </div> 
+        </div> 
+    </div>
+    <!-- Edit Account Modal -->
+    <div id="editAccountOverlay" class="overlay" style="display: none;"> 
+        <div class="form-modal-content"> 
+            <div class="modal-header"><h2><i class="fas fa-edit"></i> Edit Account</h2></div> 
+            <form id="editAccountForm" method="POST" enctype="multipart/form-data" novalidate> 
+                <input type="hidden" name="formType" value="edit">
+                <input type="hidden" id="edit-id" name="id"> 
+                <input type="hidden" id="existing-business-proof" name="existing_business_proof"> 
+                <input type="hidden" id="edit-original-region">
+                <input type="hidden" id="edit-original-city"> 
+                <div class="modal-body"> 
+                    <div id="editAccountError" class="error-message"></div> 
+                    <div class="two-column-form"> 
+                        <div class="form-column"> 
+                            <label for="edit-username">Username: <span class="required">*</span></label> 
+                            <input type="text" id="edit-username" name="username" required placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Use letters, numbers, underscores only. Max 15 chars."> 
+                            <label for="edit-phone">Phone: <span class="required">*</span></label> 
+                            <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 09123456789" maxlength="12" pattern="[0-9]+" title="Numbers only, 7-12 digits" oninput="this.value = this.value.replace(/[^0-9]/g, '');"> 
+                            <div class="switch-container"> 
+                                <label class="switch"><input type="checkbox" id="edit-password-toggle"><span class="slider"></span></label> 
+                                <label for="edit-password-toggle" class="switch-label">Set Manual Password</label> 
+                            </div> 
+                            <div id="auto-password-container"> 
+                                <label for="edit-auto-password">Password:</label> 
+                                <input type="text" id="edit-auto-password" readonly class="auto-generated" placeholder="Password unchanged"> 
+                                <div class="password-note">Leave toggle off to keep current password.</div> 
+                            </div> 
+                            <div id="manual-password-container" style="display: none;"> 
+                                <label for="edit-manual-password">New Password: <span class="required">*</span></label> 
+                                <div class="password-container"> 
+                                    <input type="password" id="edit-manual-password" name="manual_password" placeholder="Enter new password" minlength="6"> 
+                                    <span class="toggle-password" onclick="togglePasswordVisibility('edit-manual-password')"><i class="fas fa-eye"></i></span> 
+                                </div> 
+                                <div class="password-note">Min 6 characters.</div> 
+                            </div> 
+                            <label for="edit-email">Email: <span class="required">*</span></label> 
+                            <input type="email" id="edit-email" name="email" required maxlength="40" placeholder="e.g., user@example.com"> 
+                        </div> 
+                        <div class="form-column"> 
+                            <label for="edit-region">Region: <span class="required">*</span></label> 
+                            <select id="edit-region" name="region" required><option value="">Select Region</option></select> 
+                            <label for="edit-city">City: <span class="required">*</span></label> 
+                            <select id="edit-city" name="city" required><option value="">Select City</option></select> 
+                            <label for="edit-company">Company Name: <span class="required">*</span></label> 
+                            <input type="text" id="edit-company" name="company" required maxlength="25" placeholder="e.g., Top Exchange Food Corp"> 
+                        </div> 
+                        <div class="form-full-width"> 
+                            <div class="address-group"> 
+                                <h3><i class="fas fa-building"></i> Company Address</h3> 
+                                <label for="edit-company_address">Ship to Address: <span class="required">*</span></label> 
+                                <textarea id="edit-company_address" name="company_address" required maxlength="100" placeholder="e.g., 123 Main St, Brgy, City"></textarea> 
+                                <label for="edit-bill_to_address">Bill To Address: <span class="required">*</span></label> 
+                                <textarea id="edit-bill_to_address" name="bill_to_address" required maxlength="100" placeholder="e.g., 456 Billing St, Brgy, City"></textarea> 
+                            </div> 
+                            <div id="edit-business-proof-container"></div> 
+                            <label for="edit-business_proof">Upload New Business Proof: <span class="file-info">(Optional - Replaces existing)</span></label> 
+                            <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple title="Max 3 images, 20MB/ea. Replaces existing proofs."> 
+                        </div> 
+                    </div> 
+                </div> 
+                <div class="modal-footer"> 
+                    <button type="button" class="cancel-btn" onclick="closeEditAccountForm()"><i class="fas fa-times"></i> Cancel</button> 
+                    <button type="button" class="save-btn" onclick="confirmEditAccount()"><i class="fas fa-save"></i> Save Changes</button> 
+                </div> 
+            </form> 
+        </div> 
+    </div>
+    <!-- Edit Confirmation Modal -->
+    <div id="editConfirmationModal" class="confirmation-modal" style="display: none;"> 
+        <div class="confirmation-content"> 
+            <div class="confirmation-title">Confirm Edit Account</div> 
+            <div class="confirmation-message">Save these changes?</div> 
+            <div class="confirmation-buttons"> 
+                <button class="confirm-no" onclick="closeEditConfirmation()">No</button> 
+                <button class="confirm-yes" onclick="submitEditAccount()">Yes, Save</button> 
+            </div> 
+        </div> 
+    </div>
+    <!-- Status Change Modal -->
+    <div id="statusModal" class="overlay" style="display: none;"> 
+        <div class="overlay-content"> 
+            <h2>Change Status</h2> 
+            <p id="statusMessage"></p> 
+            <div class="modal-buttons"> 
+                <button class="approve-btn" onclick="changeStatus('Active')"><i class="fas fa-check"></i> Active</button> 
+                <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Inactive</button> 
+            </div> 
+            <div class="modal-buttons single-button"> 
+                <button class="cancel-btn" onclick="closeStatusModal()"><i class="fas fa-times"></i> Cancel</button> 
+            </div> 
+        </div> 
+    </div>
+    <!-- Image Zoom Modal -->
+    <div id="myModal" class="modal" style="display: none;"> 
+        <span class="close" onclick="closeModal()">&times;</span> 
+        <img class="modal-content" id="img01"> 
+        <div id="caption"></div> 
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
@@ -692,13 +817,17 @@ function truncate($text, $max = 15) {
                 errorElement.style.display = 'block';
             }
         }
-        function resetErrors() { $('.error-message').hide().text(''); }
+        function resetErrors() { 
+            $('.error-message').hide().text(''); 
+        }
         function showToast(message, type = 'info') {
             if (typeof toastr !== 'undefined') {
                 toastr.options = { closeButton: false, progressBar: true, positionClass: "toast-top-right", timeOut: 3500, extendedTimeOut: 1000, preventDuplicates: true };
                 const toastrFunc = toastr[type] || toastr.info;
                 toastrFunc(message);
-            } else { console.log(`Toast [${type}]: ${message}`); }
+            } else { 
+                console.log(`Toast [${type}]: ${message}`); 
+            }
         }
 
         function openModal(imgElement) {
@@ -711,22 +840,27 @@ function truncate($text, $max = 15) {
                 captionText.innerHTML = imgElement.alt || 'Business Proof';
             }
         }
-        function closeModal() { document.getElementById("myModal").style.display = "none"; }
+        function closeModal() { 
+            document.getElementById("myModal").style.display = "none"; 
+        }
         function showContactInfo(email, phone) {
             document.getElementById("modalEmail").textContent = email || 'N/A';
             document.getElementById("modalPhone").textContent = phone || 'N/A';
             $('#contactInfoModal').css('display', 'flex'); 
         }
-        function closeContactInfoModal() { $('#contactInfoModal').hide(); }
+        function closeContactInfoModal() { 
+            $('#contactInfoModal').hide(); 
+        }
         function showAddressInfo(companyAddress, region, city, billToAddress) {
             document.getElementById("modalCompanyAddress").textContent = companyAddress || 'N/A';
             document.getElementById("modalBillToAddress").textContent = billToAddress || 'N/A';
-            // For Address Info Modal, region is still code. To show name, would need mapping here too.
             document.getElementById("modalRegion").textContent = region || 'N/A'; 
             document.getElementById("modalCity").textContent = city || 'N/A';
             $('#addressInfoModal').css('display', 'flex');
         }
-        function closeAddressInfoModal() { $('#addressInfoModal').hide(); }
+        function closeAddressInfoModal() { 
+            $('#addressInfoModal').hide(); 
+        }
 
         function togglePasswordVisibility(fieldId) {
             const passwordField = document.getElementById(fieldId);
@@ -753,7 +887,9 @@ function truncate($text, $max = 15) {
                      select.value = selectedRegionCode;
                      if (select.value === selectedRegionCode) {
                          setTimeout(() => select.dispatchEvent(new Event('change')), 0);
-                     } else { console.warn(`Region code ${selectedRegionCode} not found in ${selectElementId}.`);}
+                     } else { 
+                         console.warn(`Region code ${selectedRegionCode} not found in ${selectElementId}.`);
+                     }
                  }
              } catch (error) {
                  console.error(`Error loading regions for ${selectElementId}:`, error);
@@ -767,8 +903,9 @@ function truncate($text, $max = 15) {
              if (!regionCode) return;
              try {
                  let cities;
-                 if (regionCityMap.has(regionCode)) { cities = regionCityMap.get(regionCode); } 
-                 else {
+                 if (regionCityMap.has(regionCode)) { 
+                     cities = regionCityMap.get(regionCode); 
+                 } else {
                      const response = await fetch(`https://psgc.gitlab.io/api/regions/${regionCode}/cities-municipalities/`);
                      if (!response.ok) throw new Error(`HTTP ${response.status}`);
                      cities = await response.json();
@@ -779,7 +916,9 @@ function truncate($text, $max = 15) {
                  citySelect.disabled = false;
                  if (selectedCityName) {
                      citySelect.value = selectedCityName;
-                     if (citySelect.value !== selectedCityName) { console.warn(`City name \"${selectedCityName}\" not found in ${citySelectId} for region ${regionCode}.`);}
+                     if (citySelect.value !== selectedCityName) { 
+                         console.warn(`City name \"${selectedCityName}\" not found in ${citySelectId} for region ${regionCode}.`);
+                     }
                  }
              } catch (error) {
                  console.error(`Error loading cities for ${citySelectId}:`, error);
@@ -799,7 +938,9 @@ function truncate($text, $max = 15) {
                  loadPhilippinesRegions('region'); 
              }
         }
-        function closeAddAccountForm() { $('#addAccountOverlay').hide(); }
+        function closeAddAccountForm() { 
+            $('#addAccountOverlay').hide(); 
+        }
         function confirmAddAccount() {
             resetErrors();
             const form = document.getElementById('addAccountForm');
@@ -810,26 +951,29 @@ function truncate($text, $max = 15) {
             }
             $('#addConfirmationModal').css('display', 'flex');
         }
-        function closeAddConfirmation() { $('#addConfirmationModal').hide(); }
+        function closeAddConfirmation() { 
+            $('#addConfirmationModal').hide(); 
+        }
         
         function submitAddAccount() {
             closeAddConfirmation();
             const form = document.getElementById('addAccountForm');
             const formData = new FormData(form);
             formData.append('ajax', true);
-
-            // *** MODIFICATION: Add selected region name to FormData ***
             const regionSelect = document.getElementById('region');
-            if (regionSelect && regionSelect.selectedIndex > 0) { // Ensure an option is selected
+            if (regionSelect && regionSelect.selectedIndex > 0) {
                 const selectedRegionName = regionSelect.options[regionSelect.selectedIndex].text;
                 formData.append('region_name', selectedRegionName);
             } else {
-                formData.append('region_name', ''); // Send empty if not selected or only placeholder
+                formData.append('region_name', '');
             }
-            // *** END MODIFICATION ***
-
             $.ajax({
-                url: window.location.pathname, type: 'POST', data: formData, contentType: false, processData: false, dataType: 'json',
+                url: window.location.pathname, 
+                type: 'POST', 
+                data: formData, 
+                contentType: false, 
+                processData: false, 
+                dataType: 'json',
                 success: function(response) {
                     if (response && response.success) {
                         showToast('Account added successfully!', 'success');
@@ -852,7 +996,9 @@ function truncate($text, $max = 15) {
             const overlay = document.getElementById("editAccountOverlay");
             const form = document.getElementById("editAccountForm");
             if (!overlay || !form) return;
-            form.reset(); resetErrors();
+            form.reset(); 
+            resetErrors();
+            
             $('#edit-id').val(id);
             $('#edit-username').val(username);
             $('#edit-email').val(email);
@@ -862,43 +1008,72 @@ function truncate($text, $max = 15) {
             $('#edit-bill_to_address').val(billToAddress);
             $('#edit-password-toggle').prop('checked', false).trigger('change');
             $('#edit-manual-password').val('');
+            
             const proofContainer = $('#edit-business-proof-container');
             const existingProofInput = $('#existing-business-proof');
             proofContainer.empty().append('<h4>Current Business Proof:</h4>'); 
-            existingProofInput.val('[]');
+            
             let proofArray = [];
-            if (businessProofEncoded && businessProofEncoded !== 'null' && businessProofEncoded !== '[]') {
+            if (businessProofEncoded && typeof businessProofEncoded === 'string' && businessProofEncoded !== 'null' && businessProofEncoded !== '[]') {
                 try {
-                    const decodedString = $('<textarea/>').html(businessProofEncoded).text();
-                    proofArray = JSON.parse(decodedString);
-                    if (!Array.isArray(proofArray)) { proofArray = []; console.warn("Parsed business proof was not an array.");}
-                    existingProofInput.val(JSON.stringify(proofArray)); 
+                    proofArray = JSON.parse(businessProofEncoded); 
+                    if (!Array.isArray(proofArray)) { 
+                        proofArray = []; 
+                        console.warn("Parsed business proof was not an array after JSON.parse.");
+                    }
+                    existingProofInput.val(businessProofEncoded); 
                 } catch (e) {
-                    console.error("Error processing business proofs:", e, "Input:", businessProofEncoded);
+                    console.error("Error processing business proofs (JSON.parse failed):", e, "Input string:", businessProofEncoded);
                     proofContainer.append('<p style="color: red;">Error loading current proofs.</p>');
                     proofArray = []; 
+                    existingProofInput.val('[]'); 
                 }
+            } else if (Array.isArray(businessProofEncoded)) { 
+                 console.warn("businessProofEncoded was an array, attempting to use directly. PHP output might be incorrect.", businessProofEncoded);
+                 proofArray = businessProofEncoded; 
+                 existingProofInput.val(JSON.stringify(proofArray)); 
+            } else {
+                existingProofInput.val('[]'); 
             }
+
             if (proofArray.length > 0) {
                 proofArray.forEach(proof => {
-                    if (typeof proof === 'string') {
+                    if (typeof proof === 'string' && proof.trim() !== '') {
                         let imagePath = proof;
-                         if (proof.startsWith('../..')) { imagePath = proof.replace('../../', '/admin/');} 
-                         else if (!proof.startsWith('/')) { imagePath = '/admin/uploads/' + username + '/' + proof; }
-                        $('<img>', { src: imagePath, alt: 'Business Proof', width: 50, css: { margin: '3px', border: '1px solid #ccc', padding: '1px', cursor: 'pointer', backgroundColor: '#fff', borderRadius: '3px' }, click: function() { openModal(this); } }).appendTo(proofContainer);
-                    } else { console.warn('Skipping invalid proof item for display:', proof); }
+                         if (!proof.startsWith('/') && !proof.match(/^https?:\/\//)) {
+                            imagePath = proof; 
+                         }
+                        $('<img>', { 
+                            src: imagePath, 
+                            alt: 'Business Proof', 
+                            css: { margin: '3px', border: '1px solid #ccc', padding: '1px', cursor: 'pointer', backgroundColor: '#fff', borderRadius: '3px', maxWidth: '60px', height: 'auto' },
+                            click: function() { openModal(this); } 
+                        }).appendTo(proofContainer);
+                    } else { 
+                        console.warn('Skipping invalid proof item for display:', proof); 
+                    }
                 });
-            } else { proofContainer.append('<p>No business proof images on record.</p>'); }
+            } else { 
+                proofContainer.append('<p>No business proof images on record.</p>'); 
+            }
+            
             $('#edit-business_proof').val(null);
-            $('#edit-original-region').val(regionCode); // Storing the region code
+            
+            $('#edit-original-region').val(regionCode);
             $('#edit-original-city').val(cityName);
-            loadPhilippinesRegions('edit-region', regionCode).then(() => { // Pass regionCode here
-                if ($('#edit-region').val() === regionCode && regionCode) { loadCities(regionCode, 'edit-city', cityName); } 
-                else if (!regionCode) { $('#edit-city').empty().append('<option value="">Select City</option>').prop('disabled', true); }
+            loadPhilippinesRegions('edit-region', regionCode).then(() => {
+                if ($('#edit-region').val() === regionCode && regionCode) { 
+                    loadCities(regionCode, 'edit-city', cityName); 
+                } else if (!regionCode) { 
+                    $('#edit-city').empty().append('<option value="">Select City</option>').prop('disabled', true); 
+                }
             });
             $(overlay).css('display', 'flex'); 
         }
-        function closeEditAccountForm() { $('#editAccountOverlay').hide(); }
+
+        function closeEditAccountForm() { 
+            $('#editAccountOverlay').hide(); 
+        }
         function confirmEditAccount() {
             resetErrors();
             const form = document.getElementById('editAccountForm');
@@ -906,23 +1081,31 @@ function truncate($text, $max = 15) {
             const manualPasswordInput = document.getElementById('edit-manual-password');
             if (passwordToggle && manualPasswordInput && passwordToggle.checked && manualPasswordInput.value.length > 0 && manualPasswordInput.value.length < 6) {
                  showError('editAccountError', 'Manual password must be at least 6 characters.');
-                 manualPasswordInput.focus(); return;
+                 manualPasswordInput.focus(); 
+                 return;
             }
             if (!form || !form.checkValidity()) {
                 form.reportValidity(); 
-                showError('editAccountError', 'Please fill all required fields correctly.'); return;
+                showError('editAccountError', 'Please fill all required fields correctly.'); 
+                return;
             }
             $('#editConfirmationModal').css('display', 'flex');
         }
-        function closeEditConfirmation() { $('#editConfirmationModal').hide(); }
+        function closeEditConfirmation() { 
+            $('#editConfirmationModal').hide(); 
+        }
         function submitEditAccount() {
             closeEditConfirmation();
             const form = document.getElementById('editAccountForm');
             const formData = new FormData(form);
             formData.append('ajax', true);
-            // If email is sent on edit, similar logic for region_name would be needed here.
             $.ajax({
-                url: window.location.pathname, type: 'POST', data: formData, contentType: false, processData: false, dataType: 'json',
+                url: window.location.pathname, 
+                type: 'POST', 
+                data: formData, 
+                contentType: false, 
+                processData: false, 
+                dataType: 'json',
                 success: function(response) {
                     if (response && response.success) {
                         showToast('Account updated successfully!', 'success');
@@ -950,42 +1133,57 @@ function truncate($text, $max = 15) {
                 $(modal).css('display', 'flex');
             }
         }
-        function closeStatusModal() { $('#statusModal').hide(); currentAccountId = 0; }
+        function closeStatusModal() { 
+            $('#statusModal').hide(); 
+            currentAccountId = 0; 
+        }
         function changeStatus(newStatus) {
             if (!currentAccountId) return;
             $.ajax({
-                url: window.location.pathname, type: 'POST', data: { ajax: true, formType: 'status', id: currentAccountId, status: newStatus }, dataType: 'json',
+                url: window.location.pathname, 
+                type: 'POST', 
+                data: { ajax: true, formType: 'status', id: currentAccountId, status: newStatus }, 
+                dataType: 'json',
                 success: function(response) {
                     if (response && response.success) {
                         showToast(`Status changed to ${newStatus}!`, 'success');
                         closeStatusModal(); 
                         setTimeout(() => window.location.reload(), 1500); 
-                    } else { showToast(response?.message || 'Error changing status.', 'error'); }
+                    } else { 
+                        showToast(response?.message || 'Error changing status.', 'error'); 
+                    }
                 },
                 error: function(xhr, status, error) {
                     console.error("Change Status AJAX Error:", status, error, xhr.responseText);
                     showToast('Server error occurred while changing status.', 'error');
                     closeStatusModal(); 
                 },
-                complete: function() { currentAccountId = 0; }
+                complete: function() { 
+                    currentAccountId = 0; 
+                }
             });
         }
 
         function filterByStatus() {
             var status = document.getElementById("statusFilter").value;
             const url = new URL(window.location.href);
-            if (status) { url.searchParams.set('status', status); }
-            else { url.searchParams.delete('status'); }
+            if (status) { 
+                url.searchParams.set('status', status); 
+            } else { 
+                url.searchParams.delete('status'); 
+            }
             window.location.href = url.toString();
         }
 
         $(document).ready(function() { 
              loadPhilippinesRegions('region');
-             $('#region').on('change', function() { loadCities(this.value, 'city'); });
+             $('#region').on('change', function() { 
+                 loadCities(this.value, 'city'); 
+             });
              $('#edit-region').on('change', function() {
-                 const selectedCity = $('#edit-original-city').val(); // This is city name
-                 const currentRegionCode = $(this).val(); // This is region code
-                 const originalRegionCode = $('#edit-original-region').val(); // This is original region code
+                 const selectedCity = $('#edit-original-city').val();
+                 const currentRegionCode = $(this).val();
+                 const originalRegionCode = $('#edit-original-region').val();
                  loadCities(currentRegionCode, 'edit-city', currentRegionCode === originalRegionCode ? selectedCity : null);
              });
              const passwordToggle = document.getElementById('edit-password-toggle');
