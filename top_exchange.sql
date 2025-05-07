@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: May 04, 2025 at 10:06 AM
+-- Generation Time: May 07, 2025 at 06:38 PM
 -- Server version: 10.11.10-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -48,8 +48,9 @@ INSERT INTO `accounts` (`id`, `username`, `password`, `created_at`, `role`, `sta
 (60, 'Manager', '123', '2025-03-05 23:27:49', 'Manager', 'Active', NULL, NULL),
 (61, 'Accountant', '123', '2025-03-05 23:27:55', 'Accountant', 'Active', NULL, NULL),
 (73, 'Owner', '123', '2025-04-29 17:09:36', 'Owner', 'Active', NULL, NULL),
-(74, 'asd', '123', '2025-04-30 12:55:03', 'Super Admin', 'Active', NULL, NULL),
-(75, 'Developer - Jeff', 'j20160112505', '2025-05-01 15:34:27', 'Super Admin', 'Active', NULL, NULL);
+(76, 'User-Developer', '123', '2025-05-05 02:19:53', 'Super Admin', 'Active', NULL, NULL),
+(77, 'User-Aedan', '123', '2025-05-05 02:27:32', 'Super Admin', 'Active', NULL, NULL),
+(78, 'Acc-Lisa', '123', '2025-05-05 08:21:48', 'Accountant', 'Active', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -65,14 +66,6 @@ CREATE TABLE `balance_history` (
   `created_by` varchar(100) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `balance_history`
---
-
-INSERT INTO `balance_history` (`id`, `username`, `amount`, `notes`, `created_by`, `created_at`) VALUES
-(8, 'Jericho', 20.00, 'test', 'system', '2025-05-04 07:53:51'),
-(9, 'Jericho', 203.00, '', 'system', '2025-05-04 07:54:25');
 
 -- --------------------------------------------------------
 
@@ -106,12 +99,7 @@ CREATE TABLE `clients_accounts` (
 --
 
 INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, `region`, `city`, `company`, `company_address`, `bill_to_address`, `business_proof`, `status`, `balance`, `created_at`, `client_session_id`, `client_last_login`, `verification_code`, `code_expires_at`) VALUES
-(38, 'solaire', '$2y$10$pT93oMuQ4rRfnG6aoBsRjun1e/OGKb89wYk7CvLISPyAcJvSb/IWi', 'solairesolaire@gmail.com', '123123123', '130000000', 'City of Malabon', 'Solaire', '22 Solaire Solaire', '22 Solaire Solaire', '[\"\\/admin\\/uploads\\/solaire\\/solaire_product_image_532faba62b.png\"]', 'Pending', 0.00, '2025-05-01 21:11:22', NULL, NULL, NULL, NULL),
-(39, 'Boters', '$2y$10$iXUK/0cO4xRYMz/arXwZq.0HQ7lPeZgMEHbe9WTi3YzuZBg8tDT/q', 'jefferson45santonia@gmail.com', '09185585149', '130000000', 'Quezon City', 'Meow', 'asdsadsadsad', 'sadsadsadsadassa', '[]', 'Active', 0.00, '2025-05-01 21:22:49', NULL, NULL, NULL, NULL),
-(40, 'asdasda', '$2y$10$iwmbX5nwUnBrqXOfBf2T/OZgEeyFvjn5iEP1X1Rb/vS6a5ZxEYu8G', 'asdasdjkashd@gnauk.com', '12312312', '030000000', 'General Mamerto Natividad', 'asdasd', 'kajshdkjasdhjaksd', 'kajshdkjasdhjaksd', '[\"\\/admin\\/uploads\\/asdasda\\/asdasda_Screenshot_1_9003d37661.png\"]', 'Pending', 0.00, '2025-05-01 22:11:15', NULL, NULL, NULL, NULL),
-(41, 'HeyHeyHey', '$2y$10$2LxoSzE0WXY1FZlFw6iLPuLNBnfKl1yB31V85zUGHOlQdRmxx9anu', 'ryanfrancisrodriguez02@gmail.com', '09154864843', '130000000', 'Quezon City', 'C & C', '1-B Palomaria Street Veterans Village Quezon CIty', '1-B Palomaria Street Veterans Village Quezon CIty', '[]', 'Active', 0.00, '2025-05-02 02:18:11', NULL, NULL, NULL, NULL),
-(42, 'sheila', '$2y$10$W41rQDTCiov1ZCmWnFbRM.vEZOLNiI6OF.K4UxowSJvuQTbCJvFWK', 'sheilaboridor23@gmail.com', '099966043932', '130000000', 'Quezon City', 'CITY', '49 agno ext tatalon Quezon City', 'fnafasfaf', '[\"..\\/..\\/uploads\\/sheila\\/sheila_Screenshot_2025-04-22_163058_c7bfa78bf5.png\"]', 'Active', 0.00, '2025-05-02 05:24:15', NULL, NULL, NULL, NULL),
-(43, 'Jericho', '$2y$10$zfp4s8tN1g51wSF/ULoQ6u66/PFl2W9WPR1J.uLtWfho8ekqN0TyW', 'jericho.santoniax@gmail.com', '091234567890', '130000000', 'Quezon City', 'ES', '123 Sample Street', '123 Sample Street', '[\"..\\/..\\/uploads\\/Jericho\\/Jericho_1000005938_cd50044dbd.jpg\"]', 'Active', 223.00, '2025-05-04 07:18:49', NULL, NULL, NULL, NULL);
+(52, 'solaire', '$2y$10$KWDuRjlT42NoK2IVAg0IceRLonEllWRk3WpOSNxLU4U/u330ly75S', 'solairemanilainc@gmail.com', '09760268643', '130000000', 'Quezon City', 'Solaire Company Inc', '123 Manila St.', '123 Manila St.', '[\"\\/admin\\/uploads\\/solaire\\/solaire_Sales_Report_af0e188f47.png\"]', 'Active', 0.00, '2025-05-05 08:14:52', NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -122,10 +110,13 @@ INSERT INTO `clients_accounts` (`id`, `username`, `password`, `email`, `phone`, 
 CREATE TABLE `drivers` (
   `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
+  `username` varchar(50) NOT NULL,
+  `password` varchar(255) NOT NULL,
   `address` text NOT NULL,
   `contact_no` varchar(50) NOT NULL,
   `availability` enum('Available','Not Available') NOT NULL DEFAULT 'Available',
   `area` enum('North','South') NOT NULL DEFAULT 'North',
+  `status` enum('Active','Archive') NOT NULL DEFAULT 'Active',
   `current_deliveries` int(11) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -135,9 +126,10 @@ CREATE TABLE `drivers` (
 -- Dumping data for table `drivers`
 --
 
-INSERT INTO `drivers` (`id`, `name`, `address`, `contact_no`, `availability`, `area`, `current_deliveries`, `created_at`, `updated_at`) VALUES
-(1, 'Manong Ryan', 'Mexico St.', '092893749823', 'Available', 'North', 14, '2025-04-25 04:19:29', '2025-05-04 09:20:56'),
-(2, 'Aedan', '22 Blabla St.', '639384923843', 'Available', 'South', 0, '2025-05-04 08:32:15', '2025-05-04 09:20:12');
+INSERT INTO `drivers` (`id`, `name`, `username`, `password`, `address`, `contact_no`, `availability`, `area`, `status`, `current_deliveries`, `created_at`, `updated_at`) VALUES
+(4, 'Aedan Evangelista', 'aedan', '$2y$10$uPIjJ2VgVwgs6tdY3B8Z7Oh5P.7ANstwEniWBsGblMeXcxsAbb36.', '123 Aedan\'s Restaurant', '094289374892', 'Available', 'North', 'Active', 7, '2025-05-04 11:31:37', '2025-05-05 07:09:31'),
+(5, 'Ryan Rodriguez', 'Driver123', '$2y$10$ikFjRhq6PKJhoWhP7otfb.C4WKdviANcsGFps17qOTauCl398Scem', '9A Alibangbang Street Quezon City', '09164435991', 'Available', 'South', 'Active', 0, '2025-05-05 07:14:10', '2025-05-05 07:14:10'),
+(6, 'Mark James', 'Mark', '$2y$10$/xltp5uTw.Z3FfRJgXw43OgK1l8pzH2zefrrKFSap/eZDy6nzlrm2', '9A Alibangbang Street Quezon City', '09164435991', 'Available', 'North', 'Active', 1, '2025-05-05 08:43:42', '2025-05-05 09:15:57');
 
 -- --------------------------------------------------------
 
@@ -158,19 +150,10 @@ CREATE TABLE `driver_assignments` (
 --
 
 INSERT INTO `driver_assignments` (`id`, `po_number`, `driver_id`, `assigned_at`, `status`) VALUES
-(1, 'maamcristylen-3', 1, '2025-04-29 14:48:53', ''),
-(2, 'maamcristylen-4', 1, '2025-04-29 15:26:56', ''),
-(3, 'Ryan-1', 1, '2025-04-29 16:53:12', ''),
-(4, 'Boters-1', 1, '2025-05-01 19:02:23', 'Assigned'),
-(5, 'monalizareyes-1', 1, '2025-04-30 03:08:12', 'Assigned'),
-(7, 'monalizareyes-2', 1, '2025-04-30 08:26:50', ''),
-(9, 'PO-HeyHeyHey-001', 1, '2025-05-01 17:42:05', ''),
-(10, 'PO-Boters-001', 1, '2025-05-03 19:44:43', ''),
-(11, 'PO-HeyHeyHey-002', 1, '2025-05-02 17:37:23', ''),
-(12, 'PO-Boters-012', 1, '2025-05-03 13:27:23', 'Assigned'),
-(13, 'PO-Boters-002', 1, '2025-05-04 05:13:14', 'Assigned'),
-(18, 'PO-Boters-003', 1, '2025-05-04 05:46:52', 'Assigned'),
-(19, 'PO-Jericho-001', 2, '2025-05-04 09:15:24', '');
+(30, 'PO-aedantiu-001', 4, '2025-05-05 00:15:30', 'Assigned'),
+(31, 'PO-Boters-001', 4, '2025-05-05 02:46:35', 'Assigned'),
+(32, 'PO-aedantiu-002', 4, '2025-05-05 07:09:31', 'Assigned'),
+(33, 'PO-solaire-001', 6, '2025-05-05 09:15:57', 'Assigned');
 
 -- --------------------------------------------------------
 
@@ -194,76 +177,6 @@ CREATE TABLE `inventory_movements` (
 --
 
 INSERT INTO `inventory_movements` (`id`, `item_name`, `item_type`, `quantity`, `po_number`, `reason`, `user_id`, `timestamp`) VALUES
-(1, 'Minced Pork', 'raw_material', 62100.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:06:02'),
-(2, 'Soy Sauce', 'raw_material', 2700.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:06:02'),
-(3, 'Sugar', 'raw_material', 1350.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:06:02'),
-(4, 'Flour', 'raw_material', 8100.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:06:02'),
-(5, 'Milk', 'raw_material', 810.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:06:02'),
-(6, 'Asado Siopao (B Large)', 'finished_product', 90.00, 'monalizareyes-2', 'Order Activated', 'system', '2025-04-30 08:06:02'),
-(7, 'Minced Pork', 'raw_material', 62100.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:06:18'),
-(8, 'Soy Sauce', 'raw_material', 2700.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:06:18'),
-(9, 'Sugar', 'raw_material', 1350.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:06:18'),
-(10, 'Flour', 'raw_material', 8100.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:06:18'),
-(11, 'Milk', 'raw_material', 810.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:06:18'),
-(12, 'Asado Siopao (B Large)', 'finished_product', 90.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:06:18'),
-(13, 'Minced Pork', 'raw_material', 62100.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:06:28'),
-(14, 'Soy Sauce', 'raw_material', 2700.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:06:28'),
-(15, 'Sugar', 'raw_material', 1350.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:06:28'),
-(16, 'Flour', 'raw_material', 8100.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:06:28'),
-(17, 'Milk', 'raw_material', 810.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:06:28'),
-(18, 'Asado Siopao (B Large)', 'finished_product', 90.00, 'monalizareyes-2', 'Order Activated', 'system', '2025-04-30 08:06:28'),
-(19, 'Minced Pork', 'raw_material', 62100.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(20, 'Soy Sauce', 'raw_material', 2700.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(21, 'Sugar', 'raw_material', 1350.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(22, 'Flour', 'raw_material', 8100.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(23, 'Milk', 'raw_material', 810.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(24, 'Asado Siopao (B Large)', 'finished_product', 90.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(25, 'Minced Pork', 'raw_material', 62100.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(26, 'Soy Sauce', 'raw_material', 2700.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(27, 'Sugar', 'raw_material', 1350.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(28, 'Flour', 'raw_material', 8100.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(29, 'Milk', 'raw_material', 810.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(30, 'Asado Siopao (B Large)', 'finished_product', 90.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(31, 'Minced Pork', 'raw_material', 62100.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(32, 'Soy Sauce', 'raw_material', 2700.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(33, 'Sugar', 'raw_material', 1350.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(34, 'Flour', 'raw_material', 8100.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(35, 'Milk', 'raw_material', 810.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(36, 'Asado Siopao (B Large)', 'finished_product', 90.00, 'monalizareyes-2', 'Order Status Change Return', 'system', '2025-04-30 08:26:24'),
-(37, 'Minced Pork', 'raw_material', 62100.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:26:44'),
-(38, 'Soy Sauce', 'raw_material', 2700.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:26:44'),
-(39, 'Sugar', 'raw_material', 1350.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:26:44'),
-(40, 'Flour', 'raw_material', 8100.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:26:44'),
-(41, 'Milk', 'raw_material', 810.00, 'monalizareyes-2', 'Manufacturing for Regular Sharksfin Dumpling', 'system', '2025-04-30 08:26:44'),
-(42, 'Asado Siopao (B Large)', 'finished_product', 90.00, 'monalizareyes-2', 'Order Activated', 'system', '2025-04-30 08:26:44'),
-(43, 'Asado Siopao (B Large)', 'finished_product', 1.00, 'aedanpogi-1', 'Order Activated', 'system', '2025-05-01 06:13:29'),
-(44, 'Asado Siopao (A Small)', 'finished_product', 1.00, 'aedanpogi-1', 'Order Activated', 'system', '2025-05-01 06:13:29'),
-(45, 'Asado Siopao (A Med)', 'finished_product', 1.00, 'aedanpogi-1', 'Order Activated', 'system', '2025-05-01 06:13:29'),
-(46, 'Asado Siopao (A Large)', 'finished_product', 1.00, 'aedanpogi-1', 'Order Activated', 'system', '2025-05-01 06:13:29'),
-(47, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-250502-HEY-021116', 'Order Activated', 'system', '2025-05-01 17:21:22'),
-(48, 'Beancurd Roll (B)', 'finished_product', 1.00, 'PO-250502-HEY-021116', 'Order Activated', 'system', '2025-05-01 17:21:22'),
-(49, 'Beef Siomai', 'finished_product', 1.00, 'PO-250502-HEY-021116', 'Order Activated', 'system', '2025-05-01 17:21:22'),
-(50, 'Chicken Feet', 'finished_product', 1.00, 'PO-250502-HEY-021116', 'Order Activated', 'system', '2025-05-01 17:21:22'),
-(51, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-250502-HEY-021116', 'Order Status Change Return', 'system', '2025-05-01 17:21:53'),
-(52, 'Beancurd Roll (B)', 'finished_product', 1.00, 'PO-250502-HEY-021116', 'Order Status Change Return', 'system', '2025-05-01 17:21:53'),
-(53, 'Beef Siomai', 'finished_product', 1.00, 'PO-250502-HEY-021116', 'Order Status Change Return', 'system', '2025-05-01 17:21:53'),
-(54, 'Chicken Feet', 'finished_product', 1.00, 'PO-250502-HEY-021116', 'Order Status Change Return', 'system', '2025-05-01 17:21:53'),
-(55, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Activated', 'system', '2025-05-01 17:32:42'),
-(56, 'Beancurd Roll (B)', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Activated', 'system', '2025-05-01 17:32:42'),
-(57, 'Beef Siomai', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Activated', 'system', '2025-05-01 17:32:42'),
-(58, 'Chicken Feet', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Activated', 'system', '2025-05-01 17:32:42'),
-(59, 'Chicken Siomai', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Activated', 'system', '2025-05-01 17:32:42'),
-(60, 'Hakaw (Shrimp Dumpling) (A)', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Activated', 'system', '2025-05-01 17:32:42'),
-(61, 'Hakaw (Shrimp Dumpling) (B)', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Activated', 'system', '2025-05-01 17:32:42'),
-(62, 'Machang (Hong Kong)', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Activated', 'system', '2025-05-01 17:32:42'),
-(63, 'Machang w/ Chestnut (Min 6 Packs)', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Activated', 'system', '2025-05-01 17:32:42'),
-(64, 'Kutchay Dumpling', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Activated', 'system', '2025-05-01 17:32:42'),
-(65, 'Japanese Pork Siomai (A)', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Activated', 'system', '2025-05-01 17:32:42'),
-(66, 'Beancurd Roll (A)', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Status Change Return', 'system', '2025-05-01 17:33:01'),
-(67, 'Beancurd Roll (B)', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Status Change Return', 'system', '2025-05-01 17:33:01'),
-(68, 'Beef Siomai', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Status Change Return', 'system', '2025-05-01 17:33:01'),
-(69, 'Chicken Feet', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Status Change Return', 'system', '2025-05-01 17:33:01'),
-(70, 'Chicken Siomai', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Status Change Return', 'system', '2025-05-01 17:33:01'),
 (71, 'Hakaw (Shrimp Dumpling) (A)', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Status Change Return', 'system', '2025-05-01 17:33:01'),
 (72, 'Hakaw (Shrimp Dumpling) (B)', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Status Change Return', 'system', '2025-05-01 17:33:01'),
 (73, 'Machang (Hong Kong)', 'finished_product', 1.00, 'PO-250502-HEY-727402', 'Order Status Change Return', 'system', '2025-05-01 17:33:01'),
@@ -356,31 +269,6 @@ CREATE TABLE `manufacturing_logs` (
   `created_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `manufacturing_logs`
---
-
-INSERT INTO `manufacturing_logs` (`log_id`, `po_number`, `product_id`, `product_name`, `quantity`, `created_at`) VALUES
-(1, 'Boters-2', 11, 'Cuaopao', 1, '2025-04-24 11:11:48'),
-(2, 'Boters-2', 45, 'Pumpkin Cake 1.5kg', 4, '2025-04-24 11:11:48'),
-(3, 'Boters-2', 43, 'Radish Cake 1.5kg', 1, '2025-04-24 11:11:48'),
-(4, 'Boters-2', 12, 'Minibun Mantao', 1, '2025-04-25 04:32:41'),
-(5, 'Boters-2', 18, 'Kutchay Dumpling', 1, '2025-04-25 04:32:41'),
-(6, 'maamcristylen-1', 11, 'Cuaopao', 5, '2025-04-26 06:50:41'),
-(7, 'maamcristylen-1', 12, 'Minibun Mantao', 5, '2025-04-26 06:50:41'),
-(8, 'maamcristylen-1', 13, 'Egg Custard Pao (Min 10 packs)', 5, '2025-04-26 06:50:41'),
-(9, 'maamcristylen-1', 14, 'Regular Pork Siomai', 5, '2025-04-26 06:50:41'),
-(10, 'maamcristylen-1', 15, 'Special Pork Siomai', 5, '2025-04-26 06:50:41'),
-(11, 'maamcristylen-1', 44, 'Radish Cake 1kg', 5, '2025-04-26 06:50:41'),
-(12, 'maamcristylen-1', 45, 'Pumpkin Cake 1.5kg', 5, '2025-04-26 06:50:41'),
-(13, 'maamcristylen-1', 46, 'Pumpkin Cake 1kg', 5, '2025-04-26 06:50:41'),
-(14, 'maamcristylen-1', 47, 'Vegetable Dumpling (A)', 5, '2025-04-26 06:50:41'),
-(15, 'maamcristylen-1', 48, 'Vegetable Dumpling (B)', 5, '2025-04-26 06:50:41'),
-(16, 'monalizareyes-2', 16, 'Regular Sharksfin Dumpling', 90, '2025-04-30 08:06:02'),
-(17, 'monalizareyes-2', 16, 'Regular Sharksfin Dumpling', 90, '2025-04-30 08:06:28'),
-(18, 'monalizareyes-2', 16, 'Regular Sharksfin Dumpling', 90, '2025-04-30 08:26:44'),
-(19, 'PO-Boters-001', 20, 'Beef Siomai', 4, '2025-05-01 20:56:34');
-
 -- --------------------------------------------------------
 
 --
@@ -401,16 +289,6 @@ CREATE TABLE `monthly_payments` (
   `payment_method` varchar(20) DEFAULT NULL,
   `payment_type` enum('Internal','External') DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `monthly_payments`
---
-
-INSERT INTO `monthly_payments` (`id`, `username`, `month`, `year`, `total_amount`, `payment_status`, `created_at`, `updated_at`, `remaining_balance`, `proof_image`, `payment_method`, `payment_type`) VALUES
-(1, 'maamcristylen', 4, 2025, 4180.00, 'Unpaid', '2025-04-29 16:56:14', '2025-04-29 16:56:26', 4180.00, NULL, NULL, NULL),
-(830, 'aedanpogi', 1, 2025, 0.00, 'Fully Paid', '2025-04-24 02:11:24', '2025-04-24 02:11:24', 0.00, NULL, NULL, NULL),
-(831, 'maamcristylen', 3, 2025, 0.00, 'Unpaid', '2025-04-26 13:35:12', '2025-04-29 13:21:00', 0.00, 'payment_1745674511.jpg', NULL, 'Internal'),
-(832, 'Jericho', 1, 2025, 0.00, 'For Approval', '2025-05-04 07:53:25', '2025-05-04 07:54:11', 0.00, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -445,10 +323,8 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `po_number`, `username`, `company`, `order_date`, `delivery_date`, `delivery_address`, `orders`, `total_amount`, `status`, `driver_assigned`, `contact_number`, `special_instructions`, `subtotal`, `progress`, `completed_items`, `item_progress_data`, `quantity_progress_data`, `item_progress_percentages`) VALUES
-(154, 'PO-Boters-001', 'Boters', 'Meow', '2025-05-04', '2025-05-05', 'asdsadsadsad', '[{\"product_id\":47,\"category\":\"Healthy Dimsum\",\"item_description\":\"Vegetable Dumpling (A)\",\"packaging\":\"12pcs/pack\",\"price\":190,\"quantity\":20}]', 3800.00, 'Completed', 1, NULL, 'asd', 0.00, 100, '[0]', NULL, '[[true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true]]', NULL),
-(155, 'PO-Boters-002', 'Boters', 'Meow', '2025-05-04', '2025-05-05', 'asdsadsadsad', '[{\"product_id\":31,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Beancurd Roll (A)\",\"packaging\":\"12pcs/pack\",\"price\":310,\"quantity\":1}]', 310.00, 'Active', 1, NULL, '', 0.00, 0, NULL, NULL, NULL, NULL),
-(156, 'PO-Boters-003', 'Boters', 'Meow', '2025-05-04', '2025-05-09', 'asdsadsadsad', '[{\"product_id\":31,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Beancurd Roll (A)\",\"packaging\":\"12pcs/pack\",\"price\":310,\"quantity\":1}]', 310.00, 'Pending', 1, NULL, '', 0.00, 0, NULL, NULL, NULL, NULL),
-(157, 'PO-Jericho-001', 'Jericho', NULL, '2025-05-04', '2025-05-05', '123 Sample Street', '[{\"product_id\":20,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Beef Siomai\",\"packaging\":\"20pcs\\/pack\",\"price\":250,\"quantity\":1}]', 250.00, 'Completed', 1, '091234567890', '', 250.00, 100, '[0]', NULL, '[[true]]', NULL);
+(198, 'PO-solaire-001', 'solaire', NULL, '2025-05-05', '2025-05-07', '123 Manila St.', '[{\"product_id\":164,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Chocolate\",\"packaging\":\"12pcs/pack\",\"price\":250,\"quantity\":5},{\"product_id\":42,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Chicken Feet\",\"packaging\":\"500g\",\"price\":200,\"quantity\":5}]', 2250.00, 'Completed', 1, '09760268643', 'Fresh', 2250.00, 0, NULL, NULL, NULL, NULL),
+(199, 'PO-solaire-002', 'solaire', 'Solaire Company Inc', '2025-05-05', '2025-05-09', '123 Manila St.', '[{\"product_id\":31,\"category\":\"Dimsum & Dumplings\",\"item_description\":\"Beancurd Roll\",\"packaging\":\"12pcs/pack\",\"price\":310,\"quantity\":1},{\"product_id\":47,\"category\":\"Healthy Dimsum\",\"item_description\":\"Vegetable Dumpling\",\"packaging\":\"12pcs/pack\",\"price\":190,\"quantity\":1},{\"product_id\":62,\"category\":\"Noodles & Wrappers\",\"item_description\":\"Dried Egg Noodles\",\"packaging\":\"1kg/pack\",\"price\":185,\"quantity\":1},{\"product_id\":59,\"category\":\"Marinated Items\",\"item_description\":\"Asado Marinated (Char Siu)\",\"packaging\":\"1kg\",\"price\":400,\"quantity\":3}]', 1885.00, 'Active', 0, NULL, '', 0.00, 0, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -470,107 +346,17 @@ CREATE TABLE `order_status_logs` (
 --
 
 INSERT INTO `order_status_logs` (`log_id`, `po_number`, `old_status`, `new_status`, `changed_by`, `changed_at`) VALUES
-(1, 'maamcristylen-1', 'Pending', 'Active', 'system', '2025-04-28 14:27:22'),
-(2, 'maamcristylen-2', 'Pending', 'Active', 'system', '2025-04-28 14:27:40'),
-(3, 'maamcristylen-1', 'Active', 'For Delivery', 'system', '2025-04-28 15:11:08'),
-(4, 'maamcristylen-3', 'Pending', 'Active', 'system', '2025-04-28 17:57:06'),
-(5, 'maamcristylen-2', 'Active', 'For Delivery', 'system', '2025-04-29 13:08:07'),
-(6, 'maamcristylen-1', 'For Delivery', 'Completed', 'system', '2025-04-29 13:08:21'),
-(7, 'maamcristylen-2', 'For Delivery', 'Completed', 'system', '2025-04-29 13:37:37'),
-(8, 'maamcristylen-3', 'Active', 'For Delivery', 'system', '2025-04-29 14:48:57'),
-(9, 'maamcristylen-3', 'For Delivery', 'Completed', 'system', '2025-04-29 14:49:11'),
-(10, 'maamcristylen-4', 'Pending', 'Active', 'system', '2025-04-29 15:26:35'),
-(11, 'maamcristylen-4', 'Active', 'For Delivery', 'system', '2025-04-29 15:26:58'),
-(12, 'maamcristylen-4', 'For Delivery', 'Completed', 'system', '2025-04-29 15:27:33'),
-(13, 'Ryan-1', 'Pending', 'Active', 'system', '2025-04-29 16:52:59'),
-(14, 'Ryan-1', 'Active', 'For Delivery', 'system', '2025-04-29 16:53:19'),
-(15, 'Ryan-1', 'For Delivery', 'In Transit', 'system', '2025-04-29 16:53:43'),
-(16, 'Ryan-1', 'In Transit', 'Completed', 'system', '2025-04-29 16:53:51'),
-(17, 'aedanpogi-1', 'Pending', 'Rejected', 'system', '2025-04-29 17:37:19'),
-(18, 'aedanpogi-1', 'Rejected', 'Pending', 'system', '2025-04-29 17:37:29'),
-(19, 'Boters-1', 'Pending', 'Active', 'Ryan', '2025-04-30 02:54:10'),
-(20, 'Boters-1', 'Active', 'For Delivery', 'Ryan', '2025-04-30 02:54:32'),
-(21, 'Boters-1', 'In Transit', 'For Delivery', 'Ryan', '2025-04-30 02:55:15'),
-(22, 'Boters-1', 'In Transit', 'For Delivery', 'Ryan', '2025-04-30 02:56:07'),
-(23, 'Boters-1', 'In Transit', 'Completed', 'Ryan', '2025-04-30 02:56:17'),
-(24, 'aedanpogi-1', 'Pending', 'Rejected', 'monalizareyes', '2025-04-30 03:05:47'),
-(25, 'monalizareyes-1', 'Pending', 'Active', 'monalizareyes', '2025-04-30 03:08:00'),
-(26, 'monalizareyes-2', 'Pending', 'Active', 'system', '2025-04-30 06:38:35'),
-(27, 'monalizareyes-2', 'Active', 'Pending', 'system', '2025-04-30 06:38:42'),
-(28, 'monalizareyes-2', 'Pending', 'Active', 'system', '2025-04-30 06:38:54'),
-(29, 'monalizareyes-2', 'Active', 'Pending', 'system', '2025-04-30 06:38:58'),
-(30, 'monalizareyes-2', 'Pending', 'Active', 'system', '2025-04-30 06:39:04'),
-(31, 'monalizareyes-2', 'Active', 'Pending', 'system', '2025-04-30 06:39:11'),
-(32, 'monalizareyes-2', 'Pending', 'Active', 'system', '2025-04-30 06:39:17'),
-(33, 'monalizareyes-2', 'Active', 'Pending', 'system', '2025-04-30 06:40:02'),
-(34, 'monalizareyes-2', 'Pending', 'Active', 'system', '2025-04-30 08:06:02'),
-(35, 'monalizareyes-2', 'Active', 'Pending', 'system', '2025-04-30 08:06:18'),
-(36, 'monalizareyes-2', 'Pending', 'Active', 'system', '2025-04-30 08:06:28'),
-(37, 'monalizareyes-2', 'Active', 'Pending', 'system', '2025-04-30 08:26:24'),
-(38, 'monalizareyes-2', 'Pending', 'Rejected', 'system', '2025-04-30 08:26:27'),
-(39, 'monalizareyes-2', 'Rejected', 'Pending', 'system', '2025-04-30 08:26:31'),
-(40, 'aedanpogi-1', 'Rejected', 'Pending', 'system', '2025-04-30 08:26:34'),
-(41, 'monalizareyes-2', 'Pending', 'Active', 'system', '2025-04-30 08:26:44'),
-(42, 'monalizareyes-2', 'Active', 'For Delivery', 'system', '2025-04-30 08:26:53'),
-(43, 'monalizareyes-2', 'For Delivery', 'In Transit', 'system', '2025-04-30 13:05:30'),
-(44, 'monalizareyes-2', 'In Transit', 'For Delivery', 'system', '2025-04-30 13:05:33'),
-(45, 'monalizareyes-2', 'For Delivery', 'For Delivery', 'system', '2025-04-30 13:06:03'),
-(46, 'monalizareyes-2', 'For Delivery', 'In Transit', 'system', '2025-04-30 13:06:07'),
-(47, 'monalizareyes-2', 'In Transit', 'For Delivery', 'system', '2025-04-30 13:06:09'),
-(48, 'monalizareyes-2', 'For Delivery', 'In Transit', 'system', '2025-04-30 13:06:13'),
-(49, 'monalizareyes-2', 'In Transit', 'For Delivery', 'system', '2025-04-30 13:06:16'),
-(50, 'monalizareyes-1', 'Active', 'For Delivery', 'system', '2025-04-30 14:54:08'),
-(51, 'monalizareyes-2', 'For Delivery', 'In Transit', 'system', '2025-04-30 15:19:34'),
-(52, 'aedanpogi-1', 'Pending', 'Active', 'system', '2025-05-01 06:13:29'),
-(53, 'aedanpogi-1', 'Active', 'Pending', 'system', '2025-05-01 12:58:15'),
-(54, 'PO-250502-HEY-021116', 'Pending', 'Active', 'system', '2025-05-01 17:21:22'),
-(55, 'PO-250502-HEY-021116', 'Active', 'Pending', 'system', '2025-05-01 17:21:53'),
-(56, 'PO-250502-HEY-727402', 'Pending', 'Active', 'system', '2025-05-01 17:32:42'),
-(57, 'PO-250502-HEY-727402', 'Active', 'Pending', 'system', '2025-05-01 17:33:01'),
-(58, 'PO-HeyHeyHey-001', 'Pending', 'Active', 'system', '2025-05-01 17:41:34'),
-(59, 'PO-HeyHeyHey-001', 'Active', 'For Delivery', 'system', '2025-05-01 17:42:22'),
-(60, 'PO-HeyHeyHey-001', 'For Delivery', 'Completed', 'system', '2025-05-01 19:01:59'),
-(61, 'Boters-1', 'Pending', 'Active', 'system', '2025-05-01 19:02:10'),
-(62, 'Boters-1', 'Active', 'For Delivery', 'system', '2025-05-01 19:02:28'),
-(63, 'PO-Boters-002', 'Pending', 'Active', 'system', '2025-05-01 19:05:02'),
-(64, 'PO-Boters-002', 'Active', 'Pending', 'system', '2025-05-01 19:16:19'),
-(65, 'PO-Boters-001', 'Pending', 'Active', 'system', '2025-05-01 20:12:17'),
-(66, 'PO-Boters-001', 'Active', 'For Delivery', 'system', '2025-05-01 20:12:39'),
-(67, 'PO-Boters-001', 'For Delivery', 'In Transit', 'system', '2025-05-01 20:12:46'),
-(68, 'PO-Boters-001', 'In Transit', 'Completed', 'system', '2025-05-01 20:12:49'),
-(69, 'PO-Boters-001', 'Pending', 'Active', 'system', '2025-05-01 20:56:34'),
-(70, 'PO-Boters-001', 'Active', 'For Delivery', 'system', '2025-05-01 20:57:27'),
-(71, 'PO-sheila-001', 'Pending', 'Active', 'system', '2025-05-02 05:35:09'),
-(72, 'PO-Boters-012', 'Pending', 'Active', 'system', '2025-05-02 05:42:56'),
-(73, 'PO-HeyHeyHey-002', 'Pending', 'Active', 'system', '2025-05-02 17:37:14'),
-(74, 'PO-Boters-001', 'In Transit', 'Completed', 'system', '2025-05-03 12:38:52'),
-(75, 'PO-HeyHeyHey-002', 'Active', 'For Delivery', 'system', '2025-05-03 13:26:57'),
-(76, 'PO-HeyHeyHey-002', 'For Delivery', 'Completed', 'system', '2025-05-03 13:27:01'),
-(77, 'PO-Boters-012', 'Active', 'For Delivery', 'system', '2025-05-03 13:27:34'),
-(78, 'PO-HeyHeyHey-003', 'Pending', 'Rejected', 'system', '2025-05-03 13:41:53'),
-(79, 'PO-Boters-012', 'For Delivery', 'In Transit', 'system', '2025-05-03 15:03:57'),
-(80, 'PO-Boters-012', 'In Transit', 'For Delivery', 'system', '2025-05-03 15:04:00'),
-(81, 'PO-Boters-001', 'Pending', 'Active', 'system', '2025-05-03 19:44:22'),
-(82, 'PO-Boters-002', 'Pending', 'Active', 'system', '2025-05-04 05:13:08'),
-(83, 'PO-Boters-003', 'Pending', 'Active', 'system', '2025-05-04 05:18:47'),
-(84, 'PO-Boters-003', 'Active', 'Pending', 'system', '2025-05-04 05:28:57'),
-(85, 'PO-Boters-003', 'Pending', 'Active', 'system', '2025-05-04 05:29:01'),
-(86, 'PO-Boters-003', 'Active', 'Pending', 'system', '2025-05-04 05:30:34'),
-(87, 'PO-Boters-003', 'Pending', 'Active', 'system', '2025-05-04 05:30:38'),
-(88, 'PO-Boters-003', 'Active', 'Pending', 'system', '2025-05-04 05:33:32'),
-(89, 'PO-Boters-003', 'Pending', 'Active', 'system', '2025-05-04 05:33:38'),
-(90, 'PO-Boters-003', 'Active', 'Pending', 'system', '2025-05-04 05:46:30'),
-(91, 'PO-Boters-003', 'Pending', 'Active', 'system', '2025-05-04 05:46:36'),
-(92, 'PO-Boters-003', 'Active', 'Pending', 'admin', '2025-05-04 06:50:05'),
-(93, 'PO-Jericho-001', 'Pending', 'Active', 'admin', '2025-05-04 07:51:28'),
-(94, 'PO-Jericho-001', 'Active', 'Pending', 'admin', '2025-05-04 08:20:22'),
-(95, 'PO-Jericho-001', 'Pending', 'Active', 'admin', '2025-05-04 08:25:43'),
-(96, 'PO-Jericho-001', 'Active', 'Pending', 'admin', '2025-05-04 08:31:34'),
-(97, 'PO-Jericho-001', 'Pending', 'Active', 'admin', '2025-05-04 08:31:38'),
-(98, 'PO-Jericho-001', 'Active', 'For Delivery', 'admin', '2025-05-04 09:19:31'),
-(99, 'PO-Jericho-001', 'For Delivery', 'Completed', 'system', '2025-05-04 09:20:12'),
-(100, 'PO-Boters-001', 'Active', 'For Delivery', 'admin', '2025-05-04 09:20:48'),
-(101, 'PO-Boters-001', 'For Delivery', 'Completed', 'system', '2025-05-04 09:20:56');
+(121, 'PO-aedantiu-001', 'Pending', 'Active', 'admin', '2025-05-05 00:15:13'),
+(122, 'PO-aedantiu-001', 'Active', 'For Delivery', 'admin', '2025-05-05 00:15:21'),
+(123, 'PO-Boters-001', 'Pending', 'Active', 'User-Developer', '2025-05-05 02:45:54'),
+(124, 'PO-Boters-001', 'Active', 'For Delivery', 'User-Developer', '2025-05-05 02:46:16'),
+(125, 'PO-aedantiu-002', 'Pending', 'Active', 'admin', '2025-05-05 07:06:47'),
+(126, 'PO-aedantiu-002', 'Active', 'For Delivery', 'admin', '2025-05-05 07:09:22'),
+(127, 'PO-aedantiu-002', 'For Delivery', 'In Transit', 'system', '2025-05-05 07:09:34'),
+(128, 'PO-aedantiu-002', 'In Transit', 'For Delivery', 'system', '2025-05-05 07:09:37'),
+(129, 'PO-solaire-001', 'Pending', 'Active', 'User-Developer', '2025-05-05 09:05:13'),
+(130, 'PO-solaire-001', 'Active', 'For Delivery', 'User-Developer', '2025-05-05 09:07:06'),
+(131, 'PO-solaire-002', 'Pending', 'Active', 'User-Developer', '2025-05-05 09:10:05');
 
 -- --------------------------------------------------------
 
@@ -600,7 +386,7 @@ INSERT INTO `pages` (`page_id`, `page_name`, `file_path`, `module`) VALUES
 (9, 'Payment History', 'payment_history.php', 'Payments'),
 (12, 'Raw Materials', 'raw_materials.php', 'Inventory'),
 (14, 'Department Forecast', 'department_forecast.php', 'Production'),
-(17, 'Drivers', 'drivers.php', 'Staff'),
+(17, 'Drivers', 'drivers.php', 'Accounts'),
 (19, 'Deliverable Orders', 'deliverable_orders.php', 'Ordering'),
 (23, 'Forecast', 'forecast.php', 'Production'),
 (24, 'Reporting', 'reporting.php', 'Reporting');
@@ -624,15 +410,6 @@ CREATE TABLE `payment_history` (
   `payment_type` enum('Internal','External') DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `payment_history`
---
-
-INSERT INTO `payment_history` (`id`, `username`, `month`, `year`, `amount`, `notes`, `proof_image`, `created_by`, `created_at`, `payment_type`) VALUES
-(23, 'maamcristylen', 3, 2025, 20625.00, NULL, 'payment_1745674511.jpg', 'system', '2025-04-26 13:35:12', 'External'),
-(24, 'maamcristylen', 3, 2025, 10000.00, NULL, NULL, 'system', '2025-04-26 13:36:34', 'Internal'),
-(25, 'maamcristylen', 3, 2025, 10625.00, NULL, NULL, 'system', '2025-04-26 13:36:46', 'Internal');
-
 -- --------------------------------------------------------
 
 --
@@ -649,22 +426,6 @@ CREATE TABLE `payment_status_history` (
   `changed_by` varchar(100) DEFAULT NULL,
   `changed_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `payment_status_history`
---
-
-INSERT INTO `payment_status_history` (`id`, `username`, `month`, `year`, `old_status`, `new_status`, `changed_by`, `changed_at`) VALUES
-(17, 'aedanpogi', 1, 2025, 'Unpaid', 'Fully Paid', 'system', '2025-04-24 02:11:24'),
-(18, 'maamcristylen', 3, 2025, 'For Approval', 'Fully Paid', 'system', '2025-04-26 13:35:54'),
-(19, 'maamcristylen', 3, 2025, 'Fully Paid', 'Unpaid', 'system', '2025-04-26 13:36:20'),
-(20, 'maamcristylen', 3, 2025, 'Fully Paid', 'Unpaid', 'system', '2025-04-29 12:48:30'),
-(21, 'maamcristylen', 4, 2025, 'Unpaid', 'Fully Paid', 'system', '2025-04-29 16:56:14'),
-(22, 'maamcristylen', 4, 2025, 'Fully Paid', 'Unpaid', 'system', '2025-04-29 16:56:26'),
-(26, 'Jericho', 1, 2025, 'Unpaid', 'For Approval', 'system', '2025-05-04 07:53:25'),
-(27, 'Jericho', 1, 2025, 'For Approval', 'Fully Paid', 'system', '2025-05-04 07:53:35'),
-(28, 'Jericho', 1, 2025, 'Fully Paid', 'Unpaid', 'system', '2025-05-04 07:53:38'),
-(29, 'Jericho', 1, 2025, 'Unpaid', 'For Approval', 'system', '2025-05-04 07:54:11');
 
 -- --------------------------------------------------------
 
@@ -690,7 +451,7 @@ CREATE TABLE `products` (
 --
 
 INSERT INTO `products` (`product_id`, `category`, `product_name`, `item_description`, `packaging`, `price`, `stock_quantity`, `additional_description`, `product_image`, `ingredients`) VALUES
-(1, 'Siopao', 'Asado Siopao', 'Asado Siopao (A Large)', '6pcs/pack', 280.00, 99, '', '/uploads/products/Asado_Siopao__A_Large_/product_image.png', '[[\"Minced Pork\", 480], [\"Soy Sauce\", 30], [\"Sugar\", 30], [\"Hoisin Sauce\", 18], [\"Star Anise\", 0.6], [\"Flour\", 600], [\"Yeast\", 6], [\"Milk\", 30], [\"Butter (Anchor)\", 18], [\"Baking Powder\", 6]]'),
+(1, 'Siopao', 'Asado Siopao', 'Asado Siopao', '6pcs/pack', 280.00, 99, '', '/uploads/products/Asado_Siopao__A_Large_/product_image.png', '[[\"Minced Pork\", 480], [\"Soy Sauce\", 30], [\"Sugar\", 30], [\"Hoisin Sauce\", 18], [\"Star Anise\", 0.6], [\"Flour\", 600], [\"Yeast\", 6], [\"Milk\", 30], [\"Butter (Anchor)\", 18], [\"Baking Powder\", 6]]'),
 (2, 'Siopao', 'Asado Siopao', 'Asado Siopao (A Med)', '10pcs/pack', 325.00, 99, '', '/uploads/products/Asado_Siopao__A_Med_/product_image.png', '[[\"Minced Pork\", 800], [\"Soy Sauce\", 50], [\"Sugar\", 50], [\"Hoisin Sauce\", 30], [\"Star Anise\", 1], [\"Flour\", 1000], [\"Yeast\", 10], [\"Milk\", 50], [\"Butter (Anchor)\", 30], [\"Baking Powder\", 10]]'),
 (3, 'Siopao', 'Asado Siopao', 'Asado Siopao (A Small)', '15pcs/pack', 270.00, 99, '', '/uploads/products/Asado_Siopao__A_Small_/product_image.png', '[[\"Minced Pork\", 1200], [\"Soy Sauce\", 75], [\"Sugar\", 75], [\"Hoisin Sauce\", 45], [\"Star Anise\", 1.5], [\"Flour\", 1500], [\"Yeast\", 15], [\"Milk\", 75], [\"Butter (Anchor)\", 45], [\"Baking Powder\", 15]]'),
 (4, 'Siopao', 'Asado Siopao', 'Asado Siopao (B Large)', '6pcs/pack', 235.00, 99, '', '/uploads/products/Asado_Siopao__B_Large_/product_image.png', '[[\"Minced Pork\", 480], [\"Soy Sauce\", 30], [\"Sugar\", 30], [\"Hoisin Sauce\", 18], [\"Star Anise\", 0.6], [\"Flour\", 600], [\"Yeast\", 6], [\"Milk\", 30], [\"Butter (Anchor)\", 18], [\"Baking Powder\", 6]]'),
@@ -707,23 +468,19 @@ INSERT INTO `products` (`product_id`, `category`, `product_name`, `item_descript
 (15, 'Dimsum & Dumplings', 'Special Pork Siomai', 'Special Pork Siomai', '30pcs/pack', 240.00, 100, '', '/uploads/products/Special_Pork_Siomai/product_image.png', '[[\"Minced Pork\", 660], [\"Shrimp\", 90], [\"Soy Sauce\", 30], [\"Sugar\", 15], [\"Hoisin Sauce\", 15], [\"Flour\", 90], [\"Butter (Anchor)\", 9]]'),
 (16, 'Dimsum & Dumplings', 'Regular Sharksfin Dumpling', 'Regular Sharksfin Dumpling', '30pcs/pack', 180.00, 100, '', '/uploads/products/Regular_Sharksfin_Dumpling/product_image.png', '[[\"Minced Pork\", 690], [\"Soy Sauce\", 30], [\"Sugar\", 15], [\"Flour\", 90], [\"Milk\", 9]]'),
 (17, 'Dimsum & Dumplings', 'Special Sharksfin Dumpling', 'Special Sharksfin Dumpling', '30pcs/pack', 260.00, 100, '', '/uploads/products/Special_Sharksfin_Dumpling/product_image.png', '[[\"Minced Pork\", 630], [\"Shrimp\", 120], [\"Soy Sauce\", 30], [\"Hoisin Sauce\", 15], [\"Flour\", 90]]'),
-(18, 'Dimsum & Dumplings', 'Kutchay Dumpling', 'Kutchay Dumpling', '30pcs/pack', 275.00, 100, '', '/uploads/products/Kutchay_Dumpling/product_image.png', '[[\"Minced Pork\", 600], [\"Soy Sauce\", 30], [\"Sugar\", 15], [\"Flour\", 90], [\"Butter (Anchor)\", 9]]'),
-(19, 'Dimsum & Dumplings', 'Chicken Siomai', 'Chicken Siomai', '30pcs/pack', 300.00, 99, '', '/uploads/products/Chicken_Siomai/product_image.png', '[[\"Chicken Diced Seasoned\", 690], [\"Soy Sauce\", 30], [\"Sugar\", 15], [\"Flour\", 90]]'),
-(20, 'Dimsum & Dumplings', 'Beef Siomai', 'Beef Siomai', '20pcs/pack', 250.00, 0, '', '/uploads/products/Beef_Siomai/product_image.png', '[[\"Beef Sliced Seasoned\", 500], [\"Soy Sauce\", 20], [\"Hoisin Sauce\", 10], [\"Flour\", 60], [\"Butter (Anchor)\", 4]]'),
-(21, 'Dimsum & Dumplings', 'Premium Pork Siomai', 'Premium Pork Siomai (A)', '20pcs/pack', 280.00, 100, '', '/uploads/products/Premium_Pork_Siomai__A_/product_image.png', '[[\"Minced Pork\", 440], [\"Shrimp\", 60], [\"Soy Sauce\", 20], [\"Hoisin Sauce\", 10], [\"Flour\", 60]]'),
-(22, 'Dimsum & Dumplings', 'Premium Pork Siomai w/ Shrimp', 'Premium Pork Siomai w/ Shrimp (A)', '20pcs/pack', 310.00, 100, '', '/uploads/products/Premium_Pork_Siomai_w__Shrimp__A_/product_image.png', '[[\"Minced Pork\", 400], [\"Shrimp\", 100], [\"Soy Sauce\", 20], [\"Hoisin Sauce\", 10], [\"Flour\", 60]]'),
+(18, 'Dimsum & Dumplings', 'Kutchay Dumpling', 'Kutchay Dumpling', '30pcs/pack', 275.00, 100, 'Kuchay with the juicy texture of our pork filling wrapped in our very own thin and chewy dumpling dough.', '/uploads/products/Kutchay_Dumpling/product_image.png', '[[\"Minced Pork\", 600], [\"Soy Sauce\", 30], [\"Sugar\", 15], [\"Flour\", 90], [\"Butter (Anchor)\", 9]]'),
+(19, 'Dimsum & Dumplings', 'Chicken Siomai', 'Chicken Siomai', '30pcs/pack', 300.00, 99, 'It is commonly steamed, with a popular variant being fried, resulting in a crisp exterior.', '/uploads/products/Chicken_Siomai/product_image.png', '[[\"Chicken Diced Seasoned\", 690], [\"Soy Sauce\", 30], [\"Sugar\", 15], [\"Flour\", 90]]'),
+(20, 'Dimsum & Dumplings', 'Beef Siomai', 'Beef Siomai', '20pcs/pack', 250.00, 0, 'It is commonly steamed, with a popular variant being fried, resulting in a crisp exterior.', '/uploads/products/Beef_Siomai/product_image.png', '[[\"Beef Sliced Seasoned\", 500], [\"Soy Sauce\", 20], [\"Hoisin Sauce\", 10], [\"Flour\", 60], [\"Butter (Anchor)\", 4]]'),
+(21, 'Dimsum & Dumplings', 'Premium Pork Siomai', 'Premium Pork Siomai', '20pcs/pack', 280.00, 100, '', '/uploads/products/Premium_Pork_Siomai__A_/product_image.png', '[[\"Minced Pork\", 440], [\"Shrimp\", 60], [\"Soy Sauce\", 20], [\"Hoisin Sauce\", 10], [\"Flour\", 60]]'),
+(22, 'Dimsum & Dumplings', 'Premium Pork Siomai w/ Shrimp', 'Premium Pork Siomai w/ Shrimp', '20pcs/pack', 310.00, 100, '', '/uploads/products/Premium_Pork_Siomai_w__Shrimp__A_/product_image.png', '[[\"Minced Pork\", 400], [\"Shrimp\", 100], [\"Soy Sauce\", 20], [\"Hoisin Sauce\", 10], [\"Flour\", 60]]'),
 (23, 'Dimsum & Dumplings', 'Premium Sharksfin Dumpling', 'Premium Sharksfin Dumpling', '20pcs/pack', 300.00, 100, '', '/uploads/products/Premium_Sharksfin_Dumpling/product_image.png', '[[\"Minced Pork\", 400], [\"Shrimp\", 100], [\"Soy Sauce\", 20], [\"Flour\", 60], [\"Butter (Anchor)\", 6]]'),
-(24, 'Dimsum & Dumplings', 'Hakaw', 'Hakaw (Shrimp Dumpling) (A)', '12pcs/pack', 300.00, 100, '', '/uploads/products/Hakaw__Shrimp_Dumpling___A_/product_image.png', '[[\"Shrimp\", 300], [\"Butter (Anchor)\", 3.6], [\"Flour\", 36], [\"Sugar\", 6]]'),
-(25, 'Dimsum & Dumplings', 'Hakaw', 'Hakaw (Shrimp Dumpling) (B)', '20pcs/pack', 480.00, 99, '', '/uploads/products/Hakaw__Shrimp_Dumpling___B_/product_image.png', '[[\"Shrimp\", 500], [\"Butter (Anchor)\", 6], [\"Flour\", 60], [\"Sugar\", 10]]'),
-(26, 'Dimsum & Dumplings', 'Japanese Pork Siomai', 'Japanese Pork Siomai (A)', '20pcs/pack', 325.00, 100, '', '/uploads/products/Japanese_Pork_Siomai__A_/product_image.png', '[[\"Minced Pork\", 400], [\"Soy Sauce\", 20], [\"Japanese Soy Sauce\", 20], [\"Flour\", 60], [\"Sugar\", 10]]'),
-(27, 'Dimsum & Dumplings', 'Polonchay Dumpling', 'Polonchay Dumpling (Min 6 Packs) (A)', '12pcs/pack', 310.00, 100, '', '/uploads/products/Polonchay_Dumpling__Min_6_Packs___A_/product_image.png', '[[\"Minced Pork\", 240], [\"Soy Sauce\", 12], [\"Flour\", 36]]'),
-(28, 'Dimsum & Dumplings', 'Polonchay Dumpling', 'Polonchay Dumpling (Min 6 Packs) (B)', '20pcs/pack', 470.00, 100, '', '/uploads/products/Polonchay_Dumpling__Min_6_Packs___B_/product_image.png', '[[\"Minced Pork\", 400], [\"Soy Sauce\", 20], [\"Flour\", 60]]'),
-(29, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (A)', '12pcs/pack', 330.00, 100, '', '/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___A_/product_image.png', '[[\"Minced Pork\", 216], [\"Shrimp\", 48], [\"Soy Sauce\", 12], [\"Flour\", 36]]'),
-(30, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs) (B)', '20pcs/pack', 530.00, 100, '', '/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___B_/product_image.png', '[[\"Minced Pork\", 360], [\"Shrimp\", 80], [\"Soy Sauce\", 20], [\"Flour\", 60]]'),
-(31, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (A)', '12pcs/pack', 310.00, 114, '', '/uploads/products/Beancurd_Roll__A_/product_image.png', '[[\"Minced Pork\",264],[\"Soy Sauce\",12],[\"Sugar\",6],[\"Veg. Spring Roll (Ham)\",36]]'),
-(32, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll (B)', '20pcs/pack', 500.00, 88, '', '/uploads/products/Beancurd_Roll__B_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Sugar\", 10], [\"Veg. Spring Roll (Ham)\", 60]]'),
-(33, 'Dimsum & Dumplings', 'Pork Gyoza Dumpling', 'Pork Gyoza Dumpling (A)', '20pcs/pack', 390.00, 100, '', '/uploads/products/Pork_Gyoza_Dumpling__A_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Crispy Powder\", 40], [\"Flour\", 60]]'),
-(34, 'Dimsum & Dumplings', 'Shanghai Dumpling', 'Shanghai Dumpling (A)', '20pcs/pack', 255.00, 100, '', '/uploads/products/Shanghai_Dumpling__A_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Sugar\", 10], [\"Flour\", 60]]'),
+(24, 'Dimsum & Dumplings', 'Hakaw', 'Hakaw (Shrimp Dumpling)', '12pcs/pack', 300.00, 100, 'Made with succulent shrimp and wrapped in a delicate, translucent dough.', '/uploads/products/Hakaw__Shrimp_Dumpling___A_/product_image.png', '[[\"Shrimp\", 300], [\"Butter (Anchor)\", 3.6], [\"Flour\", 36], [\"Sugar\", 6]]'),
+(26, 'Dimsum & Dumplings', 'Japanese Pork Siomai', 'Japanese Pork Siomai', '20pcs/pack', 325.00, 100, 'Delicious Japanese Siomai is made of delicious steamed pork meatball wrapped in our Delicious Special Seaweeds wrapper.', '/uploads/products/Japanese_Pork_Siomai__A_/product_image.png', '[[\"Minced Pork\", 400], [\"Soy Sauce\", 20], [\"Japanese Soy Sauce\", 20], [\"Flour\", 60], [\"Sugar\", 10]]'),
+(27, 'Dimsum & Dumplings', 'Polonchay Dumpling', 'Polonchay Dumpling (Min 6 Packs)', '12pcs/pack', 310.00, 100, '', '/uploads/products/Polonchay_Dumpling__Min_6_Packs___A_/product_image.png', '[[\"Minced Pork\", 240], [\"Soy Sauce\", 12], [\"Flour\", 36]]'),
+(29, 'Dimsum & Dumplings', 'Polonchay Dumpling w/ Shrimp', 'Polonchay Dumpling w/ Shrimp (Min 6 Packs)', '12pcs/pack', 330.00, 100, '', '/uploads/products/Polonchay_Dumpling_w__Shrimp__Min_6_Packs___A_/product_image.png', '[[\"Minced Pork\", 216], [\"Shrimp\", 48], [\"Soy Sauce\", 12], [\"Flour\", 36]]'),
+(31, 'Dimsum & Dumplings', 'Beancurd Roll', 'Beancurd Roll', '12pcs/pack', 310.00, 114, 'A roll made by wrapping the filling with a beancurd sheet or yuba or tofu skin.', '/uploads/products/Beancurd_Roll__A_/product_image.png', '[[\"Minced Pork\",264],[\"Soy Sauce\",12],[\"Sugar\",6],[\"Veg. Spring Roll (Ham)\",36]]'),
+(33, 'Dimsum & Dumplings', 'Pork Gyoza Dumpling', 'Pork Gyoza Dumpling', '20pcs/pack', 390.00, 100, '', '/uploads/products/Pork_Gyoza_Dumpling__A_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Crispy Powder\", 40], [\"Flour\", 60]]'),
+(34, 'Dimsum & Dumplings', 'Shanghai Dumpling', 'Shanghai Dumpling', '20pcs/pack', 255.00, 100, '', '/uploads/products/Shanghai_Dumpling__A_/product_image.png', '[[\"Minced Pork\", 440], [\"Soy Sauce\", 20], [\"Sugar\", 10], [\"Flour\", 60]]'),
 (35, 'Dimsum & Dumplings', 'Siao Long Pao', 'Siao Long Pao', '15pcs/pack', 270.00, 100, '', '/uploads/products/Siao_Long_Pao/product_image.png', '[[\"Minced Pork\", 375], [\"Soy Sauce\", 15], [\"Hoisin Sauce\", 7.5], [\"Flour\", 45]]'),
 (36, 'Dimsum & Dumplings', 'Wanton Regular', 'Wanton Regular', '20pcs/pack', 315.00, 100, '', '/uploads/products/Wanton_Regular/product_image.png', '[[\"Minced Pork\", 400], [\"Soy Sauce\", 20], [\"Flour\", 60]]'),
 (37, 'Dimsum & Dumplings', 'Sesame Butchi Ball', 'Sesame Butchi Ball', '12pcs/pack', 185.00, 100, '', '/uploads/products/Sesame_Butchi_Ball/product_image.png', '[[\"Glutinous Rice\", 300], [\"Sugar\", 60], [\"Dark Chocolate Bar\", 48], [\"Butter (Anchor)\", 12]]'),
@@ -731,23 +488,16 @@ INSERT INTO `products` (`product_id`, `category`, `product_name`, `item_descript
 (39, 'Dimsum & Dumplings', 'Machang w/ Chestnut', 'Machang w/ Chestnut (Min 6 Packs)', '1pc', 110.00, 100, '', '/uploads/products/Machang_w__Chestnut__Min_6_Packs_/product_image.png', '[[\"Glutinous Rice\", 130], [\"Pork Belly (Skin On)\", 40], [\"Soy Sauce\", 3], [\"Chestnut\", 20]]'),
 (40, 'Dimsum & Dumplings', 'Pork Rib Taosi', 'Pork Rib Taosi', '500g', 200.00, 100, '', '/uploads/products/Pork_Rib_Taosi/product_image.png', '[[\"Pork Ribs\", 500], [\"Soy Sauce\", 15], [\"Star Anise\", 5]]'),
 (41, 'Dimsum & Dumplings', 'Pork Spring Roll', 'Pork Spring Roll', '20pcs/pack', 320.00, 100, '', '/uploads/products/Pork_Spring_Roll/product_image.png', '[[\"Minced Pork\", 360], [\"Veg. Spring Roll (Ham)\", 60], [\"Soy Sauce\", 20]]'),
-(42, 'Dimsum & Dumplings', 'Chicken Feet', 'Chicken Feet', '500g', 200.00, 81, '', '/uploads/products/Chicken_Feet/product_image.png', '[[\"Chicken Feet\", 500], [\"Soy Sauce\", 10], [\"Star Anise\", 5]]'),
-(43, 'Dimsum & Dumplings', 'Radish Cake', 'Radish Cake 1.5kg', '1.5kg', 370.00, 100, '', '/uploads/products/Radish_Cake_1_5kg/product_image.png', '[[\"Minced Pork\", 300], [\"Flour\", 200], [\"Soy Sauce\", 30], [\"Sugar\", 20]]'),
+(42, 'Dimsum & Dumplings', 'Chicken Feet', 'Chicken Feet', '500g', 200.00, 81, 'Most people enjoy it for the cartilage, tendons, and skin that boasts a distinctly gelatinous texture due to its high collagen content.', '/uploads/products/Chicken_Feet/product_image.png', '[[\"Chicken Feet\", 500], [\"Soy Sauce\", 10], [\"Star Anise\", 5]]'),
 (44, 'Dimsum & Dumplings', 'Radish Cake', 'Radish Cake 1kg', '1kg', 300.00, 100, '', '/uploads/products/Radish_Cake_1kg/product_image.png', '[[\"Minced Pork\", 200], [\"Flour\", 135], [\"Soy Sauce\", 20], [\"Sugar\", 13]]'),
-(45, 'Dimsum & Dumplings', 'Pumpkin Cake', 'Pumpkin Cake 1.5kg', '1.5kg', 370.00, 100, '', '/uploads/products/Pumpkin_Cake_1_5kg/product_image.png', '[[\"Minced Pork\", 300], [\"Flour\", 200], [\"Sugar\", 30], [\"Butter (Anchor)\", 20]]'),
 (46, 'Dimsum & Dumplings', 'Pumpkin Cake', 'Pumpkin Cake 1kg', '1kg', 300.00, 100, '', '/uploads/products/Pumpkin_Cake_1kg/product_image.png', '[[\"Minced Pork\", 200], [\"Flour\", 135], [\"Sugar\", 20], [\"Butter (Anchor)\", 13]]'),
-(47, 'Healthy Dimsum', 'Vegetable Dumpling', 'Vegetable Dumpling (A)', '12pcs/pack', 190.00, 79, '', '/uploads/products/Vegetable_Dumpling__A_/product_image.png', '[[\"Veg. Spring Roll (Ham)\", 120], [\"Tofu\", 60], [\"Soy Sauce\", 12], [\"Flour\", 36]]'),
-(48, 'Healthy Dimsum', 'Vegetable Dumpling', 'Vegetable Dumpling (B)', '20pcs/pack', 300.00, 99, '', '/uploads/products/Vegetable_Dumpling__B_/product_image.png', '[[\"Veg. Spring Roll (Ham)\", 200], [\"Tofu\", 100], [\"Soy Sauce\", 20], [\"Flour\", 60]]'),
-(49, 'Healthy Dimsum', 'Vegetable Spring Roll', 'Vegetable Spring Roll (A)', '12pcs/pack', 230.00, 100, '', '/uploads/products/Vegetable_Spring_Roll__A_/product_image.png', '[[\"Veg. Spring Roll (Ham)\", 144], [\"Tofu\", 48], [\"Spring Roll Wrapper\", 12]]'),
-(50, 'Healthy Dimsum', 'Vegetable Spring Roll', 'Vegetable Spring Roll (B)', '20pcs/pack', 360.00, 100, '', '/uploads/products/Vegetable_Spring_Roll__B_/product_image.png', '[[\"Veg. Spring Roll (Ham)\", 240], [\"Tofu\", 80], [\"Spring Roll Wrapper\", 20]]'),
-(51, 'Sauces', 'Chili Sauce', 'Chili Sauce (A)', '1.5kg/cntr', 590.00, 100, '', '/uploads/products/Chili_Sauce__A_/product_image.png', '[[\"Chili\", 750], [\"Garlic\", 300], [\"Vinegar\", 200], [\"Oil\", 150], [\"Sugar\", 50], [\"Salt\", 50]]'),
-(52, 'Sauces', 'Chili Sauce', 'Chili Sauce (B)', '220g/btl', 160.00, 100, '', '/uploads/products/Chili_Sauce__B_/product_image.png', '[[\"Chili\", 110], [\"Garlic\", 44], [\"Vinegar\", 30], [\"Oil\", 22], [\"Sugar\", 7], [\"Salt\", 7]]'),
+(47, 'Healthy Dimsum', 'Vegetable Dumpling', 'Vegetable Dumpling', '12pcs/pack', 190.00, 79, '', '/uploads/products/Vegetable_Dumpling__A_/product_image.png', '[[\"Veg. Spring Roll (Ham)\", 120], [\"Tofu\", 60], [\"Soy Sauce\", 12], [\"Flour\", 36]]'),
+(49, 'Healthy Dimsum', 'Vegetable Spring Roll', 'Vegetable Spring Roll', '12pcs/pack', 230.00, 100, '', '/uploads/products/Vegetable_Spring_Roll__A_/product_image.png', '[[\"Veg. Spring Roll (Ham)\", 144], [\"Tofu\", 48], [\"Spring Roll Wrapper\", 12]]'),
+(51, 'Sauces', 'Chili Sauce', 'Chili Sauce', '1.5kg/cntr', 590.00, 100, '', '/uploads/products/Chili_Sauce__A_/product_image.png', '[[\"Chili\", 750], [\"Garlic\", 300], [\"Vinegar\", 200], [\"Oil\", 150], [\"Sugar\", 50], [\"Salt\", 50]]'),
 (53, 'Sauces', 'Seafood XO Sauce', 'Seafood XO Sauce', '220g/btl', 320.00, 100, '', '/uploads/products/Seafood_XO_Sauce/product_image.png', '[[\"Dried Japanese Scallop\", 40], [\"Dried Shrimp\", 40], [\"Garlic\", 30], [\"Chili\", 20], [\"Oil\", 60], [\"Soy Sauce\", 30]]'),
-(54, 'Sauces', 'Lemon Sauce', 'Lemon Sauce (A)', '420g/btl', 135.00, 0, '', '/uploads/products/Lemon_Sauce__A_/product_image.png', '[[\"Lemon\", 200], [\"Sugar\", 100], [\"Cornstarch\", 60], [\"Vinegar\", 60]]'),
-(55, 'Sauces', 'Sweet & Sour Sauce', 'Sweet & Sour Sauce (A)', '420g/btl', 135.00, 100, '', '/uploads/products/Sweet___Sour_Sauce__A_/product_image.png', '[[\"Ketchup\", 150], [\"Pineapple\", 100], [\"Vinegar\", 80], [\"Sugar\", 50], [\"Cornstarch\", 40]]'),
+(54, 'Sauces', 'Lemon Sauce', 'Lemon Sauce', '420g/btl', 135.00, 0, '', '/uploads/products/Lemon_Sauce__A_/product_image.png', '[[\"Lemon\", 200], [\"Sugar\", 100], [\"Cornstarch\", 60], [\"Vinegar\", 60]]'),
+(55, 'Sauces', 'Sweet & Sour Sauce', 'Sweet & Sour Sauce', '420g/btl', 135.00, 100, '', '/uploads/products/Sweet___Sour_Sauce__A_/product_image.png', '[[\"Ketchup\", 150], [\"Pineapple\", 100], [\"Vinegar\", 80], [\"Sugar\", 50], [\"Cornstarch\", 40]]'),
 (56, 'Sauces', 'Beef Fillet Sauce', 'Beef Fillet Sauce', '420g/btl', 150.00, 100, '', '/uploads/products/Beef_Fillet_Sauce/product_image.png', '[[\"Soy Sauce\", 120], [\"Sugar\", 80], [\"Garlic\", 60], [\"Star Anise\", 20], [\"Cornstarch\", 140]]'),
-(57, 'Sauces', 'Lemon Sauce', 'Lemon Sauce (B)', '3.5kg/Gal', 620.00, 0, '', '/uploads/products/Lemon_Sauce__B_/product_image.png', '[[\"Lemon\", 1660], [\"Sugar\", 830], [\"Cornstarch\", 500], [\"Vinegar\", 510]]'),
-(58, 'Sauces', 'Sweet & Sour Sauce', 'Sweet & Sour Sauce (B)', '3.5kg/Gal', 620.00, 100, '', '/uploads/products/Sweet___Sour_Sauce__B_/product_image.png', '[[\"Ketchup\", 1250], [\"Pineapple\", 830], [\"Vinegar\", 700], [\"Sugar\", 420], [\"Cornstarch\", 300]]'),
 (59, 'Marinated Items', 'Asado Marinated', 'Asado Marinated (Char Siu)', '1kg', 400.00, 100, '', '/uploads/products/Asado_Marinated__Char_Siu_/product_image.png', '[[\"Pork Belly (Skin On)\", 1000], [\"Soy Sauce\", 50], [\"Sugar\", 40], [\"Star Anise\", 10], [\"Sausana/Chinese\", 30]]'),
 (60, 'Marinated Items', 'Asado Cooked', 'Asado Cooked (Char Siu)', '1kg', 700.00, 100, '', '/uploads/products/Asado_Cooked__Char_Siu_/product_image.png', '[[\"Pork Belly (Skin On)\", 1000], [\"Soy Sauce\", 50], [\"Sugar\", 40], [\"Star Anise\", 10], [\"Sausana/Chinese\", 30]]'),
 (61, 'Noodles & Wrappers', 'Pancit Canton', 'Pancit Canton', '2kg/pack', 350.00, 100, '', '/uploads/products/Pancit_Canton/product_image.png', NULL),
@@ -762,8 +512,7 @@ INSERT INTO `products` (`product_id`, `category`, `product_name`, `item_descript
 (70, 'Noodles & Wrappers', 'Beancurd Wrapper', 'Beancurd Wrapper', '1kg/pack', 1600.00, 0, '', '/uploads/products/Beancurd_Wrapper/product_image.png', NULL),
 (71, 'Noodles & Wrappers', 'Spring Roll Wrapper', 'Spring Roll Wrapper', '25pcs/pack', 90.00, 100, '', '/uploads/products/Spring_Roll_Wrapper/product_image.png', NULL),
 (72, 'Noodles & Wrappers', 'Gyoza Wrapper', 'Gyoza Wrapper (Minimum 10 Packs)', '250g/pack', 70.00, 100, '', '/uploads/products/Gyoza_Wrapper__Minimum_10_Packs_/product_image.png', NULL),
-(82, 'Pork', 'Sisig', 'Sisig (Small)', '100g', 500.00, 0, '', '/uploads/products/Sisig__Small_/product_image.png', NULL),
-(162, 'Pork', 'Hotdog', 'Jumbo', '10/pack', 100.00, 0, '', '/uploads/products/Jumbo/product_image.jpg', NULL);
+(164, 'Dimsum & Dumplings', 'Chocolate Xiao Long Bao', 'Chocolate', '12pcs/pack', 250.00, 8, 'Delicious SLB', '/uploads/products/Chocolate/product_image.png', NULL);
 
 -- --------------------------------------------------------
 
@@ -797,7 +546,7 @@ INSERT INTO `raw_materials` (`material_id`, `name`, `stock_quantity`, `created_a
 (11, 'Peking Duck', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:33'),
 (12, 'Pork Meat', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:49'),
 (13, 'Pork Belly (Skin On)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:43'),
-(14, 'Pork Belly (Skinless)', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:44'),
+(14, 'Pork Belly (Skinless)', 2200.00, '2025-04-07 16:57:58', '2025-05-05 07:21:24'),
 (15, 'Pork Chop Marinated', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:45'),
 (16, 'Pork Fat', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:45'),
 (17, 'Pork Pigue', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:48'),
@@ -840,7 +589,7 @@ INSERT INTO `raw_materials` (`material_id`, `name`, `stock_quantity`, `created_a
 (54, 'Hoisin Sauce', 7932.00, '2025-04-07 16:57:58', '2025-05-01 20:56:34'),
 (55, 'Star Anise', 237.00, '2025-04-07 16:57:58', '2025-04-22 04:10:21'),
 (56, 'Butter (Anchor)', 7404.00, '2025-04-07 16:57:58', '2025-05-01 20:56:34'),
-(57, 'Margarine Buttercup (Buttercup)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:29'),
+(57, 'Margarine Buttercup (Buttercup)', 10500.00, '2025-04-07 16:57:58', '2025-05-05 07:21:12'),
 (58, 'Cheese Quickmelt (Magnolia)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:48'),
 (59, 'Cheese Unsalted (Magnolia)', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:35:50'),
 (60, 'Cheese (Eden)', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:35:47'),
@@ -849,13 +598,13 @@ INSERT INTO `raw_materials` (`material_id`, `name`, `stock_quantity`, `created_a
 (63, 'Sugar', 96771.00, '2025-04-07 16:57:58', '2025-04-30 08:26:44'),
 (64, 'Yeast', 99450.00, '2025-04-07 16:57:58', '2025-04-26 06:50:41'),
 (65, 'Baking Powder', 9649.50, '2025-04-07 16:57:58', '2025-04-26 06:50:41'),
-(66, 'Milk', 6669.00, '2025-04-07 16:57:58', '2025-04-30 08:26:44'),
+(66, 'Milk', 6769.02, '2025-04-07 16:57:58', '2025-05-05 07:21:09'),
 (67, 'Glutinous Rice', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:21'),
 (68, 'Chestnut', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:35:51'),
 (69, 'Tofu', 99500.00, '2025-04-07 16:57:58', '2025-04-26 06:50:41'),
 (70, 'Chili', 10400.00, '2025-04-07 16:57:58', '2025-04-15 12:36:02'),
 (71, 'Garlic', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:19'),
-(72, 'Lemon', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:28'),
+(72, 'Lemon', 210300.00, '2025-04-07 16:57:58', '2025-05-05 07:21:16'),
 (73, 'Pineapple', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:43:41'),
 (74, 'Cornstarch', 10300.00, '2025-04-07 16:57:58', '2025-04-15 12:36:04'),
 (75, 'Vinegar', 300.00, '2025-04-07 16:57:58', '2025-04-08 16:44:12'),
@@ -886,7 +635,7 @@ CREATE TABLE `roles` (
 INSERT INTO `roles` (`role_id`, `role_name`, `status`, `pages`) VALUES
 (1, 'Super Admin', 'active', 'Accounts - Admin, Accounts - Clients, User Roles, Dashboard, Inventory, Raw Materials, Deliverable Orders, Order History, Orders, Payment History, Department Forecast, Forecast, Drivers, Reporting'),
 (2, 'Manager', 'active', 'Accounts - Admin, Accounts - Clients, Dashboard, Order History, Payment History, Department Forecast, Forecast, Drivers'),
-(3, 'Secretary', 'active', 'Customers, Dashboard, Inventory, Order History, Orders, Payment History, Raw Materials, Deliverable Orders'),
+(3, 'Secretary', 'active', 'Dashboard, Inventory, Order History, Orders, Payment History, Raw Materials, Deliverable Orders'),
 (4, 'Accountant', 'active', 'Dashboard, Payment History, Reporting'),
 (38, 'Staff', 'active', 'Dashboard, Inventory, Order History, Orders, Raw Materials, Deliverable Orders'),
 (39, 'Owner', 'active', 'Dashboard, Inventory, Raw Materials, Deliverable Orders, Order History, Orders, Payment History, Department Forecast, Forecast');
@@ -1019,7 +768,9 @@ ALTER TABLE `clients_accounts`
 -- Indexes for table `drivers`
 --
 ALTER TABLE `drivers`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`),
+  ADD UNIQUE KEY `username_2` (`username`);
 
 --
 -- Indexes for table `driver_assignments`
@@ -1113,7 +864,7 @@ ALTER TABLE `walkin_products`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=79;
 
 --
 -- AUTO_INCREMENT for table `balance_history`
@@ -1125,19 +876,19 @@ ALTER TABLE `balance_history`
 -- AUTO_INCREMENT for table `clients_accounts`
 --
 ALTER TABLE `clients_accounts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
 
 --
 -- AUTO_INCREMENT for table `drivers`
 --
 ALTER TABLE `drivers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `driver_assignments`
 --
 ALTER TABLE `driver_assignments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT for table `inventory_movements`
@@ -1161,13 +912,13 @@ ALTER TABLE `monthly_payments`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=158;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=200;
 
 --
 -- AUTO_INCREMENT for table `order_status_logs`
 --
 ALTER TABLE `order_status_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=102;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=132;
 
 --
 -- AUTO_INCREMENT for table `pages`
@@ -1191,7 +942,7 @@ ALTER TABLE `payment_status_history`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=163;
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=165;
 
 --
 -- AUTO_INCREMENT for table `raw_materials`
@@ -1203,7 +954,7 @@ ALTER TABLE `raw_materials`
 -- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
 
 --
 -- AUTO_INCREMENT for table `walkin_products`
