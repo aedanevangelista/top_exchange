@@ -439,7 +439,7 @@ function truncate($text, $max = 15) {
         .address-group h3 { margin-top: 0; color: #4a90e2; font-size: 15px; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
         .modal-header { background-color: #ffffff; padding: 15px 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 10; }
         .modal-header h2 { margin: 0; padding: 0; font-size: 18px; font-weight: 600; }
-        .modal-footer { background-color: #f7f7f7; padding: 12px 20px; border-top: 1px solid #ddd; text-align: center; border-radius: 0 0 8px 8px; position: sticky; bottom: 0; z-index: 10; }
+        .modal-footer { background-color: #f7f7f7; /* Lighter footer */ padding: 12px 20px; border-top: 1px solid #ddd; text-align: center; border-radius: 0 0 8px 8px; position: sticky; bottom: 0; z-index: 10; display: flex; justify-content: flex-end; /* Align buttons right */ gap: 10px; margin-top: auto; }
         .modal-body { padding: 20px; overflow-y: auto; max-height: calc(85vh - 120px); height: auto; }
         .form-modal-content { display: flex; flex-direction: column; max-height: 85vh; height: auto; width: 90%; max-width: 650px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); animation: modalPopIn 0.3s ease-out; }
         label { display: block; font-size: 14px; margin-bottom: 5px; font-weight: 500; }
