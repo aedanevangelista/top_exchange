@@ -17,9 +17,7 @@ checkRole('Accounts - Clients');
 // --- Function to validate unique username/email ---
 function validateUnique($conn, $username, $email, $id = null) {
     $result = ['exists' => false, 'field' => null, 'message' => ''];
-    // Use prepared statements consistently
     try {
-        // Check username
         $sqlUser = "SELECT id FROM clients_accounts WHERE username = ?";
         $paramsUser = [$username];
         $typesUser = "s";
@@ -38,7 +36,6 @@ function validateUnique($conn, $username, $email, $id = null) {
         }
         $stmtUser->close();
 
-        // Check email
         $sqlEmail = "SELECT id FROM clients_accounts WHERE email = ?";
         $paramsEmail = [$email];
         $typesEmail = "s";
@@ -56,72 +53,62 @@ function validateUnique($conn, $username, $email, $id = null) {
             return ['exists' => true, 'field' => 'email', 'message' => 'Email already exists'];
         }
         $stmtEmail->close();
-
     } catch (Exception $e) {
         error_log("Unique validation error: " . $e->getMessage());
-        // Return a generic error or rethrow, depending on desired handling
         return ['exists' => true, 'field' => 'database', 'message' => 'Database error during validation.'];
     }
-    return $result; // No conflicts found
+    return $result;
 }
 
 // --- Function to generate a safe filename ---
 function generateSafeFilename($username, $originalFilename) {
-    $extension = strtolower(pathinfo($originalFilename, PATHINFO_EXTENSION)); // Lowercase extension
-    // Basic sanitization: replace non-alphanumeric/hyphen/underscore with underscore
+    $extension = strtolower(pathinfo($originalFilename, PATHINFO_EXTENSION));
     $safeBaseName = preg_replace('/[^a-zA-Z0-9_-]/', '_', pathinfo($originalFilename, PATHINFO_FILENAME));
-    // Trim leading/trailing underscores and limit length
     $safeBaseName = trim(substr($safeBaseName, 0, 50), '_');
-    // Prevent empty base names
     if (empty($safeBaseName)) {
         $safeBaseName = 'file';
     }
-    // Add username and a more unique ID
-    $uniqueId = bin2hex(random_bytes(5)); // Generate 10 hex chars
+    $uniqueId = bin2hex(random_bytes(5));
     return $username . '_' . $safeBaseName . '_' . $uniqueId . '.' . $extension;
 }
 
 
 // --- Handle AJAX POST Requests ---
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
-    header('Content-Type: application/json'); // Set content type early
+    header('Content-Type: application/json');
 
     // --- ADD ACCOUNT ---
     if ($_POST['formType'] == 'add') {
-        $response = ['success' => false, 'message' => 'An unexpected error occurred.']; // Default response
+        $response = ['success' => false, 'message' => 'An unexpected error occurred.'];
         try {
             $username = trim($_POST['username'] ?? '');
             $email = trim($_POST['email'] ?? '');
-            $phone = preg_replace('/[^0-9]/', '', $_POST['phone'] ?? ''); // Sanitize phone
-            $region = $_POST['region'] ?? '';
+            $phone = preg_replace('/[^0-9]/', '', $_POST['phone'] ?? '');
+            $region_code = $_POST['region'] ?? ''; // This is the region code
+            $region_name = $_POST['region_name'] ?? $region_code; // Use submitted name, fallback to code if not sent
             $city = $_POST['city'] ?? '';
             $company = trim($_POST['company'] ?? '');
             $company_address = trim($_POST['company_address'] ?? '');
             $bill_to_address = trim($_POST['bill_to_address'] ?? '');
 
-            // Server-side Validation
             if (empty($username) || !preg_match('/^[a-zA-Z0-9_]{1,15}$/', $username)) { throw new Exception("Invalid username format or length."); }
             if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) { throw new Exception("Invalid email address."); }
-            if (empty($phone) || strlen($phone) < 7 || strlen($phone) > 12) { throw new Exception("Invalid phone number."); } // Basic length check
-            if (empty($region)) { throw new Exception("Region is required."); }
+            if (empty($phone) || strlen($phone) < 7 || strlen($phone) > 12) { throw new Exception("Invalid phone number."); }
+            if (empty($region_code)) { throw new Exception("Region is required."); } // Validate code
             if (empty($city)) { throw new Exception("City is required."); }
             if (empty($company)) { throw new Exception("Company Name is required."); }
             if (empty($company_address)) { throw new Exception("Ship to Address is required."); }
             if (empty($bill_to_address)) { throw new Exception("Bill To Address is required."); }
             if (!isset($_FILES['business_proof']) || empty($_FILES['business_proof']['name'][0])) { throw new Exception("Business proof is required."); }
 
-            // Validate uniqueness
             $uniqueCheck = validateUnique($conn, $username, $email);
             if ($uniqueCheck['exists']) { throw new Exception($uniqueCheck['message']); }
 
-            // Auto-generate password
             $last4digits = (strlen($phone) >= 4) ? substr($phone, -4) : str_pad(substr($phone, 0, 4), 4, '0');
             $autoPassword = $username . $last4digits;
             $hashedPassword = password_hash($autoPassword, PASSWORD_DEFAULT);
 
-            $business_proof_paths = []; // Store URL paths
-
-            // --- File Paths ---
+            $business_proof_paths = [];
             $uploadBaseDir = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR;
             $userUploadDir = $uploadBaseDir . $username . DIRECTORY_SEPARATOR;
             $userUploadUrl = '../../uploads/' . $username . '/';
@@ -139,14 +126,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
                         $file_type = mime_content_type($tmp_name);
                         $file_size = $_FILES['business_proof']['size'][$key];
                         $allowed_types = ['image/jpeg', 'image/png'];
-                        $max_size = 20 * 1024 * 1024; // 20MB
+                        $max_size = 20 * 1024 * 1024;
 
                         if (!in_array($file_type, $allowed_types)) { throw new Exception('Invalid file type for ' . htmlspecialchars($originalFilename) . '. Only JPG/PNG allowed.'); }
                         if ($file_size > $max_size) { throw new Exception('File ' . htmlspecialchars($originalFilename) . ' exceeds 20MB limit.'); }
 
                         $safeFilename = generateSafeFilename($username, $originalFilename);
                         $filesystemTargetPath = $userUploadDir . $safeFilename;
-                        $urlPath = $userUploadUrl . $safeFilename;
+                        // $urlPath = $userUploadUrl . $safeFilename; // Not directly used for DB, using formatted path
 
                         if (move_uploaded_file($tmp_name, $filesystemTargetPath)) {
                             $formattedUrlPath = '/admin/uploads/' . $username . '/' . $safeFilename;
@@ -163,17 +150,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             if ($uploaded_count === 0) { throw new Exception("No valid business proof files were uploaded."); }
 
             $business_proof_json = json_encode($business_proof_paths);
+            // Use $region_code for database insertion
             $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')");
-            $stmt->bind_param("ssssssssss", $username, $hashedPassword, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json);
+            $stmt->bind_param("ssssssssss", $username, $hashedPassword, $email, $phone, $region_code, $city, $company, $company_address, $bill_to_address, $business_proof_json);
 
             if ($stmt->execute()) {
                 $response = ['success' => true, 'reload' => true];
 
-                // *** EMAIL NOTIFICATION LOGIC STARTS HERE ***
                 $to = $email;
                 $subject = "Welcome to Top Exchange - Your Account Details";
                 
-                // Using HEREDOC for easier multiline string
+                // Use $region_name for the email content
                 $message = <<<EOT
                 Hello {$username},
 
@@ -183,7 +170,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
                 Username: {$username}
                 Email: {$email}
                 Phone Number: {$phone}
-                Region: {$region}
+                Region: {$region_name} 
                 City: {$city}
                 Company Name: {$company}
                 Ship to Address: {$company_address}
@@ -200,20 +187,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
                 The Top Exchange Team
                 EOT;
 
-                $headers = "From: noreply@yourexchange.com\r\n"; // Replace with your actual sending email
-                $headers .= "Reply-To: support@yourexchange.com\r\n"; // Optional: Replace with your support email
+                $headers = "From: noreply@yourexchange.com\r\n";
+                $headers .= "Reply-To: support@yourexchange.com\r\n";
                 $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
 
                 if (mail($to, $subject, $message, $headers)) {
-                    // Email sent successfully - you might want to log this or add to response if needed for admin UI
                     error_log("Account creation email sent successfully to: " . $to);
                 } else {
-                    // Email sending failed - log this error
                     error_log("Failed to send account creation email to: " . $to . ". PHP mail() error.");
-                    // Optionally, you could add a non-critical message to the admin response
-                    // $response['email_status'] = 'Account created, but notification email failed to send.';
                 }
-                // *** EMAIL NOTIFICATION LOGIC ENDS HERE ***
 
             } else {
                 throw new Exception('Database error: Failed to add account. ' . $stmt->error);
@@ -236,7 +218,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $username = trim($_POST['username'] ?? '');
             $email = trim($_POST['email'] ?? '');
             $phone = preg_replace('/[^0-9]/', '', $_POST['phone'] ?? '');
-            $region = $_POST['region'] ?? '';
+            $region_code = $_POST['region'] ?? ''; // Region code
+            // For edit, if region_name is not submitted, we might need to fetch it if email is sent here too.
+            // For now, this part is not sending emails, so only $region_code is used for DB.
             $city = $_POST['city'] ?? '';
             $company = trim($_POST['company'] ?? '');
             $company_address = trim($_POST['company_address'] ?? '');
@@ -248,7 +232,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
              if (empty($username) || !preg_match('/^[a-zA-Z0-9_]{1,15}$/', $username)) { throw new Exception("Invalid username format or length."); }
              if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) { throw new Exception("Invalid email address."); }
              if (empty($phone) || strlen($phone) < 7 || strlen($phone) > 12) { throw new Exception("Invalid phone number."); }
-             if (empty($region)) { throw new Exception("Region is required."); }
+             if (empty($region_code)) { throw new Exception("Region is required."); }
              if (empty($city)) { throw new Exception("City is required."); }
              if (empty($company)) { throw new Exception("Company Name is required."); }
              if (empty($company_address)) { throw new Exception("Ship to Address is required."); }
@@ -316,10 +300,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
              }
             $business_proof_json_to_save = json_encode($final_business_proof_paths);
 
+            // Use $region_code for database update
             $sql = "UPDATE clients_accounts SET username = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to_address = ?, business_proof = ? $passwordSqlPart WHERE id = ?";
             $stmt = $conn->prepare($sql);
             $types = "sssssssss" . $passwordType . "i";
-            $params = [$username, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json_to_save];
+            $params = [$username, $email, $phone, $region_code, $city, $company, $company_address, $bill_to_address, $business_proof_json_to_save];
             if ($passwordParam !== null) { $params[] = $passwordParam; }
             $params[] = $id;
             $stmt->bind_param($types, ...$params);
@@ -346,7 +331,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
             $status = $_POST['status'] ?? '';
             if (empty($id)) { throw new Exception("Invalid account ID."); }
-            $allowed_statuses = ['Active', 'Inactive']; // Removed 'Rejected'
+            $allowed_statuses = ['Active', 'Inactive'];
             if (!in_array($status, $allowed_statuses)) { throw new Exception('Invalid status value provided.'); }
             $stmt = $conn->prepare("UPDATE clients_accounts SET status = ? WHERE id = ?");
             $stmt->bind_param("si", $status, $id);
@@ -376,7 +361,7 @@ try {
     $params = [];
     $types = "";
     if (!empty($status_filter)) {
-        $allowed_filters = ['Active', 'Inactive']; // Removed 'Rejected'
+        $allowed_filters = ['Active', 'Inactive']; 
          if (in_array($status_filter, $allowed_filters)) {
             $sql .= " AND status = ?";
             $params[] = $status_filter;
@@ -385,7 +370,7 @@ try {
              $status_filter = '';
          }
     }
-    $sql .= " ORDER BY CASE status WHEN 'Active' THEN 1 WHEN 'Inactive' THEN 2 ELSE 3 END, created_at DESC"; // Adjusted order
+    $sql .= " ORDER BY CASE status WHEN 'Active' THEN 1 WHEN 'Inactive' THEN 2 ELSE 3 END, created_at DESC"; 
     $stmt = $conn->prepare($sql);
     if (!empty($types)) {
         $stmt->bind_param($types, ...$params);
@@ -393,6 +378,9 @@ try {
     $stmt->execute();
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
+        // Here, $row['region'] will be the code from DB. If displaying region name in table,
+        // you'd need a way to map code to name (e.g., join or separate query/mapping array).
+        // This change focuses on the email part.
         $accounts_data[] = $row;
     }
     $stmt->close();
@@ -419,7 +407,7 @@ function truncate($text, $max = 15) {
     <link rel="stylesheet" href="/css/accounts_clients.css">
     <link rel="stylesheet" href="/css/toast.css">
     <style>
-        /* Keep existing CSS from previous version */
+        /* Styles remain the same as previous version */
         #myModal { display: none; position: fixed; z-index: 9999; padding-top: 100px; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.9); }
         .modal-content { margin: auto; display: block; max-width: 80%; max-height: 80%; }
         #caption { margin: auto; display: block; width: 80%; max-width: 700px; text-align: center; color: #ccc; padding: 10px 0; height: 150px; }
@@ -432,7 +420,7 @@ function truncate($text, $max = 15) {
         .form-column { display: flex; flex-direction: column; }
         .form-full-width { grid-column: 1 / span 2; }
         .required { color: #ff0000; font-weight: bold; }
-        .overlay-content { max-width: 800px; width: 90%; max-height: 95vh; display: flex; flex-direction: column; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; } /* Adjusted for centering */
+        .overlay-content { max-width: 800px; width: 90%; max-height: 95vh; display: flex; flex-direction: column; background-color: #fff; border-radius: 8px; overflow: hidden; margin: auto; }
         .two-column-form input, .two-column-form textarea, .two-column-form select { width: 100%; box-sizing: border-box; }
         textarea#company_address, textarea#edit-company_address, textarea#bill_to_address, textarea#edit-bill_to_address { height: 60px; padding: 8px; font-size: 14px; resize: vertical; min-height: 60px; }
         input, textarea, select { border: 1px solid #ccc; border-radius: 4px; padding: 6px 10px; transition: border-color 0.3s; outline: none; font-size: 14px; margin-bottom: 10px; }
@@ -440,7 +428,7 @@ function truncate($text, $max = 15) {
         input::placeholder, textarea::placeholder { color: #aaa; padding: 4px; font-style: italic; }
         .view-address-btn, .view-contact-btn { background-color: #4a90e2; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 12px; transition: all 0.3s; }
         .view-address-btn:hover, .view-contact-btn:hover { background-color: #357abf; }
-        #addressInfoModal, #contactInfoModal { display: none; /* Hidden */ position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        #addressInfoModal, #contactInfoModal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; background-color: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
         .info-modal-content { background-color: #ffffff; margin: 0; padding: 0; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); width: 90%; max-width: 700px; max-height: 80vh; animation: modalFadeIn 0.3s ease-out; display: flex; flex-direction: column; }
         @keyframes modalFadeIn { from {opacity: 0; transform: scale(0.95);} to {opacity: 1; transform: scale(1);} }
         .info-modal-header { background-color: #4a90e2; color: #fff; padding: 15px 25px; position: relative; display: flex; align-items: center; border-radius: 10px 10px 0 0; }
@@ -462,35 +450,20 @@ function truncate($text, $max = 15) {
         .contact-text { flex: 1; }
         .contact-value { font-weight: bold; color: #333; font-size: 14px; word-break: break-all; }
         .contact-label { font-size: 13px; color: #777; display: block; margin-top: 5px; }
-        .overlay {
-            display: none; /* Hidden by default */
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            background-color: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-            display: flex; /* Use flex to center content */
-            justify-content: center;
-            align-items: center;
-            backdrop-filter: blur(3px);
-            overflow-y: auto; /* Allow scrolling if content overflows */
-            padding: 20px 0; /* Padding for smaller screens */
-        }
+        .overlay { display: none; position: fixed; width: 100%; height: 100%; top: 0; left: 0; background-color: rgba(0, 0, 0, 0.7); z-index: 1000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(3px); overflow-y: auto; padding: 20px 0; }
         .address-group { border: 1px solid #eee; padding: 12px; border-radius: 8px; margin-bottom: 15px; background-color: #fafafa; }
         .address-group h3 { margin-top: 0; color: #4a90e2; font-size: 15px; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
-        .modal-header { background-color: #ffffff; padding: 15px 20px; /* Adjusted padding */ text-align: center; border-radius: 8px 8px 0 0; border-bottom: 1px solid #ddd; /* Lighter border */ position: sticky; top: 0; z-index: 10; }
-        .modal-header h2 { margin: 0; padding: 0; font-size: 18px; font-weight: 600; } /* Adjusted font */
-        .modal-footer { background-color: #f7f7f7; /* Lighter footer */ padding: 12px 20px; border-top: 1px solid #ddd; text-align: center; border-radius: 0 0 8px 8px; position: sticky; bottom: 0; z-index: 10; }
-        .modal-body { padding: 20px; overflow-y: auto; max-height: calc(85vh - 120px); /* Adjusted calc */ height: auto; }
-        .form-modal-content { display: flex; flex-direction: column; max-height: 85vh; height: auto; width: 90%; /* More responsive */ max-width: 650px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); animation: modalPopIn 0.3s ease-out; }
-        label { display: block; font-size: 14px; margin-bottom: 5px; /* Slightly more space */ font-weight: 500; }
+        .modal-header { background-color: #ffffff; padding: 15px 20px; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 10; }
+        .modal-header h2 { margin: 0; padding: 0; font-size: 18px; font-weight: 600; }
+        .modal-footer { background-color: #f7f7f7; padding: 12px 20px; border-top: 1px solid #ddd; text-align: center; border-radius: 0 0 8px 8px; position: sticky; bottom: 0; z-index: 10; }
+        .modal-body { padding: 20px; overflow-y: auto; max-height: calc(85vh - 120px); height: auto; }
+        .form-modal-content { display: flex; flex-direction: column; max-height: 85vh; height: auto; width: 90%; max-width: 650px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); animation: modalPopIn 0.3s ease-out; }
+        label { display: block; font-size: 14px; margin-bottom: 5px; font-weight: 500; }
         .error-message { color: #D8000C; background-color: #FFD2D2; padding: 10px 15px; border-radius: 4px; border: 1px solid #FFB8B8; margin-top: 5px; margin-bottom: 15px; display: none; font-size: 14px; text-align: left; }
         .modal-footer button { padding: 8px 16px; font-size: 14px; min-width: 100px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; border: none; margin: 0 5px; }
         .save-btn { background-color: #4a90e2; color: white; }
         .save-btn:hover { background-color: #357abf; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .cancel-btn { background-color:rgb(102, 102, 102); color: white; border: 1px solid #ccc; } /* White text */
+        .cancel-btn { background-color:rgb(102, 102, 102); color: white; border: 1px solid #ccc; }
         .cancel-btn:hover { background-color:rgb(82, 82, 82); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .status-active { color: #28a745; font-weight: bold; }
         .status-pending { color: #ffc107; font-weight: bold; } 
@@ -588,7 +561,7 @@ function truncate($text, $max = 15) {
                                 <td><?= truncate($row['company']) ?></td>
                                 <td>
                                     <button class="view-address-btn"
-                                        onclick='showAddressInfo(<?= json_encode($row["company_address"] ?? "N/A") ?>, <?= json_encode($row["region"] ?? "N/A") ?>, <?= json_encode($row["city"] ?? "N/A") ?>, <?= json_encode($row["bill_to_address"] ?? "N/A") ?>)'>
+                                        onclick='showAddressInfo(<?= json_encode($row["company_address"] ?? "N/A") ?>, <?= json_encode($row["region"] ?? "N/A") // This will show region code in the modal ?>, <?= json_encode($row["city"] ?? "N/A") ?>, <?= json_encode($row["bill_to_address"] ?? "N/A") ?>)'>
                                         <i class="fas fa-eye"></i> View
                                     </button>
                                 </td>
@@ -624,7 +597,7 @@ function truncate($text, $max = 15) {
                                             <?= json_encode($row["username"] ?? "") ?>,
                                             <?= json_encode($row["email"] ?? "") ?>,
                                             <?= json_encode($row["phone"] ?? "") ?>,
-                                            <?= json_encode($row["region"] ?? "") ?>,
+                                            <?= json_encode($row["region"] ?? "") // Pass region code to edit form ?>,
                                             <?= json_encode($row["city"] ?? "") ?>,
                                             <?= json_encode($row["company"] ?? "") ?>,
                                             <?= json_encode($row["company_address"] ?? "") ?>,
@@ -697,7 +670,7 @@ function truncate($text, $max = 15) {
              </form>
          </div>
      </div>
-    <!-- Other Modals: Add Confirmation, Edit, Edit Confirmation, Status, Image Zoom, Contact Info, Address Info -->
+    <!-- Other Modals -->
     <div id="contactInfoModal" class="overlay" style="display: none;"> <div class="info-modal-content"> <div class="info-modal-header"> <h2><i class="fas fa-address-card"></i> Contact Information</h2> <span class="info-modal-close" onclick="closeContactInfoModal()">&times;</span> </div> <div class="info-modal-body"> <div class="info-section"> <h3 class="info-section-title"><i class="fas fa-user"></i> Contact Details</h3> <div class="contact-item"> <div class="contact-icon"><i class="fas fa-envelope"></i></div> <div class="contact-text"> <div class="contact-value" id="modalEmail"></div> <div class="contact-label">Email Address</div> </div> </div> <div class="contact-item"> <div class="contact-icon"><i class="fas fa-phone"></i></div> <div class="contact-text"> <div class="contact-value" id="modalPhone"></div> <div class="contact-label">Phone Number</div> </div> </div> </div> </div> </div> </div>
     <div id="addressInfoModal" class="overlay" style="display: none;"> <div class="info-modal-content"> <div class="info-modal-header"> <h2><i class="fas fa-map-marker-alt"></i> Address Information</h2> <span class="info-modal-close" onclick="closeAddressInfoModal()">&times;</span> </div> <div class="info-modal-body"> <div class="info-section"> <h3 class="info-section-title"><i class="fas fa-building"></i> Company Location</h3> <table class="info-table"> <tr><th>Ship to Address</th><td id="modalCompanyAddress"></td></tr> <tr><th>Bill To Address</th><td id="modalBillToAddress"></td></tr> <tr><th>Region</th><td id="modalRegion"></td></tr> <tr><th>City</th><td id="modalCity"></td></tr> </table> </div> </div> </div> </div>
     <div id="addConfirmationModal" class="confirmation-modal" style="display: none;"> <div class="confirmation-content"> <div class="confirmation-title">Confirm Add Account</div> <div class="confirmation-message">Add this new client account?</div> <div class="confirmation-buttons"> <button class="confirm-no" onclick="closeAddConfirmation()">No</button> <button class="confirm-yes" onclick="submitAddAccount()">Yes, Add</button> </div> </div> </div>
@@ -709,11 +682,9 @@ function truncate($text, $max = 15) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script>
-        // --- Global Vars ---
         let currentAccountId = 0; 
         let regionCityMap = new Map();
 
-        // --- Utility Functions ---
         function showError(elementId, message) {
             const errorElement = document.getElementById(elementId);
             if (errorElement) {
@@ -730,7 +701,6 @@ function truncate($text, $max = 15) {
             } else { console.log(`Toast [${type}]: ${message}`); }
         }
 
-        // --- Modal Functions (Image Zoom, Contact/Address Info) ---
         function openModal(imgElement) {
             const modal = document.getElementById("myModal");
             const modalImg = document.getElementById("img01");
@@ -751,13 +721,13 @@ function truncate($text, $max = 15) {
         function showAddressInfo(companyAddress, region, city, billToAddress) {
             document.getElementById("modalCompanyAddress").textContent = companyAddress || 'N/A';
             document.getElementById("modalBillToAddress").textContent = billToAddress || 'N/A';
+            // For Address Info Modal, region is still code. To show name, would need mapping here too.
             document.getElementById("modalRegion").textContent = region || 'N/A'; 
             document.getElementById("modalCity").textContent = city || 'N/A';
             $('#addressInfoModal').css('display', 'flex');
         }
         function closeAddressInfoModal() { $('#addressInfoModal').hide(); }
 
-        // --- Password Toggle ---
         function togglePasswordVisibility(fieldId) {
             const passwordField = document.getElementById(fieldId);
             const icon = passwordField ? passwordField.parentElement.querySelector('.toggle-password i') : null;
@@ -769,7 +739,6 @@ function truncate($text, $max = 15) {
             }
         }
 
-        // --- Region/City Loading ---
         async function loadPhilippinesRegions(selectElementId = 'region', selectedRegionCode = null) {
              const select = document.getElementById(selectElementId);
              if (!select) return;
@@ -819,7 +788,6 @@ function truncate($text, $max = 15) {
              }
          }
 
-        // --- Form Handling (Add Account) ---
         function openAddAccountForm() {
              const overlay = document.getElementById("addAccountOverlay");
              const form = document.getElementById("addAccountForm");
@@ -843,11 +811,23 @@ function truncate($text, $max = 15) {
             $('#addConfirmationModal').css('display', 'flex');
         }
         function closeAddConfirmation() { $('#addConfirmationModal').hide(); }
+        
         function submitAddAccount() {
             closeAddConfirmation();
             const form = document.getElementById('addAccountForm');
             const formData = new FormData(form);
             formData.append('ajax', true);
+
+            // *** MODIFICATION: Add selected region name to FormData ***
+            const regionSelect = document.getElementById('region');
+            if (regionSelect && regionSelect.selectedIndex > 0) { // Ensure an option is selected
+                const selectedRegionName = regionSelect.options[regionSelect.selectedIndex].text;
+                formData.append('region_name', selectedRegionName);
+            } else {
+                formData.append('region_name', ''); // Send empty if not selected or only placeholder
+            }
+            // *** END MODIFICATION ***
+
             $.ajax({
                 url: window.location.pathname, type: 'POST', data: formData, contentType: false, processData: false, dataType: 'json',
                 success: function(response) {
@@ -868,7 +848,6 @@ function truncate($text, $max = 15) {
             });
         }
 
-        // --- Form Handling (Edit Account) ---
         function openEditAccountForm(id, username, email, phone, regionCode, cityName, company, companyAddress, billToAddress, businessProofEncoded) {
             const overlay = document.getElementById("editAccountOverlay");
             const form = document.getElementById("editAccountForm");
@@ -911,9 +890,9 @@ function truncate($text, $max = 15) {
                 });
             } else { proofContainer.append('<p>No business proof images on record.</p>'); }
             $('#edit-business_proof').val(null);
-            $('#edit-original-region').val(regionCode);
+            $('#edit-original-region').val(regionCode); // Storing the region code
             $('#edit-original-city').val(cityName);
-            loadPhilippinesRegions('edit-region', regionCode).then(() => {
+            loadPhilippinesRegions('edit-region', regionCode).then(() => { // Pass regionCode here
                 if ($('#edit-region').val() === regionCode && regionCode) { loadCities(regionCode, 'edit-city', cityName); } 
                 else if (!regionCode) { $('#edit-city').empty().append('<option value="">Select City</option>').prop('disabled', true); }
             });
@@ -941,6 +920,7 @@ function truncate($text, $max = 15) {
             const form = document.getElementById('editAccountForm');
             const formData = new FormData(form);
             formData.append('ajax', true);
+            // If email is sent on edit, similar logic for region_name would be needed here.
             $.ajax({
                 url: window.location.pathname, type: 'POST', data: formData, contentType: false, processData: false, dataType: 'json',
                 success: function(response) {
@@ -961,7 +941,6 @@ function truncate($text, $max = 15) {
             });
         }
 
-        // --- Status Change ---
         function openStatusModal(id, username, email) {
             const modal = document.getElementById("statusModal");
             const messageEl = document.getElementById("statusMessage");
@@ -992,7 +971,6 @@ function truncate($text, $max = 15) {
             });
         }
 
-        // --- Table Filtering ---
         function filterByStatus() {
             var status = document.getElementById("statusFilter").value;
             const url = new URL(window.location.href);
@@ -1001,15 +979,14 @@ function truncate($text, $max = 15) {
             window.location.href = url.toString();
         }
 
-        // --- Initial Setup ---
         $(document).ready(function() { 
              loadPhilippinesRegions('region');
              $('#region').on('change', function() { loadCities(this.value, 'city'); });
              $('#edit-region').on('change', function() {
-                 const selectedCity = $('#edit-original-city').val();
-                 const currentRegion = $(this).val();
-                 const originalRegion = $('#edit-original-region').val();
-                 loadCities(this.value, 'edit-city', currentRegion === originalRegion ? selectedCity : null);
+                 const selectedCity = $('#edit-original-city').val(); // This is city name
+                 const currentRegionCode = $(this).val(); // This is region code
+                 const originalRegionCode = $('#edit-original-region').val(); // This is original region code
+                 loadCities(currentRegionCode, 'edit-city', currentRegionCode === originalRegionCode ? selectedCity : null);
              });
              const passwordToggle = document.getElementById('edit-password-toggle');
              const autoPassContainer = document.getElementById('auto-password-container');
