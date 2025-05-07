@@ -117,33 +117,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             // Auto-generate password
             $last4digits = (strlen($phone) >= 4) ? substr($phone, -4) : str_pad(substr($phone, 0, 4), 4, '0');
             $autoPassword = $username . $last4digits;
-            $password = password_hash($autoPassword, PASSWORD_DEFAULT);
+            $hashedPassword = password_hash($autoPassword, PASSWORD_DEFAULT);
 
             $business_proof_paths = []; // Store URL paths
 
             // --- File Paths ---
-            // Use DIRECTORY_SEPARATOR for filesystem paths for better portability
             $uploadBaseDir = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR;
             $userUploadDir = $uploadBaseDir . $username . DIRECTORY_SEPARATOR;
-            // URL path always uses forward slashes
             $userUploadUrl = '../../uploads/' . $username . '/';
 
-            // Create directory
-            if (!is_dir($userUploadDir) && !mkdir($userUploadDir, 0775, true) && !is_dir($userUploadDir)) { // Use 0775 typically
+            if (!is_dir($userUploadDir) && !mkdir($userUploadDir, 0775, true) && !is_dir($userUploadDir)) {
                  throw new Exception('Failed to create upload directory. Check server permissions.');
             }
 
-            // --- Process Uploads ---
             $uploaded_count = 0;
             if (isset($_FILES['business_proof'])) {
                 if (count($_FILES['business_proof']['name']) > 3) { throw new Exception('Maximum of 3 photos allowed.'); }
-
                 foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
                     if ($_FILES['business_proof']['error'][$key] === UPLOAD_ERR_OK) {
                         $originalFilename = basename($_FILES['business_proof']['name'][$key]);
-                        $file_type = mime_content_type($tmp_name); // More reliable type check
+                        $file_type = mime_content_type($tmp_name);
                         $file_size = $_FILES['business_proof']['size'][$key];
-
                         $allowed_types = ['image/jpeg', 'image/png'];
                         $max_size = 20 * 1024 * 1024; // 20MB
 
@@ -152,11 +146,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
 
                         $safeFilename = generateSafeFilename($username, $originalFilename);
                         $filesystemTargetPath = $userUploadDir . $safeFilename;
-                        $urlPath = $userUploadUrl . $safeFilename; // Path to store in DB
+                        $urlPath = $userUploadUrl . $safeFilename;
 
                         if (move_uploaded_file($tmp_name, $filesystemTargetPath)) {
                             $formattedUrlPath = '/admin/uploads/' . $username . '/' . $safeFilename;
-                            $business_proof_paths[] = $formattedUrlPath; // Store the standardized URL path
+                            $business_proof_paths[] = $formattedUrlPath;
                             $uploaded_count++;
                         } else {
                              throw new Exception('Failed to move uploaded file: ' . htmlspecialchars($originalFilename));
@@ -168,21 +162,66 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             }
             if ($uploaded_count === 0) { throw new Exception("No valid business proof files were uploaded."); }
 
-            // Encode paths and insert into DB
             $business_proof_json = json_encode($business_proof_paths);
-            // *** MODIFICATION: Set default status to 'Active' ***
             $stmt = $conn->prepare("INSERT INTO clients_accounts (username, password, email, phone, region, city, company, company_address, bill_to_address, business_proof, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')");
-            $stmt->bind_param("ssssssssss", $username, $password, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json);
+            $stmt->bind_param("ssssssssss", $username, $hashedPassword, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json);
 
             if ($stmt->execute()) {
                 $response = ['success' => true, 'reload' => true];
+
+                // *** EMAIL NOTIFICATION LOGIC STARTS HERE ***
+                $to = $email;
+                $subject = "Welcome to Top Exchange - Your Account Details";
+                
+                // Using HEREDOC for easier multiline string
+                $message = <<<EOT
+                Hello {$username},
+
+                Welcome to Top Exchange! Your client account has been successfully registered in our system.
+                Please find your account details below:
+
+                Username: {$username}
+                Email: {$email}
+                Phone Number: {$phone}
+                Region: {$region}
+                City: {$city}
+                Company Name: {$company}
+                Ship to Address: {$company_address}
+                Bill To Address: {$bill_to_address}
+
+                IMPORTANT: Your password is automatically generated based on your username and phone number.
+                Your Password: {$autoPassword}
+                (This is your username "{$username}" followed by the last 4 digits of your phone number "{$last4digits}")
+
+                Please keep these details safe. You can log in to our portal using these credentials.
+                If you have any questions, please contact our support team.
+
+                Thank you,
+                The Top Exchange Team
+                EOT;
+
+                $headers = "From: noreply@yourexchange.com\r\n"; // Replace with your actual sending email
+                $headers .= "Reply-To: support@yourexchange.com\r\n"; // Optional: Replace with your support email
+                $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+
+                if (mail($to, $subject, $message, $headers)) {
+                    // Email sent successfully - you might want to log this or add to response if needed for admin UI
+                    error_log("Account creation email sent successfully to: " . $to);
+                } else {
+                    // Email sending failed - log this error
+                    error_log("Failed to send account creation email to: " . $to . ". PHP mail() error.");
+                    // Optionally, you could add a non-critical message to the admin response
+                    // $response['email_status'] = 'Account created, but notification email failed to send.';
+                }
+                // *** EMAIL NOTIFICATION LOGIC ENDS HERE ***
+
             } else {
                 throw new Exception('Database error: Failed to add account. ' . $stmt->error);
             }
             $stmt->close();
 
         } catch (Exception $e) {
-            error_log("Add Account Error: " . $e->getMessage()); // Log detailed error
+            error_log("Add Account Error: " . $e->getMessage());
             $response = ['success' => false, 'message' => $e->getMessage()];
         }
         echo json_encode($response);
@@ -203,9 +242,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $company_address = trim($_POST['company_address'] ?? '');
             $bill_to_address = trim($_POST['bill_to_address'] ?? '');
             $manual_password = $_POST['manual_password'] ?? '';
-            $existing_business_proof_json = $_POST['existing_business_proof'] ?? '[]'; // Get existing proofs JSON
+            $existing_business_proof_json = $_POST['existing_business_proof'] ?? '[]';
 
-             // Server-side Validation
              if (empty($id)) { throw new Exception("Invalid account ID."); }
              if (empty($username) || !preg_match('/^[a-zA-Z0-9_]{1,15}$/', $username)) { throw new Exception("Invalid username format or length."); }
              if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) { throw new Exception("Invalid email address."); }
@@ -217,46 +255,37 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
              if (empty($bill_to_address)) { throw new Exception("Bill To Address is required."); }
              if (!empty($manual_password) && strlen($manual_password) < 6) { throw new Exception("Manual password must be at least 6 characters."); }
 
-             // Validate uniqueness (excluding current user)
              $uniqueCheck = validateUnique($conn, $username, $email, $id);
              if ($uniqueCheck['exists']) { throw new Exception($uniqueCheck['message']); }
 
-             // Handle password update
              $passwordSqlPart = "";
              $passwordParam = null;
              $passwordType = "";
              if (!empty($manual_password)) {
-                 $password = password_hash($manual_password, PASSWORD_DEFAULT);
+                 $hashedPassword = password_hash($manual_password, PASSWORD_DEFAULT);
                  $passwordSqlPart = ", password = ?";
-                 $passwordParam = $password;
+                 $passwordParam = $hashedPassword;
                  $passwordType = "s";
              }
 
-            // --- File Paths (Consistent with Add) ---
             $uploadBaseDir = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\') . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR;
             $userUploadDir = $uploadBaseDir . $username . DIRECTORY_SEPARATOR;
             $userUploadUrl = '/admin/uploads/' . $username . '/';
 
-            // Decode existing proofs safely
             $final_business_proof_paths = json_decode($existing_business_proof_json, true);
             if (json_last_error() !== JSON_ERROR_NONE || !is_array($final_business_proof_paths)) {
                  error_log("Invalid existing_business_proof JSON received during edit for ID $id: " . $existing_business_proof_json);
-                 $final_business_proof_paths = []; // Fallback to empty array
+                 $final_business_proof_paths = [];
             }
 
-            // --- Process Newly Uploaded Files (if any) ---
             $new_files_uploaded = false;
             if (isset($_FILES['business_proof']) && !empty($_FILES['business_proof']['name'][0])) {
                  $new_files_uploaded = true;
-                 $final_business_proof_paths = []; // REPLACE existing if new files are uploaded
-
-                 // Create directory if needed (username might have changed)
+                 $final_business_proof_paths = []; 
                 if (!is_dir($userUploadDir) && !mkdir($userUploadDir, 0775, true) && !is_dir($userUploadDir)) {
                      throw new Exception('Failed to create upload directory for edit. Check permissions.');
                 }
-
                  if (count($_FILES['business_proof']['name']) > 3) { throw new Exception('Maximum of 3 new photos allowed.'); }
-
                  $uploaded_count = 0;
                  foreach ($_FILES['business_proof']['tmp_name'] as $key => $tmp_name) {
                      if ($_FILES['business_proof']['error'][$key] === UPLOAD_ERR_OK) {
@@ -265,14 +294,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
                          $file_size = $_FILES['business_proof']['size'][$key];
                          $allowed_types = ['image/jpeg', 'image/png'];
                          $max_size = 20 * 1024 * 1024;
-
                          if (!in_array($file_type, $allowed_types)) { throw new Exception('Invalid file type for ' . htmlspecialchars($originalFilename) . '.'); }
                          if ($file_size > $max_size) { throw new Exception('File ' . htmlspecialchars($originalFilename) . ' exceeds 20MB.'); }
-
                          $safeFilename = generateSafeFilename($username, $originalFilename);
                          $filesystemTargetPath = $userUploadDir . $safeFilename;
                          $urlPath = $userUploadUrl . $safeFilename;
-
                          if (move_uploaded_file($tmp_name, $filesystemTargetPath)) {
                              $final_business_proof_paths[] = $urlPath;
                              $uploaded_count++;
@@ -285,26 +311,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
                  }
                  if ($uploaded_count === 0) { throw new Exception("New files were selected, but none were uploaded successfully."); }
             }
-            // If no new files uploaded, $final_business_proof_paths remains the decoded existing paths
-
-            // Ensure business proof is not empty if it was required initially (unless new files failed)
              if (empty($final_business_proof_paths) && !$new_files_uploaded) {
-                 // This case should ideally not happen if validation on add was correct,
-                 // but as a safeguard, you might want to re-check if proofs are mandatory.
-                 // For now, we allow saving without proofs if none existed and none were added.
+                 // Potentially re-check if proofs are mandatory if this state is problematic
              }
-
-            // Convert final paths array to JSON
             $business_proof_json_to_save = json_encode($final_business_proof_paths);
 
-            // --- Prepare and Execute Update Query ---
             $sql = "UPDATE clients_accounts SET username = ?, email = ?, phone = ?, region = ?, city = ?, company = ?, company_address = ?, bill_to_address = ?, business_proof = ? $passwordSqlPart WHERE id = ?";
             $stmt = $conn->prepare($sql);
             $types = "sssssssss" . $passwordType . "i";
             $params = [$username, $email, $phone, $region, $city, $company, $company_address, $bill_to_address, $business_proof_json_to_save];
             if ($passwordParam !== null) { $params[] = $passwordParam; }
             $params[] = $id;
-
             $stmt->bind_param($types, ...$params);
 
             if ($stmt->execute()) {
@@ -329,21 +346,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
             $status = $_POST['status'] ?? '';
             if (empty($id)) { throw new Exception("Invalid account ID."); }
-
-            // *** MODIFICATION: Removed 'Rejected' from allowed statuses ***
-            $allowed_statuses = ['Active', 'Inactive'];
+            $allowed_statuses = ['Active', 'Inactive']; // Removed 'Rejected'
             if (!in_array($status, $allowed_statuses)) { throw new Exception('Invalid status value provided.'); }
-
             $stmt = $conn->prepare("UPDATE clients_accounts SET status = ? WHERE id = ?");
             $stmt->bind_param("si", $status, $id);
-
             if ($stmt->execute()) {
                 $response = ['success' => true, 'reload' => true];
             } else {
                 throw new Exception('Database error: Failed to change status. ' . $stmt->error);
             }
             $stmt->close();
-
         } catch (Exception $e) {
              error_log("Status Change Error (ID: $id): " . $e->getMessage());
              $response = ['success' => false, 'message' => $e->getMessage()];
@@ -352,14 +364,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         exit;
     }
 
-     // Fallback for unknown formType
      echo json_encode(['success' => false, 'message' => 'Invalid form type specified.']);
      exit;
+}
 
-} // End POST AJAX Handling
-
-
-// --- GET ACCOUNTS FOR TABLE DISPLAY ---
 $accounts_data = [];
 $error_message = null;
 try {
@@ -367,21 +375,17 @@ try {
     $sql = "SELECT id, username, email, phone, region, city, company, company_address, bill_to_address, business_proof, status, created_at FROM clients_accounts WHERE status != 'archived'";
     $params = [];
     $types = "";
-
     if (!empty($status_filter)) {
-        // *** MODIFICATION: Removed 'Rejected' from allowed filters ***
-        $allowed_filters = ['Active', 'Inactive'];
+        $allowed_filters = ['Active', 'Inactive']; // Removed 'Rejected'
          if (in_array($status_filter, $allowed_filters)) {
             $sql .= " AND status = ?";
             $params[] = $status_filter;
             $types .= "s";
          } else {
-             $status_filter = ''; // Ignore invalid filter
+             $status_filter = '';
          }
     }
-    // *** MODIFICATION: Adjusted ORDER BY CASE to remove Rejected ***
-    $sql .= " ORDER BY CASE status WHEN 'Active' THEN 1 WHEN 'Inactive' THEN 2 ELSE 3 END, created_at DESC";
-
+    $sql .= " ORDER BY CASE status WHEN 'Active' THEN 1 WHEN 'Inactive' THEN 2 ELSE 3 END, created_at DESC"; // Adjusted order
     $stmt = $conn->prepare($sql);
     if (!empty($types)) {
         $stmt->bind_param($types, ...$params);
@@ -397,10 +401,9 @@ try {
      $error_message = "Error fetching account data from database.";
 }
 
-// --- Helper function for display ---
 function truncate($text, $max = 15) {
      if ($text === null) return 'N/A';
-     $text = htmlspecialchars($text, ENT_QUOTES, 'UTF-8'); // Escape text for display
+     $text = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
     return (mb_strlen($text) > $max) ? mb_substr($text, 0, $max) . '...' : $text;
 }
 ?>
@@ -410,13 +413,11 @@ function truncate($text, $max = 15) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client Accounts</title>
-    <!-- Links removed for brevity, assume they are correct -->
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" href="/css/accounts_clients.css">
     <link rel="stylesheet" href="/css/toast.css">
-    <!-- Assume other CSS files are linked -->
     <style>
         /* Keep existing CSS from previous version */
         #myModal { display: none; position: fixed; z-index: 9999; padding-top: 100px; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.9); }
@@ -492,13 +493,13 @@ function truncate($text, $max = 15) {
         .cancel-btn { background-color:rgb(102, 102, 102); color: white; border: 1px solid #ccc; } /* White text */
         .cancel-btn:hover { background-color:rgb(82, 82, 82); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .status-active { color: #28a745; font-weight: bold; }
-        .status-pending { color: #ffc107; font-weight: bold; } /* Style kept just in case, but should not be used */
-        .status-rejected { color: #dc3545; font-weight: bold; } /* Style kept as it doesn't harm */
+        .status-pending { color: #ffc107; font-weight: bold; } 
+        .status-rejected { color: #dc3545; font-weight: bold; } 
         .status-inactive { color: #6c757d; font-weight: bold; }
-        .password-note { font-size: 12px; color: #666; margin-top: 4px; margin-bottom: 10px; /* Added bottom margin */ font-style: italic; }
+        .password-note { font-size: 12px; color: #666; margin-top: 4px; margin-bottom: 10px; font-style: italic; }
         .auto-generated { background-color: #f8f8f8; color: #888; cursor: not-allowed; }
         .password-container { position: relative; width: 100%; margin-bottom: 10px; }
-        .toggle-password { position: absolute; right: 1px; top: 1px; bottom: 1px; /* Align with input border */ display: flex; align-items: center; padding: 0 10px; cursor: pointer; color: #666; background: #fff; border-left: 1px solid #ccc; border-radius: 0 3px 3px 0; }
+        .toggle-password { position: absolute; right: 1px; top: 1px; bottom: 1px; display: flex; align-items: center; padding: 0 10px; cursor: pointer; color: #666; background: #fff; border-left: 1px solid #ccc; border-radius: 0 3px 3px 0; }
         .toggle-password:hover { color: #333; }
         .switch-container { display: flex; align-items: center; margin-top: 8px; margin-bottom: 12px; }
         .switch-label { font-size: 13px; margin-left: 8px; color: #555; cursor: pointer; }
@@ -509,20 +510,7 @@ function truncate($text, $max = 15) {
         input:checked + .slider { background-color: #4a90e2; }
         input:focus + .slider { box-shadow: 0 0 1px #4a90e2; }
         input:checked + .slider:before { transform: translateX(26px); }
-        .confirmation-modal {
-            display: none; /* Hidden by default */
-            position: fixed;
-            z-index: 1100; /* Higher than other modals */
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            overflow: hidden; /* Prevent scrolling */
-            display: flex; /* Use flex to center */
-            align-items: center;
-            justify-content: center;
-        }
+        .confirmation-modal { display: none; position: fixed; z-index: 1100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .confirmation-content { background-color: #fefefe; padding: 25px 30px; border-radius: 8px; width: 380px; max-width: 90%; text-align: center; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); animation: modalPopIn 0.3s ease-out; }
         @keyframes modalPopIn { from {transform: scale(0.8) translateY(20px); opacity: 0;} to {transform: scale(1) translateY(0); opacity: 1;} }
         .confirmation-title { font-size: 20px; margin-bottom: 15px; color: #333; font-weight: 600; }
@@ -538,20 +526,16 @@ function truncate($text, $max = 15) {
         #edit-business-proof-container img { margin: 5px; border: 1px solid #ccc; padding: 2px; max-width: 60px; height: auto; background: #fff; border-radius: 3px; cursor: pointer; }
         #edit-business-proof-container h4 { width: 100%; margin-bottom: 5px; font-size: 14px; color: #555; font-weight: 500; }
         #edit-business-proof-container p { width: 100%; font-size: 13px; color: #888; margin: 5px 0; }
-        #statusModal .overlay-content { padding: 25px; text-align: center; max-width: 450px; width: 90%; } /* Centered, adjusted size */
+        #statusModal .overlay-content { padding: 25px; text-align: center; max-width: 450px; width: 90%; }
         #statusModal h2 { margin-bottom: 15px; font-weight: 600; font-size: 20px; }
         #statusModal p { margin-bottom: 25px; color: #555; font-size: 15px; }
         #statusModal .modal-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; }
         #statusModal .modal-buttons button { flex-grow: 1; padding: 10px 15px; cursor: pointer; border: none; border-radius: 4px; transition: background-color 0.2s, box-shadow 0.2s; color: white; font-size: 14px; }
         #statusModal .approve-btn { background-color: #28a745; } #statusModal .approve-btn:hover { background-color: #218838; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
-        #statusModal .reject-btn { background-color: #dc3545; } #statusModal .reject-btn:hover { background-color: #c82333; box-shadow: 0 2px 4px rgba(0,0,0,0.15); } /* Style kept as it doesn't harm */
-        /* #statusModal .pending-btn { background-color: #ffc107; color: #333; } #statusModal .pending-btn:hover { background-color: #e0a800; box-shadow: 0 2px 4px rgba(0,0,0,0.15); } */ /* Pending button style (not used) */
+        #statusModal .reject-btn { background-color: #dc3545; } #statusModal .reject-btn:hover { background-color: #c82333; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
         #statusModal .inactive-btn { background-color: #6c757d; } #statusModal .inactive-btn:hover { background-color: #5a6268; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
         #statusModal .single-button { text-align: center; margin-top: 10px; }
         #statusModal .single-button button { width: auto; min-width: 120px; }
-        /* Add spinner styles if using */
-        /* .spinner { ... } */
-        /* .loading { pointer-events: none; opacity: 0.7; } */
     </style>
 </head>
 <body>
@@ -564,13 +548,10 @@ function truncate($text, $max = 15) {
                 <label for="statusFilter">Filter by Status:</label>
                 <select id="statusFilter" onchange="filterByStatus()">
                     <option value="">All</option>
-                    <!-- *** MODIFICATION: Removed 'Pending' option *** -->
                     <option value="Active" <?= ($status_filter ?? '') == 'Active' ? 'selected' : '' ?>>Active</option>
-                    <!-- *** MODIFICATION: Removed 'Rejected' option *** -->
                     <option value="Inactive" <?= ($status_filter ?? '') == 'Inactive' ? 'selected' : '' ?>>Inactive</option>
                 </select>
             </div>
-            <!-- Corrected button call -->
             <button onclick="openAddAccountForm()" class="add-account-btn">
                 <i class="fas fa-user-plus"></i> Add New Account
             </button>
@@ -617,16 +598,12 @@ function truncate($text, $max = 15) {
                                     if (json_last_error() === JSON_ERROR_NONE && is_array($proofs) && !empty($proofs)) {
                                         foreach ($proofs as $proof) {
                                             if (is_string($proof) && !empty($proof)) {
-                                                // Normalize the path to ensure it works correctly
                                                 $imagePath = $proof;
-                                                // Adjust path if stored differently
                                                 if (strpos($proof, '../..') === 0) {
                                                     $imagePath = str_replace('../../', '/admin/', $proof);
                                                 } else if (strpos($proof, '/admin/uploads/') !== 0) {
-                                                     // Assume it needs the base path if it doesn't start with /admin/uploads/
-                                                     $imagePath = '/admin/uploads/' . $row['username'] . '/' . basename($proof); // Use basename just in case
+                                                     $imagePath = '/admin/uploads/' . $row['username'] . '/' . basename($proof);
                                                 }
-
                                                 echo '<img src="' . htmlspecialchars($imagePath, ENT_QUOTES, 'UTF-8') .
                                                     '" alt="Business Proof" width="50" onclick="openModal(this)">';
                                             }
@@ -636,11 +613,9 @@ function truncate($text, $max = 15) {
                                     }
                                     ?>
                                 </td>
-                                <!-- *** NOTE: The CSS class 'status-pending' might still exist but won't be used if no data has 'Pending' status *** -->
                                 <td class="<?= 'status-' . strtolower(htmlspecialchars($row['status'] ?? 'inactive')) ?>"><?= htmlspecialchars($row['status'] ?? 'Inactive') ?></td>
                                 <td class="action-buttons">
                                     <?php
-                                    // Pass the raw (but potentially null) proof string to htmlspecialchars
                                     $business_proof_json_for_js = htmlspecialchars($row['business_proof'] ?? '[]', ENT_QUOTES, 'UTF-8');
                                     ?>
                                     <button class="edit-btn"
@@ -654,7 +629,7 @@ function truncate($text, $max = 15) {
                                             <?= json_encode($row["company"] ?? "") ?>,
                                             <?= json_encode($row["company_address"] ?? "") ?>,
                                             <?= json_encode($row["bill_to_address"] ?? "") ?>,
-                                            <?= $business_proof_json_for_js /* Pass HTML-encoded JSON */ ?>
+                                            <?= $business_proof_json_for_js ?>
                                         )'>
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
@@ -674,57 +649,8 @@ function truncate($text, $max = 15) {
         </div>
     </div>
 
-    <!-- Include all Modals HTML here (Add, Edit, Confirmations, Info, Status, Image Zoom) -->
-    <!-- Contact Info Modal -->
-     <div id="contactInfoModal" class="overlay" style="display: none;"> <!-- Initially hidden -->
-         <div class="info-modal-content">
-             <div class="info-modal-header">
-                 <h2><i class="fas fa-address-card"></i> Contact Information</h2>
-                 <span class="info-modal-close" onclick="closeContactInfoModal()">&times;</span>
-             </div>
-             <div class="info-modal-body">
-                 <div class="info-section">
-                     <h3 class="info-section-title"><i class="fas fa-user"></i> Contact Details</h3>
-                     <div class="contact-item">
-                         <div class="contact-icon"><i class="fas fa-envelope"></i></div>
-                         <div class="contact-text">
-                             <div class="contact-value" id="modalEmail"></div>
-                             <div class="contact-label">Email Address</div>
-                         </div>
-                     </div>
-                     <div class="contact-item">
-                         <div class="contact-icon"><i class="fas fa-phone"></i></div>
-                         <div class="contact-text">
-                             <div class="contact-value" id="modalPhone"></div>
-                             <div class="contact-label">Phone Number</div>
-                         </div>
-                     </div>
-                 </div>
-             </div>
-         </div>
-     </div>
-     <!-- Address Info Modal -->
-     <div id="addressInfoModal" class="overlay" style="display: none;"> <!-- Initially hidden -->
-         <div class="info-modal-content">
-             <div class="info-modal-header">
-                 <h2><i class="fas fa-map-marker-alt"></i> Address Information</h2>
-                 <span class="info-modal-close" onclick="closeAddressInfoModal()">&times;</span>
-             </div>
-             <div class="info-modal-body">
-                 <div class="info-section">
-                     <h3 class="info-section-title"><i class="fas fa-building"></i> Company Location</h3>
-                     <table class="info-table">
-                         <tr><th>Ship to Address</th><td id="modalCompanyAddress"></td></tr>
-                         <tr><th>Bill To Address</th><td id="modalBillToAddress"></td></tr>
-                         <tr><th>Region</th><td id="modalRegion"></td></tr>
-                         <tr><th>City</th><td id="modalCity"></td></tr>
-                     </table>
-                 </div>
-             </div>
-         </div>
-     </div>
      <!-- Add Account Modal -->
-     <div id="addAccountOverlay" class="overlay" style="display: none;"> <!-- Initially hidden -->
+     <div id="addAccountOverlay" class="overlay" style="display: none;">
          <div class="form-modal-content">
              <div class="modal-header"><h2><i class="fas fa-user-plus"></i> Add New Account</h2></div>
              <form id="addAccountForm" method="POST" enctype="multipart/form-data" novalidate>
@@ -771,126 +697,20 @@ function truncate($text, $max = 15) {
              </form>
          </div>
      </div>
-     <!-- Add Confirmation Modal -->
-     <div id="addConfirmationModal" class="confirmation-modal" style="display: none;"> <!-- Initially hidden -->
-         <div class="confirmation-content">
-             <div class="confirmation-title">Confirm Add Account</div>
-             <div class="confirmation-message">Add this new client account?</div>
-             <div class="confirmation-buttons">
-                 <button class="confirm-no" onclick="closeAddConfirmation()">No</button>
-                 <button class="confirm-yes" onclick="submitAddAccount()">Yes, Add</button>
-             </div>
-         </div>
-     </div>
-     <!-- Edit Account Modal -->
-     <div id="editAccountOverlay" class="overlay" style="display: none;"> <!-- Initially hidden -->
-         <div class="form-modal-content">
-             <div class="modal-header"><h2><i class="fas fa-edit"></i> Edit Account</h2></div>
-             <form id="editAccountForm" method="POST" enctype="multipart/form-data" novalidate>
-                 <input type="hidden" name="formType" value="edit"><input type="hidden" id="edit-id" name="id">
-                 <input type="hidden" id="existing-business-proof" name="existing_business_proof">
-                 <input type="hidden" id="edit-original-region"><input type="hidden" id="edit-original-city">
-                 <div class="modal-body">
-                     <div id="editAccountError" class="error-message"></div>
-                     <div class="two-column-form">
-                         <div class="form-column">
-                             <label for="edit-username">Username: <span class="required">*</span></label>
-                             <input type="text" id="edit-username" name="username" required placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Use letters, numbers, underscores only. Max 15 chars.">
-                             <label for="edit-phone">Phone: <span class="required">*</span></label>
-                             <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 09123456789" maxlength="12" pattern="[0-9]+" title="Numbers only, 7-12 digits" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
-                             <div class="switch-container">
-                                 <label class="switch"><input type="checkbox" id="edit-password-toggle"><span class="slider"></span></label>
-                                 <label for="edit-password-toggle" class="switch-label">Set Manual Password</label> <!-- Label for checkbox -->
-                             </div>
-                             <div id="auto-password-container">
-                                 <label for="edit-auto-password">Password:</label>
-                                 <input type="text" id="edit-auto-password" readonly class="auto-generated" placeholder="Password unchanged">
-                                 <div class="password-note">Leave toggle off to keep current password.</div>
-                             </div>
-                             <div id="manual-password-container" style="display: none;">
-                                 <label for="edit-manual-password">New Password: <span class="required">*</span></label>
-                                 <div class="password-container">
-                                     <input type="password" id="edit-manual-password" name="manual_password" placeholder="Enter new password" minlength="6">
-                                     <!-- Corrected onclick call -->
-                                     <span class="toggle-password" onclick="togglePasswordVisibility('edit-manual-password')"><i class="fas fa-eye"></i></span>
-                                 </div>
-                                 <div class="password-note">Min 6 characters.</div>
-                             </div>
-                             <label for="edit-email">Email: <span class="required">*</span></label>
-                             <input type="email" id="edit-email" name="email" required maxlength="40" placeholder="e.g., user@example.com">
-                         </div>
-                         <div class="form-column">
-                             <label for="edit-region">Region: <span class="required">*</span></label>
-                             <select id="edit-region" name="region" required><option value="">Select Region</option></select>
-                             <label for="edit-city">City: <span class="required">*</span></label>
-                             <select id="edit-city" name="city" required><option value="">Select City</option></select>
-                             <label for="edit-company">Company Name: <span class="required">*</span></label>
-                             <input type="text" id="edit-company" name="company" required maxlength="25" placeholder="e.g., Top Exchange Food Corp">
-                         </div>
-                         <div class="form-full-width">
-                             <div class="address-group">
-                                 <h3><i class="fas fa-building"></i> Company Address</h3>
-                                 <label for="edit-company_address">Ship to Address: <span class="required">*</span></label>
-                                 <textarea id="edit-company_address" name="company_address" required maxlength="100" placeholder="e.g., 123 Main St, Brgy, City"></textarea>
-                                 <label for="edit-bill_to_address">Bill To Address: <span class="required">*</span></label>
-                                 <textarea id="edit-bill_to_address" name="bill_to_address" required maxlength="100" placeholder="e.g., 456 Billing St, Brgy, City"></textarea>
-                             </div>
-                             <div id="edit-business-proof-container"></div> <!-- Display current images -->
-                             <label for="edit-business_proof">Upload New Business Proof: <span class="file-info">(Optional - Replaces existing)</span></label>
-                             <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple title="Max 3 images, 20MB/ea. Replaces existing proofs.">
-                         </div>
-                     </div>
-                 </div>
-                 <div class="modal-footer">
-                     <button type="button" class="cancel-btn" onclick="closeEditAccountForm()"><i class="fas fa-times"></i> Cancel</button>
-                     <button type="button" class="save-btn" onclick="confirmEditAccount()"><i class="fas fa-save"></i> Save Changes</button>
-                 </div>
-             </form>
-         </div>
-     </div>
-     <!-- Edit Confirmation Modal -->
-     <div id="editConfirmationModal" class="confirmation-modal" style="display: none;"> <!-- Initially hidden -->
-         <div class="confirmation-content">
-             <div class="confirmation-title">Confirm Edit Account</div>
-             <div class="confirmation-message">Save these changes?</div>
-             <div class="confirmation-buttons">
-                 <button class="confirm-no" onclick="closeEditConfirmation()">No</button>
-                 <button class="confirm-yes" onclick="submitEditAccount()">Yes, Save</button>
-             </div>
-         </div>
-     </div>
-     <!-- Status Change Modal -->
-     <div id="statusModal" class="overlay" style="display: none;"> <!-- Initially hidden -->
-         <div class="overlay-content">
-             <h2>Change Status</h2>
-             <p id="statusMessage"></p>
-             <div class="modal-buttons">
-                 <!-- *** MODIFICATION: Removed 'Pending' button (wasn't here, but confirming) *** -->
-                 <button class="approve-btn" onclick="changeStatus('Active')"><i class="fas fa-check"></i> Active</button>
-                 <!-- *** MODIFICATION: Removed 'Reject' button *** -->
-                 <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Inactive</button> <!-- Changed Archive to Inactive -->
-             </div>
-             <div class="modal-buttons single-button">
-                 <button class="cancel-btn" onclick="closeStatusModal()"><i class="fas fa-times"></i> Cancel</button>
-             </div>
-         </div>
-     </div>
-     <!-- *** NOTE: The confirmation modal logic from the previous step is NOT included here as it wasn't in your latest code snippet. If you want that back, let me know. *** -->
-     <!-- Image Zoom Modal -->
-     <div id="myModal" class="modal" style="display: none;"> <!-- Initially hidden -->
-         <span class="close" onclick="closeModal()">&times;</span>
-         <img class="modal-content" id="img01">
-         <div id="caption"></div>
-     </div>
+    <!-- Other Modals: Add Confirmation, Edit, Edit Confirmation, Status, Image Zoom, Contact Info, Address Info -->
+    <div id="contactInfoModal" class="overlay" style="display: none;"> <div class="info-modal-content"> <div class="info-modal-header"> <h2><i class="fas fa-address-card"></i> Contact Information</h2> <span class="info-modal-close" onclick="closeContactInfoModal()">&times;</span> </div> <div class="info-modal-body"> <div class="info-section"> <h3 class="info-section-title"><i class="fas fa-user"></i> Contact Details</h3> <div class="contact-item"> <div class="contact-icon"><i class="fas fa-envelope"></i></div> <div class="contact-text"> <div class="contact-value" id="modalEmail"></div> <div class="contact-label">Email Address</div> </div> </div> <div class="contact-item"> <div class="contact-icon"><i class="fas fa-phone"></i></div> <div class="contact-text"> <div class="contact-value" id="modalPhone"></div> <div class="contact-label">Phone Number</div> </div> </div> </div> </div> </div> </div>
+    <div id="addressInfoModal" class="overlay" style="display: none;"> <div class="info-modal-content"> <div class="info-modal-header"> <h2><i class="fas fa-map-marker-alt"></i> Address Information</h2> <span class="info-modal-close" onclick="closeAddressInfoModal()">&times;</span> </div> <div class="info-modal-body"> <div class="info-section"> <h3 class="info-section-title"><i class="fas fa-building"></i> Company Location</h3> <table class="info-table"> <tr><th>Ship to Address</th><td id="modalCompanyAddress"></td></tr> <tr><th>Bill To Address</th><td id="modalBillToAddress"></td></tr> <tr><th>Region</th><td id="modalRegion"></td></tr> <tr><th>City</th><td id="modalCity"></td></tr> </table> </div> </div> </div> </div>
+    <div id="addConfirmationModal" class="confirmation-modal" style="display: none;"> <div class="confirmation-content"> <div class="confirmation-title">Confirm Add Account</div> <div class="confirmation-message">Add this new client account?</div> <div class="confirmation-buttons"> <button class="confirm-no" onclick="closeAddConfirmation()">No</button> <button class="confirm-yes" onclick="submitAddAccount()">Yes, Add</button> </div> </div> </div>
+    <div id="editAccountOverlay" class="overlay" style="display: none;"> <div class="form-modal-content"> <div class="modal-header"><h2><i class="fas fa-edit"></i> Edit Account</h2></div> <form id="editAccountForm" method="POST" enctype="multipart/form-data" novalidate> <input type="hidden" name="formType" value="edit"><input type="hidden" id="edit-id" name="id"> <input type="hidden" id="existing-business-proof" name="existing_business_proof"> <input type="hidden" id="edit-original-region"><input type="hidden" id="edit-original-city"> <div class="modal-body"> <div id="editAccountError" class="error-message"></div> <div class="two-column-form"> <div class="form-column"> <label for="edit-username">Username: <span class="required">*</span></label> <input type="text" id="edit-username" name="username" required placeholder="e.g., johndoe" maxlength="15" pattern="^[a-zA-Z0-9_]+$" title="Use letters, numbers, underscores only. Max 15 chars."> <label for="edit-phone">Phone: <span class="required">*</span></label> <input type="tel" id="edit-phone" name="phone" required placeholder="e.g., 09123456789" maxlength="12" pattern="[0-9]+" title="Numbers only, 7-12 digits" oninput="this.value = this.value.replace(/[^0-9]/g, '');"> <div class="switch-container"> <label class="switch"><input type="checkbox" id="edit-password-toggle"><span class="slider"></span></label> <label for="edit-password-toggle" class="switch-label">Set Manual Password</label> </div> <div id="auto-password-container"> <label for="edit-auto-password">Password:</label> <input type="text" id="edit-auto-password" readonly class="auto-generated" placeholder="Password unchanged"> <div class="password-note">Leave toggle off to keep current password.</div> </div> <div id="manual-password-container" style="display: none;"> <label for="edit-manual-password">New Password: <span class="required">*</span></label> <div class="password-container"> <input type="password" id="edit-manual-password" name="manual_password" placeholder="Enter new password" minlength="6"> <span class="toggle-password" onclick="togglePasswordVisibility('edit-manual-password')"><i class="fas fa-eye"></i></span> </div> <div class="password-note">Min 6 characters.</div> </div> <label for="edit-email">Email: <span class="required">*</span></label> <input type="email" id="edit-email" name="email" required maxlength="40" placeholder="e.g., user@example.com"> </div> <div class="form-column"> <label for="edit-region">Region: <span class="required">*</span></label> <select id="edit-region" name="region" required><option value="">Select Region</option></select> <label for="edit-city">City: <span class="required">*</span></label> <select id="edit-city" name="city" required><option value="">Select City</option></select> <label for="edit-company">Company Name: <span class="required">*</span></label> <input type="text" id="edit-company" name="company" required maxlength="25" placeholder="e.g., Top Exchange Food Corp"> </div> <div class="form-full-width"> <div class="address-group"> <h3><i class="fas fa-building"></i> Company Address</h3> <label for="edit-company_address">Ship to Address: <span class="required">*</span></label> <textarea id="edit-company_address" name="company_address" required maxlength="100" placeholder="e.g., 123 Main St, Brgy, City"></textarea> <label for="edit-bill_to_address">Bill To Address: <span class="required">*</span></label> <textarea id="edit-bill_to_address" name="bill_to_address" required maxlength="100" placeholder="e.g., 456 Billing St, Brgy, City"></textarea> </div> <div id="edit-business-proof-container"></div> <label for="edit-business_proof">Upload New Business Proof: <span class="file-info">(Optional - Replaces existing)</span></label> <input type="file" id="edit-business_proof" name="business_proof[]" accept="image/jpeg, image/png" multiple title="Max 3 images, 20MB/ea. Replaces existing proofs."> </div> </div> </div> <div class="modal-footer"> <button type="button" class="cancel-btn" onclick="closeEditAccountForm()"><i class="fas fa-times"></i> Cancel</button> <button type="button" class="save-btn" onclick="confirmEditAccount()"><i class="fas fa-save"></i> Save Changes</button> </div> </form> </div> </div>
+    <div id="editConfirmationModal" class="confirmation-modal" style="display: none;"> <div class="confirmation-content"> <div class="confirmation-title">Confirm Edit Account</div> <div class="confirmation-message">Save these changes?</div> <div class="confirmation-buttons"> <button class="confirm-no" onclick="closeEditConfirmation()">No</button> <button class="confirm-yes" onclick="submitEditAccount()">Yes, Save</button> </div> </div> </div>
+    <div id="statusModal" class="overlay" style="display: none;"> <div class="overlay-content"> <h2>Change Status</h2> <p id="statusMessage"></p> <div class="modal-buttons"> <button class="approve-btn" onclick="changeStatus('Active')"><i class="fas fa-check"></i> Active</button> <button class="inactive-btn" onclick="changeStatus('Inactive')"><i class="fas fa-ban"></i> Inactive</button> </div> <div class="modal-buttons single-button"> <button class="cancel-btn" onclick="closeStatusModal()"><i class="fas fa-times"></i> Cancel</button> </div> </div> </div>
+    <div id="myModal" class="modal" style="display: none;"> <span class="close" onclick="closeModal()">&times;</span> <img class="modal-content" id="img01"> <div id="caption"></div> </div>
 
-
-    <!-- SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <!-- <script src="/js/toast.js"></script> Assuming this initializes toastr -->
     <script>
         // --- Global Vars ---
-        let currentAccountId = 0; // Used temporarily by status modal
+        let currentAccountId = 0; 
         let regionCityMap = new Map();
 
         // --- Utility Functions ---
@@ -901,55 +721,43 @@ function truncate($text, $max = 15) {
                 errorElement.style.display = 'block';
             }
         }
-        function resetErrors() {
-            $('.error-message').hide().text(''); // Hide all error messages using jQuery
-        }
+        function resetErrors() { $('.error-message').hide().text(''); }
         function showToast(message, type = 'info') {
             if (typeof toastr !== 'undefined') {
                 toastr.options = { closeButton: false, progressBar: true, positionClass: "toast-top-right", timeOut: 3500, extendedTimeOut: 1000, preventDuplicates: true };
                 const toastrFunc = toastr[type] || toastr.info;
                 toastrFunc(message);
-            } else {
-                console.log(`Toast [${type}]: ${message}`);
-            }
+            } else { console.log(`Toast [${type}]: ${message}`); }
         }
 
-        // --- Modal Functions ---
-        function openModal(imgElement) { /* Unchanged */
+        // --- Modal Functions (Image Zoom, Contact/Address Info) ---
+        function openModal(imgElement) {
             const modal = document.getElementById("myModal");
             const modalImg = document.getElementById("img01");
             const captionText = document.getElementById("caption");
             if (modal && modalImg && captionText) {
-                modal.style.display = "block"; // Changed from flex to block for image modal
+                modal.style.display = "block"; 
                 modalImg.src = imgElement.src;
                 captionText.innerHTML = imgElement.alt || 'Business Proof';
             }
         }
-        function closeModal() { /* Unchanged */
-            const modal = document.getElementById("myModal");
-            if (modal) modal.style.display = "none";
-        }
-        function showContactInfo(email, phone) { /* Unchanged */
+        function closeModal() { document.getElementById("myModal").style.display = "none"; }
+        function showContactInfo(email, phone) {
             document.getElementById("modalEmail").textContent = email || 'N/A';
             document.getElementById("modalPhone").textContent = phone || 'N/A';
-            $('#contactInfoModal').css('display', 'flex'); // Use jQuery for consistency
+            $('#contactInfoModal').css('display', 'flex'); 
         }
-        function closeContactInfoModal() { /* Unchanged */
-             $('#contactInfoModal').hide();
-        }
-        function showAddressInfo(companyAddress, region, city, billToAddress) { /* Unchanged */
+        function closeContactInfoModal() { $('#contactInfoModal').hide(); }
+        function showAddressInfo(companyAddress, region, city, billToAddress) {
             document.getElementById("modalCompanyAddress").textContent = companyAddress || 'N/A';
             document.getElementById("modalBillToAddress").textContent = billToAddress || 'N/A';
-            document.getElementById("modalRegion").textContent = region || 'N/A'; // Consider mapping code to name if needed
+            document.getElementById("modalRegion").textContent = region || 'N/A'; 
             document.getElementById("modalCity").textContent = city || 'N/A';
             $('#addressInfoModal').css('display', 'flex');
         }
-        function closeAddressInfoModal() { /* Unchanged */
-            $('#addressInfoModal').hide();
-        }
+        function closeAddressInfoModal() { $('#addressInfoModal').hide(); }
 
         // --- Password Toggle ---
-        // Now accepts the field ID as an argument
         function togglePasswordVisibility(fieldId) {
             const passwordField = document.getElementById(fieldId);
             const icon = passwordField ? passwordField.parentElement.querySelector('.toggle-password i') : null;
@@ -965,62 +773,44 @@ function truncate($text, $max = 15) {
         async function loadPhilippinesRegions(selectElementId = 'region', selectedRegionCode = null) {
              const select = document.getElementById(selectElementId);
              if (!select) return;
-             // console.log(`Loading regions for ${selectElementId}, selected: ${selectedRegionCode}`);
              try {
                  const response = await fetch('https://psgc.gitlab.io/api/regions/');
                  if (!response.ok) throw new Error(`HTTP ${response.status}`);
                  const regions = await response.json();
-                 select.length = 1; // Clear existing options except placeholder
+                 select.length = 1; 
                  regions.sort((a, b) => a.name.localeCompare(b.name));
                  regions.forEach(region => select.add(new Option(region.name, region.code)));
-
-                 // Pre-select and trigger change if needed (typically for edit form)
                  if (selectedRegionCode) {
                      select.value = selectedRegionCode;
-                     // Ensure the value was actually set before dispatching change
                      if (select.value === selectedRegionCode) {
-                         // Use setTimeout to ensure the event loop processes the value change before the event fires
                          setTimeout(() => select.dispatchEvent(new Event('change')), 0);
-                     } else {
-                         console.warn(`Region code ${selectedRegionCode} not found in ${selectElementId}.`);
-                     }
+                     } else { console.warn(`Region code ${selectedRegionCode} not found in ${selectElementId}.`);}
                  }
              } catch (error) {
                  console.error(`Error loading regions for ${selectElementId}:`, error);
                  showToast('Could not load regions.', 'error');
              }
          }
-
          async function loadCities(regionCode, citySelectId, selectedCityName = null) {
              const citySelect = document.getElementById(citySelectId);
              if (!citySelect) return;
-             // console.log(`Loading cities for ${citySelectId}, region: ${regionCode}, selected: ${selectedCityName}`);
-
-             citySelect.disabled = true;
-             citySelect.length = 1; // Clear existing options
-
+             citySelect.disabled = true; citySelect.length = 1; 
              if (!regionCode) return;
-
              try {
                  let cities;
-                 if (regionCityMap.has(regionCode)) {
-                     cities = regionCityMap.get(regionCode);
-                 } else {
+                 if (regionCityMap.has(regionCode)) { cities = regionCityMap.get(regionCode); } 
+                 else {
                      const response = await fetch(`https://psgc.gitlab.io/api/regions/${regionCode}/cities-municipalities/`);
                      if (!response.ok) throw new Error(`HTTP ${response.status}`);
                      cities = await response.json();
                      regionCityMap.set(regionCode, cities);
                  }
-
                  cities.sort((a, b) => a.name.localeCompare(b.name));
-                 cities.forEach(city => citySelect.add(new Option(city.name, city.name))); // Use name as value
-
+                 cities.forEach(city => citySelect.add(new Option(city.name, city.name))); 
                  citySelect.disabled = false;
                  if (selectedCityName) {
                      citySelect.value = selectedCityName;
-                     if (citySelect.value !== selectedCityName) {
-                         console.warn(`City name \"${selectedCityName}\" not found in ${citySelectId} for region ${regionCode}.`);
-                     }
+                     if (citySelect.value !== selectedCityName) { console.warn(`City name \"${selectedCityName}\" not found in ${citySelectId} for region ${regionCode}.`);}
                  }
              } catch (error) {
                  console.error(`Error loading cities for ${citySelectId}:`, error);
@@ -1029,21 +819,20 @@ function truncate($text, $max = 15) {
              }
          }
 
-        // --- Form Handling ---
+        // --- Form Handling (Add Account) ---
         function openAddAccountForm() {
              const overlay = document.getElementById("addAccountOverlay");
              const form = document.getElementById("addAccountForm");
              if (overlay && form) {
-                 form.reset();
-                 resetErrors();
-                 $('#region').val(''); // Reset selects
+                 form.reset(); resetErrors();
+                 $('#region').val(''); 
                  $('#city').empty().append('<option value="">Select City</option>').prop('disabled', true);
                  $(overlay).css('display', 'flex');
-                 loadPhilippinesRegions('region'); // Reload regions for add form
+                 loadPhilippinesRegions('region'); 
              }
         }
         function closeAddAccountForm() { $('#addAccountOverlay').hide(); }
-        function confirmAddAccount() { /* Unchanged, uses submitAddAccount */
+        function confirmAddAccount() {
             resetErrors();
             const form = document.getElementById('addAccountForm');
             if (!form || !form.checkValidity()) {
@@ -1054,16 +843,14 @@ function truncate($text, $max = 15) {
             $('#addConfirmationModal').css('display', 'flex');
         }
         function closeAddConfirmation() { $('#addConfirmationModal').hide(); }
-        function submitAddAccount() { /* Unchanged */
+        function submitAddAccount() {
             closeAddConfirmation();
             const form = document.getElementById('addAccountForm');
             const formData = new FormData(form);
             formData.append('ajax', true);
-            // showLoadingIndicator(); // Optional
             $.ajax({
                 url: window.location.pathname, type: 'POST', data: formData, contentType: false, processData: false, dataType: 'json',
                 success: function(response) {
-                    // hideLoadingIndicator(); // Optional
                     if (response && response.success) {
                         showToast('Account added successfully!', 'success');
                         closeAddAccountForm();
@@ -1073,8 +860,7 @@ function truncate($text, $max = 15) {
                         showToast(response?.message || 'Error adding account.', 'error');
                     }
                 },
-                error: function(xhr, status, error) { /* Unchanged */
-                    // hideLoadingIndicator(); // Optional
+                error: function(xhr, status, error) {
                     console.error("Add Account AJAX Error:", status, error, xhr.responseText);
                     showError('addAccountError', 'Server error. Please try again.');
                     showToast('Server error occurred.', 'error');
@@ -1082,16 +868,12 @@ function truncate($text, $max = 15) {
             });
         }
 
+        // --- Form Handling (Edit Account) ---
         function openEditAccountForm(id, username, email, phone, regionCode, cityName, company, companyAddress, billToAddress, businessProofEncoded) {
             const overlay = document.getElementById("editAccountOverlay");
             const form = document.getElementById("editAccountForm");
             if (!overlay || !form) return;
-
-            form.reset();
-            resetErrors();
-            // console.log("Opening edit form for ID:", id, "Region:", regionCode, "City:", cityName); // Debug log
-
-            // Populate basic fields
+            form.reset(); resetErrors();
             $('#edit-id').val(id);
             $('#edit-username').val(username);
             $('#edit-email').val(email);
@@ -1099,125 +881,69 @@ function truncate($text, $max = 15) {
             $('#edit-company').val(company);
             $('#edit-company_address').val(companyAddress);
             $('#edit-bill_to_address').val(billToAddress);
-
-            // Reset password fields
             $('#edit-password-toggle').prop('checked', false).trigger('change');
             $('#edit-manual-password').val('');
-
-            // --- Handle Business Proof ---
             const proofContainer = $('#edit-business-proof-container');
             const existingProofInput = $('#existing-business-proof');
-            proofContainer.empty().append('<h4>Current Business Proof:</h4>'); // Clear and add header
-
-            // Default to empty array string
+            proofContainer.empty().append('<h4>Current Business Proof:</h4>'); 
             existingProofInput.val('[]');
             let proofArray = [];
-
-            // console.log("Raw businessProofEncoded:", businessProofEncoded); // Debug
-
             if (businessProofEncoded && businessProofEncoded !== 'null' && businessProofEncoded !== '[]') {
                 try {
-                    // Attempt to parse the potentially HTML-encoded JSON string
                     const decodedString = $('<textarea/>').html(businessProofEncoded).text();
-                    // console.log("Decoded String:", decodedString); // Debug
                     proofArray = JSON.parse(decodedString);
-                    if (!Array.isArray(proofArray)) {
-                        proofArray = []; // Ensure it's an array
-                        console.warn("Parsed business proof was not an array.");
-                    }
-                    existingProofInput.val(JSON.stringify(proofArray)); // Store the valid JSON string
-                    // console.log("Successfully parsed proofs:", proofArray); // Debug
+                    if (!Array.isArray(proofArray)) { proofArray = []; console.warn("Parsed business proof was not an array.");}
+                    existingProofInput.val(JSON.stringify(proofArray)); 
                 } catch (e) {
                     console.error("Error processing business proofs:", e, "Input:", businessProofEncoded);
                     proofContainer.append('<p style="color: red;">Error loading current proofs.</p>');
-                    proofArray = []; // Reset on error
+                    proofArray = []; 
                 }
             }
-
-            // Display current images from the processed array
             if (proofArray.length > 0) {
                 proofArray.forEach(proof => {
                     if (typeof proof === 'string') {
                         let imagePath = proof;
-                         if (proof.startsWith('../..')) {
-                             imagePath = proof.replace('../../', '/admin/');
-                         } else if (!proof.startsWith('/')) { // Add base path if relative
-                            imagePath = '/admin/uploads/' + username + '/' + proof; // Construct path assuming username is part of it
-                         }
-
-                        // Create the image element
-                        $('<img>', {
-                            src: imagePath,
-                            alt: 'Business Proof',
-                            width: 50,
-                            css: { margin: '3px', border: '1px solid #ccc', padding: '1px', cursor: 'pointer', backgroundColor: '#fff', borderRadius: '3px' },
-                            click: function() { openModal(this); }
-                        }).appendTo(proofContainer);
-                    } else {
-                        console.warn('Skipping invalid proof item for display:', proof);
-                    }
+                         if (proof.startsWith('../..')) { imagePath = proof.replace('../../', '/admin/');} 
+                         else if (!proof.startsWith('/')) { imagePath = '/admin/uploads/' + username + '/' + proof; }
+                        $('<img>', { src: imagePath, alt: 'Business Proof', width: 50, css: { margin: '3px', border: '1px solid #ccc', padding: '1px', cursor: 'pointer', backgroundColor: '#fff', borderRadius: '3px' }, click: function() { openModal(this); } }).appendTo(proofContainer);
+                    } else { console.warn('Skipping invalid proof item for display:', proof); }
                 });
-            } else {
-                proofContainer.append('<p>No business proof images on record.</p>');
-            }
-
-            // Clear the file input
+            } else { proofContainer.append('<p>No business proof images on record.</p>'); }
             $('#edit-business_proof').val(null);
-
-            // --- Handle Region/City ---
-            // Store original values to help pre-select city after regions load
             $('#edit-original-region').val(regionCode);
             $('#edit-original-city').val(cityName);
-
-            // Load regions, then pre-select and trigger city loading
             loadPhilippinesRegions('edit-region', regionCode).then(() => {
-                // Check if the region was successfully selected
-                if ($('#edit-region').val() === regionCode && regionCode) {
-                     // Now load cities for the selected region and pre-select the city
-                     loadCities(regionCode, 'edit-city', cityName);
-                } else if (!regionCode) {
-                    // If no region code, disable city select
-                     $('#edit-city').empty().append('<option value="">Select City</option>').prop('disabled', true);
-                }
-                // If regionCode was provided but not found, loadCities won't be called correctly,
-                // but the UI will show the empty/disabled city select, which is reasonable.
+                if ($('#edit-region').val() === regionCode && regionCode) { loadCities(regionCode, 'edit-city', cityName); } 
+                else if (!regionCode) { $('#edit-city').empty().append('<option value="">Select City</option>').prop('disabled', true); }
             });
-
-
-            $(overlay).css('display', 'flex'); // Show modal
+            $(overlay).css('display', 'flex'); 
         }
-
         function closeEditAccountForm() { $('#editAccountOverlay').hide(); }
-        function confirmEditAccount() { /* Unchanged, uses submitEditAccount */
+        function confirmEditAccount() {
             resetErrors();
             const form = document.getElementById('editAccountForm');
             const passwordToggle = document.getElementById('edit-password-toggle');
             const manualPasswordInput = document.getElementById('edit-manual-password');
-
-            // Check manual password length only if the toggle is checked and field is not empty
             if (passwordToggle && manualPasswordInput && passwordToggle.checked && manualPasswordInput.value.length > 0 && manualPasswordInput.value.length < 6) {
                  showError('editAccountError', 'Manual password must be at least 6 characters.');
-                 manualPasswordInput.focus();
-                 return;
+                 manualPasswordInput.focus(); return;
             }
             if (!form || !form.checkValidity()) {
-                form.reportValidity(); // Let browser handle basic validation hints
-                showError('editAccountError', 'Please fill all required fields correctly.');
-                return;
+                form.reportValidity(); 
+                showError('editAccountError', 'Please fill all required fields correctly.'); return;
             }
             $('#editConfirmationModal').css('display', 'flex');
         }
         function closeEditConfirmation() { $('#editConfirmationModal').hide(); }
-        function submitEditAccount() { /* Unchanged */
+        function submitEditAccount() {
             closeEditConfirmation();
             const form = document.getElementById('editAccountForm');
             const formData = new FormData(form);
             formData.append('ajax', true);
-            // showLoadingIndicator(); // Optional
             $.ajax({
                 url: window.location.pathname, type: 'POST', data: formData, contentType: false, processData: false, dataType: 'json',
                 success: function(response) {
-                    // hideLoadingIndicator(); // Optional
                     if (response && response.success) {
                         showToast('Account updated successfully!', 'success');
                         closeEditAccountForm();
@@ -1227,8 +953,7 @@ function truncate($text, $max = 15) {
                         showToast(response?.message || 'Error updating account.', 'error');
                     }
                 },
-                error: function(xhr, status, error) { /* Unchanged */
-                    // hideLoadingIndicator(); // Optional
+                error: function(xhr, status, error) {
                     console.error("Edit Account AJAX Error:", status, error, xhr.responseText);
                     showError('editAccountError', 'Server error. Please try again.');
                     showToast('Server error occurred.', 'error');
@@ -1237,57 +962,38 @@ function truncate($text, $max = 15) {
         }
 
         // --- Status Change ---
-        function openStatusModal(id, username, email) { /* Unchanged */
+        function openStatusModal(id, username, email) {
             const modal = document.getElementById("statusModal");
             const messageEl = document.getElementById("statusMessage");
             if (modal && messageEl) {
-                currentAccountId = id; // Store ID temporarily
-                messageEl.innerHTML = `Change status for <strong>${username}</strong> (${email})`; // Use innerHTML for bold
+                currentAccountId = id; 
+                messageEl.innerHTML = `Change status for <strong>${username}</strong> (${email})`; 
                 $(modal).css('display', 'flex');
             }
         }
-        function closeStatusModal() { /* Unchanged */
-            $('#statusModal').hide();
-            currentAccountId = 0; // Reset temporary ID
-        }
-        // *** NOTE: This function now directly makes the AJAX call. If you want the confirmation modal back, let me know. ***
+        function closeStatusModal() { $('#statusModal').hide(); currentAccountId = 0; }
         function changeStatus(newStatus) {
             if (!currentAccountId) return;
-
-            // Optional: Add confirmation logic here if desired, otherwise proceeds directly
-
-            // showLoadingIndicator(); // Optional: Add a visual indicator
             $.ajax({
-                url: window.location.pathname,
-                type: 'POST',
-                data: { ajax: true, formType: 'status', id: currentAccountId, status: newStatus },
-                dataType: 'json',
+                url: window.location.pathname, type: 'POST', data: { ajax: true, formType: 'status', id: currentAccountId, status: newStatus }, dataType: 'json',
                 success: function(response) {
                     if (response && response.success) {
                         showToast(`Status changed to ${newStatus}!`, 'success');
-                        closeStatusModal(); // Close the selection modal
-                        setTimeout(() => window.location.reload(), 1500); // Reload page after success
-                    } else {
-                        showToast(response?.message || 'Error changing status.', 'error');
-                        // Optionally close modal on failure too, or leave it open
-                        // closeStatusModal();
-                    }
+                        closeStatusModal(); 
+                        setTimeout(() => window.location.reload(), 1500); 
+                    } else { showToast(response?.message || 'Error changing status.', 'error'); }
                 },
                 error: function(xhr, status, error) {
                     console.error("Change Status AJAX Error:", status, error, xhr.responseText);
                     showToast('Server error occurred while changing status.', 'error');
-                    closeStatusModal(); // Close modal on error
+                    closeStatusModal(); 
                 },
-                complete: function() {
-                    // hideLoadingIndicator(); // Optional: Hide visual indicator
-                    currentAccountId = 0; // Reset temporary ID after call completes
-                }
+                complete: function() { currentAccountId = 0; }
             });
         }
 
-
         // --- Table Filtering ---
-        function filterByStatus() { /* Unchanged */
+        function filterByStatus() {
             var status = document.getElementById("statusFilter").value;
             const url = new URL(window.location.href);
             if (status) { url.searchParams.set('status', status); }
@@ -1296,22 +1002,15 @@ function truncate($text, $max = 15) {
         }
 
         // --- Initial Setup ---
-        $(document).ready(function() { // Use jQuery's ready for consistency
-             // Initial load of regions for Add form (Edit form regions loaded in openEditAccountForm)
+        $(document).ready(function() { 
              loadPhilippinesRegions('region');
-
-             // Setup region change listeners
              $('#region').on('change', function() { loadCities(this.value, 'city'); });
              $('#edit-region').on('change', function() {
                  const selectedCity = $('#edit-original-city').val();
                  const currentRegion = $(this).val();
                  const originalRegion = $('#edit-original-region').val();
-                 // Load cities, pre-select only if the region hasn't changed from the original
                  loadCities(this.value, 'edit-city', currentRegion === originalRegion ? selectedCity : null);
              });
-
-
-             // Password toggle setup
              const passwordToggle = document.getElementById('edit-password-toggle');
              const autoPassContainer = document.getElementById('auto-password-container');
              const manualPassContainer = document.getElementById('manual-password-container');
@@ -1321,28 +1020,21 @@ function truncate($text, $max = 15) {
                      const isManual = this.checked;
                      $(autoPassContainer).toggle(!isManual);
                      $(manualPassContainer).toggle(isManual);
-                     manualPassInput.required = isManual; // Make required only when visible
-                     if (!isManual) manualPassInput.value = ''; // Clear if switching back
-                 }).trigger('change'); // Initial trigger to set correct state
+                     manualPassInput.required = isManual; 
+                     if (!isManual) manualPassInput.value = ''; 
+                 }).trigger('change'); 
              }
-
-             // Global click listener to close modals when clicking outside their content
              $(window).on('click', function(event) {
-                 // Check if the click target is the overlay itself (not its content)
                  if ($(event.target).is('#addAccountOverlay')) closeAddAccountForm();
                  if ($(event.target).is('#editAccountOverlay')) closeEditAccountForm();
                  if ($(event.target).is('#addConfirmationModal')) closeAddConfirmation();
                  if ($(event.target).is('#editConfirmationModal')) closeEditConfirmation();
                  if ($(event.target).is('#statusModal')) closeStatusModal();
-                 // If status confirmation modal exists, add its check here:
-                 // if ($(event.target).is('#statusConfirmationModal')) closeStatusConfirmation();
                  if ($(event.target).is('#addressInfoModal')) closeAddressInfoModal();
                  if ($(event.target).is('#contactInfoModal')) closeContactInfoModal();
-                 if ($(event.target).is('#myModal')) closeModal(); // Close image zoom modal
+                 if ($(event.target).is('#myModal')) closeModal(); 
              });
         });
-
     </script>
-
 </body>
 </html>
