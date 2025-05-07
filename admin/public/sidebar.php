@@ -170,7 +170,13 @@ $allowedPages = array_map('trim', explode(',', $pages));
         <div class="menu-section">
             <span class="menu-title"><b>DATA</b></span>
             <hr>
-            <?php if (in_array('Staff', $allowedPages) || in_array('Drivers', $allowedPages)): ?>
+            <?php 
+            // MODIFIED: Removed 'Drivers' from this condition. 
+            // If 'Staff' main menu item is only for 'Staff' page and not 'Drivers' page, 
+            // you might need to adjust this condition further or remove the 'Staff' menu if it becomes empty.
+            // For now, assuming 'Staff' might have other sub-items or is a standalone page.
+            if (in_array('Staff', $allowedPages)): 
+            ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
@@ -179,16 +185,16 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <i class="fas fa-chevron-down"></i>
                     </span>
                     <div class="submenu-items">
-                        <?php if (in_array('Drivers', $allowedPages)): ?>
-                            <a href="/public/pages/drivers.php" class="submenu-item">
-                                <i class="fas fa-arrow-right"></i> Drivers
-                            </a>
-                        <?php endif; ?>
+                        <?php // MODIFICATION: Removed Drivers link from here ?>
                     </div>
                 </div>
             <?php endif; ?>
+            
             <!-- Accounts Menu with Submenus -->
-            <?php if (in_array('Accounts - Admin', $allowedPages) || in_array('Accounts - Clients', $allowedPages) || in_array('User Roles', $allowedPages)): ?>
+            <?php 
+            // MODIFIED: Added 'Drivers' to the condition for showing the Accounts menu
+            if (in_array('Accounts - Admin', $allowedPages) || in_array('Accounts - Clients', $allowedPages) || in_array('User Roles', $allowedPages) || in_array('Drivers', $allowedPages)): 
+            ?>
                 <div class="submenu">
                     <span class="menu-item" onclick="toggleSubmenu(this)">
                         <div>
@@ -205,6 +211,12 @@ $allowedPages = array_map('trim', explode(',', $pages));
                         <?php if (in_array('Accounts - Clients', $allowedPages)): ?>
                             <a href="/public/pages/accounts_clients.php" class="submenu-item">
                                 <i class="fas fa-arrow-right"></i> Clients
+                            </a>
+                        <?php endif; ?>
+                        <?php // MODIFICATION: Added Drivers link here ?>
+                        <?php if (in_array('Drivers', $allowedPages)): ?>
+                            <a href="/public/pages/drivers.php" class="submenu-item">
+                                <i class="fas fa-arrow-right"></i> Drivers
                             </a>
                         <?php endif; ?>
                         <?php if (in_array('User Roles', $allowedPages)): ?>
