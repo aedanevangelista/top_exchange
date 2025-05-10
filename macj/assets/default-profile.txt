@@ -1,5 +1,0 @@
-This is a placeholder for the default profile image.
-
-Please create a default-profile.jpg or default-profile.png file in this directory.
-
-You can use a service like https://ui-avatars.com/api/?name=Admin&background=3b82f6&color=fff&size=200 to generate a simple avatar.
