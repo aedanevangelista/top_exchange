@@ -9,16 +9,16 @@ if (!isset($_SESSION['admin_user_id'])) {
     exit();
 }
 
-// Determine which tab is active
-$active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'company';
+// Determine which tab is active - now always 'company'
+$active_tab = 'company'; // Only company products are shown
 
 // Process form submissions for standard product updates
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST['formType'] == 'edit_product') {
     header('Content-Type: application/json');
 
     $product_id = $_POST['product_id'];
-    $is_walkin = isset($_POST['is_walkin']) && $_POST['is_walkin'] == '1';
-    $table = $is_walkin ? 'walkin_products' : 'products';
+    // $is_walkin = isset($_POST['is_walkin']) && $_POST['is_walkin'] == '1'; // No longer needed
+    $table = 'products'; // Always use the 'products' table
 
     $category = $_POST['category'];
     $product_name = $_POST['product_name']; // New field
@@ -197,26 +197,16 @@ if ($raw_materials->num_rows > 0) {
     }
 }
 
-// Fetch categories from both tables (products and walkin_products)
-$sql = "SELECT DISTINCT category FROM products
-        UNION
-        SELECT DISTINCT category FROM walkin_products
-        ORDER BY category";
+// Fetch categories from products table only
+$sql = "SELECT DISTINCT category FROM products ORDER BY category";
 $categories = $conn->query($sql);
 
-// Fetch product names from both tables
-$sql = "SELECT DISTINCT product_name FROM products WHERE product_name IS NOT NULL AND product_name != ''
-        UNION
-        SELECT DISTINCT product_name FROM walkin_products WHERE product_name IS NOT NULL AND product_name != ''
-        ORDER BY product_name";
+// Fetch product names from products table only
+$sql = "SELECT DISTINCT product_name FROM products WHERE product_name IS NOT NULL AND product_name != '' ORDER BY product_name";
 $product_names = $conn->query($sql);
 
-// Fetch products data based on active tab
-if ($active_tab === 'company') {
-    $sql = "SELECT product_id, category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image FROM products ORDER BY category, product_name, item_description";
-} else {
-    $sql = "SELECT product_id, category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image FROM walkin_products ORDER BY category, product_name, item_description";
-}
+// Fetch products data from products table only
+$sql = "SELECT product_id, category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image FROM products ORDER BY category, product_name, item_description";
 $result = $conn->query($sql);
 ?>
 
@@ -552,8 +542,8 @@ $result = $conn->query($sql);
                     <select id="category-filter" onchange="filterByCategory()">
                         <option value="all">All</option>
                         <?php
-                        $categories->data_seek(0); // Reset pointer before looping again
-                        if ($categories->num_rows > 0) {
+                        if ($categories && $categories->num_rows > 0) { // Added check for $categories
+                            $categories->data_seek(0); // Reset pointer before looping again
                             while ($row = $categories->fetch_assoc()) {
                                 echo "<option value='{$row['category']}'>{$row['category']}</option>";
                             }
@@ -567,14 +557,12 @@ $result = $conn->query($sql);
             </button>
         </div>
 
-        <!-- Tabs navigation -->
+        <!-- Tabs navigation - Only Company Orders tab remains -->
         <ul class="inventory-tabs">
-            <li class="tab-item <?php echo ($active_tab === 'company') ? 'active' : ''; ?>" onclick="window.location.href='?tab=company'">
+            <li class="tab-item active">
                 <i class="fas fa-building"></i> Company Orders
             </li>
-            <li class="tab-item <?php echo ($active_tab === 'walkin') ? 'active' : ''; ?>" onclick="window.location.href='?tab=walkin'">
-                <i class="fas fa-walking"></i> Walk-in Customers
-            </li>
+            <!-- Walk-in Customers tab removed -->
         </ul>
 
         <div class="inventory-table-container">
@@ -623,17 +611,17 @@ $result = $conn->query($sql);
                             echo "</td>
                                 <td class='additional-desc'>" . htmlspecialchars($row['additional_description'] ?? '') . "</td>
                                 <td>
-                                    <button class='view-ingredients-btn' onclick='viewIngredients({$row['product_id']}, \"" . ($active_tab === 'walkin' ? 'walkin' : 'company') . "\")'>
+                                    <button class='view-ingredients-btn' onclick='viewIngredients({$row['product_id']}, \"company\")'>
                                         <i class='fas fa-list'></i> View
                                     </button>
                                 </td>
                                 <td class='adjust-stock'>
-                                    <button class='add-btn' onclick='updateStock({$row['product_id']}, \"add\", \"" . ($active_tab === 'walkin' ? 'walkin' : 'company') . "\")'>+</button>
+                                    <button class='add-btn' onclick='updateStock({$row['product_id']}, \"add\", \"company\")'>+</button>
                                     <input type='number' id='adjust-{$row['product_id']}' min='1' value='1'>
-                                    <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\", \"" . ($active_tab === 'walkin' ? 'walkin' : 'company') . "\")'>-</button>
+                                    <button class='remove-btn' onclick='updateStock({$row['product_id']}, \"remove\", \"company\")'>-</button>
                                 </td>
                                 <td>
-                                    <button class='edit-btn' onclick='editProduct({$row['product_id']}, \"" . ($active_tab === 'walkin' ? 'walkin' : 'company') . "\")'>
+                                    <button class='edit-btn' onclick='editProduct({$row['product_id']}, \"company\")'>
                                         <i class='fas fa-edit'></i> Edit
                                     </button>
                                 </td>
@@ -655,15 +643,15 @@ $result = $conn->query($sql);
                 <h2><i class="fas fa-plus-circle"></i> Add New Product</h2>
                 <div id="addProductError" class="error-message"></div>
                 <form id="add-product-form" method="POST">
-                    <input type="hidden" id="add_product_type" name="product_type" value="<?php echo $active_tab === 'walkin' ? 'walkin' : 'company'; ?>">
+                    <input type="hidden" id="add_product_type" name="product_type" value="company">
 
                     <label for="category">Category:</label>
                     <!-- Added 'required' -->
                     <select id="category" name="category" required>
                         <option value="">Select Category</option>
                         <?php
-                        $categories->data_seek(0); // Reset pointer
-                        if ($categories->num_rows > 0) {
+                        if ($categories && $categories->num_rows > 0) { // Added check for $categories
+                            $categories->data_seek(0); // Reset pointer
                             while ($row = $categories->fetch_assoc()) {
                                 echo "<option value='{$row['category']}'>{$row['category']}</option>";
                             }
@@ -683,8 +671,8 @@ $result = $conn->query($sql);
                     <select id="product_name" name="product_name" required>
                         <option value="">Select Product Name</option>
                         <?php
-                        $product_names->data_seek(0); // Reset pointer
-                        if ($product_names->num_rows > 0) {
+                        if ($product_names && $product_names->num_rows > 0) { // Added check for $product_names
+                           $product_names->data_seek(0); // Reset pointer
                             while ($row = $product_names->fetch_assoc()) {
                                 echo "<option value='{$row['product_name']}'>{$row['product_name']}</option>";
                             }
@@ -740,7 +728,7 @@ $result = $conn->query($sql);
                 <form id="edit-product-form" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="formType" value="edit_product">
                     <input type="hidden" id="edit_product_id" name="product_id">
-                    <input type="hidden" id="edit_product_type" name="is_walkin" value="0">
+                    <input type="hidden" id="edit_product_type" name="is_walkin" value="0"> <!-- Always 0 for company products -->
 
                     <div class="form-grid">
                         <div>
@@ -748,8 +736,8 @@ $result = $conn->query($sql);
                             <select id="edit_category" name="category" required>
                                 <option value="">Select Category</option>
                                 <?php
-                                $categories->data_seek(0); // Reset pointer
-                                if ($categories->num_rows > 0) {
+                                if ($categories && $categories->num_rows > 0) { // Added check for $categories
+                                    $categories->data_seek(0); // Reset pointer
                                     while ($row = $categories->fetch_assoc()) {
                                         echo "<option value='{$row['category']}'>{$row['category']}</option>";
                                     }
@@ -767,8 +755,8 @@ $result = $conn->query($sql);
                             <select id="edit_product_name" name="product_name" required>
                                 <option value="">Select Product Name</option>
                                 <?php
-                                $product_names->data_seek(0); // Reset pointer
-                                if ($product_names->num_rows > 0) {
+                                if ($product_names && $product_names->num_rows > 0) { // Added check for $product_names
+                                    $product_names->data_seek(0); // Reset pointer
                                     while ($row = $product_names->fetch_assoc()) {
                                         echo "<option value='{$row['product_name']}'>{$row['product_name']}</option>";
                                     }
@@ -827,7 +815,7 @@ $result = $conn->query($sql);
 
                 <form id="ingredients-form">
                     <input type="hidden" id="ingredients_product_id">
-                    <input type="hidden" id="ingredients_product_type" value="company">
+                    <input type="hidden" id="ingredients_product_type" value="company"> <!-- Always "company" -->
 
                     <table class="ingredients-table" id="ingredients-table">
                         <thead>
@@ -870,8 +858,8 @@ $result = $conn->query($sql);
     <script>
         // Store raw materials for the ingredients dropdown
         const rawMaterials = <?php echo json_encode($raw_materials_list); ?>;
-        // Store current active tab
-        const activeTab = "<?php echo $active_tab; ?>";
+        // Store current active tab - now always "company"
+        const activeTab = "company";
 
         toastr.options = {
             "positionClass": "toast-bottom-right",
@@ -887,8 +875,6 @@ $result = $conn->query($sql);
                 // Check if the parsed value is a number and exceeds the max value
                 if (!isNaN(value) && value > maxValue) {
                     this.value = maxValue; // Reset value to the maximum allowed
-                    // Optional: Show a subtle warning or toast
-                    // console.warn(`Value cannot exceed ${maxValue}.`);
                     if (typeof toastr !== 'undefined') { // Check if toastr is loaded
                          toastr.warning(`Maximum value allowed is ₱${maxValue}.`, { timeOut: 2000, preventDuplicates: true });
                     }
@@ -940,7 +926,6 @@ $result = $conn->query($sql);
             if (!isNew && this.value !== '') {
                 const selectedProductName = this.value;
                 const itemDescriptionInput = document.getElementById('item_description');
-                // Pre-fill variant only if empty or doesn't already start with the name
                 if (itemDescriptionInput && (!itemDescriptionInput.value || !itemDescriptionInput.value.startsWith(selectedProductName))) {
                     itemDescriptionInput.value = selectedProductName + ' '; // Add space for easier typing
                 }
@@ -952,18 +937,17 @@ $result = $conn->query($sql);
             document.getElementById('edit_category')?.addEventListener('change', function() {
                  const isNew = this.value === 'new';
                  document.getElementById('edit-new-category-container').style.display = isNew ? 'block' : 'none';
-                 document.getElementById('edit_new_category').required = isNew; // Make required only if visible
+                 document.getElementById('edit_new_category').required = isNew; 
             });
 
             document.getElementById('edit_product_name')?.addEventListener('change', function() {
                  const isNew = this.value === 'new';
                  document.getElementById('edit-new-product-name-container').style.display = isNew ? 'block' : 'none';
-                 document.getElementById('edit_new_product_name').required = isNew; // Make required only if visible
+                 document.getElementById('edit_new_product_name').required = isNew; 
 
                  if (!isNew && this.value !== '') {
                     const selectedProductName = this.value;
                     const itemDescriptionInput = document.getElementById('edit_item_description');
-                    // Pre-fill variant only if empty or doesn't already start with the name
                     if (itemDescriptionInput && (!itemDescriptionInput.value || !itemDescriptionInput.value.startsWith(selectedProductName))) {
                         itemDescriptionInput.value = selectedProductName + ' ';
                     }
@@ -981,9 +965,8 @@ $result = $conn->query($sql);
         document.getElementById('add-product-form')?.addEventListener('submit', function(e) {
             e.preventDefault();
             const errorDiv = document.getElementById('addProductError');
-            errorDiv.textContent = ''; // Clear previous errors
+            errorDiv.textContent = ''; 
 
-            // Validate Price
             const priceInput = document.getElementById('price');
             const price = parseFloat(priceInput.value);
             if (isNaN(price) || price <= 0 || price > 5000) {
@@ -992,7 +975,6 @@ $result = $conn->query($sql);
                 return;
             }
 
-            // Validate 'New Category' if selected
             const categorySelect = document.getElementById('category');
             const newCategoryInput = document.getElementById('new_category');
             if (categorySelect.value === 'new' && !newCategoryInput.value.trim()) {
@@ -1001,7 +983,6 @@ $result = $conn->query($sql);
                 return;
             }
 
-            // Validate 'New Product Name' if selected
             const productNameSelect = document.getElementById('product_name');
             const newProductNameInput = document.getElementById('new_product_name');
             if (productNameSelect.value === 'new' && !newProductNameInput.value.trim()) {
@@ -1010,11 +991,9 @@ $result = $conn->query($sql);
                 return;
             }
 
-            // --- Check if all required fields are filled (HTML5 validation should handle most) ---
             const requiredFields = this.querySelectorAll('[required]');
             let firstEmptyField = null;
             for (const field of requiredFields) {
-                // Check if field is visible (offsetParent !== null) and empty
                 if (field.offsetParent !== null && !field.value.trim() ) {
                     firstEmptyField = field;
                     break;
@@ -1025,21 +1004,17 @@ $result = $conn->query($sql);
                 firstEmptyField.focus();
                 return;
             }
-            // --- End Extra Validation ---
 
+            const formData = new FormData(this); 
 
-            const formData = new FormData(this); // Use 'this' for the form
-
-            // Set category and product name correctly if 'new' was selected
             if (categorySelect.value === 'new') formData.set('category', newCategoryInput.value.trim());
             if (productNameSelect.value === 'new') formData.set('product_name', newProductNameInput.value.trim());
 
-            // Add missing fields if needed (like stock_quantity for add)
             if (!formData.has('stock_quantity')) {
                  formData.append('stock_quantity', 0);
             }
-            // Ensure product_type is set
-             formData.set('product_type', document.getElementById('add_product_type').value);
+            // Ensure product_type is set (already done by hidden input value="company")
+            // formData.set('product_type', document.getElementById('add_product_type').value);
 
 
             fetch("../../backend/add_product.php", {
@@ -1049,10 +1024,8 @@ $result = $conn->query($sql);
             .then(response => {
                 return response.text().then(text => {
                     try {
-                        // Try to parse as JSON
                         return JSON.parse(text);
                     } catch (e) {
-                        // If parsing fails, log the raw response and throw an error
                         console.error("Invalid JSON response:", text);
                         throw new Error("Server returned invalid response: " + text.substring(0, 50) + "...");
                     }
@@ -1078,9 +1051,8 @@ $result = $conn->query($sql);
         document.getElementById('edit-product-form')?.addEventListener('submit', function(e) {
              e.preventDefault();
             const errorDiv = document.getElementById('editProductError');
-            errorDiv.textContent = ''; // Clear previous errors
+            errorDiv.textContent = ''; 
 
-            // Validate Price
             const priceInput = document.getElementById('edit_price');
             const price = parseFloat(priceInput.value);
             if (isNaN(price) || price <= 0 || price > 5000) {
@@ -1089,7 +1061,6 @@ $result = $conn->query($sql);
                 return;
             }
 
-            // Validate 'New Category' if selected
             const categorySelect = document.getElementById('edit_category');
             const newCategoryInput = document.getElementById('edit_new_category');
             if (categorySelect.value === 'new' && !newCategoryInput.value.trim()) {
@@ -1098,7 +1069,6 @@ $result = $conn->query($sql);
                 return;
             }
 
-            // Validate 'New Product Name' if selected
             const productNameSelect = document.getElementById('edit_product_name');
             const newProductNameInput = document.getElementById('edit_new_product_name');
             if (productNameSelect.value === 'new' && !newProductNameInput.value.trim()) {
@@ -1107,11 +1077,9 @@ $result = $conn->query($sql);
                 return;
             }
 
-             // --- Check if all required fields are filled (HTML5 validation should handle most) ---
             const requiredFields = this.querySelectorAll('[required]');
             let firstEmptyField = null;
             for (const field of requiredFields) {
-                 // Check if field is visible (offsetParent !== null) and empty
                 if (field.offsetParent !== null && !field.value.trim()) {
                     firstEmptyField = field;
                     break;
@@ -1122,17 +1090,15 @@ $result = $conn->query($sql);
                 firstEmptyField.focus();
                 return;
             }
-            // --- End Extra Validation ---
-
 
             const formData = new FormData(this);
 
-             // Set category and product name correctly if 'new' was selected for edit form
              if (categorySelect.value === 'new') formData.set('category', newCategoryInput.value.trim());
              if (productNameSelect.value === 'new') formData.set('product_name', newProductNameInput.value.trim());
 
+            // The hidden input 'is_walkin' is already set to '0'
 
-            fetch(window.location.href, { // POST to the current page for edit handling
+            fetch(window.location.href, { 
                 method: "POST",
                 body: formData
             })
@@ -1167,12 +1133,12 @@ $result = $conn->query($sql);
             document.getElementById('add-product-form').reset();
             document.getElementById('addProductError').textContent = '';
             document.getElementById('new-category-container').style.display = 'none';
-            document.getElementById('new_category').required = false; // Not required initially
+            document.getElementById('new_category').required = false; 
             document.getElementById('new-product-name-container').style.display = 'none';
-             document.getElementById('new_product_name').required = false; // Not required initially
+             document.getElementById('new_product_name').required = false; 
 
-            // Set the product type based on the active tab
-            document.getElementById('add_product_type').value = activeTab === 'walkin' ? 'walkin' : 'company';
+            // Set the product type to "company" (already set in HTML, but good for consistency)
+            document.getElementById('add_product_type').value = 'company';
         }
 
         function closeAddProductModal() {
@@ -1187,12 +1153,13 @@ $result = $conn->query($sql);
              document.getElementById('ingredientsModal').style.display = 'none';
         }
 
-        // Updated editProduct function to handle both product types
-        function editProduct(productId, productType) {
+        // Updated editProduct function - productType will always be "company"
+        function editProduct(productId, productType) { // productType is passed as "company"
+            // API URL defaults to company products if 'type' param is missing or not 'walkin'
             let apiUrl = `../pages/api/get_product.php?id=${productId}`;
-            if (productType === 'walkin') {
-                apiUrl += '&type=walkin';
-            }
+            // if (productType === 'walkin') { // This condition will no longer be met
+            //     apiUrl += '&type=walkin';
+            // }
 
             fetch(apiUrl)
                 .then(response => {
@@ -1206,16 +1173,15 @@ $result = $conn->query($sql);
                     });
                 })
                 .then(product => {
-                    // Set form values
                     document.getElementById('edit_product_id').value = product.product_id;
-                    document.getElementById('edit_product_type').value = productType === 'walkin' ? '1' : '0';
+                    // 'is_walkin' hidden field is already hardcoded to 0, which is correct for company
+                    document.getElementById('edit_product_type').value = '0'; 
 
-                    // Set category
                     const categorySelect = document.getElementById('edit_category');
                     const newCategoryContainer = document.getElementById('edit-new-category-container');
                     const newCategoryInput = document.getElementById('edit_new_category');
-                    newCategoryContainer.style.display = 'none'; // Hide by default
-                    newCategoryInput.required = false; // Not required by default
+                    newCategoryContainer.style.display = 'none'; 
+                    newCategoryInput.required = false; 
 
                     if (product.category) {
                         let categoryExists = false;
@@ -1231,18 +1197,17 @@ $result = $conn->query($sql);
                             categorySelect.value = 'new';
                             newCategoryContainer.style.display = 'block';
                             newCategoryInput.value = product.category;
-                            newCategoryInput.required = true; // Required if new is selected
+                            newCategoryInput.required = true; 
                         }
                     } else {
-                        categorySelect.value = ''; // No category selected
+                        categorySelect.value = ''; 
                     }
 
-                    // Set product name
                     const productNameSelect = document.getElementById('edit_product_name');
                     const newProductNameContainer = document.getElementById('edit-new-product-name-container');
                     const newProductNameInput = document.getElementById('edit_new_product_name');
-                    newProductNameContainer.style.display = 'none'; // Hide by default
-                    newProductNameInput.required = false; // Not required by default
+                    newProductNameContainer.style.display = 'none'; 
+                    newProductNameInput.required = false; 
 
                     if (product.product_name) {
                         let productNameExists = false;
@@ -1258,20 +1223,18 @@ $result = $conn->query($sql);
                             productNameSelect.value = 'new';
                             newProductNameContainer.style.display = 'block';
                             newProductNameInput.value = product.product_name;
-                            newProductNameInput.required = true; // Required if new is selected
+                            newProductNameInput.required = true; 
                         }
                     } else {
-                         productNameSelect.value = ''; // No product name selected
+                         productNameSelect.value = ''; 
                     }
 
-                    // Set other form fields - explicit check for null/undefined with fallback to empty string
                     document.getElementById('edit_item_description').value = product.item_description || '';
                     document.getElementById('edit_packaging').value = product.packaging || '';
                     document.getElementById('edit_price').value = product.price || 0;
                     document.getElementById('edit_stock_quantity').value = product.stock_quantity || 0;
                     document.getElementById('edit_additional_description').value = product.additional_description || '';
 
-                    // Show current image if it exists
                     document.getElementById('current-image-container').innerHTML = '';
                     if (product.product_image) {
                         const imgContainer = document.getElementById('current-image-container');
@@ -1281,7 +1244,6 @@ $result = $conn->query($sql);
                         `;
                     }
 
-                    // Show the modal
                     document.getElementById('editProductModal').style.display = 'flex';
                     document.getElementById('editProductError').textContent = '';
                 })
@@ -1291,12 +1253,13 @@ $result = $conn->query($sql);
                 });
         }
 
-        // Updated viewIngredients function to handle both product types
-        function viewIngredients(productId, productType) {
+        // Updated viewIngredients function - productType will always be "company"
+        function viewIngredients(productId, productType) { // productType is passed as "company"
+             // API URL defaults to company products if 'type' param is missing or not 'walkin'
              let apiUrl = `../pages/api/get_product_ingredients.php?id=${productId}`;
-            if (productType === 'walkin') {
-                apiUrl += '&type=walkin';
-            }
+            // if (productType === 'walkin') { // This condition will no longer be met
+            //     apiUrl += '&type=walkin';
+            // }
 
             fetch(apiUrl)
                 .then(response => {
@@ -1310,28 +1273,21 @@ $result = $conn->query($sql);
                     });
                 })
                 .then(product => {
-                    // Set product name in the modal title
                     document.getElementById('ingredients-product-name').textContent = product.item_description;
-
-                    // Set product ID and type for form submission
                     document.getElementById('ingredients_product_id').value = product.product_id;
-                    document.getElementById('ingredients_product_type').value = productType;
+                    document.getElementById('ingredients_product_type').value = productType; // Will be "company"
 
-                    // Clear previous ingredients table
                     const tbody = document.getElementById('ingredients-tbody');
                     tbody.innerHTML = '';
 
-                    // Add ingredient rows
                     if (product.ingredients && product.ingredients.length > 0) {
                         product.ingredients.forEach(ingredient => {
                             addIngredientRow(ingredient[0], ingredient[1]);
                         });
                     } else {
-                        // Add an empty row if no ingredients
                         addIngredientRow();
                     }
 
-                    // Display the ingredients modal
                     document.getElementById('ingredientsModal').style.display = 'flex';
                     document.getElementById('ingredientsError').textContent = '';
                 })
@@ -1345,8 +1301,7 @@ $result = $conn->query($sql);
              const tbody = document.getElementById('ingredients-tbody');
             const row = document.createElement('tr');
 
-            // Create ingredient select dropdown
-            let selectHtml = `<select class="ingredient-select" required> <!-- Added required -->
+            let selectHtml = `<select class="ingredient-select" required> 
                                 <option value="">Select Ingredient</option>`;
 
             rawMaterials.forEach(material => {
@@ -1356,10 +1311,9 @@ $result = $conn->query($sql);
 
             selectHtml += '</select>';
 
-            // Add row content
             row.innerHTML = `
                 <td>${selectHtml}</td>
-                <td><input type="number" class="ingredient-quantity" min="1" step="1" value="${quantity}" required></td> <!-- Added required and min=1 -->
+                <td><input type="number" class="ingredient-quantity" min="1" step="1" value="${quantity}" required></td> 
                 <td><button type="button" class="remove-ingredient-btn" onclick="removeIngredientRow(this)"><i class="fas fa-trash"></i></button></td>
             `;
 
@@ -1371,14 +1325,14 @@ $result = $conn->query($sql);
             row.remove();
         }
 
-        // Updated saveIngredients function to handle both product types
+        // Updated saveIngredients function - productType will always be "company"
         function saveIngredients() {
              const productId = document.getElementById('ingredients_product_id').value;
-            const productType = document.getElementById('ingredients_product_type').value;
+            const productType = document.getElementById('ingredients_product_type').value; // Will be "company"
             const rows = document.querySelectorAll('#ingredients-tbody tr');
             const ingredients = [];
             const errorDiv = document.getElementById('ingredientsError');
-            errorDiv.textContent = ''; // Clear previous errors
+            errorDiv.textContent = ''; 
             let isValid = true;
 
             rows.forEach(row => {
@@ -1392,26 +1346,26 @@ $result = $conn->query($sql);
                     errorDiv.textContent = 'Please select an ingredient for all rows.';
                     isValid = false;
                     ingredientSelect.focus();
-                    return; // Exit loop early
+                    return; 
                 }
                 if (isNaN(quantity) || quantity <= 0) {
                      errorDiv.textContent = 'Please enter a valid positive quantity for all ingredients.';
                      isValid = false;
                      quantityInput.focus();
-                     return; // Exit loop early
+                     return; 
                 }
 
                 ingredients.push([ingredientName, quantity]);
             });
 
-            if (!isValid) return; // Stop if validation failed
+            if (!isValid) return; 
 
             fetch("../pages/api/update_ingredients.php", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     product_id: productId,
-                    product_type: productType,
+                    product_type: productType, // Will be "company"
                     ingredients: ingredients
                 })
             })
@@ -1440,8 +1394,8 @@ $result = $conn->query($sql);
             });
         }
 
-        // Updated updateStock function to handle both product types
-        function updateStock(productId, action, productType) {
+        // Updated updateStock function - productType will always be "company"
+        function updateStock(productId, action, productType) { // productType is passed as "company"
              const amountInput = document.getElementById(`adjust-${productId}`);
             const amount = parseInt(amountInput.value);
 
@@ -1459,7 +1413,7 @@ $result = $conn->query($sql);
                     product_id: productId,
                     action: action,
                     amount: amount,
-                    product_type: productType
+                    product_type: productType // Will be "company"
                 })
             })
             .then(response => {
@@ -1475,12 +1429,11 @@ $result = $conn->query($sql);
             .then(data => {
                 if (data.success) {
                      toastr.success(data.message, { timeOut: 3000, closeButton: true });
-                     // Update stock directly in the table instead of reloading
                      const stockCell = document.getElementById(`stock-${productId}`);
                      if (stockCell) {
                          stockCell.textContent = data.new_stock;
                      }
-                     amountInput.value = 1; // Reset adjustment amount
+                     amountInput.value = 1; 
                  } else {
                      toastr.error(data.message || "Error updating stock.", { timeOut: 3000, closeButton: true });
                  }
