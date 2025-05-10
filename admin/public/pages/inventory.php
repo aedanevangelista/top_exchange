@@ -20,7 +20,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
     $category = $_POST['category'];
     $product_name = $_POST['product_name'];
     $item_description = $_POST['item_description'];
-    $packaging = $_POST['packaging']; // This will be the concatenated string from JS
+    $packaging = $_POST['packaging'];
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock_quantity']);
     $additional_description = $_POST['additional_description'];
@@ -30,12 +30,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         exit;
     }
 
-    if ($category === 'new' && isset($_POST['new_category']) && !empty($_POST['new_category'])) {
-        $category = $_POST['new_category'];
+    if ($category === 'new' && isset($_POST['new_category_field']) && !empty($_POST['new_category_field'])) {
+        $category = $_POST['new_category_field'];
     }
 
-    if ($product_name === 'new' && isset($_POST['new_product_name']) && !empty($_POST['new_product_name'])) {
-        $product_name = $_POST['new_product_name'];
+    if ($product_name === 'new' && isset($_POST['new_product_name_field']) && !empty($_POST['new_product_name_field'])) {
+        $product_name = $_POST['new_product_name_field'];
     }
 
     $stmt = $conn->prepare("SELECT item_description, product_image FROM $table WHERE product_id = ?");
@@ -72,7 +72,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
                 $old_item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $old_item_description);
                 $old_item_dir = $upload_dir . $old_item_folder . '/';
                 if (file_exists($old_item_dir)) {
-                    error_log("Cleaning up old folder: " . $old_item_dir);
                     $old_files = array_diff(scandir($old_item_dir), array('.', '..'));
                     foreach ($old_files as $file) {
                         if (file_exists($old_item_dir . $file)) {
@@ -86,7 +85,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
             }
 
             if (file_exists($item_dir)) {
-                error_log("Cleaning up current folder before new upload: " . $item_dir);
                 $existing_files = array_diff(scandir($item_dir), array('.', '..'));
                 foreach ($existing_files as $file) {
                     if (file_exists($item_dir . $file)) {
@@ -186,8 +184,6 @@ $products_data_result = $conn->query($products_sql);
         .inventory-tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding: 0; list-style: none; }
         .tab-item { padding: 10px 20px; cursor: pointer; font-weight: bold; border: 1px solid transparent; border-bottom: none; border-radius: 5px 5px 0 0; margin-right: 5px; transition: all 0.3s; position: relative; top: 1px; }
         .tab-item.active { background-color: #fff; border-color: #ddd; border-bottom: 1px solid #fff; color: #333; }
-        .tab-item:not(.active) { background-color: #f8f8f8; color: #777; }
-        .tab-item:not(.active):hover { background-color: #f0f0f0; }
         .view-ingredients-btn { background-color: #555555; color: white; border: none; padding: 5px 10px; border-radius: 80px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
         .view-ingredients-btn i { margin-right: 2px; }
         .view-ingredients-btn:hover { background-color: #333333; }
@@ -203,6 +199,10 @@ $products_data_result = $conn->query($products_sql);
         .ingredient-select { width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
         input:required, select:required, textarea:required { border-left: 3px solid #e67e22; }
         input:invalid, select:invalid, textarea:invalid { border-left: 3px solid #e74c3c; }
+        .packaging-group { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 15px; }
+        .packaging-item { display: flex; flex-direction: column; flex: 1; }
+        .packaging-item label { margin-bottom: 5px; font-size: 0.9em; }
+        .packaging-item input[type="number"], .packaging-item select { width: 100%; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -265,14 +265,14 @@ $products_data_result = $conn->query($products_sql);
                             $data_attributes = "data-category='{$row['category']}'
                                                data-product-id='{$row['product_id']}'
                                                data-product-name='" . htmlspecialchars($row['product_name'] ?? '') . "'
-                                               data-item-description='{$row['item_description']}'
+                                               data-item-description='" . htmlspecialchars($row['item_description'] ?? '') . "'
                                                data-packaging='" . htmlspecialchars($row['packaging'] ?? '') . "'
                                                data-additional-description='" . htmlspecialchars($row['additional_description'] ?? '') . "'";
 
                             echo "<tr $data_attributes>
                                 <td>{$row['category']}</td>
                                 <td class='product-name'>" . htmlspecialchars($row['product_name'] ?? '') . "</td>
-                                <td>{$row['item_description']}</td>
+                                <td>" . htmlspecialchars($row['item_description'] ?? '') . "</td>
                                 <td>" . htmlspecialchars($row['packaging'] ?? '') . "</td>
                                 <td>₱" . number_format($row['price'], 2) . "</td>
                                 <td id='stock-{$row['product_id']}'>{$row['stock_quantity']}</td>
@@ -357,26 +357,31 @@ $products_data_result = $conn->query($products_sql);
                     <label for="item_description">Product Variant:</label>
                     <input type="text" id="item_description" name="item_description" required placeholder="e.g., Asado Siopao (A Large)">
                     
-                    <label for="packaging_quantity">Packaging Quantity:</label>
-                    <input type="number" id="packaging_quantity" min="1" required placeholder="e.g., 12">
-
-                    <label for="packaging_unit">Unit:</label>
-                    <select id="packaging_unit" required>
-                        <option value="">Select Unit</option>
-                        <option value="PC">PC - Piece</option>
-                        <option value="PCS">PCS - Pieces</option>
-                        <option value="G">G - Grams</option>
-                        <option value="KG">KG - Kilograms</option>
-                    </select>
-
-                    <label for="packaging_container">Container:</label>
-                    <select id="packaging_container" required>
-                        <option value="">Select Container</option>
-                        <option value="Pack">Pack - Pack</option>
-                        <option value="Btl">Btl - Bottle</option>
-                        <option value="Cntr">Cntr - Container</option>
-                        <option value="None">None</option>
-                    </select>
+                    <div class="packaging-group">
+                        <div class="packaging-item">
+                            <label for="packaging_quantity">Quantity:</label>
+                            <input type="number" id="packaging_quantity" min="1" required placeholder="e.g., 12">
+                        </div>
+                        <div class="packaging-item">
+                            <label for="packaging_unit">Unit:</label>
+                            <select id="packaging_unit" required>
+                                <option value="">Select Unit</option>
+                                <option value="COUNT">Piece(s)</option>
+                                <option value="G">Grams (g)</option>
+                                <option value="KG">Kilograms (kg)</option>
+                            </select>
+                        </div>
+                        <div class="packaging-item">
+                            <label for="packaging_container">Container:</label>
+                            <select id="packaging_container" required>
+                                <option value="">Select Container</option>
+                                <option value="Pack">Pack</option>
+                                <option value="Btl">Bottle</option>
+                                <option value="Cntr">Container</option>
+                                <option value="None">None</option>
+                            </select>
+                        </div>
+                    </div>
 
                     <label for="price">Price (₱):</label>
                     <input type="number" id="price" name="price" step="0.01" min="0" max="5000" required placeholder="0.00">
@@ -446,30 +451,9 @@ $products_data_result = $conn->query($products_sql);
 
                             <label for="edit_item_description">Product Variant:</label>
                             <input type="text" id="edit_item_description" name="item_description" required placeholder="Enter full product description">
-
-                            <label for="edit_packaging_quantity">Packaging Quantity:</label>
-                            <input type="number" id="edit_packaging_quantity" min="1" required placeholder="e.g., 12">
                         </div>
 
                         <div>
-                            <label for="edit_packaging_unit">Unit:</label>
-                            <select id="edit_packaging_unit" required>
-                                <option value="">Select Unit</option>
-                                <option value="PC">PC - Piece</option>
-                                <option value="PCS">PCS - Pieces</option>
-                                <option value="G">G - Grams</option>
-                                <option value="KG">KG - Kilograms</option>
-                            </select>
-
-                            <label for="edit_packaging_container">Container:</label>
-                            <select id="edit_packaging_container" required>
-                                <option value="">Select Container</option>
-                                <option value="Pack">Pack - Pack</option>
-                                <option value="Btl">Btl - Bottle</option>
-                                <option value="Cntr">Cntr - Container</option>
-                                <option value="None">None</option>
-                            </select>
-                            
                             <label for="edit_price">Price (₱):</label>
                             <input type="number" id="edit_price" name="price" step="0.01" min="0" max="5000" required placeholder="0.00">
 
@@ -477,6 +461,33 @@ $products_data_result = $conn->query($products_sql);
                             <input type="number" id="edit_stock_quantity" name="stock_quantity" min="0" required placeholder="0">
                         </div>
                     </div>
+                     
+                    <div class="packaging-group">
+                        <div class="packaging-item">
+                            <label for="edit_packaging_quantity">Quantity:</label>
+                            <input type="number" id="edit_packaging_quantity" min="1" required placeholder="e.g., 12">
+                        </div>
+                        <div class="packaging-item">
+                            <label for="edit_packaging_unit">Unit:</label>
+                            <select id="edit_packaging_unit" required>
+                                <option value="">Select Unit</option>
+                                <option value="COUNT">Piece(s)</option>
+                                <option value="G">Grams (g)</option>
+                                <option value="KG">Kilograms (kg)</option>
+                            </select>
+                        </div>
+                        <div class="packaging-item">
+                            <label for="edit_packaging_container">Container:</label>
+                            <select id="edit_packaging_container" required>
+                                <option value="">Select Container</option>
+                                <option value="Pack">Pack</option>
+                                <option value="Btl">Bottle</option>
+                                <option value="Cntr">Container</option>
+                                <option value="None">None</option>
+                            </select>
+                        </div>
+                    </div>
+
                      <label for="edit_additional_description">Additional Description:</label>
                      <textarea id="edit_additional_description" name="additional_description" placeholder="Add more details about the product" required></textarea>
 
@@ -608,6 +619,30 @@ $products_data_result = $conn->query($products_sql);
             limitNumberInput(document.getElementById('edit_price'), 5000);
         });
 
+        function getPackagingString(qtyId, unitId, containerId) {
+            const qty = document.getElementById(qtyId).value;
+            const unitType = document.getElementById(unitId).value;
+            const container = document.getElementById(containerId).value;
+
+            if (!qty || !unitType || !container) {
+                 return null; 
+            }
+
+            let unitString;
+            if (unitType === 'COUNT') {
+                unitString = parseInt(qty) === 1 ? 'pc' : 'pcs';
+            } else { // G or KG
+                unitString = unitType.toLowerCase(); 
+            }
+
+            let packagingString = qty.trim() + unitString;
+            if (container.trim() !== 'None' && container.trim() !== '') {
+                packagingString += '/' + container.trim().toLowerCase();
+            }
+            return packagingString;
+        }
+
+
         document.getElementById('add-product-form')?.addEventListener('submit', function(e) {
             e.preventDefault();
             const errorDiv = document.getElementById('addProductError');
@@ -637,22 +672,19 @@ $products_data_result = $conn->query($products_sql);
                 return;
             }
             
-            const packagingQty = document.getElementById('packaging_quantity').value;
-            const packagingUnit = document.getElementById('packaging_unit').value;
-            const packagingCont = document.getElementById('packaging_container').value;
-
-            if (!packagingQty || !packagingUnit || !packagingCont) {
-                 errorDiv.textContent = 'Please fill in all packaging details.';
-                 if (!packagingQty) document.getElementById('packaging_quantity').focus();
-                 else if (!packagingUnit) document.getElementById('packaging_unit').focus();
+            const packagingString = getPackagingString('packaging_quantity', 'packaging_unit', 'packaging_container');
+            if (!packagingString) {
+                 errorDiv.textContent = 'Please fill in all packaging details (Quantity, Unit, Container).';
+                 if (!document.getElementById('packaging_quantity').value) document.getElementById('packaging_quantity').focus();
+                 else if (!document.getElementById('packaging_unit').value) document.getElementById('packaging_unit').focus();
                  else document.getElementById('packaging_container').focus();
                  return;
             }
 
-
-            const requiredFields = this.querySelectorAll('[required]:not(#new_category):not(#new_product_name)'); // Exclude conditionally required
+            const requiredFields = this.querySelectorAll('input[required]:not(#new_category):not(#new_product_name), select[required]:not(#new_category):not(#new_product_name), textarea[required]:not(#new_category):not(#new_product_name)');
             let firstEmptyField = null;
             for (const field of requiredFields) {
+                if (field.id === 'packaging_quantity' || field.id === 'packaging_unit' || field.id === 'packaging_container') continue; // Already checked
                 if (field.offsetParent !== null && !field.value.trim() ) {
                     firstEmptyField = field;
                     break;
@@ -671,24 +703,23 @@ $products_data_result = $conn->query($products_sql);
             if (productNameSelect.value === 'new') formData.set('product_name', newProductNameInput.value.trim());
             else formData.set('product_name', productNameSelect.value);
             
-            let packagingString = `${packagingQty.trim()} ${packagingUnit.trim()}`;
-            if (packagingCont.trim() !== 'None' && packagingCont.trim() !== '') {
-                packagingString += ` ${packagingCont.trim()}`;
-            }
             formData.set('packaging', packagingString);
 
-
-            if (!formData.has('stock_quantity')) { // Add product form doesn't have stock quantity input
+            if (!formData.has('stock_quantity')) {
                  formData.append('stock_quantity', 0);
             }
             formData.set('product_type', 'company');
+            // Remove individual packaging fields from FormData if they were added by name attribute
+            formData.delete('packaging_quantity');
+            formData.delete('packaging_unit');
+            formData.delete('packaging_container');
 
 
             fetch("../../backend/add_product.php", {
                 method: "POST",
                 body: formData
             })
-            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (err) { console.error("Invalid JSON:", text); throw new Error("Server returned non-JSON response."); } }))
+            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (err) { console.error("Invalid JSON:", text, err); throw new Error("Server returned non-JSON response."); } }))
             .then(data => {
                 if (data.success) {
                     toastr.success(data.message, { timeOut: 3000, closeButton: true });
@@ -733,21 +764,19 @@ $products_data_result = $conn->query($products_sql);
                 return;
             }
 
-            const packagingQty = document.getElementById('edit_packaging_quantity').value;
-            const packagingUnit = document.getElementById('edit_packaging_unit').value;
-            const packagingCont = document.getElementById('edit_packaging_container').value;
-
-            if (!packagingQty || !packagingUnit || !packagingCont) {
-                 errorDiv.textContent = 'Please fill in all packaging details.';
-                 if (!packagingQty) document.getElementById('edit_packaging_quantity').focus();
-                 else if (!packagingUnit) document.getElementById('edit_packaging_unit').focus();
+            const packagingString = getPackagingString('edit_packaging_quantity', 'edit_packaging_unit', 'edit_packaging_container');
+             if (!packagingString) {
+                 errorDiv.textContent = 'Please fill in all packaging details (Quantity, Unit, Container).';
+                 if (!document.getElementById('edit_packaging_quantity').value) document.getElementById('edit_packaging_quantity').focus();
+                 else if (!document.getElementById('edit_packaging_unit').value) document.getElementById('edit_packaging_unit').focus();
                  else document.getElementById('edit_packaging_container').focus();
                  return;
             }
             
-            const requiredFields = this.querySelectorAll('[required]:not(#edit_new_category):not(#edit_new_product_name)');
+            const requiredFields = this.querySelectorAll('input[required]:not(#edit_new_category):not(#edit_new_product_name), select[required]:not(#edit_new_category):not(#edit_new_product_name), textarea[required]:not(#edit_new_category):not(#edit_new_product_name)');
             let firstEmptyField = null;
             for (const field of requiredFields) {
+                 if (field.id === 'edit_packaging_quantity' || field.id === 'edit_packaging_unit' || field.id === 'edit_packaging_container') continue; // Already checked
                 if (field.offsetParent !== null && !field.value.trim()) {
                     firstEmptyField = field;
                     break;
@@ -766,19 +795,19 @@ $products_data_result = $conn->query($products_sql);
             if (productNameSelect.value === 'new') formData.set('product_name', newProductNameInput.value.trim());
             else formData.set('product_name', productNameSelect.value);
 
-            let packagingString = `${packagingQty.trim()} ${packagingUnit.trim()}`;
-            if (packagingCont.trim() !== 'None' && packagingCont.trim() !== '') {
-                packagingString += ` ${packagingCont.trim()}`;
-            }
             formData.set('packaging', packagingString);
             formData.set('is_walkin', '0');
+            // Remove individual packaging fields from FormData
+            formData.delete('edit_packaging_quantity');
+            formData.delete('edit_packaging_unit');
+            formData.delete('edit_packaging_container');
 
 
             fetch(window.location.href, { 
                 method: "POST",
                 body: formData
             })
-            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (err) { console.error("Invalid JSON:", text); throw new Error("Server returned non-JSON response."); } }))
+            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (err) { console.error("Invalid JSON:", text, err); throw new Error("Server returned non-JSON response."); } }))
             .then(data => {
                 if (data.success) {
                     toastr.success(data.message, { timeOut: 3000, closeButton: true });
@@ -811,7 +840,7 @@ $products_data_result = $conn->query($products_sql);
         function closeIngredientsModal() { document.getElementById('ingredientsModal').style.display = 'none'; }
 
         function editProduct(productId, productType) { 
-            let apiUrl = `../pages/api/get_product.php?id=${productId}`; // productType is always 'company'
+            let apiUrl = `../pages/api/get_product.php?id=${productId}`;
 
             fetch(apiUrl)
                 .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response:", text); throw new Error("Server returned invalid response"); } }))
@@ -826,7 +855,7 @@ $products_data_result = $conn->query($products_sql);
                     newCategoryInput.required = false; 
                     if (product.category) {
                         categorySelect.value = product.category;
-                        if (categorySelect.value !== product.category) { // Category not in list
+                        if (categorySelect.value !== product.category) {
                              categorySelect.value = 'new';
                              newCategoryContainer.style.display = 'block';
                              newCategoryInput.value = product.category;
@@ -841,7 +870,7 @@ $products_data_result = $conn->query($products_sql);
                     newProductNameInput.required = false; 
                     if (product.product_name) {
                         productNameSelect.value = product.product_name;
-                         if (productNameSelect.value !== product.product_name) { // Product name not in list
+                         if (productNameSelect.value !== product.product_name) { 
                              productNameSelect.value = 'new';
                              newProductNameContainer.style.display = 'block';
                              newProductNameInput.value = product.product_name;
@@ -851,29 +880,36 @@ $products_data_result = $conn->query($products_sql);
 
                     document.getElementById('edit_item_description').value = product.item_description || '';
                     
-                    // Parse packaging string: "QTY UNIT CONTAINER" or "QTY UNIT"
                     const packagingStr = product.packaging || '';
-                    const packagingParts = packagingStr.split(' ');
-                    let qty = '', unitVal = '', containerVal = 'None';
+                    let qtyVal = '';
+                    let unitTypeVal = ''; 
+                    let containerVal = 'None'; 
 
-                    if (packagingParts.length >= 1 && !isNaN(packagingParts[0])) {
-                        qty = packagingParts[0];
-                    }
-                    if (packagingParts.length >= 2) {
-                        unitVal = packagingParts[1];
-                        const validUnits = ["PC", "PCS", "G", "KG"];
-                        if (!validUnits.includes(unitVal)) unitVal = ''; // Reset if not a valid unit
-                    }
-                    if (packagingParts.length >= 3) {
-                        const potentialContainer = packagingParts[2];
-                        const validContainers = ["Pack", "Btl", "Cntr"];
-                        if (validContainers.includes(potentialContainer)) {
-                            containerVal = potentialContainer;
+                    const regex = /^(\d+)([a-zA-Z]+)(?:\/([a-zA-Z]+))?$/;
+                    const match = packagingStr.match(regex);
+
+                    if (match) {
+                        qtyVal = match[1]; 
+                        const parsedUnit = match[2].toLowerCase(); 
+                        
+                        if (parsedUnit === 'pc' || parsedUnit === 'pcs') {
+                            unitTypeVal = 'COUNT';
+                        } else if (parsedUnit === 'g') {
+                            unitTypeVal = 'G';
+                        } else if (parsedUnit === 'kg') {
+                            unitTypeVal = 'KG';
+                        }
+
+                        if (match[3]) { 
+                            const parsedContainer = match[3].toLowerCase();
+                            if (parsedContainer === 'pack') containerVal = 'Pack';
+                            else if (parsedContainer === 'btl') containerVal = 'Btl';
+                            else if (parsedContainer === 'cntr') containerVal = 'Cntr';
                         }
                     }
                     
-                    document.getElementById('edit_packaging_quantity').value = qty;
-                    document.getElementById('edit_packaging_unit').value = unitVal;
+                    document.getElementById('edit_packaging_quantity').value = qtyVal;
+                    document.getElementById('edit_packaging_unit').value = unitTypeVal;
                     document.getElementById('edit_packaging_container').value = containerVal;
 
                     document.getElementById('edit_price').value = product.price || 0;
