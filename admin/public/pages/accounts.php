@@ -1,28 +1,25 @@
 <?php
 session_start();
-include "../../backend/db_connection.php"; // Establishes $conn
+include "../../backend/db_connection.php";
 include "../../backend/check_role.php";
-checkRole('Accounts - Admin'); // Ensure user has access
+checkRole('Accounts - Admin');
 
-// --- Sorting ---
-$sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'username'; // Default sort column
-$sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'ASC'; // Default sort direction
+// Sorting
+$sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'username';
+$sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'ASC';
 
-// Validate sort column
-$allowed_columns = ['username', 'role', 'created_at', 'status']; // 'Account Age' sorts by 'created_at'
+$allowed_columns = ['username', 'role', 'created_at', 'status'];
 if (!in_array($sort_column, $allowed_columns)) {
-    $sort_column = 'username'; // Default back if invalid
+    $sort_column = 'username';
 }
-
-// Validate sort direction
 if (strtoupper($sort_direction) !== 'ASC' && strtoupper($sort_direction) !== 'DESC') {
-    $sort_direction = 'ASC'; // Default back if invalid
+    $sort_direction = 'ASC';
 }
 
-// --- Status Filter ---
+// Status Filter
 $status_filter = $_GET['status'] ?? '';
 
-// --- Fetch Roles ---
+// Fetch Roles
 $roles = [];
 $roleQuery = "SELECT role_name FROM roles WHERE status = 'active'";
 $resultRoles = $conn->query($roleQuery);
@@ -31,28 +28,21 @@ if ($resultRoles && $resultRoles->num_rows > 0) {
         $roles[] = $row['role_name'];
     }
 }
-// Not closing $resultRoles here assuming it's small or implicitly handled
 
-// --- AJAX Handlers ---
+// AJAX Handlers
 function returnJsonResponse($success, $reload, $message = '') {
-    // Note: This function calls exit, so connection closing needs careful consideration
-    // if database operations happen *after* a potential AJAX call.
-    // For now, assuming AJAX handlers are self-contained and main page load continues.
-    global $conn; // Make connection available if needed within AJAX, though ideally handled differently
+    global $conn;
     echo json_encode(['success' => $success, 'reload' => $reload, 'message' => $message]);
-    // $conn->close(); // Don't close here if main script continues
     exit;
 }
+
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
-    // Important: If AJAX handlers use $conn, ensure it's not closed before they run.
-    // The current structure seems okay as AJAX exits, but keep this in mind.
     header('Content-Type: application/json');
     $formType = $_POST['formType'] ?? '';
 
-    // Add Account
     if ($formType == 'add') {
         $username = trim($_POST['username']);
-        $password = $_POST['password'];
+        $password = $_POST['password']; // Store passwords securely (e.g., password_hash())
         $role = $_POST['role'];
         $status = 'Active';
         $created_at = date('Y-m-d H:i:s');
@@ -63,31 +53,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         $checkStmt->store_result();
 
         if ($checkStmt->num_rows > 0) {
-            $checkStmt->close(); // Close check statement
+            $checkStmt->close();
             returnJsonResponse(false, false, 'Username already exists.');
         }
         $checkStmt->close();
 
         $stmt = $conn->prepare("INSERT INTO accounts (username, password, role, status, created_at) VALUES (?, ?, ?, ?, ?)");
-        // IMPORTANT: In a real application, hash the password!
-        $stmt->bind_param("sssss", $username, $password, $role, $status, $created_at); // Using plain text for now
+        $stmt->bind_param("sssss", $username, $password, $role, $status, $created_at);
 
         if ($stmt->execute()) {
-             $stmt->close(); // Close insert statement
-            returnJsonResponse(true, true);
+            $stmt->close();
+            returnJsonResponse(true, true, 'Account added successfully.');
         } else {
             error_log("Add account failed: " . $stmt->error);
-             $stmt->close(); // Close insert statement even on failure
+            $stmt->close();
             returnJsonResponse(false, false, 'Database error adding account.');
         }
-        // Exit is handled by returnJsonResponse
-    }
-
-    // Edit Account
-    elseif ($formType == 'edit') {
+    } elseif ($formType == 'edit') {
         $id = $_POST['id'];
         $username = trim($_POST['username']);
-        $password = $_POST['password'];
+        $password = $_POST['password']; // Store passwords securely
         $role = $_POST['role'];
 
         $checkStmt = $conn->prepare("SELECT id FROM accounts WHERE username = ? AND id != ?");
@@ -101,11 +86,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         }
         $checkStmt->close();
 
-        $stmt = null; // Initialize stmt
+        $stmt = null;
         if (!empty($password)) {
-            // IMPORTANT: Hash the new password!
             $stmt = $conn->prepare("UPDATE accounts SET username = ?, password = ?, role = ? WHERE id = ?");
-            $stmt->bind_param("sssi", $username, $password, $role, $id); // Plain text for now
+            $stmt->bind_param("sssi", $username, $password, $role, $id);
         } else {
             $stmt = $conn->prepare("UPDATE accounts SET username = ?, role = ? WHERE id = ?");
             $stmt->bind_param("ssi", $username, $role, $id);
@@ -113,22 +97,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
 
         if ($stmt->execute()) {
             $stmt->close();
-            returnJsonResponse(true, true);
+            returnJsonResponse(true, true, 'Account updated successfully.');
         } else {
             error_log("Edit account failed: " . $stmt->error);
             $stmt->close();
             returnJsonResponse(false, false, 'Database error updating account.');
         }
-         // Exit is handled by returnJsonResponse
-    }
-
-    // Change Status
-    elseif ($formType == 'status') {
+    } elseif ($formType == 'status') {
         $id = $_POST['id'];
         $status = $_POST['status'];
-        $allowed_statuses = ['Active', 'Reject', 'Archived'];
+        // REMOVED 'Reject' from allowed statuses
+        $allowed_statuses = ['Active', 'Archived'];
         if (!in_array($status, $allowed_statuses)) {
-             returnJsonResponse(false, false, 'Invalid status value.');
+            returnJsonResponse(false, false, 'Invalid status value.');
         }
 
         $stmt = $conn->prepare("UPDATE accounts SET status = ? WHERE id = ?");
@@ -136,35 +117,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
 
         if ($stmt->execute()) {
             $stmt->close();
-            returnJsonResponse(true, true);
+            returnJsonResponse(true, true, 'Status updated successfully.');
         } else {
             error_log("Change status failed: " . $stmt->error);
             $stmt->close();
             returnJsonResponse(false, false, 'Failed to change status.');
         }
-         // Exit is handled by returnJsonResponse
     }
-} // End AJAX handling block
+}
 
-// --- Fetch Accounts Data for Page Load ---
+// Fetch Accounts Data
 $sql = "SELECT id, username, role, status, created_at FROM accounts";
 $params = [];
 $param_types = "";
 
-// Apply status filter if present
 if (!empty($status_filter)) {
     $sql .= " WHERE status = ?";
     $params[] = $status_filter;
     $param_types .= "s";
 }
 
-// Apply sorting
 $sql .= " ORDER BY {$sort_column} {$sort_direction}";
 
-// Prepare and execute the main query
 $stmt = $conn->prepare($sql);
 if ($stmt === false) {
-    // Close connection before dying if prepare fails early
     if ($conn instanceof mysqli) $conn->close();
     die("Prepare failed: (" . $conn->errno . ") " . $conn->error);
 }
@@ -180,21 +156,16 @@ if ($result) {
     while ($row = $result->fetch_assoc()) {
         $accounts[] = $row;
     }
-    $stmt->close(); // Close the statement after fetching results
+    $stmt->close();
 } else {
-     error_log("Fetch accounts failed: " . $conn->error);
-     $stmt->close(); // Close statement even if get_result failed
-     // Handle error appropriately, maybe show a message
+    error_log("Fetch accounts failed: " . $conn->error);
+    $stmt->close();
 }
 
-// --- Helper Functions for Sorting ---
-// These functions don't need the database connection
+// Helper Functions for Sorting
 function getSortUrl($column, $currentColumn, $currentDirection, $currentStatus) {
     $newDirection = ($column === $currentColumn && strtoupper($currentDirection) === 'ASC') ? 'DESC' : 'ASC';
-    $urlParams = [
-        'sort' => $column,
-        'direction' => $newDirection
-    ];
+    $urlParams = ['sort' => $column, 'direction' => $newDirection];
     if (!empty($currentStatus)) {
         $urlParams['status'] = $currentStatus;
     }
@@ -202,17 +173,10 @@ function getSortUrl($column, $currentColumn, $currentDirection, $currentStatus) 
 }
 
 function getSortIcon($column, $currentColumn, $currentDirection) {
-    if ($column !== $currentColumn) {
-        return '<i class="fas fa-sort"></i>';
-    } elseif (strtoupper($currentDirection) === 'ASC') {
-        return '<i class="fas fa-sort-up"></i>';
-    } else {
-        return '<i class="fas fa-sort-down"></i>';
-    }
+    if ($column !== $currentColumn) return '<i class="fas fa-sort"></i>';
+    return (strtoupper($currentDirection) === 'ASC') ? '<i class="fas fa-sort-up"></i>' : '<i class="fas fa-sort-down"></i>';
 }
-
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -225,115 +189,40 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <link rel="stylesheet" href="/css/toast.css">
     <style>
-        /* Add styles for search bar */
-        .search-container {
-            display: flex;
-            align-items: center;
-            margin: 0 15px; /* Adjust margin as needed */
-        }
-
-        .search-container input {
-            padding: 8px 12px;
-            border-radius: 20px 0 0 20px;
-            border: 1px solid #ddd;
-            font-size: 12px;
-            width: 200px; /* Adjust width */
-            border-right: none;
-        }
-
-        .search-container .search-btn {
-            background-color: #2980b9; /* Match other button styles */
-            color: white;
-            border: 1px solid #2980b9;
-            border-radius: 0 20px 20px 0;
-            padding: 8px 12px;
-            cursor: pointer;
-            margin-left: -1px; /* Overlap border */
-        }
-
-        .search-container .search-btn:hover {
-            background-color: #2471a3;
-        }
-
-        /* Adjust header layout */
-        .accounts-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .accounts-header h1 {
-             margin-right: auto; /* Push other elements to the right */
-        }
-
-        /* Style for sortable headers */
-        .accounts-table th.sortable a {
-            color: inherit;
-            text-decoration: none;
-            display: inline-block; /* Allows icon placement */
-        }
-
-         th.sortable:hover {
-            background-color:rgb(71, 71, 71); /* Example hover color */
-         }
-        .accounts-table th.sortable i {
-            margin-left: 5px;
-            color: #aaa; /* Lighter color for icons */
-        }
-         .accounts-table th.sortable.active i {
-             color: white; /* Darker color for active sort icon */
-         }
-        /* Default role label style */
-        .role-label {
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.8em;
-            font-weight: 500;
-            /* Add default background/color if needed, or rely on specific role styles */
-            background-color: #e9ecef; /* Example default background */
-            color: #495057;      /* Example default text color */
-            border: 1px solid #ced4da; /* Example default border */
-        }
-         /* Add specific styles ONLY for roles you WANT styled */
-         .role-label.role-admin { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb;}
-         .role-label.role-orders { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb;}
-         /* Add other specific role styles here */
-         /* NO styles needed for role-accountant, role-secretary etc. */
-
-
+        .search-container { display: flex; align-items: center; margin: 0 15px; }
+        .search-container input { padding: 8px 12px; border-radius: 20px 0 0 20px; border: 1px solid #ddd; font-size: 12px; width: 200px; border-right: none; }
+        .search-container .search-btn { background-color: #2980b9; color: white; border: 1px solid #2980b9; border-radius: 0 20px 20px 0; padding: 8px 12px; cursor: pointer; margin-left: -1px; }
+        .search-container .search-btn:hover { background-color: #2471a3; }
+        .accounts-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .accounts-header h1 { margin-right: auto; }
+        .accounts-table th.sortable a { color: inherit; text-decoration: none; display: inline-block; }
+        th.sortable:hover { background-color:rgb(71, 71, 71); }
+        .accounts-table th.sortable i { margin-left: 5px; color: #aaa; }
+        .accounts-table th.sortable.active i { color: white; }
+        .role-label { padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: 500; background-color: #e9ecef; color: #495057; border: 1px solid #ced4da; }
+        .role-label.role-admin { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb;}
+        .role-label.role-orders { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb;}
     </style>
 </head>
 <body>
     <div id="toast-container"></div>
-
-    <?php
-    // Include the sidebar - $conn should still be open here
-    include '../sidebar.php';
-    ?>
-
+    <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="accounts-header">
             <h1>Staff Accounts</h1>
-
-            <!-- Search Bar -->
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Search accounts...">
                 <button class="search-btn" id="searchBtn"><i class="fas fa-search"></i></button>
             </div>
-
-            <!-- Status Filter Dropdown -->
             <div class="filter-section">
                 <label for="statusFilter">Filter by Status:</label>
                 <select id="statusFilter" onchange="filterByStatus()">
                     <option value="" <?= empty($status_filter) ? 'selected' : '' ?>>All</option>
                     <option value="Active" <?= $status_filter == 'Active' ? 'selected' : '' ?>>Active</option>
-                    <option value="Reject" <?= $status_filter == 'Reject' ? 'selected' : '' ?>>Reject</option>
+                    <!-- REMOVED Reject Option -->
                     <option value="Archived" <?= $status_filter == 'Archived' ? 'selected' : '' ?>>Archived</option>
                 </select>
             </div>
-
-            <!-- Add Account Button -->
             <button onclick="openAddAccountForm()" class="add-account-btn">
                 <i class="fas fa-user-plus"></i> Add New Account
             </button>
@@ -343,7 +232,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <table class="accounts-table">
                 <thead>
                     <tr>
-                        <!-- Make headers sortable -->
                         <th class="sortable <?= $sort_column == 'username' ? 'active' : '' ?>">
                             <a href="<?= getSortUrl('username', $sort_column, $sort_direction, $status_filter) ?>">
                                 Username <?= getSortIcon('username', $sort_column, $sort_direction) ?>
@@ -370,54 +258,38 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                 <tbody>
                     <?php if (count($accounts) > 0): ?>
                         <?php foreach ($accounts as $account):
-                            // Calculate account age
                             try {
                                 $created_at = new DateTime($account['created_at']);
                                 $now = new DateTime();
                                 $diff = $created_at->diff($now);
-                                if ($diff->y > 0) {
-                                    $account_age = $diff->y . " year" . ($diff->y > 1 ? "s" : "") . " ago";
-                                } elseif ($diff->m > 0) {
-                                    $account_age = $diff->m . " month" . ($diff->m > 1 ? "s" : "") . " ago";
-                                } elseif ($diff->d > 0) {
-                                    $account_age = $diff->d . " day" . ($diff->d > 1 ? "s" : "") . " ago";
-                                } elseif ($diff->h > 0 || $diff->i > 0 || $diff->s >= 0) {
-                                     $account_age = "Just now";
-                                } else {
-                                     $account_age = "Unknown"; // Fallback
-                                }
+                                if ($diff->y > 0) $account_age = $diff->y . " year" . ($diff->y > 1 ? "s" : "") . " ago";
+                                elseif ($diff->m > 0) $account_age = $diff->m . " month" . ($diff->m > 1 ? "s" : "") . " ago";
+                                elseif ($diff->d > 0) $account_age = $diff->d . " day" . ($diff->d > 1 ? "s" : "") . " ago";
+                                elseif ($diff->h > 0 || $diff->i > 0 || $diff->s >= 0) $account_age = "Just now";
+                                else $account_age = "Unknown";
                             } catch (Exception $e) {
-                                $account_age = "Invalid date"; // Handle potential date parsing errors
+                                $account_age = "Invalid date";
                             }
                         ?>
                             <tr>
                                 <td><?= htmlspecialchars($account['username']) ?></td>
-                                <!-- *** MODIFIED ROLE DISPLAY LOGIC *** -->
                                 <td>
                                     <?php
-                                    $roleName = $account['role'] ?? ''; // Get the role name safely
-                                    $roleDisplay = !empty($roleName) ? ucfirst($roleName) : 'Unknown'; // Text to display
-
-                                    // Define roles that should NOT get specific styling
+                                    $roleName = $account['role'] ?? '';
+                                    $roleDisplay = !empty($roleName) ? ucfirst($roleName) : 'Unknown';
                                     $rolesWithoutSpecificStyle = ['accountant', 'secretary'];
-
-                                    // Determine the CSS class(es)
-                                    $roleClasses = 'role-label'; // Base class for all roles
+                                    $roleClasses = 'role-label';
                                     if (!empty($roleName)) {
                                         $lowerRole = strtolower($roleName);
-                                        // Add the specific class ONLY if it's NOT in the exclusion list
                                         if (!in_array($lowerRole, $rolesWithoutSpecificStyle)) {
-                                            $roleClasses .= ' role-' . $lowerRole; // e.g., role-admin, role-orders
+                                            $roleClasses .= ' role-' . $lowerRole;
                                         }
-                                        // else: For Accountant/Secretary, only 'role-label' is used
                                     } else {
-                                        $roleClasses .= ' role-unknown'; // Class for empty/unknown roles
+                                        $roleClasses .= ' role-unknown';
                                     }
-
                                     echo "<span class='$roleClasses'>$roleDisplay</span>";
                                     ?>
                                 </td>
-                                <!-- *** END MODIFIED ROLE DISPLAY LOGIC *** -->
                                 <td><?= $account_age ?></td>
                                 <td class="<?= 'status-' . strtolower($account['status'] ?? 'active') ?>">
                                     <?= htmlspecialchars($account['status'] ?? 'Active') ?>
@@ -445,18 +317,17 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         </div>
     </div>
 
-    <!-- Modals (Add, Edit, Status) -->
-     <div id="addAccountOverlay" class="overlay" style="display: none;">
+    <div id="addAccountOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2><i class="fas fa-user-plus"></i> Add New Account</h2>
             <div id="addAccountError" class="error-message"></div>
             <form id="addAccountForm" method="POST" class="account-form" action="">
                 <input type="hidden" name="formType" value="add">
-                <input type="hidden" name="ajax" value="1"> <!-- Ensure AJAX flag is sent -->
+                <input type="hidden" name="ajax" value="1">
                 <label for="username">Username:</label>
                 <input type="text" id="username" name="username" autocomplete="username" required>
                 <label for="password">Password:</label>
-                <input type="text" id="password" name="password" autocomplete="new-password" required> <!-- Consider type="password" -->
+                <input type="text" id="password" name="password" autocomplete="new-password" required>
                 <label for="role">Role:</label>
                 <select id="role" name="role" autocomplete="role" required>
                      <?php if (empty($roles)): ?>
@@ -483,12 +354,12 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <div id="editAccountError" class="error-message"></div>
             <form id="editAccountForm" method="POST" class="account-form" action="">
                 <input type="hidden" name="formType" value="edit">
-                <input type="hidden" name="ajax" value="1"> <!-- Ensure AJAX flag is sent -->
+                <input type="hidden" name="ajax" value="1">
                 <input type="hidden" id="edit-id" name="id">
                 <label for="edit-username">Username:</label>
                 <input type="text" id="edit-username" name="username" autocomplete="username" required>
                 <label for="edit-password">Password: <small>(Leave blank to keep current)</small></label>
-                <input type="text" id="edit-password" name="password" autocomplete="new-password"> <!-- Consider type="password" -->
+                <input type="text" id="edit-password" name="password" autocomplete="new-password">
                 <label for="edit-role">Role:</label>
                 <select id="edit-role" name="role" autocomplete="role" required>
                      <?php if (empty($roles)): ?>
@@ -513,19 +384,15 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         <div class="overlay-content">
             <h2>Change Status</h2>
             <p id="statusMessage"></p>
-             <!-- Hidden fields for AJAX submission -->
              <input type="hidden" id="status-change-id" name="id">
              <input type="hidden" id="status-change-value" name="status">
              <input type="hidden" name="formType" value="status">
              <input type="hidden" name="ajax" value="1">
-
             <div class="modal-buttons">
                 <button class="approve-btn" onclick="confirmStatusChange('Active')">
                     <i class="fas fa-check"></i> Active
                 </button>
-                <button class="reject-btn" onclick="confirmStatusChange('Reject')">
-                    <i class="fas fa-times"></i> Reject
-                </button>
+                <!-- REMOVED Reject Button -->
                 <button class="archive-btn" onclick="confirmStatusChange('Archived')">
                     <i class="fas fa-archive"></i> Archive
                 </button>
@@ -541,30 +408,22 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/js/toast.js"></script>
-    <!-- Ensure accounts.js is loaded AFTER the inline script or includes necessary functions -->
     <script src="/js/accounts.js"></script>
     <script>
-        // --- Client-side Search ---
         $(document).ready(function() {
             function performSearch() {
                 const searchTerm = $('#searchInput').val().toLowerCase().trim();
                 let visibleCount = 0;
-                let totalRows = 0; // Count actual data rows
+                let totalRows = 0;
 
                 $('.accounts-table tbody tr').each(function() {
                     const row = $(this);
-                    // Skip the 'no accounts found' template row
-                    if (row.attr('id') === 'noAccountsFound') {
-                        return; // continue to next iteration
-                    }
-                    // Check if it's the original 'no accounts' row
+                    if (row.attr('id') === 'noAccountsFound') return;
                     if (row.find('.no-accounts').length > 0) {
-                        // Hide this row during search
                         row.hide();
-                        return; // continue
+                        return;
                     }
-
-                    totalRows++; // This is a data row
+                    totalRows++;
                     const rowText = row.text().toLowerCase();
                     if (rowText.includes(searchTerm)) {
                         row.show();
@@ -574,51 +433,35 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                     }
                 });
 
-                 // Show/hide the 'no accounts found' message row template
                  if (visibleCount === 0 && totalRows > 0 && searchTerm !== '') {
                      $('#noAccountsFound').show();
                  } else {
                      $('#noAccountsFound').hide();
-                     // If search is cleared and the original 'no accounts' row exists, show it
                      if (searchTerm === '' && totalRows === 0 && $('.accounts-table tbody .no-accounts').length > 0) {
                           $('.accounts-table tbody .no-accounts').closest('tr').show();
                      }
                  }
             }
-
             $('#searchInput').on('input', performSearch);
-            $('#searchBtn').on('click', performSearch); // Also trigger search on button click
-
-             // Ensure search is performed on page load if search input has value (e.g. after back button)
+            $('#searchBtn').on('click', performSearch);
              if ($('#searchInput').val()) {
                  performSearch();
              }
         });
 
-        // --- Status Filter Function ---
         function filterByStatus() {
             const selectedStatus = document.getElementById('statusFilter').value;
             const url = new URL(window.location.href);
             const currentSort = url.searchParams.get('sort');
             const currentDirection = url.searchParams.get('direction');
-
             const params = {};
-            if (selectedStatus) {
-                params.status = selectedStatus;
-            }
-            if (currentSort) {
-                params.sort = currentSort;
-            }
-             if (currentDirection) {
-                params.direction = currentDirection;
-            }
-
-            const queryString = Object.keys(params).map(key => key + '=' + encodeURIComponent(params[key])).join('&');
-            window.location.search = queryString; // Reload page with new filter/sort
+            if (selectedStatus) params.status = selectedStatus;
+            if (currentSort) params.sort = currentSort;
+            if (currentDirection) params.direction = currentDirection;
+            window.location.search = Object.keys(params).map(key => key + '=' + encodeURIComponent(params[key])).join('&');
         }
 
-         // --- Functions needed by modals/buttons (Ensure these are in accounts.js or here) ---
-         let currentAccountId = null; // To store ID for status change
+         let currentAccountId = null;
 
          function openAddAccountForm() {
              $('#addAccountForm')[0].reset();
@@ -630,7 +473,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
          function openEditAccountForm(id, username, password, role) {
              $('#edit-id').val(id);
              $('#edit-username').val(username);
-             $('#edit-password').val(''); // Clear password field for editing
+             $('#edit-password').val('');
              $('#edit-role').val(role);
              $('#editAccountError').text('').hide();
              $('#editAccountOverlay').css('display', 'flex');
@@ -638,25 +481,21 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
          function closeEditAccountForm() { $('#editAccountOverlay').hide(); }
 
          function openStatusModal(id, username) {
-             currentAccountId = id; // Store the ID
+             currentAccountId = id;
              $('#statusMessage').text(`Change status for account: ${username}`);
-             // Clear previous status selection if needed
-             $('#status-change-id').val(id); // Set hidden ID field
+             $('#status-change-id').val(id);
              $('#statusModal').css('display', 'flex');
          }
          function closeStatusModal() {
              $('#statusModal').hide();
-             currentAccountId = null; // Clear stored ID
+             currentAccountId = null;
          }
 
-         // Confirms which status button was clicked, sets hidden value
          function confirmStatusChange(newStatus) {
              $('#status-change-value').val(newStatus);
-             // Now call the function that will perform the AJAX submit
              submitStatusChange();
          }
 
-         // Submits the status change via AJAX
          function submitStatusChange() {
              const accountId = $('#status-change-id').val();
              const newStatus = $('#status-change-value').val();
@@ -665,23 +504,15 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                  showToast('Error: Missing account ID or status.', 'error');
                  return;
              }
-
              $.ajax({
-                 url: window.location.pathname, // Post back to the same page
+                 url: window.location.pathname,
                  type: 'POST',
-                 data: {
-                     ajax: 1,
-                     formType: 'status',
-                     id: accountId,
-                     status: newStatus
-                 },
+                 data: { ajax: 1, formType: 'status', id: accountId, status: newStatus },
                  dataType: 'json',
                  success: function(response) {
                      if (response.success) {
                          showToast('Status updated successfully!', 'success');
-                         if (response.reload) {
-                             setTimeout(() => { window.location.reload(); }, 1000);
-                         }
+                         if (response.reload) setTimeout(() => { window.location.reload(); }, 1000);
                      } else {
                          showToast('Error: ' + (response.message || 'Failed to update status.'), 'error');
                      }
@@ -690,29 +521,20 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                      console.error("Status change AJAX error:", status, error, xhr.responseText);
                      showToast('Error: Could not connect to server.', 'error');
                  },
-                 complete: function() {
-                     closeStatusModal(); // Close modal regardless of success/failure
-                 }
+                 complete: function() { closeStatusModal(); }
              });
          }
 
-         // --- Form Submissions via AJAX (Add/Edit) ---
          $(document).ready(function() {
              $('#addAccountForm').on('submit', function(e) {
                  e.preventDefault();
-                 const form = $(this);
                  $.ajax({
-                     url: window.location.pathname, // Post back to same page
-                     type: 'POST',
-                     data: form.serialize() + '&ajax=1', // Ensure ajax=1 is sent
-                     dataType: 'json',
+                     url: window.location.pathname, type: 'POST', data: $(this).serialize(), dataType: 'json',
                      success: function(response) {
                          if (response.success) {
                              showToast('Account added successfully!', 'success');
                              closeAddAccountForm();
-                             if (response.reload) {
-                                 setTimeout(() => { window.location.reload(); }, 1000);
-                             }
+                             if (response.reload) setTimeout(() => { window.location.reload(); }, 1000);
                          } else {
                              $('#addAccountError').text(response.message || 'Failed to add account.').show();
                              showToast('Error: ' + (response.message || 'Failed to add account.'), 'error');
@@ -728,19 +550,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
              $('#editAccountForm').on('submit', function(e) {
                  e.preventDefault();
-                 const form = $(this);
                  $.ajax({
-                     url: window.location.pathname, // Post back to same page
-                     type: 'POST',
-                     data: form.serialize() + '&ajax=1', // Ensure ajax=1 is sent
-                     dataType: 'json',
+                     url: window.location.pathname, type: 'POST', data: $(this).serialize(), dataType: 'json',
                      success: function(response) {
                          if (response.success) {
                              showToast('Account updated successfully!', 'success');
                              closeEditAccountForm();
-                             if (response.reload) {
-                                 setTimeout(() => { window.location.reload(); }, 1000);
-                             }
+                             if (response.reload) setTimeout(() => { window.location.reload(); }, 1000);
                          } else {
                              $('#editAccountError').text(response.message || 'Failed to update account.').show();
                              showToast('Error: ' + (response.message || 'Failed to update account.'), 'error');
@@ -754,13 +570,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                  });
              });
          });
-
-
     </script>
 </body>
 </html>
 <?php
-// --- Close Connection AT THE END ---
 if ($conn instanceof mysqli) {
     $conn->close();
 }
