@@ -8,7 +8,6 @@ checkRole('Accounts - Admin');
 $sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'username';
 $sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'ASC';
 
-// Added new columns to allowed_columns for sorting if needed in the future
 $allowed_columns = ['username', 'name', 'email_address', 'contact_number', 'role', 'created_at', 'status'];
 if (!in_array($sort_column, $allowed_columns)) {
     $sort_column = 'username';
@@ -29,7 +28,6 @@ if ($resultRoles && $resultRoles->num_rows > 0) {
 }
 
 function returnJsonResponse($success, $reload, $message = '') {
-    global $conn; // Ensure $conn is available if needed, though exit happens.
     if (!headers_sent()) {
         header('Content-Type: application/json');
     }
@@ -46,23 +44,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         $name = trim($_POST['name']);
         $email_address = trim($_POST['email_address']);
         $contact_number = trim($_POST['contact_number']);
-        // Password is auto-generated
         $role = $_POST['role'];
         $status = 'Active';
         $created_at = date('Y-m-d H:i:s');
 
-        // Validate inputs (basic example, add more robust validation)
+        // Validation
         if (empty($username) || empty($name) || empty($email_address) || empty($contact_number) || empty($role)) {
-            returnJsonResponse(false, false, 'All fields except password are required.');
+            returnJsonResponse(false, false, 'All fields are required.');
         }
         if (!filter_var($email_address, FILTER_VALIDATE_EMAIL)) {
             returnJsonResponse(false, false, 'Invalid email address format.');
         }
-        if (!preg_match('/^\d{10,15}$/', $contact_number)) { // Example: 10-15 digits
-            returnJsonResponse(false, false, 'Invalid contact number format (10-15 digits).');
+        if (!preg_match('/^\d{10,15}$/', $contact_number)) { // Example: 10-15 digits, adjust as needed
+            returnJsonResponse(false, false, 'Invalid contact number format (10-15 digits required).');
         }
-         if (strlen($contact_number) < 4) {
+        if (strlen($contact_number) < 4) {
             returnJsonResponse(false, false, 'Contact number must be at least 4 digits long for password generation.');
+        }
+        if (strlen($username) > 50 || strlen($name) > 255 || strlen($email_address) > 255 || strlen($contact_number) > 20 || strlen($role) > 255) {
+            returnJsonResponse(false, false, 'One or more fields exceed maximum length.');
         }
 
 
@@ -83,21 +83,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         $hashed_password = password_hash($generated_password_plain, PASSWORD_DEFAULT);
 
         if ($hashed_password === false) {
-            error_log("Password hashing failed for add account.");
-            returnJsonResponse(false, false, 'Password generation failed.');
+            error_log("Password hashing failed for add account: " . $username);
+            returnJsonResponse(false, false, 'Password generation failed. Please try again.');
         }
 
+        // Ensure your 'accounts' table has 'name', 'email_address', 'contact_number' columns
         $stmt = $conn->prepare("INSERT INTO accounts (username, name, email_address, contact_number, password, role, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("ssssssss", $username, $name, $email_address, $contact_number, $hashed_password, $role, $status, $created_at);
 
         if ($stmt->execute()) {
             $stmt->close();
+            // Provide the plain text password in the success message for the admin
             returnJsonResponse(true, true, 'Account added successfully. Password: ' . $generated_password_plain);
         } else {
-            error_log("Add account failed: " . $stmt->error);
+            error_log("Add account failed: " . $stmt->error . " for username: " . $username);
             $stmt->close();
-            returnJsonResponse(false, false, 'Database error adding account.');
+            returnJsonResponse(false, false, 'Database error adding account. Check server logs.');
         }
+
     } elseif ($formType == 'edit') {
         $id = $_POST['id'];
         $username = trim($_POST['username']);
@@ -107,15 +110,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         $password_input = $_POST['password']; // New password if provided
         $role = $_POST['role'];
 
+        // Validation
+        if (empty($id) || !filter_var($id, FILTER_VALIDATE_INT)) {
+            returnJsonResponse(false, false, 'Invalid account ID.');
+        }
         if (empty($username) || empty($name) || empty($email_address) || empty($contact_number) || empty($role)) {
-            returnJsonResponse(false, false, 'All fields except password are required.');
+            returnJsonResponse(false, false, 'Username, Name, Email, Contact, and Role are required.');
         }
         if (!filter_var($email_address, FILTER_VALIDATE_EMAIL)) {
             returnJsonResponse(false, false, 'Invalid email address format.');
         }
-         if (!preg_match('/^\d{10,15}$/', $contact_number)) {
-            returnJsonResponse(false, false, 'Invalid contact number format (10-15 digits).');
+        if (!preg_match('/^\d{10,15}$/', $contact_number)) { // Example: 10-15 digits
+            returnJsonResponse(false, false, 'Invalid contact number format (10-15 digits required).');
         }
+        if (strlen($username) > 50 || strlen($name) > 255 || strlen($email_address) > 255 || strlen($contact_number) > 20 || strlen($role) > 255) {
+            returnJsonResponse(false, false, 'One or more fields exceed maximum length.');
+        }
+        if (!empty($password_input) && strlen($password_input) < 6) { // Example minimum password length
+             returnJsonResponse(false, false, 'New password must be at least 6 characters long.');
+        }
+
 
         $checkStmt = $conn->prepare("SELECT id FROM accounts WHERE (username = ? OR email_address = ?) AND id != ?");
         $checkStmt->bind_param("ssi", $username, $email_address, $id);
@@ -142,7 +156,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $hashed_password = password_hash($password_input, PASSWORD_DEFAULT);
             if ($hashed_password === false) {
                 error_log("Password hashing failed for edit account ID: $id");
-                returnJsonResponse(false, false, 'Password update failed.');
+                returnJsonResponse(false, false, 'Password update failed. Please try again.');
             }
             $sql_update_parts[] = "password = ?";
             $params_update[] = $hashed_password;
@@ -155,7 +169,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         $stmt = $conn->prepare($sql);
         if ($stmt === false) {
             error_log("Edit account prepare failed: " . $conn->error);
-            returnJsonResponse(false, false, 'Database error preparing update.');
+            returnJsonResponse(false, false, 'Database error preparing update. Check server logs.');
         }
         $stmt->bind_param($types, ...$params_update);
 
@@ -163,10 +177,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $stmt->close();
             returnJsonResponse(true, true, 'Account updated successfully.');
         } else {
-            error_log("Edit account failed: " . $stmt->error);
+            error_log("Edit account failed: " . $stmt->error . " for ID: " . $id);
             $stmt->close();
-            returnJsonResponse(false, false, 'Database error updating account.');
+            returnJsonResponse(false, false, 'Database error updating account. Check server logs.');
         }
+
     } elseif ($formType == 'status') {
         $id = $_POST['id'];
         $status = $_POST['status'];
@@ -182,14 +197,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             $stmt->close();
             returnJsonResponse(true, true, 'Status updated successfully.');
         } else {
-            error_log("Change status failed: " . $stmt->error);
+            error_log("Change status failed: " . $stmt->error . " for ID: " . $id);
             $stmt->close();
-            returnJsonResponse(false, false, 'Failed to change status.');
+            returnJsonResponse(false, false, 'Failed to change status. Check server logs.');
         }
     }
 }
 
-// Fetch Accounts Data with new columns
+// Fetch Accounts Data - Include new columns
 $sql = "SELECT id, username, name, email_address, contact_number, role, status, created_at FROM accounts";
 $params = [];
 $param_types = "";
@@ -258,9 +273,10 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
         .accounts-table th.sortable.active i { color: white; }
         .role-label { padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: 500; background-color: #e9ecef; color: #495057; border: 1px solid #ced4da; }
         .role-label.role-admin { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb;}
-        .role-label.role-super-admin { background-color: #ffeeba; color: #856404; border-color: #ffd32a;} /* Example for Super Admin */
+        .role-label.role-super-admin { background-color: #ffeeba; color: #856404; border-color: #ffd32a;}
         .role-label.role-orders { background-color: #d1ecf1; color: #0c5460; border-color: #bee5eb;}
         .password-generation-info { font-size: 0.9em; color: #6c757d; margin-bottom: 15px; }
+        .required-asterisk { color: red; margin-left: 2px;}
     </style>
 </head>
 <body>
@@ -311,9 +327,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 elseif ($diff->m > 0) $account_age = $diff->m . " month" . ($diff->m > 1 ? "s" : "") . " ago";
                                 elseif ($diff->d > 0) $account_age = $diff->d . " day" . ($diff->d > 1 ? "s" : "") . " ago";
                                 else $account_age = "Just now";
-                            } catch (Exception $e) {
-                                $account_age = "Invalid date";
-                            }
+                            } catch (Exception $e) { $account_age = "Invalid date"; }
                         ?>
                             <tr>
                                 <td><?= htmlspecialchars($account['username']) ?></td>
@@ -323,17 +337,15 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                                 <td>
                                     <?php
                                     $roleName = $account['role'] ?? '';
-                                    $roleDisplay = !empty($roleName) ? ucfirst(str_replace('_', ' ', $roleName)) : 'Unknown'; // Replace underscore for display
-                                    $rolesWithoutSpecificStyle = ['accountant', 'secretary']; // Add other roles if needed
+                                    $roleDisplay = !empty($roleName) ? ucfirst(str_replace('_', ' ', $roleName)) : 'Unknown';
+                                    $rolesWithoutSpecificStyle = ['accountant', 'secretary'];
                                     $roleClasses = 'role-label';
                                     if (!empty($roleName)) {
-                                        $lowerRole = strtolower(str_replace(' ', '-', $roleName)); // for CSS class (e.g. super-admin)
+                                        $lowerRole = strtolower(str_replace(' ', '-', $roleName));
                                         if (!in_array(strtolower($roleName), $rolesWithoutSpecificStyle)) {
                                             $roleClasses .= ' role-' . $lowerRole;
                                         }
-                                    } else {
-                                        $roleClasses .= ' role-unknown';
-                                    }
+                                    } else { $roleClasses .= ' role-unknown'; }
                                     echo "<span class='$roleClasses'>$roleDisplay</span>";
                                     ?>
                                 </td>
@@ -376,17 +388,16 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <h2><i class="fas fa-user-plus"></i> Add New Account</h2>
             <div id="addAccountError" class="error-message"></div>
             <form id="addAccountForm" method="POST" class="account-form" action="">
-                <input type="hidden" name="formType" value="add">
-                <input type="hidden" name="ajax" value="1">
+                <input type="hidden" name="formType" value="add"><input type="hidden" name="ajax" value="1">
                 <label for="add-username">Username:<span class="required-asterisk">*</span></label>
-                <input type="text" id="add-username" name="username" autocomplete="username" required>
+                <input type="text" id="add-username" name="username" autocomplete="username" required maxlength="50">
                 <label for="add-name">Full Name:<span class="required-asterisk">*</span></label>
-                <input type="text" id="add-name" name="name" required>
+                <input type="text" id="add-name" name="name" required maxlength="255">
                 <label for="add-email_address">Email Address:<span class="required-asterisk">*</span></label>
-                <input type="email" id="add-email_address" name="email_address" required>
+                <input type="email" id="add-email_address" name="email_address" required maxlength="255">
                 <label for="add-contact_number">Contact Number (10-15 digits):<span class="required-asterisk">*</span></label>
-                <input type="text" id="add-contact_number" name="contact_number" required pattern="\d{10,15}" title="Enter 10 to 15 digits">
-                <p class="password-generation-info">Password will be automatically generated: username + last 4 digits of contact number.</p>
+                <input type="text" id="add-contact_number" name="contact_number" required pattern="\d{10,15}" title="Enter 10 to 15 digits" maxlength="15">
+                <p class="password-generation-info">Password will be: username + last 4 digits of contact number.</p>
                 <label for="add-role">Role:<span class="required-asterisk">*</span></label>
                 <select id="add-role" name="role" autocomplete="role" required>
                      <?php if (empty($roles)): ?><option value="" disabled>No roles available</option>
@@ -409,15 +420,15 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
             <form id="editAccountForm" method="POST" class="account-form" action="">
                 <input type="hidden" name="formType" value="edit"><input type="hidden" name="ajax" value="1"><input type="hidden" id="edit-id" name="id">
                 <label for="edit-username">Username:<span class="required-asterisk">*</span></label>
-                <input type="text" id="edit-username" name="username" autocomplete="username" required>
+                <input type="text" id="edit-username" name="username" autocomplete="username" required maxlength="50">
                 <label for="edit-name">Full Name:<span class="required-asterisk">*</span></label>
-                <input type="text" id="edit-name" name="name" required>
+                <input type="text" id="edit-name" name="name" required maxlength="255">
                 <label for="edit-email_address">Email Address:<span class="required-asterisk">*</span></label>
-                <input type="email" id="edit-email_address" name="email_address" required>
+                <input type="email" id="edit-email_address" name="email_address" required maxlength="255">
                 <label for="edit-contact_number">Contact Number (10-15 digits):<span class="required-asterisk">*</span></label>
-                <input type="text" id="edit-contact_number" name="contact_number" required pattern="\d{10,15}" title="Enter 10 to 15 digits">
+                <input type="text" id="edit-contact_number" name="contact_number" required pattern="\d{10,15}" title="Enter 10 to 15 digits" maxlength="15">
                 <label for="edit-password">New Password: <small>(Leave blank to keep current)</small></label>
-                <input type="password" id="edit-password" name="password" autocomplete="new-password">
+                <input type="password" id="edit-password" name="password" autocomplete="new-password" minlength="6">
                 <label for="edit-role">Role:<span class="required-asterisk">*</span></label>
                 <select id="edit-role" name="role" autocomplete="role" required>
                      <?php if (empty($roles)): ?><option value="" disabled>No roles available</option>
@@ -451,7 +462,6 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src="/js/toast.js"></script>
-    <!-- <script src="/js/accounts.js"></script> Ensure this file is correctly linked or integrate its JS here -->
     <script>
         $(document).ready(function() {
             function performSearch() {
@@ -502,9 +512,9 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
          function openEditAccountForm(id, username, name, email_address, contact_number, role) {
              $('#edit-id').val(id);
              $('#edit-username').val(username);
-             $('#edit-name').val(name);
-             $('#edit-email_address').val(email_address);
-             $('#edit-contact_number').val(contact_number);
+             $('#edit-name').val(name || ''); // Handle null values from DB
+             $('#edit-email_address').val(email_address || '');
+             $('#edit-contact_number').val(contact_number || '');
              $('#edit-password').val('');
              $('#edit-role').val(role);
              $('#editAccountError').text('').hide();
@@ -548,11 +558,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
              $('#addAccountForm').on('submit', function(e) {
                  e.preventDefault();
                  const contactNumber = $('#add-contact_number').val();
-                 if (contactNumber.length < 4) {
-                     $('#addAccountError').text('Contact number must be at least 4 digits for password generation.').show();
-                     showToast('Contact number too short for password generation.', 'error');
+                 if (!/^\d{10,15}$/.test(contactNumber) || contactNumber.length < 4) {
+                     $('#addAccountError').text('Valid contact number (10-15 digits) is required for password generation.').show();
+                     showToast('Invalid contact number for password generation.', 'error');
                      return;
                  }
+                 $('#addAccountError').text('').hide(); // Clear previous error
+
                  $.ajax({
                      url: window.location.pathname, type: 'POST', data: $(this).serialize(), dataType: 'json',
                      success: function(response) {
@@ -571,6 +583,13 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
              $('#editAccountForm').on('submit', function(e) {
                  e.preventDefault();
+                  const contactNumber = $('#edit-contact_number').val();
+                 if (!/^\d{10,15}$/.test(contactNumber)) {
+                     $('#editAccountError').text('Valid contact number (10-15 digits) is required.').show();
+                     showToast('Invalid contact number.', 'error');
+                     return;
+                 }
+                 $('#editAccountError').text('').hide(); // Clear previous error
                  $.ajax({
                      url: window.location.pathname, type: 'POST', data: $(this).serialize(), dataType: 'json',
                      success: function(response) {
