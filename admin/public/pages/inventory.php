@@ -25,19 +25,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
     $stock_quantity = intval($_POST['stock_quantity']);
     $additional_description = $_POST['additional_description'];
 
-    // --- MODIFICATION: Receive and construct expiration string ---
     $expiration_duration = trim($_POST['expiration_duration'] ?? '');
-    $expiration_unit = trim($_POST['expiration_unit'] ?? ''); // Will be "Week" or "Month" from the form
+    $expiration_unit = trim($_POST['expiration_unit'] ?? ''); 
 
     $expiration_string_to_save = NULL;
     if (!empty($expiration_duration) && is_numeric($expiration_duration) && $expiration_duration > 0 && !empty($expiration_unit)) {
         $duration = intval($expiration_duration);
-        // Ensure the unit is singular "Week" or "Month" before adding 's'
         $unit_base = ($expiration_unit === 'Weeks' || $expiration_unit === 'Week') ? 'Week' : 'Month';
         $unit_display = ($duration == 1) ? $unit_base : $unit_base . 's';
         $expiration_string_to_save = $duration . " " . $unit_display;
     }
-    // --- END MODIFICATION ---
 
     if ($price > 5000) {
         echo json_encode(['success' => false, 'message' => 'Price cannot exceed ₱5000.']);
@@ -126,10 +123,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         }
     }
 
-    // --- MODIFICATION: Update SQL and bind_param for expiration ---
     $stmt = $conn->prepare("UPDATE $table SET category = ?, product_name = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, product_image = ?, expiration = ? WHERE product_id = ?");
     $stmt->bind_param("ssssdissisi", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $expiration_string_to_save, $product_id);
-    // --- END MODIFICATION ---
 
     if ($stmt->execute()) {
         if ($old_item_description != $item_description && !empty($product_image)) {
@@ -161,9 +156,7 @@ $categories_result = $conn->query($categories_sql);
 $product_names_sql = "SELECT DISTINCT product_name FROM products WHERE product_name IS NOT NULL AND product_name != '' ORDER BY product_name";
 $product_names_result = $conn->query($product_names_sql);
 
-// --- MODIFICATION: Add 'expiration' to the SELECT query ---
 $products_sql = "SELECT product_id, category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image, expiration FROM products ORDER BY category, product_name, item_description";
-// --- END MODIFICATION ---
 $products_data_result = $conn->query($products_sql);
 ?>
 
@@ -217,10 +210,35 @@ $products_data_result = $conn->query($products_sql);
         .ingredient-select { width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
         input:required, select:required, textarea:required { border-left: 3px solid #e67e22; }
         input:invalid, select:invalid, textarea:invalid { border-left: 3px solid #e74c3c; }
-        .packaging-group { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 15px; }
-        .packaging-item { display: flex; flex-direction: column; flex: 1; }
-        .packaging-item label { margin-bottom: 5px; font-size: 0.9em; }
-        .packaging-item input[type="number"], .packaging-item select { width: 100%; box-sizing: border-box; }
+        
+        /* MODIFICATION: Styles for packaging and expiration groups */
+        .packaging-group, .expiration-group { 
+            display: flex; 
+            gap: 10px; 
+            align-items: flex-end; 
+            margin-bottom: 15px; 
+        }
+        .packaging-item, .expiration-item { 
+            display: flex; 
+            flex-direction: column; 
+            flex: 1; 
+        }
+        .packaging-item label, .expiration-item label { 
+            margin-bottom: 5px; 
+            font-size: 0.9em; 
+        }
+        .packaging-item input[type="number"], 
+        .packaging-item select,
+        .expiration-item input[type="number"],
+        .expiration-item select { 
+            width: 100%; 
+            box-sizing: border-box; 
+            padding: 8px; /* Ensure consistent padding with other inputs */
+            border: 1px solid #ddd; /* Ensure consistent border */
+            border-radius: 4px; /* Ensure consistent border-radius */
+        }
+        /* END MODIFICATION */
+
     </style>
 </head>
 <body>
@@ -267,7 +285,7 @@ $products_data_result = $conn->query($products_sql);
                         <th>Product Name</th>
                         <th>Product Variant</th>
                         <th>Packaging</th>
-                        <th>Expiration</th> <!-- MODIFICATION: Added Expiration Header -->
+                        <th>Expiration</th>
                         <th>Price</th>
                         <th>Stock Level</th>
                         <th>Image</th>
@@ -293,7 +311,7 @@ $products_data_result = $conn->query($products_sql);
                                 <td class='product-name'>" . htmlspecialchars($row['product_name'] ?? '') . "</td>
                                 <td>" . htmlspecialchars($row['item_description'] ?? '') . "</td>
                                 <td>" . htmlspecialchars($row['packaging'] ?? '') . "</td>
-                                <td>" . htmlspecialchars($row['expiration'] ?? 'N/A') . "</td> <!-- MODIFICATION: Display Expiration -->
+                                <td>" . htmlspecialchars($row['expiration'] ?? 'N/A') . "</td>
                                 <td>₱" . number_format($row['price'], 2) . "</td>
                                 <td id='stock-{$row['product_id']}'>{$row['stock_quantity']}</td>
                                 <td class='product-image-cell'>";
@@ -324,9 +342,7 @@ $products_data_result = $conn->query($products_sql);
                             </tr>";
                         }
                     } else {
-                        // --- MODIFICATION: Adjusted colspan ---
                         echo "<tr><td colspan='12'>No products found.</td></tr>";
-                        // --- END MODIFICATION ---
                     }
                     ?>
                 </tbody>
@@ -405,18 +421,22 @@ $products_data_result = $conn->query($products_sql);
                         </div>
                     </div>
                     
-                    <!-- MODIFICATION: Added Expiration fields for Add Modal -->
-                    <label for="add_expiration_duration">Expiration Duration:</label>
-                    <input type="number" id="add_expiration_duration" name="expiration_duration" min="1" placeholder="e.g., 2" style="margin-bottom: 10px; width:100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-
-                    <label for="add_expiration_unit">Expiration Unit:</label>
-                    <select id="add_expiration_unit" name="expiration_unit" style="margin-bottom: 15px; width:100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
-                        <option value="">-- Select Unit --</option>
-                        <option value="Week">Week(s)</option>
-                        <option value="Month">Month(s)</option>
-                    </select>
+                    <!-- MODIFICATION: Expiration fields in a group for Add Modal -->
+                    <div class="expiration-group">
+                        <div class="expiration-item">
+                            <label for="add_expiration_duration">Expiration Duration:</label>
+                            <input type="number" id="add_expiration_duration" name="expiration_duration" min="1" placeholder="e.g., 2">
+                        </div>
+                        <div class="expiration-item">
+                            <label for="add_expiration_unit">Expiration Unit:</label>
+                            <select id="add_expiration_unit" name="expiration_unit">
+                                <option value="">-- Select Unit --</option>
+                                <option value="Week">Week(s)</option>
+                                <option value="Month">Month(s)</option>
+                            </select>
+                        </div>
+                    </div>
                     <!-- END MODIFICATION -->
-
 
                     <label for="price">Price (₱):</label>
                     <input type="number" id="price" name="price" step="0.01" min="0" max="5000" required placeholder="0.00">
@@ -495,17 +515,7 @@ $products_data_result = $conn->query($products_sql);
                             <label for="edit_stock_quantity">Stock Quantity:</label>
                             <input type="number" id="edit_stock_quantity" name="stock_quantity" min="0" required placeholder="0">
                         
-                            <!-- MODIFICATION: Added Expiration fields for Edit Modal -->
-                            <label for="edit_expiration_duration">Expiration Duration:</label>
-                            <input type="number" id="edit_expiration_duration" name="expiration_duration" min="1" placeholder="e.g., 2">
-
-                            <label for="edit_expiration_unit">Expiration Unit:</label>
-                            <select id="edit_expiration_unit" name="expiration_unit">
-                                <option value="">-- Select Unit --</option>
-                                <option value="Week">Week(s)</option>
-                                <option value="Month">Month(s)</option>
-                            </select>
-                            <!-- END MODIFICATION -->
+                             <!-- MODIFICATION: Expiration fields in a group for Edit Modal (moved here for better grid flow) -->
                         </div>
                     </div>
                      
@@ -534,6 +544,23 @@ $products_data_result = $conn->query($products_sql);
                             </select>
                         </div>
                     </div>
+
+                    <!-- MODIFICATION: Expiration fields in a group for Edit Modal -->
+                    <div class="expiration-group">
+                        <div class="expiration-item">
+                            <label for="edit_expiration_duration">Expiration Duration:</label>
+                            <input type="number" id="edit_expiration_duration" name="expiration_duration" min="1" placeholder="e.g., 2">
+                        </div>
+                        <div class="expiration-item">
+                            <label for="edit_expiration_unit">Expiration Unit:</label>
+                            <select id="edit_expiration_unit" name="expiration_unit">
+                                <option value="">-- Select Unit --</option>
+                                <option value="Week">Week(s)</option>
+                                <option value="Month">Month(s)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- END MODIFICATION -->
 
                      <label for="edit_additional_description">Additional Description:</label>
                      <textarea id="edit_additional_description" name="additional_description" placeholder="Add more details about the product" required></textarea>
@@ -732,7 +759,7 @@ $products_data_result = $conn->query($products_sql);
             let firstEmptyField = null;
             for (const field of requiredFields) {
                 if (field.id === 'packaging_quantity' || field.id === 'packaging_unit' || field.id === 'packaging_container') continue; 
-                if (field.id === 'add_expiration_duration' || field.id === 'add_expiration_unit') continue; // Expiration is optional
+                if (field.id === 'add_expiration_duration' || field.id === 'add_expiration_unit') continue; 
                 if (field.offsetParent !== null && !field.value.trim() ) {
                     firstEmptyField = field;
                     break;
@@ -744,14 +771,13 @@ $products_data_result = $conn->query($products_sql);
                 return;
             }
 
-            // --- MODIFICATION: Construct and add expiration to FormData ---
             const addExpDurationInput = document.getElementById('add_expiration_duration');
             const addExpUnitInput = document.getElementById('add_expiration_unit');
             let expirationString = null;
 
             if (addExpDurationInput && addExpUnitInput) {
                 const addExpDuration = addExpDurationInput.value.trim();
-                const addExpUnit = addExpUnitInput.value.trim(); // This will be "Week" or "Month"
+                const addExpUnit = addExpUnitInput.value.trim(); 
                 
                 if (addExpDuration && !isNaN(addExpDuration) && parseInt(addExpDuration) > 0 && addExpUnit) {
                     const duration = parseInt(addExpDuration);
@@ -759,7 +785,6 @@ $products_data_result = $conn->query($products_sql);
                     expirationString = duration + " " + unitDisplay;
                 }
             }
-            // --- END MODIFICATION ---
 
             const formData = new FormData(this); 
             if (categorySelect.value === 'new') formData.set('category', newCategoryInput.value.trim());
@@ -770,13 +795,11 @@ $products_data_result = $conn->query($products_sql);
             
             formData.set('packaging', packagingString);
 
-            // --- MODIFICATION: Add expiration to FormData if present ---
             if (expirationString) {
                 formData.set('expiration', expirationString);
             }
-            formData.delete('expiration_duration'); // Remove individual field as it's combined
-            formData.delete('expiration_unit');   // Remove individual field as it's combined
-            // --- END MODIFICATION ---
+            formData.delete('expiration_duration'); 
+            formData.delete('expiration_unit');   
 
 
             if (!formData.has('stock_quantity')) {
@@ -787,10 +810,8 @@ $products_data_result = $conn->query($products_sql);
             formData.delete('packaging_unit');
             formData.delete('packaging_container');
 
-            // --- MODIFICATION: Added reminder for backend update ---
             console.warn("IMPORTANT REMINDER: You MUST update your backend script '../../backend/add_product.php' to correctly receive and save the 'expiration' field being sent in the FormData.");
             toastr.info("Backend for 'Add Product' needs update for 'expiration'.", { timeOut: 10000, closeButton: true, preventDuplicates: true });
-            // --- END MODIFICATION ---
 
 
             fetch("../../backend/add_product.php", {
@@ -855,7 +876,7 @@ $products_data_result = $conn->query($products_sql);
             let firstEmptyField = null;
             for (const field of requiredFields) {
                  if (field.id === 'edit_packaging_quantity' || field.id === 'edit_packaging_unit' || field.id === 'edit_packaging_container') continue; 
-                 if (field.id === 'edit_expiration_duration' || field.id === 'edit_expiration_unit') continue; // Expiration is optional
+                 if (field.id === 'edit_expiration_duration' || field.id === 'edit_expiration_unit') continue; 
                 if (field.offsetParent !== null && !field.value.trim()) {
                     firstEmptyField = field;
                     break;
@@ -877,9 +898,6 @@ $products_data_result = $conn->query($products_sql);
             formData.set('packaging', packagingString);
             formData.set('is_walkin', '0');
             
-            // Expiration duration and unit are already on formData from the input fields' name attributes
-            // The PHP handler at the top will combine them.
-
             formData.delete('edit_packaging_quantity');
             formData.delete('edit_packaging_unit');
             formData.delete('edit_packaging_container');
@@ -915,7 +933,6 @@ $products_data_result = $conn->query($products_sql);
             document.getElementById('new-product-name-container').style.display = 'none';
             document.getElementById('new_product_name').required = false; 
             document.getElementById('add_product_type').value = 'company';
-            // Clear add modal expiration fields
             document.getElementById('add_expiration_duration').value = '';
             document.getElementById('add_expiration_unit').value = '';
         }
@@ -1001,7 +1018,6 @@ $products_data_result = $conn->query($products_sql);
                     document.getElementById('edit_stock_quantity').value = product.stock_quantity || 0;
                     document.getElementById('edit_additional_description').value = product.additional_description || '';
 
-                    // --- MODIFICATION: Populate expiration fields for Edit Modal ---
                     const productExpiration = product.expiration || ''; 
                     let form_exp_duration = '';
                     let form_exp_unit = ''; 
@@ -1020,7 +1036,6 @@ $products_data_result = $conn->query($products_sql);
                     }
                     document.getElementById('edit_expiration_duration').value = form_exp_duration;
                     document.getElementById('edit_expiration_unit').value = form_exp_unit;
-                    // --- END MODIFICATION ---
 
 
                     document.getElementById('current-image-container').innerHTML = '';
