@@ -55,7 +55,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         if (!filter_var($email_address, FILTER_VALIDATE_EMAIL)) {
             returnJsonResponse(false, false, 'Invalid email address format.');
         }
-        if (!preg_match('/^\d{10,15}$/', $contact_number)) { // Example: 10-15 digits, adjust as needed
+        if (!preg_match('/^\d{10,15}$/', $contact_number)) {
             returnJsonResponse(false, false, 'Invalid contact number format (10-15 digits required).');
         }
         if (strlen($contact_number) < 4) {
@@ -64,7 +64,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         if (strlen($username) > 50 || strlen($name) > 255 || strlen($email_address) > 255 || strlen($contact_number) > 20 || strlen($role) > 255) {
             returnJsonResponse(false, false, 'One or more fields exceed maximum length.');
         }
-
 
         $checkStmt = $conn->prepare("SELECT id FROM accounts WHERE username = ? OR email_address = ?");
         $checkStmt->bind_param("ss", $username, $email_address);
@@ -77,7 +76,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         }
         $checkStmt->close();
 
-        // Automated password generation
         $last_four_digits = substr($contact_number, -4);
         $generated_password_plain = $username . $last_four_digits;
         $hashed_password = password_hash($generated_password_plain, PASSWORD_DEFAULT);
@@ -87,14 +85,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
             returnJsonResponse(false, false, 'Password generation failed. Please try again.');
         }
 
-        // Ensure your 'accounts' table has 'name', 'email_address', 'contact_number' columns
         $stmt = $conn->prepare("INSERT INTO accounts (username, name, email_address, contact_number, password, role, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("ssssssss", $username, $name, $email_address, $contact_number, $hashed_password, $role, $status, $created_at);
 
         if ($stmt->execute()) {
             $stmt->close();
-            // Provide the plain text password in the success message for the admin
-            returnJsonResponse(true, true, 'Account added successfully. Password: ' . $generated_password_plain);
+            
+            // --- SEND EMAIL NOTIFICATION ---
+            $to = $email_address;
+            $subject = "Your Staff Account Has Been Created - Top Exchange";
+            $messageBody = "Hello " . $name . ",\n\n" .
+                         "A staff account has been created for you at Top Exchange.\n\n" .
+                         "Your login details are:\n" .
+                         "Username: " . $username . "\n" .
+                         "Password: " . $generated_password_plain . "\n\n" .
+                         "Please keep these details safe. You may be prompted to change your password upon first login or can change it via your account settings (if applicable).\n\n" .
+                         "Regards,\n" .
+                         "Top Exchange Admin";
+            $headers = "From: no-reply@topexchangefood.com\r\n" . // Replace with your actual sender email
+                       "Reply-To: no-reply@topexchangefood.com\r\n" .
+                       "X-Mailer: PHP/" . phpversion() . "\r\n" .
+                       "Content-Type: text/plain; charset=UTF-8";
+
+            $email_sent_successfully = @mail($to, $subject, $messageBody, $headers);
+            // --- END SEND EMAIL NOTIFICATION ---
+
+            $response_message = 'Account added successfully. Password: ' . $generated_password_plain;
+            if (!$email_sent_successfully) {
+                error_log("Failed to send account creation email to: " . $email_address . " for username: " . $username);
+                // Optionally, you could append a warning to the admin, but the primary function (account creation) succeeded.
+                // $response_message .= " (Warning: Email notification failed to send.)";
+            }
+            
+            returnJsonResponse(true, true, $response_message);
+
         } else {
             error_log("Add account failed: " . $stmt->error . " for username: " . $username);
             $stmt->close();
@@ -107,10 +131,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         $name = trim($_POST['name']);
         $email_address = trim($_POST['email_address']);
         $contact_number = trim($_POST['contact_number']);
-        $password_input = $_POST['password']; // New password if provided
+        $password_input = $_POST['password'];
         $role = $_POST['role'];
 
-        // Validation
         if (empty($id) || !filter_var($id, FILTER_VALIDATE_INT)) {
             returnJsonResponse(false, false, 'Invalid account ID.');
         }
@@ -120,16 +143,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajax'])) {
         if (!filter_var($email_address, FILTER_VALIDATE_EMAIL)) {
             returnJsonResponse(false, false, 'Invalid email address format.');
         }
-        if (!preg_match('/^\d{10,15}$/', $contact_number)) { // Example: 10-15 digits
+        if (!preg_match('/^\d{10,15}$/', $contact_number)) {
             returnJsonResponse(false, false, 'Invalid contact number format (10-15 digits required).');
         }
         if (strlen($username) > 50 || strlen($name) > 255 || strlen($email_address) > 255 || strlen($contact_number) > 20 || strlen($role) > 255) {
             returnJsonResponse(false, false, 'One or more fields exceed maximum length.');
         }
-        if (!empty($password_input) && strlen($password_input) < 6) { // Example minimum password length
+        if (!empty($password_input) && strlen($password_input) < 6) {
              returnJsonResponse(false, false, 'New password must be at least 6 characters long.');
         }
-
 
         $checkStmt = $conn->prepare("SELECT id FROM accounts WHERE (username = ? OR email_address = ?) AND id != ?");
         $checkStmt->bind_param("ssi", $username, $email_address, $id);
@@ -512,7 +534,7 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
          function openEditAccountForm(id, username, name, email_address, contact_number, role) {
              $('#edit-id').val(id);
              $('#edit-username').val(username);
-             $('#edit-name').val(name || ''); // Handle null values from DB
+             $('#edit-name').val(name || '');
              $('#edit-email_address').val(email_address || '');
              $('#edit-contact_number').val(contact_number || '');
              $('#edit-password').val('');
@@ -559,11 +581,11 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
                  e.preventDefault();
                  const contactNumber = $('#add-contact_number').val();
                  if (!/^\d{10,15}$/.test(contactNumber) || contactNumber.length < 4) {
-                     $('#addAccountError').text('Valid contact number (10-15 digits) is required for password generation.').show();
+                     $('#addAccountError').text('Valid contact number (10-15 digits, min 4 for password) is required.').show();
                      showToast('Invalid contact number for password generation.', 'error');
                      return;
                  }
-                 $('#addAccountError').text('').hide(); // Clear previous error
+                 $('#addAccountError').text('').hide();
 
                  $.ajax({
                      url: window.location.pathname, type: 'POST', data: $(this).serialize(), dataType: 'json',
@@ -583,13 +605,19 @@ function getSortIcon($column, $currentColumn, $currentDirection) {
 
              $('#editAccountForm').on('submit', function(e) {
                  e.preventDefault();
-                  const contactNumber = $('#edit-contact_number').val();
+                 const contactNumber = $('#edit-contact_number').val();
                  if (!/^\d{10,15}$/.test(contactNumber)) {
                      $('#editAccountError').text('Valid contact number (10-15 digits) is required.').show();
                      showToast('Invalid contact number.', 'error');
                      return;
                  }
-                 $('#editAccountError').text('').hide(); // Clear previous error
+                 const password = $('#edit-password').val();
+                 if (password && password.length < 6) {
+                     $('#editAccountError').text('New password must be at least 6 characters.').show();
+                     showToast('New password too short.', 'error');
+                     return;
+                 }
+                 $('#editAccountError').text('').hide();
                  $.ajax({
                      url: window.location.pathname, type: 'POST', data: $(this).serialize(), dataType: 'json',
                      success: function(response) {
