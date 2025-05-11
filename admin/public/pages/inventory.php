@@ -25,16 +25,54 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
     $stock_quantity = intval($_POST['stock_quantity']);
     $additional_description = $_POST['additional_description'];
 
-    $expiration_duration = trim($_POST['expiration_duration'] ?? '');
+    // --- REFINED Expiration processing for Edit ---
+    $expiration_duration_str = trim($_POST['expiration_duration'] ?? '');
     $expiration_unit = trim($_POST['expiration_unit'] ?? ''); 
 
-    $expiration_string_to_save = NULL;
-    if (!empty($expiration_duration) && is_numeric($expiration_duration) && $expiration_duration > 0 && !empty($expiration_unit)) {
-        $duration = intval($expiration_duration);
-        $unit_base = ($expiration_unit === 'Weeks' || $expiration_unit === 'Week') ? 'Week' : 'Month';
-        $unit_display = ($duration == 1) ? $unit_base : $unit_base . 's';
-        $expiration_string_to_save = $duration . " " . $unit_display;
+    $expiration_string_to_save = NULL; 
+
+    if ($expiration_duration_str !== '' && is_numeric($expiration_duration_str) && !empty($expiration_unit)) {
+        $duration = intval($expiration_duration_str);
+        if ($duration < 0) $duration = 0; 
+
+        $temp_parts = [];
+
+        if ($expiration_unit === 'Week') {
+            if ($duration === 0) {
+                $expiration_string_to_save = "0 Weeks";
+            } else {
+                $months = floor($duration / 4); // Assuming 4 weeks per month
+                $remaining_weeks = $duration % 4;
+
+                if ($months > 0) {
+                    $temp_parts[] = $months . ($months == 1 ? " Month" : " Months");
+                }
+                if ($remaining_weeks > 0) {
+                    $temp_parts[] = $remaining_weeks . ($remaining_weeks == 1 ? " Week" : " Weeks");
+                }
+                
+                if (count($temp_parts) > 0) {
+                    $expiration_string_to_save = implode(" ", $temp_parts);
+                } else {
+                    // This case implies duration was > 0 but resulted in no months and no weeks (e.g. if duration was 4, it becomes "1 Month")
+                    // If duration was a multiple of 4, only months part would be added.
+                    // If duration was < 4, only weeks part would be added.
+                    // If it's empty, it means the original duration must have been 0 (which is handled), or it was a multiple of 4 and only month was added.
+                    // This structure should correctly form "1 Month" or "2 Weeks" or "1 Month 1 Week"
+                    // If for some reason temp_parts is empty and duration was > 0, it's likely an edge case not hit by above.
+                    // However, if duration > 0, at least one part (months or weeks) should be > 0 unless duration is a multiple of 4 (then only months).
+                    // If duration = 4, $months=1, $remaining_weeks=0. temp_parts = ["1 Month"]. Correct.
+                    // If duration = 3, $months=0, $remaining_weeks=3. temp_parts = ["3 Weeks"]. Correct.
+                    // So, if temp_parts is empty, it must be because duration was 0.
+                    $expiration_string_to_save = "0 Weeks"; // Fallback, though covered by $duration === 0
+                }
+            }
+        } elseif ($expiration_unit === 'Month') {
+            // For months, it's straightforward
+            $expiration_string_to_save = $duration . ($duration == 1 ? " Month" : " Months");
+        }
     }
+    // --- END REFINED Expiration processing ---
 
     if ($price > 5000) {
         echo json_encode(['success' => false, 'message' => 'Price cannot exceed ₱5000.']);
@@ -72,7 +110,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         $file_size = $_FILES['product_image']['size'];
 
         if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
-            $item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $item_description);
+            $item_folder = preg_replace('/[^a-zA-Z0-9_.-]/', '_', $item_description);
             $item_dir = $upload_dir . $item_folder . '/';
 
             if (!file_exists($item_dir)) {
@@ -80,7 +118,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
             }
 
             if ($old_item_description != $item_description && !empty($old_product_image)) {
-                $old_item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $old_item_description);
+                $old_item_folder = preg_replace('/[^a-zA-Z0-9_.-]/', '_', $old_item_description);
                 $old_item_dir = $upload_dir . $old_item_folder . '/';
                 if (file_exists($old_item_dir)) {
                     $old_files = array_diff(scandir($old_item_dir), array('.', '..'));
@@ -182,7 +220,18 @@ $products_data_result = $conn->query($products_sql);
         .file-info { font-size: 0.9em; color: #666; font-style: italic; }
         .additional-desc { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .overlay-content { background-color: white; padding: 20px; border-radius: 5px; width: 80%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+        
+        .overlay-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            width: 600px; 
+            max-width: 95vw; 
+            box-sizing: border-box; 
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .form-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .save-btn, .cancel-btn { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; }
@@ -211,7 +260,6 @@ $products_data_result = $conn->query($products_sql);
         input:required, select:required, textarea:required { border-left: 3px solid #e67e22; }
         input:invalid, select:invalid, textarea:invalid { border-left: 3px solid #e74c3c; }
         
-        /* MODIFICATION: Styles for packaging and expiration groups */
         .packaging-group, .expiration-group { 
             display: flex; 
             gap: 10px; 
@@ -233,11 +281,10 @@ $products_data_result = $conn->query($products_sql);
         .expiration-item select { 
             width: 100%; 
             box-sizing: border-box; 
-            padding: 8px; /* Ensure consistent padding with other inputs */
-            border: 1px solid #ddd; /* Ensure consistent border */
-            border-radius: 4px; /* Ensure consistent border-radius */
+            padding: 8px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
         }
-        /* END MODIFICATION */
 
     </style>
 </head>
@@ -421,11 +468,10 @@ $products_data_result = $conn->query($products_sql);
                         </div>
                     </div>
                     
-                    <!-- MODIFICATION: Expiration fields in a group for Add Modal -->
                     <div class="expiration-group">
                         <div class="expiration-item">
                             <label for="add_expiration_duration">Expiration Duration:</label>
-                            <input type="number" id="add_expiration_duration" name="expiration_duration" min="1" placeholder="e.g., 2">
+                            <input type="number" id="add_expiration_duration" name="expiration_duration" min="0" placeholder="e.g., 2">
                         </div>
                         <div class="expiration-item">
                             <label for="add_expiration_unit">Expiration Unit:</label>
@@ -436,7 +482,6 @@ $products_data_result = $conn->query($products_sql);
                             </select>
                         </div>
                     </div>
-                    <!-- END MODIFICATION -->
 
                     <label for="price">Price (₱):</label>
                     <input type="number" id="price" name="price" step="0.01" min="0" max="5000" required placeholder="0.00">
@@ -515,7 +560,6 @@ $products_data_result = $conn->query($products_sql);
                             <label for="edit_stock_quantity">Stock Quantity:</label>
                             <input type="number" id="edit_stock_quantity" name="stock_quantity" min="0" required placeholder="0">
                         
-                             <!-- MODIFICATION: Expiration fields in a group for Edit Modal (moved here for better grid flow) -->
                         </div>
                     </div>
                      
@@ -545,11 +589,10 @@ $products_data_result = $conn->query($products_sql);
                         </div>
                     </div>
 
-                    <!-- MODIFICATION: Expiration fields in a group for Edit Modal -->
                     <div class="expiration-group">
                         <div class="expiration-item">
                             <label for="edit_expiration_duration">Expiration Duration:</label>
-                            <input type="number" id="edit_expiration_duration" name="expiration_duration" min="1" placeholder="e.g., 2">
+                            <input type="number" id="edit_expiration_duration" name="expiration_duration" min="0" placeholder="e.g., 2">
                         </div>
                         <div class="expiration-item">
                             <label for="edit_expiration_unit">Expiration Unit:</label>
@@ -560,7 +603,6 @@ $products_data_result = $conn->query($products_sql);
                             </select>
                         </div>
                     </div>
-                    <!-- END MODIFICATION -->
 
                      <label for="edit_additional_description">Additional Description:</label>
                      <textarea id="edit_additional_description" name="additional_description" placeholder="Add more details about the product" required></textarea>
@@ -771,20 +813,52 @@ $products_data_result = $conn->query($products_sql);
                 return;
             }
 
+            // --- REFINED Expiration string construction for Add form ---
             const addExpDurationInput = document.getElementById('add_expiration_duration');
             const addExpUnitInput = document.getElementById('add_expiration_unit');
-            let expirationString = null;
+            let expirationString = null; 
 
             if (addExpDurationInput && addExpUnitInput) {
-                const addExpDuration = addExpDurationInput.value.trim();
-                const addExpUnit = addExpUnitInput.value.trim(); 
+                const addExpDurationValue = addExpDurationInput.value.trim();
+                const addExpUnitValue = addExpUnitInput.value.trim(); 
                 
-                if (addExpDuration && !isNaN(addExpDuration) && parseInt(addExpDuration) > 0 && addExpUnit) {
-                    const duration = parseInt(addExpDuration);
-                    const unitDisplay = (duration === 1) ? addExpUnit : addExpUnit + 's'; 
-                    expirationString = duration + " " + unitDisplay;
+                if (addExpDurationValue !== '' && !isNaN(addExpDurationValue) && addExpUnitValue !== '') {
+                    let duration = parseInt(addExpDurationValue);
+                    if (duration < 0) duration = 0; 
+
+                    let temp_parts = [];
+
+                    if (addExpUnitValue === 'Week') {
+                        if (duration === 0) {
+                            expirationString = "0 Weeks";
+                        } else {
+                            const months = Math.floor(duration / 4);
+                            const remaining_weeks = duration % 4;
+
+                            if (months > 0) {
+                                temp_parts.push(months + (months === 1 ? " Month" : " Months"));
+                            }
+                            if (remaining_weeks > 0) {
+                                temp_parts.push(remaining_weeks + (remaining_weeks === 1 ? " Week" : " Weeks"));
+                            }
+                            
+                            if (temp_parts.length > 0) {
+                                expirationString = temp_parts.join(" ");
+                            } else { 
+                                // This will be hit if duration was a multiple of 4 (e.g. 4 weeks -> 1 month, no remaining_weeks)
+                                // or if duration was 0 (already handled).
+                                // If duration was 4, temp_parts = ["1 Month"], so this else isn't hit.
+                                // This else implies duration was 0, or some unexpected case.
+                                expirationString = "0 Weeks"; // Fallback if duration was 0 and not caught, or if temp_parts is empty for other reasons.
+                            }
+                        }
+                    } else if (addExpUnitValue === 'Month') {
+                        expirationString = duration + (duration === 1 ? " Month" : " Months");
+                    }
                 }
             }
+            // --- END REFINED Expiration ---
+
 
             const formData = new FormData(this); 
             if (categorySelect.value === 'new') formData.set('category', newCategoryInput.value.trim());
@@ -810,8 +884,8 @@ $products_data_result = $conn->query($products_sql);
             formData.delete('packaging_unit');
             formData.delete('packaging_container');
 
-            console.warn("IMPORTANT REMINDER: You MUST update your backend script '../../backend/add_product.php' to correctly receive and save the 'expiration' field being sent in the FormData.");
-            toastr.info("Backend for 'Add Product' needs update for 'expiration'.", { timeOut: 10000, closeButton: true, preventDuplicates: true });
+            console.warn("CRITICAL: Ensure '../../backend/add_product.php' correctly processes the 'expiration' field from FormData.");
+            // toastr.warning("CRITICAL: Check backend for 'Add Product' to save 'expiration'.", { timeOut: 15000, closeButton: true, preventDuplicates: false });
 
 
             fetch("../../backend/add_product.php", {
@@ -945,7 +1019,7 @@ $products_data_result = $conn->query($products_sql);
             let apiUrl = `../pages/api/get_product.php?id=${productId}`;
 
             fetch(apiUrl)
-                .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response:", text); throw new Error("Server returned invalid response"); } }))
+                .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for get_product:", text); throw new Error("Server returned invalid response for product details"); } }))
                 .then(product => {
                     document.getElementById('edit_product_id').value = product.product_id;
                     document.getElementById('edit_product_type').value = '0'; 
@@ -1018,24 +1092,56 @@ $products_data_result = $conn->query($products_sql);
                     document.getElementById('edit_stock_quantity').value = product.stock_quantity || 0;
                     document.getElementById('edit_additional_description').value = product.additional_description || '';
 
+                    // --- REFINED Parsing expiration for Edit form ---
                     const productExpiration = product.expiration || ''; 
-                    let form_exp_duration = '';
-                    let form_exp_unit = ''; 
+                    let form_exp_duration_val = '';
+                    let form_exp_unit_val = ''; 
 
                     if (productExpiration) {
-                        const parts = productExpiration.split(' ', 2);
-                        if (parts.length === 2 && !isNaN(parts[0])) {
-                            form_exp_duration = parts[0];
-                            const unit_from_db = parts[1].toLowerCase();
-                            if (unit_from_db.startsWith('week')) {
-                                form_exp_unit = 'Week'; 
-                            } else if (unit_from_db.startsWith('month')) {
-                                form_exp_unit = 'Month'; 
+                        let totalWeeks = 0;
+                        let monthsFromDb = 0;
+                        let weeksFromDb = 0;
+                        let hasMonthsInDb = false;
+                        let hasWeeksInDb = false;
+
+                        const monthMatch = productExpiration.match(/(\d+)\s*Month(s)?/i);
+                        const weekMatch = productExpiration.match(/(\d+)\s*Week(s)?/i);
+
+                        if (monthMatch) {
+                            monthsFromDb = parseInt(monthMatch[1]);
+                            hasMonthsInDb = true;
+                        }
+                        if (weekMatch) {
+                            weeksFromDb = parseInt(weekMatch[1]);
+                            hasWeeksInDb = true;
+                        }
+
+                        if (hasMonthsInDb && !hasWeeksInDb) { 
+                            form_exp_duration_val = monthsFromDb;
+                            form_exp_unit_val = 'Month';
+                        } else if (hasWeeksInDb) { 
+                            totalWeeks = (monthsFromDb * 4) + weeksFromDb;
+                            form_exp_duration_val = totalWeeks;
+                            form_exp_unit_val = 'Week';
+                        } else if (hasMonthsInDb) { // Fallback if only months matched but not caught above
+                            form_exp_duration_val = monthsFromDb;
+                            form_exp_unit_val = 'Month';
+                        }
+                        
+                        // Handle explicit "0 Weeks" or "0 Months" if not parsed into duration/unit yet
+                        if (form_exp_duration_val === '' || form_exp_duration_val === 0) { // Check if duration is still empty or zero
+                            if (productExpiration.toLowerCase() === "0 weeks") {
+                                form_exp_duration_val = 0;
+                                form_exp_unit_val = 'Week';
+                            } else if (productExpiration.toLowerCase() === "0 months") {
+                                form_exp_duration_val = 0;
+                                form_exp_unit_val = 'Month';
                             }
                         }
                     }
-                    document.getElementById('edit_expiration_duration').value = form_exp_duration;
-                    document.getElementById('edit_expiration_unit').value = form_exp_unit;
+                    document.getElementById('edit_expiration_duration').value = form_exp_duration_val;
+                    document.getElementById('edit_expiration_unit').value = form_exp_unit_val;
+                    // --- END REFINED Parsing ---
 
 
                     document.getElementById('current-image-container').innerHTML = '';
@@ -1047,13 +1153,14 @@ $products_data_result = $conn->query($products_sql);
                 })
                 .catch(error => {
                     toastr.error("Error fetching product details: " + error.message, { timeOut: 3000, closeButton: true });
+                    console.error("Error in editProduct fetch:", error);
                 });
         }
 
         function viewIngredients(productId, productType) {
              let apiUrl = `../pages/api/get_product_ingredients.php?id=${productId}`;
             fetch(apiUrl)
-                .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response:", text); throw new Error("Server returned invalid response"); } }))
+                .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for ingredients:", text); throw new Error("Server returned invalid response for ingredients"); } }))
                 .then(product => {
                     document.getElementById('ingredients-product-name').textContent = product.item_description;
                     document.getElementById('ingredients_product_id').value = product.product_id;
@@ -1068,6 +1175,7 @@ $products_data_result = $conn->query($products_sql);
                 })
                 .catch(error => {
                     toastr.error("Error fetching ingredients: " + error.message, { timeOut: 3000, closeButton: true });
+                     console.error("Error in viewIngredients fetch:", error);
                 });
         }
 
@@ -1109,7 +1217,7 @@ $products_data_result = $conn->query($products_sql);
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ product_id: productId, product_type: productType, ingredients: ingredients })
             })
-            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response:", text); throw new Error("Server returned invalid response"); } }))
+            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for update_ingredients:", text); throw new Error("Server returned invalid response for update_ingredients"); } }))
             .then(data => {
                 if (data.success) {
                     toastr.success(data.message, { timeOut: 3000, closeButton: true });
@@ -1118,7 +1226,7 @@ $products_data_result = $conn->query($products_sql);
             })
             .catch(error => {
                 toastr.error("Error updating ingredients: " + error.message, { timeOut: 3000, closeButton: true });
-                errorDiv.textContent = error.message;
+                console.error("Error in saveIngredients fetch:", error);
             });
         }
 
@@ -1134,7 +1242,7 @@ $products_data_result = $conn->query($products_sql);
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ product_id: productId, action: action, amount: amount, product_type: productType })
             })
-            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response:", text); throw new Error("Server returned invalid response"); } }))
+            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for update_stock:", text); throw new Error("Server returned invalid response for update_stock"); } }))
             .then(data => {
                 if (data.success) {
                      toastr.success(data.message, { timeOut: 3000, closeButton: true });
@@ -1145,6 +1253,7 @@ $products_data_result = $conn->query($products_sql);
             })
             .catch(error => {
                 toastr.error("Error updating stock: " + error.message, { timeOut: 3000, closeButton: true });
+                console.error("Error in updateStock fetch:", error);
             });
         }
 
