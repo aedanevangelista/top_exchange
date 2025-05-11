@@ -32,10 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         if (empty($name)) { $errors['name'] = 'Name is required.'; } elseif (strlen($name) > 40) { $errors['name'] = 'Name cannot exceed 40 characters.'; }
         if (empty($username)) { $errors['username'] = 'Username is required.'; } elseif (strlen($username) > 15) { $errors['username'] = 'Username cannot exceed 15 characters.'; } elseif (str_contains($username, ' ')) { $errors['username'] = 'Username cannot contain spaces.'; }
         else { $checkUserStmt = $conn->prepare("SELECT id FROM drivers WHERE username = ?"); if ($checkUserStmt) { $checkUserStmt->bind_param("s", $username); $checkUserStmt->execute(); $checkUserStmt->store_result(); if ($checkUserStmt->num_rows > 0) { $errors['username'] = 'Username already exists.'; } $checkUserStmt->close(); } else { error_log("Add Driver Username Check Prepare Error: " . $conn->error); returnJsonResponse(false, false, 'DB error checking username.', ['general' => 'DB error checking username.']); } }
-        if (empty($contact_no)) { $errors['contact_no'] = 'Contact number is required.'; } elseif (!preg_match('/^\\d{4,12}$/', $contact_no)) { $errors['contact_no'] = 'Contact number must be 4-12 digits.'; } // Adjusted regex and message
+        if (empty($contact_no)) { $errors['contact_no'] = 'Contact number is required.'; } elseif (!preg_match('/^\\d{4,12}$/', $contact_no)) { $errors['contact_no'] = 'Contact number must be 4-12 digits.'; } 
         if (empty($address)) { $errors['address'] = 'Address is required.'; }
         if (!in_array($availability, ['Available', 'Not Available'])) { $errors['availability'] = 'Invalid availability status.'; }
-        if (!in_array($area, ['North', 'South'])) { $errors['area'] = 'Invalid area.'; }
+        if (!in_array($area, ['North', 'South'])) { $errors['area'] = 'Invalid route.'; } // MODIFIED
         if (empty($errors['name'])) { $checkNameStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ?"); if ($checkNameStmt) { $checkNameStmt->bind_param("s", $name); $checkNameStmt->execute(); $checkNameStmt->store_result(); if ($checkNameStmt->num_rows > 0) { $errors['name'] = 'Driver name already exists.'; } $checkNameStmt->close(); } else { error_log("Add Driver Name Check Prepare Error: " . $conn->error); returnJsonResponse(false, false, 'DB error checking name.', ['general' => 'DB error checking name.']); } }
         if (!empty($errors)) { returnJsonResponse(false, false, 'Please correct the errors below.', $errors); }
         $last_four_digits = substr($contact_no, -4); $generated_password = $username . $last_four_digits; $hashed_password = password_hash($generated_password, PASSWORD_DEFAULT);
@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         if (empty($contact_no)) { $errors['contact_no'] = 'Contact number is required.'; } elseif (!preg_match('/^\\d{1,12}$/', $contact_no)) { $errors['contact_no'] = 'Contact number must be only digits (up to 12).'; }
         if (empty($address)) { $errors['address'] = 'Address is required.'; }
         if (!in_array($availability, ['Available', 'Not Available'])) { $errors['availability'] = 'Invalid availability status.'; }
-        if (!in_array($area, ['North', 'South'])) { $errors['area'] = 'Invalid area.'; }
+        if (!in_array($area, ['North', 'South'])) { $errors['area'] = 'Invalid route.'; } // MODIFIED
         if (!in_array($status, ['Active', 'Archive'])) { $errors['status'] = 'Invalid account status.'; }
         if (empty($errors['name']) && empty($errors['general'])) { $checkNameStmt = $conn->prepare("SELECT id FROM drivers WHERE name = ? AND id != ?"); if ($checkNameStmt) { $checkNameStmt->bind_param("si", $name, $id); $checkNameStmt->execute(); $checkNameStmt->store_result(); if ($checkNameStmt->num_rows > 0) { $errors['name'] = 'Driver name already exists.'; } $checkNameStmt->close(); } else { error_log("Edit Driver Name Check Prepare Error: " . $conn->error); returnJsonResponse(false, false, 'DB error checking name.', ['general' => 'DB error checking name.']); } }
         if (!empty($errors)) { returnJsonResponse(false, false, 'Please correct the errors below.', $errors); }
@@ -102,29 +102,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['driver_id']) && isset($
     if ($resultModal->num_rows > 0) {
         while ($row = $resultModal->fetch_assoc()) {
             $orderItems = json_decode($row['orders'], true);
-            if (json_last_error() !== JSON_ERROR_NONE) { error_log("[drivers.php get_deliveries] JSON Decode Error for PO {$row['po_number']}: " . json_last_error_msg() . " | Raw Data: " . $row['orders']); $orderItems = []; } // Handle JSON errors gracefully
+            if (json_last_error() !== JSON_ERROR_NONE) { error_log("[drivers.php get_deliveries] JSON Decode Error for PO {$row['po_number']}: " . json_last_error_msg() . " | Raw Data: " . $row['orders']); $orderItems = []; } 
             $data[] = [
                 'po_number' => $row['po_number'],
                 'username' => $row['username'],
                 'delivery_date' => $row['delivery_date'],
                 'delivery_address' => $row['delivery_address'],
                 'status' => $row['status'],
-                'items' => $orderItems ?? [] // Use null coalescing operator
+                'items' => $orderItems ?? [] 
             ];
         }
         echo json_encode(['success' => true, 'deliveries' => $data]);
     } else {
-        echo json_encode(['success' => true, 'deliveries' => []]); // Return empty array if no deliveries
+        echo json_encode(['success' => true, 'deliveries' => []]); 
     }
     $stmtModal->close();
-    exit; // Exit after AJAX processing
+    exit; 
 }
 
 // --- Fetch main list of drivers ---
 $status_filter = $_GET['status'] ?? ''; $area_filter = $_GET['area'] ?? ''; $params = []; $types = ""; $main_list_result = null;
 $sql = "SELECT d.id, d.name, d.username, d.address, d.contact_no, d.availability, d.area, d.status, d.created_at, COALESCE(COUNT(DISTINCT o.po_number), 0) AS calculated_deliveries FROM drivers d LEFT JOIN driver_assignments da ON d.id = da.driver_id LEFT JOIN orders o ON da.po_number = o.po_number AND o.status IN ('Active', 'For Delivery', 'In Transit') WHERE 1=1";
 if (!empty($status_filter)) { $sql .= " AND d.availability = ?"; $params[] = $status_filter; $types .= "s"; }
-if (!empty($area_filter)) { $sql .= " AND d.area = ?"; $params[] = $area_filter; $types .= "s"; }
+if (!empty($area_filter)) { $sql .= " AND d.area = ?"; $params[] = $area_filter; $types .= "s"; } // 'area' is the DB column
 $sql .= " GROUP BY d.id, d.name, d.username, d.address, d.contact_no, d.availability, d.area, d.status, d.created_at ORDER BY d.name ASC";
 $stmtMain = $conn->prepare($sql);
 if (!$stmtMain) { die("Error preparing driver list: " . $conn->error); }
@@ -150,25 +150,25 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
         /* Styles exactly as provided by user previously */
         .overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
         .overlay-content { background-color: #fefefe; margin: auto; padding: 25px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .overlay-content h2 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; font-size: 1.5rem; display: flex; align-items: center; gap: 10px; } /* Added flex properties */
+        .overlay-content h2 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; font-size: 1.5rem; display: flex; align-items: center; gap: 10px; } 
         .close-btn { color: #aaa; position: absolute; top: 10px; right: 15px; font-size: 28px; font-weight: bold; cursor: pointer; }
         .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; }
         .account-form label { display: block; margin-bottom: 5px; font-weight: 500; }
         .account-form input[type="text"], .account-form input[type="password"], .account-form select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 5px; }
         .form-buttons { text-align: right; margin-top: 20px; }
-        .form-buttons button, .action-buttons button, .add-account-btn, .modal-buttons button, .see-deliveries-btn { /* Combined General Button Styling */
+        .form-buttons button, .action-buttons button, .add-account-btn, .modal-buttons button, .see-deliveries-btn { 
             margin-left: 10px; padding: 8px 15px; border-radius: 40px; border: none; cursor: pointer; font-size: 14px; color: white; transition: background-color 0.3s, box-shadow 0.3s; vertical-align: middle; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; justify-content: center; line-height: 1.5;
         }
-        .form-buttons button:first-child, .action-buttons button:first-child { margin-left: 0; } /* Remove margin for first button in group */
+        .form-buttons button:first-child, .action-buttons button:first-child { margin-left: 0; } 
         .form-buttons button:hover, .action-buttons button:hover, .add-account-btn:hover, .modal-buttons button:hover, .see-deliveries-btn:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.2); filter: brightness(95%); }
         .form-buttons button:active, .action-buttons button:active, .add-account-btn:active, .modal-buttons button:active, .see-deliveries-btn:active { filter: brightness(90%); box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
-        .cancel-btn { background-color: #6c757d; color: white; } /* Keep border-radius if needed, but base style covers it */
+        .cancel-btn { background-color: #6c757d; color: white; } 
         .save-btn { background-color: #28a745; color: white; }
         .edit-btn { background-color: #ffc107; color: #333; }
         .availability-btn { background-color: #17a2b8; color: white;}
         .account-status-btn { background-color: #fd7e14; color: white;}
-        .add-account-btn { background-color: #0d6efd; color: white; margin-left: auto; } /* Push to right */
-        .see-deliveries-btn { background-color: #6c757d; color: white; padding: 5px 10px; font-size: 13px; } /* Specific smaller style */
+        .add-account-btn { background-color: #0d6efd; color: white; margin-left: auto; } 
+        .see-deliveries-btn { background-color: #6c757d; color: white; padding: 5px 10px; font-size: 13px; } 
         .approve-btn { background-color: #28a745; color: white; }
         .reject-btn { background-color: #dc3545; color: white; }
         .archive-btn { background-color: #ffc107; color: #333; }
@@ -180,13 +180,13 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
         .password-info { font-size: 0.9em; color: #666; margin-bottom: 15px; margin-top: -5px; }
         .accounts-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
         .accounts-header h1 { margin: 0; }
-        .filter-section { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-left: 15px; margin-right: auto; } /* Adjusted margins */
+        .filter-section { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-left: 15px; margin-right: auto; } 
         .filter-section label { margin-bottom: 0; margin-right: 5px; }
-        .filter-section select { padding: 6px 10px; font-size: 14px; margin-bottom: 0; margin-right: 10px; } /* Added margin-right */
-        .accounts-table-container { overflow-x: auto; background-color: #fff; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); } /* Added background/shadow */
+        .filter-section select { padding: 6px 10px; font-size: 14px; margin-bottom: 0; margin-right: 10px; } 
+        .accounts-table-container { overflow-x: auto; background-color: #fff; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); } 
         .accounts-table { width: 100%; border-collapse: collapse; }
         .accounts-table th, .accounts-table td { padding: 10px 12px; border-bottom: 1px solid #dee2e6; text-align: center; vertical-align: middle; }
-        .accounts-table th { background-color:rgb(32, 32, 32); font-weight: 600; border-top: 1px solid #dee2e6; }
+        .accounts-table th { background-color:rgb(32, 32, 32); font-weight: 600; border-top: 1px solid #dee2e6; color: white; } /* Added color white */
         .accounts-table tr:last-child td { border-bottom: none; }
         .accounts-table tr:hover { background-color: #f1f3f5; }
         .no-accounts { text-align: center; color: #6c757d; font-style: italic; padding: 15px; }
@@ -199,7 +199,7 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
         .account-status-active { color: #198754; font-weight: bold; }
         .account-status-archive { color: #dc3545; font-weight: bold; }
         .action-buttons { white-space: nowrap; text-align: center; }
-        .action-buttons button { margin-right: 5px; margin-bottom: 5px; } /* Keep allowing wrap */
+        .action-buttons button { margin-right: 5px; margin-bottom: 5px; } 
         .deliveries-modal-content { max-width: 900px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
         .deliveries-table-container { overflow-y: auto; flex-grow: 1; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
         .deliveries-table { width: 100%; border-collapse: collapse; }
@@ -217,7 +217,7 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
 </head>
 <body>
     <div id="toast-container"></div>
-    <?php include '../sidebar.php'; // Adjust path if needed ?>
+    <?php include '../sidebar.php'; ?>
     <div class="main-content">
         <div class="accounts-header">
             <h1>Drivers List</h1>
@@ -228,8 +228,9 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                     <option value="Available" <?= $status_filter == 'Available' ? 'selected' : '' ?>>Available</option>
                     <option value="Not Available" <?= $status_filter == 'Not Available' ? 'selected' : '' ?>>Not Available</option>
                 </select>
-                <label for="areaFilter">Area:</label>
-                <select id="areaFilter" onchange="filterDrivers()">
+                <!-- MODIFIED Filter Label -->
+                <label for="areaFilter">Route:</label> 
+                <select id="areaFilter" name="area" onchange="filterDrivers()"> <!-- name="area" is fine as it maps to DB column -->
                     <option value="">All</option>
                     <option value="North" <?= $area_filter == 'North' ? 'selected' : '' ?>>North</option>
                     <option value="South" <?= $area_filter == 'South' ? 'selected' : '' ?>>South</option>
@@ -247,7 +248,7 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                         <th>Username</th>
                         <th>Address</th>
                         <th>Contact No.</th>
-                        <th>Area</th>
+                        <th>Route</th> <!-- MODIFIED Table Header -->
                         <th>Availability</th>
                         <th>Account Status</th>
                         <th>Active Deliveries</th>
@@ -261,7 +262,7 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                             $active_delivery_count = $row['calculated_deliveries'];
                             $deliveryClass = 'delivery-count-low';
                             if ($active_delivery_count > 15) $deliveryClass = 'delivery-count-high';
-                            elseif ($active_delivery_count > 10) $deliveryClass = 'delivery-count-medium'; // Use elseif
+                            elseif ($active_delivery_count > 10) $deliveryClass = 'delivery-count-medium'; 
                             $availability_class = 'status-' . strtolower(str_replace(' ', '-', $row['availability']));
                             $account_status_class = 'account-status-' . strtolower($row['status']);
                     ?>
@@ -270,7 +271,7 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                                 <td><?= htmlspecialchars($row['username']) ?></td>
                                 <td><?= htmlspecialchars($row['address']) ?></td>
                                 <td><?= htmlspecialchars($row['contact_no']) ?></td>
-                                <td><?= htmlspecialchars($row['area']) ?></td>
+                                <td><?= htmlspecialchars($row['area']) ?></td> <!-- Data comes from 'area' column -->
                                 <td class="<?= $availability_class ?>">
                                     <?= htmlspecialchars($row['availability']) ?>
                                 </td>
@@ -302,13 +303,13 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                     else:
                     ?>
                         <tr>
-                            <td colspan="9" class="no-accounts">No drivers found matching criteria.</td>
+                            <!-- MODIFIED Colspan -->
+                            <td colspan="9" class="no-accounts">No drivers found matching criteria.</td> 
                         </tr>
                     <?php
                     endif;
-                    // Close statement and connection
                     if (isset($stmtMain)) $stmtMain->close();
-                    if (isset($conn)) $conn->close(); // Ensure connection is closed if opened
+                    if (isset($conn)) $conn->close(); 
                     ?>
                 </tbody>
             </table>
@@ -332,8 +333,9 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                 <input type="text" id="add-address" name="address" required> <span id="addAddressError" class="error-message"></span>
                 <label for="add-contact_no">Contact No.: (4-12 digits)<span class="required-asterisk">*</span></label>
                 <input type="text" id="add-contact_no" name="contact_no" required maxlength="12" pattern="^\d{4,12}$" title="Must be 4 to 12 digits"> <span id="addContactError" class="error-message"></span>
-                <label for="add-area">Area:<span class="required-asterisk">*</span></label>
-                <select id="add-area" name="area" required> <option value="">Select Area</option><option value="North">North</option> <option value="South">South</option> </select> <span id="addAreaError" class="error-message"></span>
+                <!-- MODIFIED Label and Select Placeholder -->
+                <label for="add-area">Route:<span class="required-asterisk">*</span></label>
+                <select id="add-area" name="area" required> <option value="">Select Route</option><option value="North">North</option> <option value="South">South</option> </select> <span id="addAreaError" class="error-message"></span>
                 <label for="add-availability">Availability:<span class="required-asterisk">*</span></label>
                 <select id="add-availability" name="availability" required> <option value="">Select Status</option><option value="Available">Available</option> <option value="Not Available">Not Available</option> </select> <span id="addAvailabilityError" class="error-message"></span>
                 <div class="form-buttons">
@@ -362,8 +364,9 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                 <input type="text" id="edit-address" name="address" required> <span id="editAddressError" class="error-message"></span>
                 <label for="edit-contact_no">Contact No.: (Up to 12 digits)<span class="required-asterisk">*</span></label>
                 <input type="text" id="edit-contact_no" name="contact_no" required maxlength="12" pattern="^\d{1,12}$" title="Must be only digits (up to 12)"> <span id="editContactError" class="error-message"></span>
-                <label for="edit-area">Area:<span class="required-asterisk">*</span></label>
-                <select id="edit-area" name="area" required> <option value="">Select Area</option><option value="North">North</option> <option value="South">South</option> </select> <span id="editAreaError" class="error-message"></span>
+                <!-- MODIFIED Label and Select Placeholder -->
+                <label for="edit-area">Route:<span class="required-asterisk">*</span></label>
+                <select id="edit-area" name="area" required> <option value="">Select Route</option><option value="North">North</option> <option value="South">South</option> </select> <span id="editAreaError" class="error-message"></span>
                 <label for="edit-availability">Availability:<span class="required-asterisk">*</span></label>
                 <select id="edit-availability" name="availability" required> <option value="">Select Status</option><option value="Available">Available</option> <option value="Not Available">Not Available</option> </select> <span id="editAvailabilityError" class="error-message"></span>
                 <label for="edit-status">Account Status:<span class="required-asterisk">*</span></label>
@@ -420,7 +423,7 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
         </div>
     </div>
 
-    <!-- Deliveries List Modal (FIXED HTML) -->
+    <!-- Deliveries List Modal -->
     <div id="deliveriesModal" class="overlay" style="display: none;">
          <div class="overlay-content deliveries-modal-content">
              <span class="close-btn" onclick="closeDeliveriesModal()">&times;</span>
@@ -435,7 +438,6 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                             <th>Status</th>
                         </tr>
                     </thead>
-                    <!-- THIS TBODY NOW HAS THE CORRECT ID -->
                     <tbody id="deliveriesTableBody">
                         <tr><td colspan="4" class="no-deliveries">Loading...</td></tr>
                     </tbody>
@@ -449,20 +451,16 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
         </div>
     </div>
 
-    <!-- JavaScript includes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src="/js/toast.js"></script> <!-- Assuming toast.js initializes toastr -->
+    <script src="/js/toast.js"></script> 
 
-    <!-- COMPLETE JAVASCRIPT BLOCK -->
     <script>
         let currentDriverId = null;
 
-        // --- Form Error Handling ---
         function clearFormErrors(formId) { $(`#${formId} .error-message`).text(''); $(`#${formId} input, #${formId} select`).removeClass('form-field-error'); $(`#${formId}Error`).text(''); }
         function displayFormErrors(formId, errors) { clearFormErrors(formId); if (errors && typeof errors === 'object') { $.each(errors, function(field, message) { const inputElement = $(`#${formId} [name="${field}"]`); const errorElementId = `#${formId.replace('Form', '')}${field.charAt(0).toUpperCase() + field.slice(1)}Error`; const errorElement = $(errorElementId); if (inputElement.length) { inputElement.addClass('form-field-error'); } if (errorElement.length) { errorElement.text(message); } else if (field === 'general') { $(`#${formId.replace('Form', '')}Error`).text(message); } }); } }
 
-        // --- Modal Control ---
         function openAddDriverForm() { clearFormErrors('addDriverForm'); $('#addDriverForm')[0].reset(); $('#addDriverOverlay').css('display', 'flex'); }
         function closeAddDriverForm() { $('#addDriverOverlay').hide(); clearFormErrors('addDriverForm'); }
         function openEditDriverForm(id, name, username, address, contact_no, availability, area, status) { clearFormErrors('editDriverForm'); $('#edit-id').val(id); $('#edit-name').val(name); $('#edit-username').val(username); $('#edit-password').val(''); $('#edit-address').val(address); $('#edit-contact_no').val(contact_no); $('#edit-availability').val(availability); $('#edit-area').val(area); $('#edit-status').val(status); $('#editDriverOverlay').css('display', 'flex'); }
@@ -473,7 +471,6 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
         function openAccountStatusModal(id, name) { currentDriverId = id; $('#accountStatusMessage').text(`Change account login status for driver: ${name}`); $('#accountStatusModal').css('display', 'flex'); }
         function closeAccountStatusModal() { $('#accountStatusModal').hide(); currentDriverId = null; }
 
-        // --- Deliveries Modal Logic ---
         function toggleOrderItems(headerRow) {
             const itemsRow = headerRow.nextElementSibling;
             if (itemsRow && itemsRow.classList.contains('order-items-row')) {
@@ -493,25 +490,23 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
             return isNaN(num) ? '₱--.--' : '₱' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
         }
         function viewDriverDeliveries(id, name) {
-            // Check if elements exist BEFORE trying to use them
             if ($('#deliveriesModal').length === 0) { console.error("Deliveries modal (#deliveriesModal) not found."); if(typeof showToast === 'function') showToast("Error: Delivery details modal is missing.", "error"); return; }
             if ($('#deliveriesTableBody').length === 0) { console.error("Deliveries table body (#deliveriesTableBody) not found."); if(typeof showToast === 'function') showToast("Error: Delivery details table is missing.", "error"); return; }
 
             $('#deliveriesModalTitle').text(`${name}'s Active/Pending Deliveries`);
-            $('#deliveriesModal').css('display', 'flex'); // Show modal
+            $('#deliveriesModal').css('display', 'flex'); 
             const tableBody = $('#deliveriesTableBody');
-            tableBody.html('<tr><td colspan="4" class="no-deliveries"><i class="fas fa-spinner fa-spin"></i> Loading deliveries...</td></tr>'); // Set loading state
+            tableBody.html('<tr><td colspan="4" class="no-deliveries"><i class="fas fa-spinner fa-spin"></i> Loading deliveries...</td></tr>'); 
 
             fetch(`drivers.php?driver_id=${id}&action=get_deliveries`)
                 .then(response => {
                     if (!response.ok) {
-                        // Try to get more info from non-JSON response
                         return response.text().then(text => {
                             console.error(`Server Error (${response.status}) fetching deliveries for driver ${id}:`, text);
                             throw new Error(`Server error (${response.status}). Check server logs or Network tab response.`);
                         });
                     }
-                    return response.json(); // Only parse if response is ok
+                    return response.json(); 
                 })
                 .then(data => {
                     if (data.success && data.deliveries) {
@@ -533,7 +528,7 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                                 } else { html += `<tr><td colspan="4" style="text-align: center; color: #888;">No item details available.</td></tr>`; }
                                 html += `</tbody></table></td></tr>`;
                             });
-                            tableBody.html(html); // Populate table body
+                            tableBody.html(html); 
                         } else {
                             tableBody.html('<tr><td colspan="4" class="no-deliveries">No active or pending deliveries found.</td></tr>');
                         }
@@ -547,9 +542,7 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                     tableBody.html(`<tr><td colspan="4" class="no-deliveries">Failed to load delivery details. ${error.message}</td></tr>`);
                 });
         }
-        // --- END Deliveries Modal Logic ---
-
-        // --- Change AVAILABILITY Status AJAX ---
+        
         function changeAvailability(availability) {
              if (currentDriverId === null) { if(typeof showToast === 'function') showToast('No driver selected.', 'error'); return; }
              $.ajax({ url: 'drivers.php', type: 'POST', data: { ajax: true, formType: 'availability_status', id: currentDriverId, availability: availability }, dataType: 'json',
@@ -558,7 +551,6 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
              });
         }
 
-         // --- Change ACCOUNT Status AJAX ---
         function changeAccountStatus(status) {
              if (currentDriverId === null) { if(typeof showToast === 'function') showToast('No driver selected.', 'error'); return; }
              $.ajax({ url: 'drivers.php', type: 'POST', data: { ajax: true, formType: 'account_status', id: currentDriverId, status: status }, dataType: 'json',
@@ -567,16 +559,14 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
              });
         }
 
-        // --- Filtering ---
         function filterDrivers() { const status = document.getElementById('statusFilter').value; const area = document.getElementById('areaFilter').value; const params = new URLSearchParams(window.location.search); params.set('status', status); params.set('area', area); window.location.href = `drivers.php?${params.toString()}`; }
 
-        // --- Client-Side Validation Functions ---
         function validateContactNumber(contactInput, errorElement) {
             const contactValue = $(contactInput).val().trim();
-            const pattern = /^\d{4,12}$/; // Use the 4-12 pattern for add form
+            const pattern = /^\d{4,12}$/; 
             if (!contactValue) { $(errorElement).text('Contact number is required.'); $(contactInput).addClass('form-field-error'); return false; }
             else if (!pattern.test(contactValue) && $(contactInput).closest('form').attr('id') === 'addDriverForm') { $(errorElement).text('Must be 4 to 12 digits.'); $(contactInput).addClass('form-field-error'); return false; }
-            else if (!/^\d{1,12}$/.test(contactValue) && $(contactInput).closest('form').attr('id') === 'editDriverForm') { // Use 1-12 for edit
+            else if (!/^\d{1,12}$/.test(contactValue) && $(contactInput).closest('form').attr('id') === 'editDriverForm') { 
                  $(errorElement).text('Must be only digits (up to 12).'); $(contactInput).addClass('form-field-error'); return false;
             }
             $(errorElement).text(''); $(contactInput).removeClass('form-field-error'); return true;
@@ -603,44 +593,40 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
             if (value && value.length < minLength) { $(errorElement).text(`Password must be at least ${minLength} characters.`); $(inputElement).addClass('form-field-error'); return false; }
             $(errorElement).text(''); $(inputElement).removeClass('form-field-error'); return true;
         }
+        // MODIFIED validateSelect for Route
         function validateSelect(selectElement, errorElement, fieldName) {
             const value = $(selectElement).val();
             if (!value) { $(errorElement).text(`${fieldName} is required.`); $(selectElement).addClass('form-field-error'); return false; }
             $(errorElement).text(''); $(selectElement).removeClass('form-field-error'); return true;
         }
-        // --- END Client-Side Validation Functions ---
-
-        // --- Document Ready ---
+        
         $(document).ready(function() {
-            // Modal closing
             $(document).on('click', '.overlay', function(event) { if (event.target === this) $(this).hide(); });
             $(document).on('click', '.overlay-content', function(event) { event.stopPropagation(); });
 
-            // Live Validation Bindings
             $('#add-name').on('input blur', function() { validateRequired(this, '#addNameError', 'Name') && validateMaxLength(this, '#addNameError', 40, 'Name'); });
             $('#add-username').on('input blur', function() { validateRequired(this, '#addUsernameError', 'Username') && validateMaxLength(this, '#addUsernameError', 15, 'Username') && validateNoSpaces(this, '#addUsernameError', 'Username'); });
             $('#add-address').on('input blur', function() { validateRequired(this, '#addAddressError', 'Address'); });
-            $('#add-contact_no').on('input blur', function() { validateContactNumber(this, '#addContactError'); }); // Uses updated validation
-            $('#add-area').on('change blur', function() { validateSelect(this, '#addAreaError', 'Area'); });
+            $('#add-contact_no').on('input blur', function() { validateContactNumber(this, '#addContactError'); }); 
+            $('#add-area').on('change blur', function() { validateSelect(this, '#addAreaError', 'Route'); }); // MODIFIED
             $('#add-availability').on('change blur', function() { validateSelect(this, '#addAvailabilityError', 'Availability'); });
 
             $('#edit-name').on('input blur', function() { validateRequired(this, '#editNameError', 'Name') && validateMaxLength(this, '#editNameError', 40, 'Name'); });
             $('#edit-username').on('input blur', function() { validateRequired(this, '#editUsernameError', 'Username') && validateMaxLength(this, '#editUsernameError', 15, 'Username') && validateNoSpaces(this, '#editUsernameError', 'Username'); });
             $('#edit-address').on('input blur', function() { validateRequired(this, '#editAddressError', 'Address'); });
-            $('#edit-contact_no').on('input blur', function() { validateContactNumber(this, '#editContactError'); }); // Uses updated validation
+            $('#edit-contact_no').on('input blur', function() { validateContactNumber(this, '#editContactError'); }); 
             $('#edit-password').on('input blur', function() { if ($(this).val()) validatePasswordLength(this, '#editPasswordError'); else { $('#editPasswordError').text(''); $(this).removeClass('form-field-error'); } });
-            $('#edit-area').on('change blur', function() { validateSelect(this, '#editAreaError', 'Area'); });
+            $('#edit-area').on('change blur', function() { validateSelect(this, '#editAreaError', 'Route'); }); // MODIFIED
             $('#edit-availability').on('change blur', function() { validateSelect(this, '#editAvailabilityError', 'Availability'); });
             $('#edit-status').on('change blur', function() { validateSelect(this, '#editStatusError', 'Account Status'); });
 
-            // Add Form Submit Handler
             $('#addDriverForm').on('submit', function(e) {
                 e.preventDefault(); clearFormErrors('addDriverForm'); let isValid = true;
                 isValid &= validateRequired('#add-name', '#addNameError', 'Name'); isValid &= validateMaxLength('#add-name', '#addNameError', 40, 'Name');
                 isValid &= validateRequired('#add-username', '#addUsernameError', 'Username'); isValid &= validateMaxLength('#add-username', '#addUsernameError', 15, 'Username'); isValid &= validateNoSpaces('#add-username', '#addUsernameError', 'Username');
                 isValid &= validateRequired('#add-address', '#addAddressError', 'Address');
-                isValid &= validateContactNumber('#add-contact_no', '#addContactError'); // Uses updated validation
-                isValid &= validateSelect('#add-area', '#addAreaError', 'Area');
+                isValid &= validateContactNumber('#add-contact_no', '#addContactError'); 
+                isValid &= validateSelect('#add-area', '#addAreaError', 'Route'); // MODIFIED
                 isValid &= validateSelect('#add-availability', '#addAvailabilityError', 'Availability');
                 if (!isValid) { if (typeof showToast === 'function') showToast('Please correct the errors.', 'warning'); return false; }
                 $.ajax({ url: 'drivers.php', type: 'POST', data: $(this).serialize() + '&ajax=true', dataType: 'json',
@@ -649,15 +635,14 @@ if ($main_list_result === false) { $stmtMain->close(); die("Error retrieving dri
                 });
             });
 
-            // Edit Form Submit Handler
             $('#editDriverForm').on('submit', function(e) {
                 e.preventDefault(); clearFormErrors('editDriverForm'); let isValid = true;
                 isValid &= validateRequired('#edit-name', '#editNameError', 'Name'); isValid &= validateMaxLength('#edit-name', '#editNameError', 40, 'Name');
                 isValid &= validateRequired('#edit-username', '#editUsernameError', 'Username'); isValid &= validateMaxLength('#edit-username', '#editUsernameError', 15, 'Username'); isValid &= validateNoSpaces('#edit-username', '#editUsernameError', 'Username');
                 isValid &= validateRequired('#edit-address', '#editAddressError', 'Address');
-                isValid &= validateContactNumber('#edit-contact_no', '#editContactError'); // Uses updated validation
+                isValid &= validateContactNumber('#edit-contact_no', '#editContactError'); 
                 if ($('#edit-password').val()) { isValid &= validatePasswordLength('#edit-password', '#editPasswordError'); }
-                isValid &= validateSelect('#edit-area', '#editAreaError', 'Area');
+                isValid &= validateSelect('#edit-area', '#editAreaError', 'Route'); // MODIFIED
                 isValid &= validateSelect('#edit-availability', '#editAvailabilityError', 'Availability');
                 isValid &= validateSelect('#edit-status', '#editStatusError', 'Account Status');
                 if (!isValid) { if (typeof showToast === 'function') showToast('Please correct the errors.', 'warning'); return false; }
