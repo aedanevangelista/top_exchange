@@ -182,7 +182,20 @@ $products_data_result = $conn->query($products_sql);
         .file-info { font-size: 0.9em; color: #666; font-style: italic; }
         .additional-desc { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .overlay-content { background-color: white; padding: 20px; border-radius: 5px; width: 80%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+        
+        /* MODIFICATION: Adjusted .overlay-content width */
+        .overlay-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            width: 600px; /* Set a specific target width */
+            max-width: 95vw; /* Ensure it doesn't overflow viewport width, leaves a small margin */
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        /* END MODIFICATION */
+
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .form-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .save-btn, .cancel-btn { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; }
@@ -211,7 +224,6 @@ $products_data_result = $conn->query($products_sql);
         input:required, select:required, textarea:required { border-left: 3px solid #e67e22; }
         input:invalid, select:invalid, textarea:invalid { border-left: 3px solid #e74c3c; }
         
-        /* MODIFICATION: Styles for packaging and expiration groups */
         .packaging-group, .expiration-group { 
             display: flex; 
             gap: 10px; 
@@ -233,11 +245,10 @@ $products_data_result = $conn->query($products_sql);
         .expiration-item select { 
             width: 100%; 
             box-sizing: border-box; 
-            padding: 8px; /* Ensure consistent padding with other inputs */
-            border: 1px solid #ddd; /* Ensure consistent border */
-            border-radius: 4px; /* Ensure consistent border-radius */
+            padding: 8px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
         }
-        /* END MODIFICATION */
 
     </style>
 </head>
@@ -421,7 +432,6 @@ $products_data_result = $conn->query($products_sql);
                         </div>
                     </div>
                     
-                    <!-- MODIFICATION: Expiration fields in a group for Add Modal -->
                     <div class="expiration-group">
                         <div class="expiration-item">
                             <label for="add_expiration_duration">Expiration Duration:</label>
@@ -436,7 +446,6 @@ $products_data_result = $conn->query($products_sql);
                             </select>
                         </div>
                     </div>
-                    <!-- END MODIFICATION -->
 
                     <label for="price">Price (₱):</label>
                     <input type="number" id="price" name="price" step="0.01" min="0" max="5000" required placeholder="0.00">
@@ -515,7 +524,6 @@ $products_data_result = $conn->query($products_sql);
                             <label for="edit_stock_quantity">Stock Quantity:</label>
                             <input type="number" id="edit_stock_quantity" name="stock_quantity" min="0" required placeholder="0">
                         
-                             <!-- MODIFICATION: Expiration fields in a group for Edit Modal (moved here for better grid flow) -->
                         </div>
                     </div>
                      
@@ -545,7 +553,6 @@ $products_data_result = $conn->query($products_sql);
                         </div>
                     </div>
 
-                    <!-- MODIFICATION: Expiration fields in a group for Edit Modal -->
                     <div class="expiration-group">
                         <div class="expiration-item">
                             <label for="edit_expiration_duration">Expiration Duration:</label>
@@ -560,7 +567,6 @@ $products_data_result = $conn->query($products_sql);
                             </select>
                         </div>
                     </div>
-                    <!-- END MODIFICATION -->
 
                      <label for="edit_additional_description">Additional Description:</label>
                      <textarea id="edit_additional_description" name="additional_description" placeholder="Add more details about the product" required></textarea>
