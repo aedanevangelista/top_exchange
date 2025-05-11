@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "db_connection.php";
+include "db_connection.php"; // Make sure this path is correct
 
 header('Content-Type: application/json');
 
@@ -25,12 +25,12 @@ $table = $product_type === 'walkin' ? 'walkin_products' : 'products';
 
 // Extract values from POST
 $category = trim($_POST['category']);
-if ($category === 'new' && isset($_POST['new_category']) && !empty($_POST['new_category'])) {
+if ($category === 'new' && isset($_POST['new_category']) && !empty(trim($_POST['new_category']))) { // Also check new_category is not empty
     $category = trim($_POST['new_category']);
 }
 
 $product_name = trim($_POST['product_name']);
-if ($product_name === 'new' && isset($_POST['new_product_name']) && !empty($_POST['new_product_name'])) {
+if ($product_name === 'new' && isset($_POST['new_product_name']) && !empty(trim($_POST['new_product_name']))) { // Also check new_product_name is not empty
     $product_name = trim($_POST['new_product_name']);
 }
 
@@ -40,6 +40,10 @@ $price = floatval($_POST['price']);
 $stock_quantity = isset($_POST['stock_quantity']) ? intval($_POST['stock_quantity']) : 0;
 $additional_description = isset($_POST['additional_description']) ? trim($_POST['additional_description']) : '';
 $product_image = '';
+
+// --- MODIFICATION: Receive expiration value ---
+$expiration = isset($_POST['expiration']) && !empty(trim($_POST['expiration'])) ? trim($_POST['expiration']) : NULL;
+// --- END MODIFICATION ---
 
 // Upload image if provided
 if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
@@ -51,23 +55,29 @@ if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
     
     if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
         // Create folder for product images
-        $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/products/';
+        $upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/uploads/products/'; // Ensure this path is correct and writable
         
         // Create folder based on item description
-        $item_folder = preg_replace('/[^a-zA-Z0-9]/', '_', $item_description);
+        $item_folder = preg_replace('/[^a-zA-Z0-9_.-]/', '_', $item_description); // Allow underscores, dots, hyphens
         $item_dir = $upload_dir . $item_folder . '/';
         
         if (!file_exists($upload_dir)) {
-            mkdir($upload_dir, 0777, true);
+            if (!mkdir($upload_dir, 0777, true)) {
+                echo json_encode(['success' => false, 'message' => 'Failed to create upload directory. Check permissions.']);
+                exit;
+            }
         }
         
         if (!file_exists($item_dir)) {
-            mkdir($item_dir, 0777, true);
+            if (!mkdir($item_dir, 0777, true)) {
+                echo json_encode(['success' => false, 'message' => 'Failed to create item directory. Check permissions.']);
+                exit;
+            }
         }
         
         // Generate a unique filename based on extension
         $file_extension = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
-        $filename = 'product_image.' . $file_extension;
+        $filename = 'product_image.' . $file_extension; // Consider making this more unique if needed: uniqid() . '.' . $file_extension
         $target_path = $item_dir . $filename;
         
         // Move uploaded file to destination directory
@@ -75,11 +85,11 @@ if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
             // Save relative path to the database
             $product_image = '/uploads/products/' . $item_folder . '/' . $filename;
         } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to upload image']);
+            echo json_encode(['success' => false, 'message' => 'Failed to move uploaded image. Check permissions and path.']);
             exit;
         }
     } else {
-        echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB.']);
+        echo json_encode(['success' => false, 'message' => 'Invalid file type or size. Maximum file size is 20MB. Allowed types: JPG, PNG.']);
         exit;
     }
 }
@@ -91,21 +101,25 @@ $check_stmt->execute();
 $check_result = $check_stmt->get_result();
 
 if ($check_result->num_rows > 0) {
-    echo json_encode(['success' => false, 'message' => 'A product with this description already exists']);
+    echo json_encode(['success' => false, 'message' => 'A product with this Product Variant (Item Description) already exists.']);
     $check_stmt->close();
     exit;
 }
 $check_stmt->close();
 
-// Insert the new product into the database
-$stmt = $conn->prepare("INSERT INTO $table (category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-$stmt->bind_param("ssssdiss", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image);
+// --- MODIFICATION: Add 'expiration' column to INSERT statement and update bind_param ---
+$stmt = $conn->prepare("INSERT INTO $table (category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image, expiration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+// The types string should now be "ssssdissS" (s for string for expiration, can be NULL)
+$stmt->bind_param("ssssdissS", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $expiration);
+// --- END MODIFICATION ---
 
 if ($stmt->execute()) {
     echo json_encode(['success' => true, 'message' => 'Product added successfully']);
 } else {
-    echo json_encode(['success' => false, 'message' => 'Failed to add product: ' . $conn->error]);
+    error_log("SQL Error in add_product.php: " . $stmt->error); // Log the specific SQL error
+    echo json_encode(['success' => false, 'message' => 'Failed to add product. Please check server logs for details. Error: ' . $conn->error]);
 }
 
 $stmt->close();
+$conn->close(); // Close the connection
 ?>
