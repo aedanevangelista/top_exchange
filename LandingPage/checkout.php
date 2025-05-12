@@ -86,7 +86,10 @@ function processCheckoutForm() {
     $deliveryDate = $_POST['delivery_date'];
     $specialInstructions = trim($_POST['special_instructions']);
     $contactNumber = trim($_POST['contact_number']);
-    $paymentMethod = 'Check Payment'; // For display purposes only, not inserted into database
+    $paymentMethod = isset($_POST['payment_method']) ? $_POST['payment_method'] : 'check_payment';
+
+    // Log the payment method for debugging
+    error_log("Checkout - Payment method selected: " . $paymentMethod);
 
     // Basic validation
     if (empty($deliveryAddress) || empty($deliveryDate) || empty($contactNumber)) {
@@ -122,7 +125,8 @@ function processCheckoutForm() {
             'item_description' => $item['name'],
             'packaging' => $item['packaging'] ?? '',
             'price' => $price,
-            'quantity' => $quantity
+            'quantity' => $quantity,
+            'is_preorder' => isset($item['is_preorder']) ? (bool)$item['is_preorder'] : false
         ];
     }
 
@@ -149,20 +153,45 @@ function processCheckoutForm() {
         // Log the order data for debugging
         error_log("Preparing to insert order: PO=" . $poNumber . ", Username=" . $username);
 
-        // Insert order into database - removed payment_method
-        $stmt = $conn->prepare("INSERT INTO orders (
-            po_number,
-            username,
-            order_date,
-            delivery_date,
-            delivery_address,
-            contact_number,
-            orders,
-            total_amount,
-            status,
-            special_instructions,
-            subtotal
-        ) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, 'Pending', ?, ?)");
+        // Check if payment_method and payment_status columns exist in the orders table
+        $checkColumnsQuery = "SHOW COLUMNS FROM `orders` LIKE 'payment_method'";
+        $checkResult = $conn->query($checkColumnsQuery);
+        $hasPaymentColumns = $checkResult && $checkResult->num_rows > 0;
+
+        // Prepare the SQL statement based on whether the payment columns exist
+        if ($hasPaymentColumns) {
+            // Insert order into database with payment_method and payment_status
+            $stmt = $conn->prepare("INSERT INTO orders (
+                po_number,
+                username,
+                order_date,
+                delivery_date,
+                delivery_address,
+                contact_number,
+                orders,
+                total_amount,
+                status,
+                special_instructions,
+                subtotal,
+                payment_method,
+                payment_status
+            ) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, 'Pending', ?, ?, ?, 'Pending')");
+        } else {
+            // Insert order into database without payment_method and payment_status
+            $stmt = $conn->prepare("INSERT INTO orders (
+                po_number,
+                username,
+                order_date,
+                delivery_date,
+                delivery_address,
+                contact_number,
+                orders,
+                total_amount,
+                status,
+                special_instructions,
+                subtotal
+            ) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, 'Pending', ?, ?)");
+        }
 
         if (!$stmt) {
             throw new Exception("Prepare failed: " . $conn->error);
@@ -191,19 +220,37 @@ function processCheckoutForm() {
         // Log the JSON string for debugging
         error_log("JSON orders string (first 200 chars): " . substr($jsonOrders, 0, 200) . "...");
 
-        // Updated bind_param without delivery_fee and payment_method
-        $bindResult = $stmt->bind_param(
-            "ssssssdsd",
-            $poNumber,
-            $username,
-            $deliveryDate,
-            $deliveryAddress,
-            $contactNumber,
-            $jsonOrders,
-            $total,
-            $specialInstructions,
-            $subtotal
-        );
+        // Bind parameters based on whether payment columns exist
+        if ($hasPaymentColumns) {
+            // Bind parameters with payment_method
+            $bindResult = $stmt->bind_param(
+                "ssssssdsds",
+                $poNumber,
+                $username,
+                $deliveryDate,
+                $deliveryAddress,
+                $contactNumber,
+                $jsonOrders,
+                $total,
+                $specialInstructions,
+                $subtotal,
+                $paymentMethod
+            );
+        } else {
+            // Bind parameters without payment_method
+            $bindResult = $stmt->bind_param(
+                "ssssssdsd",
+                $poNumber,
+                $username,
+                $deliveryDate,
+                $deliveryAddress,
+                $contactNumber,
+                $jsonOrders,
+                $total,
+                $specialInstructions,
+                $subtotal
+            );
+        }
 
         if (!$bindResult) {
             throw new Exception("Bind failed: " . $stmt->error);
@@ -522,6 +569,62 @@ if (isset($_SESSION['error'])) {
             font-size: 0.85rem;
             color: #666;
             margin-top: 5px;
+        }
+
+        /* Payment method styles */
+        .payment-method-selection {
+            margin-bottom: 15px;
+        }
+
+        .payment-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .payment-option {
+            flex: 1;
+            min-width: 200px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .payment-option .form-check-input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .payment-option-content {
+            border: 2px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .payment-option .form-check-input:checked + .form-check-label .payment-option-content {
+            border-color: var(--primary-color);
+            background-color: rgba(154, 116, 50, 0.05);
+            box-shadow: 0 2px 8px rgba(154, 116, 50, 0.15);
+        }
+
+        .payment-option-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+
+        .payment-option-desc {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .payment-info-box {
+            background-color: #f9f9f9;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-top: 15px;
         }
 
         .confirmation-modal .modal-content {
@@ -864,9 +967,34 @@ if (isset($_SESSION['error'])) {
                             </div>
 
                             <div class="delivery-info-group">
-                                <div class="payment-info-box">
-                                    <h4><i class="fas fa-check-circle"></i> Payment Method: Check Payment</h4>
+                                <div class="payment-method-selection">
+                                    <h4><i class="fas fa-credit-card"></i> Payment Method</h4>
+                                    <div class="payment-options">
+                                        <div class="form-check payment-option">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_check" value="check_payment" checked>
+                                            <label class="form-check-label" for="payment_check">
+                                                <div class="payment-option-content">
+                                                    <div class="payment-option-title">Check Payment</div>
+                                                    <div class="payment-option-desc">Pay with check upon delivery</div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                        <div class="form-check payment-option">
+                                            <input class="form-check-input" type="radio" name="payment_method" id="payment_qr" value="qr_payment">
+                                            <label class="form-check-label" for="payment_qr">
+                                                <div class="payment-option-content">
+                                                    <div class="payment-option-title">QR Payment</div>
+                                                    <div class="payment-option-desc">Pay now by scanning a QR code</div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="check_payment_info" class="payment-info-box">
                                     <p class="info-text">All orders will be processed with check payment upon delivery. Please have your check ready when your order arrives.</p>
+                                </div>
+                                <div id="qr_payment_info" class="payment-info-box" style="display: none;">
+                                    <p class="info-text">You'll be redirected to scan a QR code after confirming your order. Your order will be processed once payment is confirmed.</p>
                                 </div>
                             </div>
 
@@ -913,6 +1041,9 @@ if (isset($_SESSION['error'])) {
                                             <?php if (!empty($item['category'])): ?>
                                                 • <span class="badge badge-info"><?php echo htmlspecialchars($item['category']); ?></span>
                                             <?php endif; ?>
+                                            <?php if (isset($item['is_preorder']) && $item['is_preorder']): ?>
+                                                • <span class="badge badge-danger">Pre-order</span>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                     <div>₱<?php echo number_format($itemSubtotal, 2); ?></div>
@@ -948,7 +1079,7 @@ if (isset($_SESSION['error'])) {
                             <i class="fas fa-shopping-bag mr-2"></i> Place Order
                         </button>
 
-                       
+
                     </div>
                 </div>
             </div>
@@ -994,6 +1125,9 @@ if (isset($_SESSION['error'])) {
                                     <?php echo htmlspecialchars($item['name']) . ' x ' . $quantity; ?>
                                     <?php if (!empty($item['category'])): ?>
                                         <small class="d-block text-muted"><?php echo htmlspecialchars($item['category']); ?></small>
+                                    <?php endif; ?>
+                                    <?php if (isset($item['is_preorder']) && $item['is_preorder']): ?>
+                                        <small class="d-block"><span class="badge badge-danger">Pre-order</span></small>
                                     <?php endif; ?>
                                 </span>
                                 <span>₱<?php echo number_format($itemSubtotal, 2); ?></span>
@@ -1131,7 +1265,7 @@ if (isset($_SESSION['error'])) {
             once: true
         });
 
-       
+
 
         // Function to show custom popup message
         function showPopup(message, isError = false) {
@@ -1165,6 +1299,21 @@ if (isset($_SESSION['error'])) {
             <?php if (isset($errorMessage)): ?>
                 showPopup('<?php echo addslashes($errorMessage); ?>', true);
             <?php endif; ?>
+
+            // Handle payment method selection
+            $('input[name="payment_method"]').change(function() {
+                const selectedMethod = $('input[name="payment_method"]:checked').val();
+
+                // Hide all payment info boxes
+                $('.payment-info-box').hide();
+
+                // Show the selected payment info box
+                if (selectedMethod === 'check_payment') {
+                    $('#check_payment_info').show();
+                } else if (selectedMethod === 'qr_payment') {
+                    $('#qr_payment_info').show();
+                }
+            });
 
             $('#placeOrderBtn').click(function(e) {
                 e.preventDefault();
@@ -1263,8 +1412,33 @@ if (isset($_SESSION['error'])) {
                                         }
 
                                         if (orderId) {
-                                            // Redirect to order confirmation page
-                                            window.location.href = 'order_confirmation.php?id=' + orderId;
+                                            // Check if QR payment was selected
+                                            const paymentMethod = $('input[name="payment_method"]:checked').val();
+
+                                            if (paymentMethod === 'qr_payment') {
+                                                // Log the redirection for debugging
+                                                console.log('Redirecting to QR payment page with order ID: ' + orderId);
+
+                                                // Store payment method in session via a hidden AJAX call
+                                                $.ajax({
+                                                    url: 'set_session_var.php',
+                                                    type: 'POST',
+                                                    data: {
+                                                        key: 'payment_method',
+                                                        value: 'qr_payment'
+                                                    },
+                                                    async: false // Make sure this completes before redirect
+                                                });
+
+                                                // Redirect to QR payment page
+                                                window.location.href = 'qr_payment.php?id=' + orderId;
+                                            } else {
+                                                // Log the redirection for debugging
+                                                console.log('Redirecting to order confirmation page with order ID: ' + orderId);
+
+                                                // Redirect to order confirmation page
+                                                window.location.href = 'order_confirmation.php?id=' + orderId;
+                                            }
                                         } else {
                                             // Fallback to direct form submission
                                             $('#checkoutForm').submit();

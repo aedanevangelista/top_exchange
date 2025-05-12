@@ -598,8 +598,32 @@ if ($sendEmail) {
             </div>
             <div class="detail-row">
                 <div class="detail-label">Payment Method:</div>
-                <div class="detail-value">Check Payment</div>
+                <div class="detail-value">
+                    <?php if (isset($order['payment_method'])): ?>
+                        <?php if ($order['payment_method'] === 'qr_payment'): ?>
+                            QR Payment
+                            <?php if (isset($order['payment_status'])): ?>
+                                <span class="badge <?php echo $order['payment_status'] === 'Completed' ? 'badge-success' : 'badge-warning'; ?>">
+                                    <?php echo $order['payment_status']; ?>
+                                </span>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            Check Payment
+                        <?php endif; ?>
+                    <?php else: ?>
+                        Check Payment
+                    <?php endif; ?>
+                </div>
             </div>
+
+            <?php if (isset($order['payment_method']) && $order['payment_method'] === 'qr_payment' && isset($order['payment_status']) && $order['payment_status'] !== 'Completed'): ?>
+            <div class="detail-row">
+                <div class="detail-label">Payment Action:</div>
+                <div class="detail-value">
+                    <a href="qr_payment.php?id=<?php echo $orderId; ?>" class="btn btn-sm btn-primary">Complete Payment</a>
+                </div>
+            </div>
+            <?php endif; ?>
             <?php if (!empty($order['special_instructions'])): ?>
                 <div class="detail-row">
                     <div class="detail-label">Special Instructions:</div>
@@ -621,6 +645,9 @@ if ($sendEmail) {
                             <?php endif; ?>
                             <?php if (!empty($item['packaging'])): ?>
                                 • <?php echo htmlspecialchars($item['packaging']); ?>
+                            <?php endif; ?>
+                            <?php if (isset($item['is_preorder']) && $item['is_preorder']): ?>
+                                • <span class="badge badge-danger">Pre-order</span>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -705,7 +732,10 @@ if ($sendEmail) {
         }
 
         $(document).ready(function() {
-            <?php if (isset($emailSuccessMessage)): ?>
+            <?php if (isset($_SESSION['payment_success'])): ?>
+                showPopup('Payment completed successfully!', false);
+                <?php unset($_SESSION['payment_success']); ?>
+            <?php elseif (isset($emailSuccessMessage)): ?>
                 showPopup('<?php echo addslashes($emailSuccessMessage); ?>', false);
             <?php elseif (isset($emailErrorMessage)): ?>
                 showPopup('<?php echo addslashes($emailErrorMessage); ?>', true);

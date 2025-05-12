@@ -22,8 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Rate limiting
         if (isset($_SESSION['last_verification_attempt'])) {
             $time_since_last_attempt = time() - $_SESSION['last_verification_attempt'];
-            if ($time_since_last_attempt < 5) {
-                $error_message = "Please wait 5 seconds between verification attempts.";
+            if ($time_since_last_attempt < 30) {
+                $error_message = "Please wait 30 seconds between verification attempts.";
             }
         }
 

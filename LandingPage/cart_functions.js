@@ -113,6 +113,7 @@ function updateCartModal() {
                                 <td>
                                     <h6>${item.name}</h6>
                                     <small class="text-muted">${item.packaging || ''}</small>
+                                    ${item.is_preorder ? '<span class="badge badge-danger">Pre-order</span>' : ''}
                                 </td>
                                 <td>₱${price.toFixed(2)}</td>
                                 <td>

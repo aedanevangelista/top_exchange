@@ -48,6 +48,7 @@ $imagePath = isset($_POST['image_path']) && !empty($_POST['image_path']) ? $_POS
 $packaging = $_POST['packaging'] ?? '';
 $category = $_POST['category'] ?? '';
 $quantity = isset($_POST['quantity']) ? intval($_POST['quantity']) : 1;
+$isPreOrder = isset($_POST['is_preorder']) ? filter_var($_POST['is_preorder'], FILTER_VALIDATE_BOOLEAN) : false;
 
 // Log the data being added to the cart
 error_log("Adding to cart: Product ID: $productId, Name: $productName, Price: $productPrice, Image: $imagePath, Quantity: $quantity");
@@ -76,7 +77,8 @@ if (isset($_SESSION['cart'][$productId])) {
         'quantity' => $quantity,
         'image_path' => $imagePath,
         'packaging' => $packaging,
-        'category' => $category
+        'category' => $category,
+        'is_preorder' => $isPreOrder
     ];
 }
 
@@ -87,10 +89,11 @@ $cartCount = array_sum(array_column($_SESSION['cart'], 'quantity'));
 $response = [
     'success' => true,
     'cart_count' => $cartCount,
-    'message' => 'Product added to cart',
+    'message' => $isPreOrder ? 'Pre-order added to cart' : 'Product added to cart',
     'product_id' => $productId,
     'quantity_added' => $quantity,
-    'total_quantity' => $_SESSION['cart'][$productId]['quantity']
+    'total_quantity' => $_SESSION['cart'][$productId]['quantity'],
+    'is_preorder' => $isPreOrder
 ];
 
 // Debug information

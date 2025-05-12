@@ -38,7 +38,8 @@ foreach ($cartItems as $productId => $item) {
         'price' => $price,
         'quantity' => $quantity,
         'image_path' => isset($item['image_path']) ? $item['image_path'] : '/LandingPage/images/default-product.jpg',
-        'packaging' => isset($item['packaging']) ? $item['packaging'] : ''
+        'packaging' => isset($item['packaging']) ? $item['packaging'] : '',
+        'is_preorder' => isset($item['is_preorder']) ? (bool)$item['is_preorder'] : false
     ];
 
     $response['subtotal'] += $price * $quantity;

@@ -1,7 +1,7 @@
 <?php
 /**
  * Send Order Email
- * 
+ *
  * This file contains functions to send a professional order confirmation email
  * to the customer after checkout.
  */
@@ -9,13 +9,13 @@
 // Function to get user email from database
 function getUserEmail($conn, $username) {
     $email = null;
-    
+
     // Try to get email from clients_accounts table
     $stmt = $conn->prepare("SELECT email FROM clients_accounts WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($result->num_rows > 0) {
         $user = $result->fetch_assoc();
         $email = $user['email'];
@@ -25,13 +25,13 @@ function getUserEmail($conn, $username) {
         $stmt->bind_param("s", $username);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         if ($result->num_rows > 0) {
             $user = $result->fetch_assoc();
             $email = $user['email'] . "@topexchange.com"; // Default domain for admin accounts
         }
     }
-    
+
     $stmt->close();
     return $email;
 }
@@ -44,16 +44,16 @@ function generateOrderEmailHTML($order, $orderItems, $userEmail) {
     $companyAddress = "123 Main Street, Manila, Philippines";
     $companyPhone = "+63 (2) 8123 4567";
     $companyEmail = "orders@topexchangefoodcorp.com";
-    
+
     // Format the order date and delivery date
     $orderDate = date('F j, Y', strtotime($order['order_date']));
     $deliveryDate = date('F j, Y', strtotime($order['delivery_date']));
     $deliveryDay = date('l', strtotime($order['delivery_date']));
-    
+
     // Calculate order totals
     $subtotal = $order['subtotal'];
     $total = $order['total_amount'];
-    
+
     // Start building the HTML email
     $html = '
     <!DOCTYPE html>
@@ -197,12 +197,12 @@ function generateOrderEmailHTML($order, $orderItems, $userEmail) {
                 <img src="' . $companyLogo . '" alt="' . $companyName . '" class="logo">
                 <h1>Order Confirmation</h1>
             </div>
-            
+
             <div class="confirmation-message">
                 <h2>Thank You for Your Order!</h2>
                 <p>We\'ve received your order and will process it shortly. Your order will be delivered on the selected date.</p>
             </div>
-            
+
             <div class="order-details">
                 <h3>Order Information</h3>
                 <div class="detail-row">
@@ -227,9 +227,23 @@ function generateOrderEmailHTML($order, $orderItems, $userEmail) {
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Payment Method:</span>
-                    <span>Check Payment</span>
+                    <span>';
+
+    // Dynamically display payment method
+    if (isset($order['payment_method']) && $order['payment_method'] === 'qr_payment') {
+        $html .= 'QR Payment';
+        // Add payment status if available
+        if (isset($order['payment_status'])) {
+            $statusClass = $order['payment_status'] === 'Completed' ? 'color: #28a745; font-weight: bold;' : 'color: #ffc107; font-weight: bold;';
+            $html .= ' <span style="' . $statusClass . '">(' . $order['payment_status'] . ')</span>';
+        }
+    } else {
+        $html .= 'Check Payment';
+    }
+
+    $html .= '</span>
                 </div>';
-    
+
     // Add special instructions if any
     if (!empty($order['special_instructions'])) {
         $html .= '
@@ -238,13 +252,13 @@ function generateOrderEmailHTML($order, $orderItems, $userEmail) {
                     <span>' . htmlspecialchars($order['special_instructions']) . '</span>
                 </div>';
     }
-    
+
     $html .= '
             </div>
-            
+
             <div class="order-items">
                 <h3>Order Items</h3>';
-    
+
     // Add each order item
     foreach ($orderItems as $item) {
         $html .= '
@@ -252,26 +266,26 @@ function generateOrderEmailHTML($order, $orderItems, $userEmail) {
                     <div class="item-name">' . htmlspecialchars($item['item_description']) . '</div>
                     <div class="item-details">
                         ' . $item['quantity'] . ' x ₱' . number_format($item['price'], 2);
-        
+
         // Add category if available
         if (!empty($item['category'])) {
             $html .= ' • Category: ' . htmlspecialchars($item['category']);
         }
-        
+
         // Add packaging if available
         if (!empty($item['packaging'])) {
             $html .= ' • ' . htmlspecialchars($item['packaging']);
         }
-        
+
         $html .= '
                     </div>
                     <div class="item-price">₱' . number_format($item['price'] * $item['quantity'], 2) . '</div>
                 </div>';
     }
-    
+
     $html .= '
             </div>
-            
+
             <div class="order-totals">
                 <div class="total-row">
                     <span>Subtotal:</span>
@@ -282,11 +296,26 @@ function generateOrderEmailHTML($order, $orderItems, $userEmail) {
                     <span>₱' . number_format($total, 2) . '</span>
                 </div>
             </div>
-            
-            <div class="note">
-                <strong>Note:</strong> Please prepare a check payment for the total amount. Our delivery personnel will collect the payment upon delivery.
+
+            <div class="note">';
+
+    // Customize note based on payment method
+    if (isset($order['payment_method']) && $order['payment_method'] === 'qr_payment') {
+        if (isset($order['payment_status']) && $order['payment_status'] === 'Completed') {
+            $html .= '
+                <strong>Note:</strong> Thank you for completing your payment via QR code. Your order has been confirmed and will be delivered on the scheduled date.';
+        } else {
+            $html .= '
+                <strong>Note:</strong> Please complete your QR payment if you haven\'t done so already. Your order will be processed once payment is confirmed.';
+        }
+    } else {
+        $html .= '
+                <strong>Note:</strong> Please prepare a check payment for the total amount. Our delivery personnel will collect the payment upon delivery.';
+    }
+
+    $html .= '
             </div>
-            
+
             <div class="footer">
                 <p>If you have any questions about your order, please contact our customer service.</p>
                 <div class="contact-info">
@@ -299,7 +328,7 @@ function generateOrderEmailHTML($order, $orderItems, $userEmail) {
         </div>
     </body>
     </html>';
-    
+
     return $html;
 }
 
@@ -307,25 +336,32 @@ function generateOrderEmailHTML($order, $orderItems, $userEmail) {
 function sendOrderConfirmationEmail($conn, $orderId, $username) {
     // Get user email
     $userEmail = getUserEmail($conn, $username);
-    
+
     if (!$userEmail) {
         error_log("Could not find email for user: $username");
         return false;
     }
-    
+
     // Fetch order details
     $stmt = $conn->prepare("SELECT * FROM orders WHERE id = ? AND username = ?");
     $stmt->bind_param("is", $orderId, $username);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     if ($result->num_rows === 0) {
         error_log("Order not found: ID=$orderId, Username=$username");
         return false;
     }
-    
+
     $order = $result->fetch_assoc();
-    
+
+    // Log the order details for debugging
+    error_log("Send Order Email - Order details: " . json_encode([
+        'order_id' => $orderId,
+        'payment_method' => $order['payment_method'] ?? 'not set',
+        'payment_status' => $order['payment_status'] ?? 'not set'
+    ]));
+
     // Safely decode JSON orders
     $orderItems = [];
     if (!empty($order['orders'])) {
@@ -338,10 +374,10 @@ function sendOrderConfirmationEmail($conn, $orderId, $username) {
             return false;
         }
     }
-    
+
     // Generate email content
     $emailHTML = generateOrderEmailHTML($order, $orderItems, $userEmail);
-    
+
     // Email headers
     $subject = "Order Confirmation - " . $order['po_number'];
     $headers = "MIME-Version: 1.0" . "\r\n";
@@ -349,10 +385,10 @@ function sendOrderConfirmationEmail($conn, $orderId, $username) {
     $headers .= "From: Top Exchange Food Corp <orders@topexchangefoodcorp.com>" . "\r\n";
     $headers .= "Reply-To: orders@topexchangefoodcorp.com" . "\r\n";
     $headers .= "X-Mailer: PHP/" . phpversion();
-    
+
     // Send the email
     $mailSent = mail($userEmail, $subject, $emailHTML, $headers);
-    
+
     if ($mailSent) {
         // Log success
         error_log("Order confirmation email sent to $userEmail for order ID $orderId");

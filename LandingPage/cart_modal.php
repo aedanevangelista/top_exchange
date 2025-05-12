@@ -44,6 +44,9 @@
                                             <td>
                                                 <h6><?php echo htmlspecialchars($item['name']); ?></h6>
                                                 <small class="text-muted"><?php echo htmlspecialchars($item['packaging'] ?? ''); ?></small>
+                                                <?php if (isset($item['is_preorder']) && $item['is_preorder']): ?>
+                                                <span class="badge badge-danger">Pre-order</span>
+                                                <?php endif; ?>
                                             </td>
                                             <td>₱<?php echo number_format($item['price'], 2); ?></td>
                                             <td>
