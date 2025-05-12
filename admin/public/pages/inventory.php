@@ -265,12 +265,54 @@ $products_data_result = $conn->query($products_sql);
         .view-ingredients-btn { background-color: #555555; color: white; border: none; padding: 5px 10px; border-radius: 80px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
         .view-ingredients-btn i { margin-right: 2px; }
         .view-ingredients-btn:hover { background-color: #333333; }
-        .edit-btn, .status-btn { display: inline-flex; align-items: center; margin-top: 5px; width: calc(100% - 10px); justify-content: center;}
+        
+        /* --- MODIFIED CSS FOR BUTTONS --- */
+        .edit-btn, .status-btn {
+            display: inline-flex;
+            align-items: center;
+            margin-top: 5px;
+            width: calc(100% - 10px); 
+            justify-content: center;
+            padding: 6px 12px;
+            font-size: 14px;
+            font-weight: normal;
+            line-height: 1.42857143;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            cursor: pointer;
+            user-select: none;
+            border: 1px solid #ccc; 
+            border-radius: 4px;
+            color: #333; /* Default text color for edit-btn and deactivate-btn */
+            background-color: #fff; /* Default background for edit-btn and deactivate-btn */
+            text-decoration: none;
+        }
         .edit-btn i, .status-btn i { margin-right: 5px; }
-        .status-btn.activate-btn { background-color: #5cb85c; color: white; }
-        .status-btn.activate-btn:hover { background-color: #4cae4c; }
-        .status-btn.deactivate-btn { background-color: #d9534f; color: white; }
-        .status-btn.deactivate-btn:hover { background-color: #c9302c; }
+
+        /* Hover for edit-btn and status-btn that are NOT activate-btn (i.e., deactivate-btn) */
+        .edit-btn:hover,
+        .status-btn:not(.activate-btn):hover {
+            color: #333;
+            background-color: #e6e6e6;
+            border-color: #adadad;
+        }
+
+        /* Activate button - keeps its distinct style */
+        .status-btn.activate-btn { 
+            background-color: #5cb85c; 
+            color: white; 
+            border-color: #4cae4c;
+        }
+        .status-btn.activate-btn:hover { 
+            background-color: #4cae4c; 
+            border-color: #398439;
+        }
+
+        /* Deactivate button - styling is now inherited from the base .status-btn, making it uniform with .edit-btn */
+        /* The old red styling for .status-btn.deactivate-btn is removed */
+        /* --- END MODIFIED CSS FOR BUTTONS --- */
+
         .ingredients-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .ingredients-table th, .ingredients-table td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
         .ingredients-table th { background-color: #f2f2f2; font-weight: bold; }
@@ -381,7 +423,8 @@ $products_data_result = $conn->query($products_sql);
 
                             $status_class = $row['status'] == 'Active' ? 'status-active' : 'status-inactive';
                             $status_button_text = $row['status'] == 'Active' ? 'Deactivate' : 'Activate';
-                            $status_button_class = $row['status'] == 'Active' ? 'deactivate-btn' : 'activate-btn';
+                            // The class for deactivate-btn will now just be .status-btn, it won't have a specific .deactivate-btn color class unless you re-add it
+                            $status_button_specific_class = $row['status'] == 'Active' ? '' : 'activate-btn'; // Deactivate button gets base .status-btn style
                             $status_button_icon = $row['status'] == 'Active' ? 'fa-toggle-off' : 'fa-toggle-on';
 
 
@@ -418,7 +461,7 @@ $products_data_result = $conn->query($products_sql);
                                     <button class='edit-btn' onclick='editProduct({$row['product_id']}, \"company\")'>
                                         <i class='fas fa-edit'></i> Edit
                                     </button>
-                                    <button class='status-btn {$status_button_class}' id='status-btn-{$row['product_id']}' onclick='toggleProductStatus({$row['product_id']}, \"{$row['status']}\")'>
+                                    <button class='status-btn {$status_button_specific_class}' id='status-btn-{$row['product_id']}' onclick='toggleProductStatus({$row['product_id']}, \"{$row['status']}\")'>
                                         <i class='fas {$status_button_icon}'></i> {$status_button_text}
                                     </button>
                                 </td>
@@ -1229,7 +1272,6 @@ $products_data_result = $conn->query($products_sql);
                 return;
             }
 
-            // Corrected path: ../../backend/update_product_status.php
             fetch('../../backend/update_product_status.php', { 
                 method: 'POST',
                 headers: {
@@ -1241,9 +1283,7 @@ $products_data_result = $conn->query($products_sql);
                 })
             })
             .then(response => {
-                // Check if the response is OK (status code 200-299)
                 if (!response.ok) {
-                    // If not OK, log the response status and text to help debug
                     response.text().then(text => {
                         console.error(`Error from server (${response.status}):`, text);
                         toastr.error(`Server error (${response.status}). Check console for details.`, { timeOut: 5000, closeButton: true });
@@ -1279,7 +1319,11 @@ $products_data_result = $conn->query($products_sql);
                         const buttonText = data.new_status === 'Active' ? 'Deactivate' : 'Activate';
                         const buttonIconClass = data.new_status === 'Active' ? 'fa-toggle-off' : 'fa-toggle-on';
                         statusButton.innerHTML = `<i class="fas ${buttonIconClass}"></i> ${buttonText}`;
-                        statusButton.className = `status-btn ${data.new_status === 'Active' ? 'deactivate-btn' : 'activate-btn'}`;
+                        // Adjust class for styling: remove activate-btn if present, add it if new_status is Inactive (so button becomes Activate)
+                        statusButton.classList.remove('activate-btn');
+                        if (data.new_status === 'Inactive') { // If product is now Inactive, button should be "Activate"
+                            statusButton.classList.add('activate-btn');
+                        }
                         statusButton.setAttribute('onclick', `toggleProductStatus(${productId}, '${data.new_status}')`);
                     }
                 } else {
@@ -1294,7 +1338,7 @@ $products_data_result = $conn->query($products_sql);
 
 
         function viewIngredients(productId, productType) {
-             let apiUrl = `../pages/api/get_product_ingredients.php?id=${productId}`; // This path seems correct based on previous context
+             let apiUrl = `../pages/api/get_product_ingredients.php?id=${productId}`; 
             fetch(apiUrl)
                 .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for ingredients:", text); throw new Error("Server returned non-JSON response for ingredients"); }}))
                 .then(product => {
@@ -1344,7 +1388,6 @@ $products_data_result = $conn->query($products_sql);
             errorDiv.textContent = ''; 
             let isValid = true;
             if (rows.length === 0) { 
-                // Allow saving with no ingredients
             } else {
                 rows.forEach(row => {
                     if (!isValid) return; 
@@ -1359,7 +1402,7 @@ $products_data_result = $conn->query($products_sql);
             }
             if (!isValid && rows.length > 0) return;  
 
-            fetch("../pages/api/update_ingredients.php", { // This path seems correct based on previous context
+            fetch("../pages/api/update_ingredients.php", { 
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ product_id: productId, product_type: productType, ingredients: ingredients })
@@ -1384,7 +1427,7 @@ $products_data_result = $conn->query($products_sql);
                  toastr.error("Please enter a valid positive amount to adjust.", { timeOut: 3000, closeButton: true });
                  amountInput.focus(); return;
             }
-            fetch("../pages/api/update_stock.php", { // This path seems correct based on previous context
+            fetch("../pages/api/update_stock.php", { 
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ product_id: productId, action: action, amount: amount, product_type: productType })
