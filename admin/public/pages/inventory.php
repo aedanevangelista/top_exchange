@@ -14,7 +14,7 @@ $active_tab = 'company';
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST['formType'] == 'edit_product') {
     header('Content-Type: application/json');
 
-    $product_id = intval($_POST['product_id']); // Corrected: ensure integer type
+    $product_id = intval($_POST['product_id']);
     $table = 'products'; 
 
     $category = $_POST['category'];
@@ -24,6 +24,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock_quantity']);
     $additional_description = $_POST['additional_description'];
+    $status = $_POST['status']; // New status field
 
     // --- REFINED Expiration processing for Edit ---
     $expiration_duration_str = trim($_POST['expiration_duration'] ?? '');
@@ -65,6 +66,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
 
     if ($price > 5000) {
         echo json_encode(['success' => false, 'message' => 'Price cannot exceed ₱5000.']);
+        exit;
+    }
+    
+    if (!in_array($status, ['Active', 'Inactive'])) {
+        echo json_encode(['success' => false, 'message' => 'Invalid status value.']);
         exit;
     }
 
@@ -150,8 +156,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         }
     }
 
-    // Corrected SQL UPDATE statement and bind_param
-    $sql_update = "UPDATE $table SET category = ?, product_name = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, product_image = ?, expiration = ? WHERE product_id = ?";
+    $sql_update = "UPDATE $table SET category = ?, product_name = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, status = ?, product_image = ?, expiration = ? WHERE product_id = ?";
     $stmt = $conn->prepare($sql_update);
 
     if (!$stmt) {
@@ -159,8 +164,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         exit;
     }
 
-    // Corrected type string: s,s,s,s,d,i,s,s,s,i (10 types for 10 params)
-    $correct_bind_types = "ssssdisssi"; 
+    // Corrected type string: s,s,s,s,d,i,s,s,s,s,i (11 types for 11 params)
+    // category, product_name, item_description, packaging, price, stock_quantity, additional_description, status, product_image, expiration, product_id
+    $correct_bind_types = "ssssdissssi"; 
     $stmt->bind_param(
         $correct_bind_types,
         $category,
@@ -170,14 +176,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         $price,
         $stock_quantity,
         $additional_description,
+        $status, // New status parameter
         $product_image,
-        $expiration_string_to_save, // Bound as 's'
-        $product_id                 // Bound as 'i'
+        $expiration_string_to_save,
+        $product_id
     );
 
     if ($stmt->execute()) {
         if ($old_item_description != $item_description && !empty($product_image)) {
-            // This logic might need review if item_description is not unique enough as a folder name key
             $stmt_update_image = $conn->prepare("UPDATE $table SET product_image = ? WHERE item_description = ? AND product_id != ?");
             if($stmt_update_image) {
                 $stmt_update_image->bind_param("ssi", $product_image, $item_description, $product_id);
@@ -208,7 +214,8 @@ $categories_result = $conn->query($categories_sql);
 $product_names_sql = "SELECT DISTINCT product_name FROM products WHERE product_name IS NOT NULL AND product_name != '' ORDER BY product_name";
 $product_names_result = $conn->query($product_names_sql);
 
-$products_sql = "SELECT product_id, category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image, expiration FROM products ORDER BY category, product_name, item_description";
+// Updated to select the 'status' column
+$products_sql = "SELECT product_id, category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image, expiration, status FROM products ORDER BY category, product_name";
 $products_data_result = $conn->query($products_sql);
 ?>
 
@@ -261,8 +268,12 @@ $products_data_result = $conn->query($products_sql);
         .view-ingredients-btn { background-color: #555555; color: white; border: none; padding: 5px 10px; border-radius: 80px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
         .view-ingredients-btn i { margin-right: 2px; }
         .view-ingredients-btn:hover { background-color: #333333; }
-        .edit-btn { display: inline-flex; align-items: center; }
-        .edit-btn i { margin-right: 5px; }
+        .edit-btn, .status-btn { display: inline-flex; align-items: center; margin-top: 5px; width: calc(100% - 10px); justify-content: center;}
+        .edit-btn i, .status-btn i { margin-right: 5px; }
+        .status-btn.activate-btn { background-color: #5cb85c; color: white; }
+        .status-btn.activate-btn:hover { background-color: #4cae4c; }
+        .status-btn.deactivate-btn { background-color: #d9534f; color: white; }
+        .status-btn.deactivate-btn:hover { background-color: #c9302c; }
         .ingredients-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .ingredients-table th, .ingredients-table td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
         .ingredients-table th { background-color: #f2f2f2; font-weight: bold; }
@@ -299,6 +310,8 @@ $products_data_result = $conn->query($products_sql);
             border: 1px solid #ddd; 
             border-radius: 4px; 
         }
+        .status-active { color: green; font-weight: bold; }
+        .status-inactive { color: red; font-weight: bold; }
 
     </style>
 </head>
@@ -351,6 +364,7 @@ $products_data_result = $conn->query($products_sql);
                         <th>Stock Level</th>
                         <th>Image</th>
                         <th>Additional Description</th>
+                        <th>Status</th> {/* New Status Header */}
                         <th>Ingredients</th>
                         <th>Adjust Stock</th>
                         <th>Actions</th>
@@ -365,7 +379,14 @@ $products_data_result = $conn->query($products_sql);
                                                data-product-name='" . htmlspecialchars($row['product_name'] ?? '', ENT_QUOTES) . "'
                                                data-item-description='" . htmlspecialchars($row['item_description'] ?? '', ENT_QUOTES) . "'
                                                data-packaging='" . htmlspecialchars($row['packaging'] ?? '', ENT_QUOTES) . "'
-                                               data-additional-description='" . htmlspecialchars($row['additional_description'] ?? '', ENT_QUOTES) . "'";
+                                               data-additional-description='" . htmlspecialchars($row['additional_description'] ?? '', ENT_QUOTES) . "'
+                                               data-status='{$row['status']}'"; // Added status to data attributes
+
+                            $status_class = $row['status'] == 'Active' ? 'status-active' : 'status-inactive';
+                            $status_button_text = $row['status'] == 'Active' ? 'Deactivate' : 'Activate';
+                            $status_button_class = $row['status'] == 'Active' ? 'deactivate-btn' : 'activate-btn';
+                            $status_button_icon = $row['status'] == 'Active' ? 'fa-toggle-off' : 'fa-toggle-on';
+
 
                             echo "<tr $data_attributes>
                                 <td>{$row['category']}</td>
@@ -385,6 +406,7 @@ $products_data_result = $conn->query($products_sql);
 
                             echo "</td>
                                 <td class='additional-desc'>" . htmlspecialchars($row['additional_description'] ?? '', ENT_QUOTES) . "</td>
+                                <td class='{$status_class}' id='status-text-{$row['product_id']}'>{$row['status']}</td> {/* New Status Cell */}
                                 <td>
                                     <button class='view-ingredients-btn' onclick='viewIngredients({$row['product_id']}, \"company\")'>
                                         <i class='fas fa-list'></i> View
@@ -399,11 +421,14 @@ $products_data_result = $conn->query($products_sql);
                                     <button class='edit-btn' onclick='editProduct({$row['product_id']}, \"company\")'>
                                         <i class='fas fa-edit'></i> Edit
                                     </button>
+                                    <button class='status-btn {$status_button_class}' id='status-btn-{$row['product_id']}' onclick='toggleProductStatus({$row['product_id']}, \"{$row['status']}\")'>
+                                        <i class='fas {$status_button_icon}'></i> {$status_button_text}
+                                    </button>
                                 </td>
                             </tr>";
                         }
                     } else {
-                        echo "<tr><td colspan='12'>No products found.</td></tr>";
+                        echo "<tr><td colspan='13'>No products found.</td></tr>"; // Increased colspan
                     }
                     ?>
                 </tbody>
@@ -502,6 +527,14 @@ $products_data_result = $conn->query($products_sql);
 
                     <label for="additional_description">Additional Description:</label>
                     <textarea id="additional_description" name="additional_description" placeholder="Add more details about the product" required></textarea>
+                    
+                    {/* You might want to add a Status select here for new products, defaulting to Active */}
+                    {/* <label for="add_status">Status:</label>
+                    <select id="add_status" name="status" required>
+                        <option value="Active" selected>Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select> */}
+
 
                     <label for="product_image">Product Image: <span class="file-info">(Max: 20MB, JPG/PNG only)</span></label>
                     <input type="file" id="product_image" name="product_image" accept="image/jpeg, image/png">
@@ -574,6 +607,11 @@ $products_data_result = $conn->query($products_sql);
                             <label for="edit_stock_quantity">Stock Quantity:</label>
                             <input type="number" id="edit_stock_quantity" name="stock_quantity" min="0" required placeholder="0">
                         
+                            <label for="edit_status">Status:</label> {/* New Status field in Edit Modal */}
+                            <select id="edit_status" name="status" required>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
                         </div>
                     </div>
                      
@@ -700,7 +738,8 @@ $products_data_result = $conn->query($products_sql);
                 const category = (row.getAttribute('data-category') || '').toLowerCase();
                 const packaging = (row.getAttribute('data-packaging') || '').toLowerCase();
                 const additionalDescription = (row.getAttribute('data-additional-description') || '').toLowerCase();
-                if (itemDescription.includes(searchValue) || productName.includes(searchValue) || category.includes(searchValue) || packaging.includes(searchValue) || additionalDescription.includes(searchValue)) {
+                const status = (row.getAttribute('data-status') || '').toLowerCase(); // Search by status
+                if (itemDescription.includes(searchValue) || productName.includes(searchValue) || category.includes(searchValue) || packaging.includes(searchValue) || additionalDescription.includes(searchValue) || status.includes(searchValue)) {
                     row.style.display = '';
                 } else {
                     row.style.display = 'none';
@@ -811,7 +850,7 @@ $products_data_result = $conn->query($products_sql);
                  return;
             }
 
-            const requiredFields = this.querySelectorAll('input[required]:not(#new_category):not(#new_product_name), select[required]:not(#new_category):not(#new_product_name), textarea[required]:not(#additional_description)'); // Adjusted required check
+            const requiredFields = this.querySelectorAll('input[required]:not(#new_category):not(#new_product_name), select[required]:not(#new_category):not(#new_product_name), textarea[required]');
             let firstEmptyField = null;
             for (const field of requiredFields) {
                 if (field.id === 'packaging_quantity' || field.id === 'packaging_unit' || field.id === 'packaging_container') continue; 
@@ -826,7 +865,6 @@ $products_data_result = $conn->query($products_sql);
                 firstEmptyField.focus();
                 return;
             }
-            // Check additional_description separately if it's required, as it was excluded above
             const additionalDescField = document.getElementById('additional_description');
             if (additionalDescField.required && !additionalDescField.value.trim()){
                 errorDiv.textContent = `Please fill in the '${additionalDescField.labels?.[0]?.textContent || additionalDescField.id}' field.`;
@@ -890,10 +928,15 @@ $products_data_result = $conn->query($products_sql);
             if (expirationString) {
                 formData.set('expiration', expirationString);
             } else {
-                formData.delete('expiration'); // Ensure it's not set if null
+                formData.delete('expiration'); 
             }
             formData.delete('expiration_duration'); 
             formData.delete('expiration_unit');   
+
+            // Add status for new product - assuming you add a select with name="status" to the add form
+            // const addStatusSelect = document.getElementById('add_status'); // Example ID
+            // if (addStatusSelect) formData.set('status', addStatusSelect.value);
+            // else formData.set('status', 'Active'); // Default if not in form
 
 
             if (!formData.has('stock_quantity')) {
@@ -904,7 +947,7 @@ $products_data_result = $conn->query($products_sql);
             formData.delete('packaging_unit');
             formData.delete('packaging_container');
 
-            fetch("../../backend/add_product.php", {
+            fetch("../../backend/add_product.php", { // Ensure add_product.php handles 'status'
                 method: "POST",
                 body: formData
             })
@@ -962,7 +1005,7 @@ $products_data_result = $conn->query($products_sql);
                  return;
             }
             
-            const requiredFields = this.querySelectorAll('input[required]:not(#edit_new_category):not(#edit_new_product_name), select[required]:not(#edit_new_category):not(#edit_new_product_name), textarea[required]:not(#edit_additional_description)'); // Adjusted
+            const requiredFields = this.querySelectorAll('input[required]:not(#edit_new_category):not(#edit_new_product_name), select[required]:not(#edit_new_category):not(#edit_new_product_name), textarea[required]');
             let firstEmptyField = null;
             for (const field of requiredFields) {
                  if (field.id === 'edit_packaging_quantity' || field.id === 'edit_packaging_unit' || field.id === 'edit_packaging_container') continue; 
@@ -985,7 +1028,7 @@ $products_data_result = $conn->query($products_sql);
             }
 
 
-            const formData = new FormData(this);
+            const formData = new FormData(this); // Status will be included from the #edit_status select
             if (categorySelect.value === 'new') formData.set('category', newCategoryInput.value.trim());
             else formData.set('category', categorySelect.value);
 
@@ -993,15 +1036,14 @@ $products_data_result = $conn->query($products_sql);
             else formData.set('product_name', productNameSelect.value);
 
             formData.set('packaging', packagingString);
-            formData.set('is_walkin', '0'); // This seems specific, ensure it's intended.
+            formData.set('is_walkin', '0'); 
             
-            // These are derived and should not be sent directly if 'packaging' string is used by backend
             formData.delete('edit_packaging_quantity'); 
             formData.delete('edit_packaging_unit');
             formData.delete('edit_packaging_container');
 
 
-            fetch(window.location.href, { // Submitting to the same page (inventory.php)
+            fetch(window.location.href, { 
                 method: "POST",
                 body: formData
             })
@@ -1033,6 +1075,8 @@ $products_data_result = $conn->query($products_sql);
             document.getElementById('add_product_type').value = 'company';
             document.getElementById('add_expiration_duration').value = '';
             document.getElementById('add_expiration_unit').value = '';
+            // const addStatusSelect = document.getElementById('add_status'); // If you add it
+            // if(addStatusSelect) addStatusSelect.value = 'Active';
         }
 
         function closeAddProductModal() { document.getElementById('addProductModal').style.display = 'none'; }
@@ -1040,24 +1084,21 @@ $products_data_result = $conn->query($products_sql);
         function closeIngredientsModal() { document.getElementById('ingredientsModal').style.display = 'none'; }
 
         function editProduct(productId, productType) { 
-            let apiUrl = `../pages/api/get_product.php?id=${productId}`;
+            let apiUrl = `../pages/api/get_product.php?id=${productId}`; // Ensure this API returns 'status'
 
             fetch(apiUrl)
-                .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for get_product:", text); throw new Error("Server returned non-JSON response for get_product"); }}))
+                .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for get_product:", text); throw new Error("Server returned non-JSON response for product"); }}))
                 .then(product => {
-                    // DEBUGGING LINES ADDED HERE
-                    console.log("Fetched product for edit:", product);
-                    if(product) { // Ensure product is not null/undefined
-                        console.log("Product expiration from API:", product.expiration);
-                    } else {
-                        console.error("Product data is null or undefined from API.");
-                        toastr.error("Failed to load product data.", { timeOut: 3000, closeButton: true });
-                        return; // Stop further execution if product is not valid
+                    if(!product || typeof product.product_id === 'undefined') { // Added a check for product_id
+                        console.error("Product data is null, undefined, or invalid from API for ID:", productId, product);
+                        toastr.error("Failed to load product data. The product might not exist or there was an API error.", { timeOut: 4000, closeButton: true });
+                        return; 
                     }
 
 
                     document.getElementById('edit_product_id').value = product.product_id;
                     document.getElementById('edit_product_type').value = '0'; 
+                    document.getElementById('edit_status').value = product.status || 'Active'; // Set status dropdown
 
                     const categorySelect = document.getElementById('edit_category');
                     const newCategoryContainer = document.getElementById('edit-new-category-container');
@@ -1066,7 +1107,7 @@ $products_data_result = $conn->query($products_sql);
                     newCategoryInput.required = false; 
                     if (product.category) {
                         categorySelect.value = product.category;
-                        if (categorySelect.value !== product.category) { // If category not in dropdown
+                        if (categorySelect.value !== product.category) { 
                              categorySelect.value = 'new';
                              newCategoryContainer.style.display = 'block';
                              newCategoryInput.value = product.category;
@@ -1081,7 +1122,7 @@ $products_data_result = $conn->query($products_sql);
                     newProductNameInput.required = false; 
                     if (product.product_name) {
                         productNameSelect.value = product.product_name;
-                         if (productNameSelect.value !== product.product_name) { // If name not in dropdown
+                         if (productNameSelect.value !== product.product_name) { 
                              productNameSelect.value = 'new';
                              newProductNameContainer.style.display = 'block';
                              newProductNameInput.value = product.product_name;
@@ -1116,7 +1157,6 @@ $products_data_result = $conn->query($products_sql);
                             if (parsedContainer === 'pack') containerVal = 'Pack';
                             else if (parsedContainer === 'btl') containerVal = 'Btl';
                             else if (parsedContainer === 'cntr') containerVal = 'Cntr';
-                            // else it remains 'None' if not matched or explicitly 'None'
                         }
                     }
                     
@@ -1128,11 +1168,7 @@ $products_data_result = $conn->query($products_sql);
                     document.getElementById('edit_stock_quantity').value = product.stock_quantity || 0;
                     document.getElementById('edit_additional_description').value = product.additional_description || '';
 
-                    // --- REFINED Parsing expiration for Edit form ---
                     const productExpiration = product.expiration || ''; 
-                    // DEBUGGING LINE ADDED
-                    console.log("Parsing this expiration string for form:", productExpiration);
-                    
                     let form_exp_duration_val = '';
                     let form_exp_unit_val = ''; 
 
@@ -1158,34 +1194,28 @@ $products_data_result = $conn->query($products_sql);
                         if (hasMonthsInDb && !hasWeeksInDb) { 
                             form_exp_duration_val = monthsFromDb;
                             form_exp_unit_val = 'Month';
-                        } else if (hasWeeksInDb) { // Prioritize weeks if present, or if only weeks are there
-                            totalWeeks = (monthsFromDb * 4) + weeksFromDb; // monthsFromDb will be 0 if no month part
+                        } else if (hasWeeksInDb) { 
+                            totalWeeks = (monthsFromDb * 4) + weeksFromDb; 
                             form_exp_duration_val = totalWeeks;
                             form_exp_unit_val = 'Week';
-                        } else if (hasMonthsInDb) { // Fallback if only months matched (e.g. "1 Month" no weeks part)
+                        } else if (hasMonthsInDb) { 
                             form_exp_duration_val = monthsFromDb;
                             form_exp_unit_val = 'Month';
                         }
                         
-                        // Handle explicit "0 Weeks" or "0 Months" if not parsed into duration/unit yet
-                        // or if the value from DB is literally "0" (due to previous incorrect saving)
                         if (productExpiration.toLowerCase() === "0 weeks" || (productExpiration === "0" && !form_exp_unit_val)) {
                              form_exp_duration_val = 0;
                              form_exp_unit_val = 'Week';
                         } else if (productExpiration.toLowerCase() === "0 months" || (productExpiration === "0" && !form_exp_unit_val)) {
                              form_exp_duration_val = 0;
                              form_exp_unit_val = 'Month';
-                        } else if (productExpiration === "0" && !form_exp_duration_val && !form_exp_unit_val) { // If it's just "0" from DB
+                        } else if (productExpiration === "0" && !form_exp_duration_val && !form_exp_unit_val) { 
                             form_exp_duration_val = 0;
-                            form_exp_unit_val = 'Week'; // Default to week for "0"
+                            form_exp_unit_val = 'Week'; 
                         }
                     }
                     document.getElementById('edit_expiration_duration').value = form_exp_duration_val;
                     document.getElementById('edit_expiration_unit').value = form_exp_unit_val;
-                    // DEBUGGING LINE ADDED
-                    console.log("Form values to be set - Duration:", form_exp_duration_val, "Unit:", form_exp_unit_val);
-                    // --- END REFINED Parsing ---
-
 
                     document.getElementById('current-image-container').innerHTML = '';
                     if (product.product_image) {
@@ -1199,6 +1229,61 @@ $products_data_result = $conn->query($products_sql);
                     console.error("Error in editProduct fetch:", error);
                 });
         }
+
+        function toggleProductStatus(productId, currentStatus) {
+            const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
+            const actionText = newStatus === 'Active' ? 'activate' : 'deactivate';
+
+            if (!confirm(`Are you sure you want to ${actionText} this product?`)) {
+                return;
+            }
+
+            fetch('../backend/update_product_status.php', { // Path to your new backend script
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    new_status: newStatus
+                })
+            })
+            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for status update:", text); throw new Error("Server returned non-JSON response for status update"); }}))
+            .then(data => {
+                if (data.success) {
+                    toastr.success(data.message, { timeOut: 3000, closeButton: true });
+                    // Update UI
+                    const statusTextCell = document.getElementById(`status-text-${productId}`);
+                    const statusButton = document.getElementById(`status-btn-${productId}`);
+                    const productRow = statusTextCell.closest('tr');
+
+
+                    if (statusTextCell) {
+                        statusTextCell.textContent = data.new_status;
+                        statusTextCell.className = data.new_status === 'Active' ? 'status-active' : 'status-inactive';
+                    }
+                    if (productRow) {
+                        productRow.setAttribute('data-status', data.new_status);
+                    }
+
+                    if (statusButton) {
+                        const buttonText = data.new_status === 'Active' ? 'Deactivate' : 'Activate';
+                        const buttonIconClass = data.new_status === 'Active' ? 'fa-toggle-off' : 'fa-toggle-on';
+                        statusButton.innerHTML = `<i class="fas ${buttonIconClass}"></i> ${buttonText}`;
+                        statusButton.className = `status-btn ${data.new_status === 'Active' ? 'deactivate-btn' : 'activate-btn'}`;
+                        // Update the onclick attribute directly for the next toggle
+                        statusButton.setAttribute('onclick', `toggleProductStatus(${productId}, '${data.new_status}')`);
+                    }
+                } else {
+                    toastr.error(data.message || 'Failed to update status.', { timeOut: 3000, closeButton: true });
+                }
+            })
+            .catch(error => {
+                toastr.error('Error: ' + error.message, { timeOut: 3000, closeButton: true });
+                console.error('Error toggling product status:', error);
+            });
+        }
+
 
         function viewIngredients(productId, productType) {
              let apiUrl = `../pages/api/get_product_ingredients.php?id=${productId}`;
@@ -1217,7 +1302,7 @@ $products_data_result = $conn->query($products_sql);
                     tbody.innerHTML = '';
                     if (product.ingredients && product.ingredients.length > 0) {
                         product.ingredients.forEach(ingredient => addIngredientRow(ingredient[0], ingredient[1]));
-                    } else { addIngredientRow(); } // Add one empty row if no ingredients
+                    } else { addIngredientRow(); } 
                     document.getElementById('ingredientsModal').style.display = 'flex';
                     document.getElementById('ingredientsError').textContent = '';
                 })
@@ -1250,11 +1335,11 @@ $products_data_result = $conn->query($products_sql);
             const errorDiv = document.getElementById('ingredientsError');
             errorDiv.textContent = ''; 
             let isValid = true;
-            if (rows.length === 0) { // Allow saving with no ingredients
+            if (rows.length === 0) { 
                 // Proceed to fetch call with empty ingredients array
             } else {
                 rows.forEach(row => {
-                    if (!isValid) return; // Stop processing if an error was found
+                    if (!isValid) return; 
                     const ingredientSelect = row.querySelector('.ingredient-select');
                     const quantityInput = row.querySelector('.ingredient-quantity');
                     const ingredientName = ingredientSelect.value;
@@ -1264,14 +1349,14 @@ $products_data_result = $conn->query($products_sql);
                     ingredients.push([ingredientName, quantity]);
                 });
             }
-            if (!isValid && rows.length > 0) return;  // Don't proceed if there were rows and they had errors
+            if (!isValid && rows.length > 0) return;  
 
             fetch("../pages/api/update_ingredients.php", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ product_id: productId, product_type: productType, ingredients: ingredients })
             })
-            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for update_ingredients:", text); throw new Error("Server returned non-JSON response for update_ingredients"); }}))
+            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for update_ingredients:", text); throw new Error("Server returned non-JSON response for ingredients update"); }}))
             .then(data => {
                 if (data.success) {
                     toastr.success(data.message, { timeOut: 3000, closeButton: true });
@@ -1296,7 +1381,7 @@ $products_data_result = $conn->query($products_sql);
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ product_id: productId, action: action, amount: amount, product_type: productType })
             })
-            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for update_stock:", text); throw new Error("Server returned non-JSON response for update_stock"); }}))
+            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for update_stock:", text); throw new Error("Server returned non-JSON response for stock update"); }}))
             .then(data => {
                 if (data.success) {
                      toastr.success(data.message, { timeOut: 3000, closeButton: true });
