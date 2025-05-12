@@ -14,7 +14,7 @@ $active_tab = 'company';
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST['formType'] == 'edit_product') {
     header('Content-Type: application/json');
 
-    $product_id = intval($_POST['product_id']); 
+    $product_id = intval($_POST['product_id']); // Corrected: ensure integer type
     $table = 'products'; 
 
     $category = $_POST['category'];
@@ -31,8 +31,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
 
     $expiration_string_to_save = NULL; 
 
-    // If form validation makes these required, these should always have values.
-    // This logic handles conversion if they are provided.
     if ($expiration_duration_str !== '' && is_numeric($expiration_duration_str) && !empty($expiration_unit)) {
         $duration = intval($expiration_duration_str);
         if ($duration < 0) $duration = 0; 
@@ -43,7 +41,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
             if ($duration === 0) {
                 $expiration_string_to_save = "0 Weeks";
             } else {
-                $months = floor($duration / 4); 
+                $months = floor($duration / 4); // Assuming 4 weeks per month
                 $remaining_weeks = $duration % 4;
 
                 if ($months > 0) {
@@ -55,17 +53,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
                 
                 if (count($temp_parts) > 0) {
                     $expiration_string_to_save = implode(" ", $temp_parts);
-                } else { 
-                    // This case implies duration was a multiple of 4 (only months part added) or 0.
-                    // If duration was >0 and multiple of 4, temp_parts has month string.
-                    // So if temp_parts is empty, it implies original duration was 0.
+                } else {
                     $expiration_string_to_save = "0 Weeks"; 
                 }
             }
         } elseif ($expiration_unit === 'Month') {
             $expiration_string_to_save = $duration . ($duration == 1 ? " Month" : " Months");
         }
-    } // If duration or unit is empty (despite form requirement), it remains NULL
+    }
     // --- END REFINED Expiration processing ---
 
     if ($price > 5000) {
@@ -155,6 +150,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         }
     }
 
+    // Corrected SQL UPDATE statement and bind_param
     $sql_update = "UPDATE $table SET category = ?, product_name = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, product_image = ?, expiration = ? WHERE product_id = ?";
     $stmt = $conn->prepare($sql_update);
 
@@ -163,6 +159,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         exit;
     }
 
+    // Corrected type string: s,s,s,s,d,i,s,s,s,i (10 types for 10 params)
     $correct_bind_types = "ssssdisssi"; 
     $stmt->bind_param(
         $correct_bind_types,
@@ -174,12 +171,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         $stock_quantity,
         $additional_description,
         $product_image,
-        $expiration_string_to_save, 
-        $product_id                 
+        $expiration_string_to_save, // Bound as 's'
+        $product_id                 // Bound as 'i'
     );
 
     if ($stmt->execute()) {
         if ($old_item_description != $item_description && !empty($product_image)) {
+            // This logic might need review if item_description is not unique enough as a folder name key
             $stmt_update_image = $conn->prepare("UPDATE $table SET product_image = ? WHERE item_description = ? AND product_id != ?");
             if($stmt_update_image) {
                 $stmt_update_image->bind_param("ssi", $product_image, $item_description, $product_id);
@@ -487,11 +485,11 @@ $products_data_result = $conn->query($products_sql);
                     <div class="expiration-group">
                         <div class="expiration-item">
                             <label for="add_expiration_duration">Expiration Duration:</label>
-                            <input type="number" id="add_expiration_duration" name="expiration_duration" min="0" placeholder="e.g., 2" required>
+                            <input type="number" id="add_expiration_duration" name="expiration_duration" min="0" placeholder="e.g., 2">
                         </div>
                         <div class="expiration-item">
                             <label for="add_expiration_unit">Expiration Unit:</label>
-                            <select id="add_expiration_unit" name="expiration_unit" required>
+                            <select id="add_expiration_unit" name="expiration_unit">
                                 <option value="">-- Select Unit --</option>
                                 <option value="Week">Week(s)</option>
                                 <option value="Month">Month(s)</option>
@@ -608,11 +606,11 @@ $products_data_result = $conn->query($products_sql);
                     <div class="expiration-group">
                         <div class="expiration-item">
                             <label for="edit_expiration_duration">Expiration Duration:</label>
-                            <input type="number" id="edit_expiration_duration" name="expiration_duration" min="0" placeholder="e.g., 2" required>
+                            <input type="number" id="edit_expiration_duration" name="expiration_duration" min="0" placeholder="e.g., 2">
                         </div>
                         <div class="expiration-item">
                             <label for="edit_expiration_unit">Expiration Unit:</label>
-                            <select id="edit_expiration_unit" name="expiration_unit" required>
+                            <select id="edit_expiration_unit" name="expiration_unit">
                                 <option value="">-- Select Unit --</option>
                                 <option value="Week">Week(s)</option>
                                 <option value="Month">Month(s)</option>
@@ -812,13 +810,12 @@ $products_data_result = $conn->query($products_sql);
                  else document.getElementById('packaging_container').focus();
                  return;
             }
-            
-            // Check all required fields including expiration
-            const requiredFields = this.querySelectorAll('input[required]:not(#new_category):not(#new_product_name), select[required]:not(#new_category):not(#new_product_name), textarea[required]');
+
+            const requiredFields = this.querySelectorAll('input[required]:not(#new_category):not(#new_product_name), select[required]:not(#new_category):not(#new_product_name), textarea[required]:not(#additional_description)'); // Adjusted required check
             let firstEmptyField = null;
             for (const field of requiredFields) {
                 if (field.id === 'packaging_quantity' || field.id === 'packaging_unit' || field.id === 'packaging_container') continue; 
-                // No longer skipping expiration fields for 'add' form
+                if (field.id === 'add_expiration_duration' || field.id === 'add_expiration_unit') continue; 
                 if (field.offsetParent !== null && !field.value.trim() ) {
                     firstEmptyField = field;
                     break;
@@ -829,7 +826,16 @@ $products_data_result = $conn->query($products_sql);
                 firstEmptyField.focus();
                 return;
             }
+            // Check additional_description separately if it's required, as it was excluded above
+            const additionalDescField = document.getElementById('additional_description');
+            if (additionalDescField.required && !additionalDescField.value.trim()){
+                errorDiv.textContent = `Please fill in the '${additionalDescField.labels?.[0]?.textContent || additionalDescField.id}' field.`;
+                additionalDescField.focus();
+                return;
+            }
 
+
+            // --- REFINED Expiration string construction for Add form ---
             const addExpDurationInput = document.getElementById('add_expiration_duration');
             const addExpUnitInput = document.getElementById('add_expiration_unit');
             let expirationString = null; 
@@ -838,7 +844,6 @@ $products_data_result = $conn->query($products_sql);
                 const addExpDurationValue = addExpDurationInput.value.trim();
                 const addExpUnitValue = addExpUnitInput.value.trim(); 
                 
-                // Since they are required, they should have values. This check is an additional safeguard.
                 if (addExpDurationValue !== '' && !isNaN(addExpDurationValue) && addExpUnitValue !== '') {
                     let duration = parseInt(addExpDurationValue);
                     if (duration < 0) duration = 0; 
@@ -868,12 +873,9 @@ $products_data_result = $conn->query($products_sql);
                     } else if (addExpUnitValue === 'Month') {
                         expirationString = duration + (duration === 1 ? " Month" : " Months");
                     }
-                } else { // Should not be reached if HTML required and JS validation works
-                    errorDiv.textContent = 'Expiration duration and unit are required.';
-                    if (!addExpDurationValue) addExpDurationInput.focus(); else addExpUnitInput.focus();
-                    return;
                 }
             }
+            // --- END REFINED Expiration ---
 
 
             const formData = new FormData(this); 
@@ -885,12 +887,13 @@ $products_data_result = $conn->query($products_sql);
             
             formData.set('packaging', packagingString);
 
-            if (expirationString) { // Should always be true now if required
+            if (expirationString) {
                 formData.set('expiration', expirationString);
+            } else {
+                formData.delete('expiration'); // Ensure it's not set if null
             }
-            // These are sent by form but backend uses the combined expiration string
-            // formData.delete('expiration_duration'); 
-            // formData.delete('expiration_unit');   
+            formData.delete('expiration_duration'); 
+            formData.delete('expiration_unit');   
 
 
             if (!formData.has('stock_quantity')) {
@@ -959,12 +962,11 @@ $products_data_result = $conn->query($products_sql);
                  return;
             }
             
-            // Check all required fields, including expiration for 'edit' form
-            const requiredFields = this.querySelectorAll('input[required]:not(#edit_new_category):not(#edit_new_product_name), select[required]:not(#edit_new_category):not(#edit_new_product_name), textarea[required]');
+            const requiredFields = this.querySelectorAll('input[required]:not(#edit_new_category):not(#edit_new_product_name), select[required]:not(#edit_new_category):not(#edit_new_product_name), textarea[required]:not(#edit_additional_description)'); // Adjusted
             let firstEmptyField = null;
             for (const field of requiredFields) {
                  if (field.id === 'edit_packaging_quantity' || field.id === 'edit_packaging_unit' || field.id === 'edit_packaging_container') continue; 
-                 // Expiration fields (edit_expiration_duration, edit_expiration_unit) are now included in this check because 'required' attribute was added
+                 if (field.id === 'edit_expiration_duration' || field.id === 'edit_expiration_unit') continue; 
                 if (field.offsetParent !== null && !field.value.trim()) {
                     firstEmptyField = field;
                     break;
@@ -975,6 +977,13 @@ $products_data_result = $conn->query($products_sql);
                 firstEmptyField.focus();
                 return;
             }
+            const editAdditionalDescField = document.getElementById('edit_additional_description');
+            if (editAdditionalDescField.required && !editAdditionalDescField.value.trim()){
+                errorDiv.textContent = `Please fill in the '${editAdditionalDescField.labels?.[0]?.textContent || editAdditionalDescField.id}' field.`;
+                editAdditionalDescField.focus();
+                return;
+            }
+
 
             const formData = new FormData(this);
             if (categorySelect.value === 'new') formData.set('category', newCategoryInput.value.trim());
@@ -984,14 +993,15 @@ $products_data_result = $conn->query($products_sql);
             else formData.set('product_name', productNameSelect.value);
 
             formData.set('packaging', packagingString);
-            formData.set('is_walkin', '0'); 
+            formData.set('is_walkin', '0'); // This seems specific, ensure it's intended.
             
+            // These are derived and should not be sent directly if 'packaging' string is used by backend
             formData.delete('edit_packaging_quantity'); 
             formData.delete('edit_packaging_unit');
             formData.delete('edit_packaging_container');
 
 
-            fetch(window.location.href, { 
+            fetch(window.location.href, { // Submitting to the same page (inventory.php)
                 method: "POST",
                 body: formData
             })
@@ -1021,8 +1031,8 @@ $products_data_result = $conn->query($products_sql);
             document.getElementById('new-product-name-container').style.display = 'none';
             document.getElementById('new_product_name').required = false; 
             document.getElementById('add_product_type').value = 'company';
-            document.getElementById('add_expiration_duration').value = ''; // Clear on open
-            document.getElementById('add_expiration_unit').value = ''; // Clear on open
+            document.getElementById('add_expiration_duration').value = '';
+            document.getElementById('add_expiration_unit').value = '';
         }
 
         function closeAddProductModal() { document.getElementById('addProductModal').style.display = 'none'; }
@@ -1035,13 +1045,15 @@ $products_data_result = $conn->query($products_sql);
             fetch(apiUrl)
                 .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for get_product:", text); throw new Error("Server returned non-JSON response for get_product"); }}))
                 .then(product => {
+                    // DEBUGGING LINES ADDED HERE
                     console.log("Fetched product for edit:", product);
-                    if(!product) { 
+                    if(product) { // Ensure product is not null/undefined
+                        console.log("Product expiration from API:", product.expiration);
+                    } else {
                         console.error("Product data is null or undefined from API.");
                         toastr.error("Failed to load product data.", { timeOut: 3000, closeButton: true });
-                        return; 
+                        return; // Stop further execution if product is not valid
                     }
-                     console.log("Product expiration from API:", product.expiration);
 
 
                     document.getElementById('edit_product_id').value = product.product_id;
@@ -1054,7 +1066,7 @@ $products_data_result = $conn->query($products_sql);
                     newCategoryInput.required = false; 
                     if (product.category) {
                         categorySelect.value = product.category;
-                        if (categorySelect.value !== product.category) { 
+                        if (categorySelect.value !== product.category) { // If category not in dropdown
                              categorySelect.value = 'new';
                              newCategoryContainer.style.display = 'block';
                              newCategoryInput.value = product.category;
@@ -1069,7 +1081,7 @@ $products_data_result = $conn->query($products_sql);
                     newProductNameInput.required = false; 
                     if (product.product_name) {
                         productNameSelect.value = product.product_name;
-                         if (productNameSelect.value !== product.product_name) { 
+                         if (productNameSelect.value !== product.product_name) { // If name not in dropdown
                              productNameSelect.value = 'new';
                              newProductNameContainer.style.display = 'block';
                              newProductNameInput.value = product.product_name;
@@ -1104,6 +1116,7 @@ $products_data_result = $conn->query($products_sql);
                             if (parsedContainer === 'pack') containerVal = 'Pack';
                             else if (parsedContainer === 'btl') containerVal = 'Btl';
                             else if (parsedContainer === 'cntr') containerVal = 'Cntr';
+                            // else it remains 'None' if not matched or explicitly 'None'
                         }
                     }
                     
@@ -1115,16 +1128,15 @@ $products_data_result = $conn->query($products_sql);
                     document.getElementById('edit_stock_quantity').value = product.stock_quantity || 0;
                     document.getElementById('edit_additional_description').value = product.additional_description || '';
 
+                    // --- REFINED Parsing expiration for Edit form ---
                     const productExpiration = product.expiration || ''; 
+                    // DEBUGGING LINE ADDED
                     console.log("Parsing this expiration string for form:", productExpiration);
                     
                     let form_exp_duration_val = '';
                     let form_exp_unit_val = ''; 
 
-                    if (!productExpiration) { // Handles NULL from DB -> empty string
-                        document.getElementById('edit_expiration_duration').value = '';
-                        document.getElementById('edit_expiration_unit').value = '';
-                    } else {
+                    if (productExpiration) {
                         let totalWeeks = 0;
                         let monthsFromDb = 0;
                         let weeksFromDb = 0;
@@ -1146,30 +1158,33 @@ $products_data_result = $conn->query($products_sql);
                         if (hasMonthsInDb && !hasWeeksInDb) { 
                             form_exp_duration_val = monthsFromDb;
                             form_exp_unit_val = 'Month';
-                        } else if (hasWeeksInDb) { 
-                            totalWeeks = (monthsFromDb * 4) + weeksFromDb; 
+                        } else if (hasWeeksInDb) { // Prioritize weeks if present, or if only weeks are there
+                            totalWeeks = (monthsFromDb * 4) + weeksFromDb; // monthsFromDb will be 0 if no month part
                             form_exp_duration_val = totalWeeks;
                             form_exp_unit_val = 'Week';
-                        } else if (hasMonthsInDb) { 
+                        } else if (hasMonthsInDb) { // Fallback if only months matched (e.g. "1 Month" no weeks part)
                             form_exp_duration_val = monthsFromDb;
                             form_exp_unit_val = 'Month';
                         }
                         
-                        if (productExpiration.toLowerCase() === "0 weeks") {
+                        // Handle explicit "0 Weeks" or "0 Months" if not parsed into duration/unit yet
+                        // or if the value from DB is literally "0" (due to previous incorrect saving)
+                        if (productExpiration.toLowerCase() === "0 weeks" || (productExpiration === "0" && !form_exp_unit_val)) {
                              form_exp_duration_val = 0;
                              form_exp_unit_val = 'Week';
-                        } else if (productExpiration.toLowerCase() === "0 months") {
+                        } else if (productExpiration.toLowerCase() === "0 months" || (productExpiration === "0" && !form_exp_unit_val)) {
                              form_exp_duration_val = 0;
                              form_exp_unit_val = 'Month';
-                        } else if (productExpiration === "0" && form_exp_duration_val === '' && form_exp_unit_val === '') { 
-                            // If it's literally "0" from DB and not parsed yet, default to 0 Weeks
+                        } else if (productExpiration === "0" && !form_exp_duration_val && !form_exp_unit_val) { // If it's just "0" from DB
                             form_exp_duration_val = 0;
-                            form_exp_unit_val = 'Week'; 
+                            form_exp_unit_val = 'Week'; // Default to week for "0"
                         }
-                        document.getElementById('edit_expiration_duration').value = form_exp_duration_val;
-                        document.getElementById('edit_expiration_unit').value = form_exp_unit_val;
                     }
+                    document.getElementById('edit_expiration_duration').value = form_exp_duration_val;
+                    document.getElementById('edit_expiration_unit').value = form_exp_unit_val;
+                    // DEBUGGING LINE ADDED
                     console.log("Form values to be set - Duration:", form_exp_duration_val, "Unit:", form_exp_unit_val);
+                    // --- END REFINED Parsing ---
 
 
                     document.getElementById('current-image-container').innerHTML = '';
@@ -1202,7 +1217,7 @@ $products_data_result = $conn->query($products_sql);
                     tbody.innerHTML = '';
                     if (product.ingredients && product.ingredients.length > 0) {
                         product.ingredients.forEach(ingredient => addIngredientRow(ingredient[0], ingredient[1]));
-                    } else { addIngredientRow(); } 
+                    } else { addIngredientRow(); } // Add one empty row if no ingredients
                     document.getElementById('ingredientsModal').style.display = 'flex';
                     document.getElementById('ingredientsError').textContent = '';
                 })
@@ -1235,11 +1250,11 @@ $products_data_result = $conn->query($products_sql);
             const errorDiv = document.getElementById('ingredientsError');
             errorDiv.textContent = ''; 
             let isValid = true;
-            if (rows.length === 0) {
-                // Allow saving with no ingredients
+            if (rows.length === 0) { // Allow saving with no ingredients
+                // Proceed to fetch call with empty ingredients array
             } else {
                 rows.forEach(row => {
-                    if (!isValid) return; 
+                    if (!isValid) return; // Stop processing if an error was found
                     const ingredientSelect = row.querySelector('.ingredient-select');
                     const quantityInput = row.querySelector('.ingredient-quantity');
                     const ingredientName = ingredientSelect.value;
@@ -1249,7 +1264,7 @@ $products_data_result = $conn->query($products_sql);
                     ingredients.push([ingredientName, quantity]);
                 });
             }
-            if (!isValid && rows.length > 0) return;  
+            if (!isValid && rows.length > 0) return;  // Don't proceed if there were rows and they had errors
 
             fetch("../pages/api/update_ingredients.php", {
                 method: "POST",
