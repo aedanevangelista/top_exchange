@@ -10,7 +10,7 @@ if (!isset($_SESSION['admin_user_id'])) {
     exit;
 }
 
-// Check if all required fields are present
+// Check if all required fields are present (status is not strictly required here as it defaults)
 $required_fields = ['category', 'product_name', 'item_description', 'packaging', 'price'];
 foreach ($required_fields as $field) {
     if (!isset($_POST[$field]) || trim($_POST[$field]) === '') {
@@ -20,6 +20,8 @@ foreach ($required_fields as $field) {
 }
 
 // Get product type (company or walkin)
+// Note: The 'status' column should ideally be added to 'walkin_products' table as well if it's intended to have a status.
+// For now, this script assumes 'status' is primarily for the 'products' table.
 $product_type = isset($_POST['product_type']) && $_POST['product_type'] === 'walkin' ? 'walkin' : 'company';
 $table = $product_type === 'walkin' ? 'walkin_products' : 'products';
 
@@ -42,6 +44,13 @@ $additional_description = isset($_POST['additional_description']) ? trim($_POST[
 $product_image = '';
 
 $expiration = isset($_POST['expiration']) && !empty(trim($_POST['expiration'])) ? trim($_POST['expiration']) : NULL;
+
+// Handle Status
+$status = 'Active'; // Default status
+if (isset($_POST['status']) && in_array($_POST['status'], ['Active', 'Inactive'])) {
+    $status = $_POST['status'];
+}
+
 
 // Upload image if provided
 if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
@@ -100,17 +109,23 @@ if ($check_result->num_rows > 0) {
 }
 $check_stmt->close();
 
-// --- MODIFICATION: Corrected bind_param type for expiration to 's' ---
-$stmt = $conn->prepare("INSERT INTO $table (category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image, expiration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-// The types string should now be "ssssdisss" (s for string for expiration, can be NULL)
-$stmt->bind_param("ssssdisss", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $expiration);
-// --- END MODIFICATION ---
+// Prepare SQL statement
+// If 'walkin_products' table also needs status, this conditional logic for SQL and bind_param will need adjustment.
+if ($table === 'products') {
+    $stmt = $conn->prepare("INSERT INTO $table (category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image, expiration, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    // Types: category(s), product_name(s), item_description(s), packaging(s), price(d), stock_quantity(i), additional_description(s), product_image(s), expiration(s), status(s)
+    $stmt->bind_param("ssssdissss", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $expiration, $status);
+} else { // For 'walkin_products' table, assuming no status column for now
+    $stmt = $conn->prepare("INSERT INTO $table (category, product_name, item_description, packaging, price, stock_quantity, additional_description, product_image, expiration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssdisss", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $expiration);
+}
+
 
 if ($stmt->execute()) {
     echo json_encode(['success' => true, 'message' => 'Product added successfully']);
 } else {
     error_log("SQL Error in add_product.php: " . $stmt->error . " (Query: INSERT INTO $table ...)"); 
-    echo json_encode(['success' => false, 'message' => 'Failed to add product. Please check server logs for details. Error: ' . $conn->error]);
+    echo json_encode(['success' => false, 'message' => 'Failed to add product. Please check server logs for details. Error: ' . $stmt->error]);
 }
 
 $stmt->close();
