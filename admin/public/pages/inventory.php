@@ -267,7 +267,7 @@ $products_data_result = $conn->query($products_sql);
         .view-ingredients-btn:hover { background-color: #333333; }
         .edit-btn, .status-btn { display: inline-flex; align-items: center; margin-top: 5px; width: calc(100% - 10px); justify-content: center;}
         .edit-btn i, .status-btn i { margin-right: 5px; }
-        .status-btn.activate-btn { background-color: #5cb85c; color: white; }
+        .status-btn.activate-btn { background-color: #5cb85c; color: white; border-radius: 80px; padding: 4px 8px; }
         .status-btn.activate-btn:hover { background-color: #4cae4c; }
         .status-btn.deactivate-btn { background-color: #d9534f; color: white; border-radius: 80px; padding: 4px 8px; }
         .status-btn.deactivate-btn:hover { background-color: #c9302c; }
