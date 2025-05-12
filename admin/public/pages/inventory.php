@@ -266,15 +266,16 @@ $products_data_result = $conn->query($products_sql);
         .view-ingredients-btn i { margin-right: 2px; }
         .view-ingredients-btn:hover { background-color: #333333; }
         
-        /* --- MODIFIED CSS FOR BUTTONS --- */
+        /* --- REVISED CSS FOR BUTTONS --- */
+        /* Common sizing, alignment, and structural properties for Edit and Status buttons */
         .edit-btn, .status-btn {
             display: inline-flex;
             align-items: center;
             margin-top: 5px;
             width: calc(100% - 10px); 
             justify-content: center;
-            padding: 6px 12px;
-            font-size: 14px;
+            padding: 6px 12px; /* Consistent padding */
+            font-size: 14px;   /* Consistent font size */
             font-weight: normal;
             line-height: 1.42857143;
             text-align: center;
@@ -282,36 +283,38 @@ $products_data_result = $conn->query($products_sql);
             vertical-align: middle;
             cursor: pointer;
             user-select: none;
-            border: 1px solid #ccc; 
-            border-radius: 4px;
-            color: #333; /* Default text color for edit-btn and deactivate-btn */
-            background-color: #fff; /* Default background for edit-btn and deactivate-btn */
+            border-radius: 4px; /* Consistent border-radius */
             text-decoration: none;
         }
         .edit-btn i, .status-btn i { margin-right: 5px; }
 
-        /* Hover for edit-btn and status-btn that are NOT activate-btn (i.e., deactivate-btn) */
+        /* Explicit style for the Edit button (and Deactivate button by extension) */
+        /* This is a common neutral button style. Adjust if your original edit button was different. */
+        .edit-btn,
+        .status-btn:not(.activate-btn) { /* Targets status-btn that IS NOT activate-btn (i.e., Deactivate button) */
+            color: #333;                /* Dark text */
+            background-color: #f0f0f0;   /* Light gray background */
+            border: 1px solid #ccc;     /* Gray border */
+        }
+
         .edit-btn:hover,
         .status-btn:not(.activate-btn):hover {
             color: #333;
-            background-color: #e6e6e6;
+            background-color: #e6e6e6;   /* Slightly darker gray on hover */
             border-color: #adadad;
         }
 
-        /* Activate button - keeps its distinct style */
+        /* Activate button - distinct green style */
         .status-btn.activate-btn { 
             background-color: #5cb85c; 
             color: white; 
-            border-color: #4cae4c;
+            border: 1px solid #4cae4c; /* Matching border for activate button */
         }
         .status-btn.activate-btn:hover { 
             background-color: #4cae4c; 
             border-color: #398439;
         }
-
-        /* Deactivate button - styling is now inherited from the base .status-btn, making it uniform with .edit-btn */
-        /* The old red styling for .status-btn.deactivate-btn is removed */
-        /* --- END MODIFIED CSS FOR BUTTONS --- */
+        /* --- END REVISED CSS FOR BUTTONS --- */
 
         .ingredients-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .ingredients-table th, .ingredients-table td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
@@ -423,9 +426,10 @@ $products_data_result = $conn->query($products_sql);
 
                             $status_class = $row['status'] == 'Active' ? 'status-active' : 'status-inactive';
                             $status_button_text = $row['status'] == 'Active' ? 'Deactivate' : 'Activate';
-                            // The class for deactivate-btn will now just be .status-btn, it won't have a specific .deactivate-btn color class unless you re-add it
-                            $status_button_specific_class = $row['status'] == 'Active' ? '' : 'activate-btn'; // Deactivate button gets base .status-btn style
                             $status_button_icon = $row['status'] == 'Active' ? 'fa-toggle-off' : 'fa-toggle-on';
+                            // If product is Active, button is "Deactivate" (no extra class, uses .status-btn:not(.activate-btn) style)
+                            // If product is Inactive, button is "Activate" (gets .activate-btn class for green style)
+                            $status_button_extra_class = $row['status'] == 'Active' ? '' : 'activate-btn';
 
 
                             echo "<tr $data_attributes>
@@ -461,7 +465,7 @@ $products_data_result = $conn->query($products_sql);
                                     <button class='edit-btn' onclick='editProduct({$row['product_id']}, \"company\")'>
                                         <i class='fas fa-edit'></i> Edit
                                     </button>
-                                    <button class='status-btn {$status_button_specific_class}' id='status-btn-{$row['product_id']}' onclick='toggleProductStatus({$row['product_id']}, \"{$row['status']}\")'>
+                                    <button class='status-btn {$status_button_extra_class}' id='status-btn-{$row['product_id']}' onclick='toggleProductStatus({$row['product_id']}, \"{$row['status']}\")'>
                                         <i class='fas {$status_button_icon}'></i> {$status_button_text}
                                     </button>
                                 </td>
@@ -1319,11 +1323,13 @@ $products_data_result = $conn->query($products_sql);
                         const buttonText = data.new_status === 'Active' ? 'Deactivate' : 'Activate';
                         const buttonIconClass = data.new_status === 'Active' ? 'fa-toggle-off' : 'fa-toggle-on';
                         statusButton.innerHTML = `<i class="fas ${buttonIconClass}"></i> ${buttonText}`;
-                        // Adjust class for styling: remove activate-btn if present, add it if new_status is Inactive (so button becomes Activate)
-                        statusButton.classList.remove('activate-btn');
-                        if (data.new_status === 'Inactive') { // If product is now Inactive, button should be "Activate"
+                        
+                        statusButton.classList.remove('activate-btn'); // Remove green class if present
+                        if (data.new_status === 'Inactive') { // Product is now Inactive, button becomes "Activate" (green)
                             statusButton.classList.add('activate-btn');
                         }
+                        // If data.new_status is 'Active', button is "Deactivate" and uses the default .status-btn:not(.activate-btn) style (light gray)
+                        
                         statusButton.setAttribute('onclick', `toggleProductStatus(${productId}, '${data.new_status}')`);
                     }
                 } else {
