@@ -74,11 +74,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
         exit;
     }
 
-    if ($category === 'new' && isset($_POST['new_category_field']) && !empty($_POST['new_category_field'])) {
+    if ($category === 'new' && isset($_POST['new_category_field']) && !empty(trim($_POST['new_category_field']))) {
         $category = $_POST['new_category_field'];
     }
 
-    if ($product_name === 'new' && isset($_POST['new_product_name_field']) && !empty($_POST['new_product_name_field'])) {
+    if ($product_name === 'new' && isset($_POST['new_product_name_field']) && !empty(trim($_POST['new_product_name_field']))) {
         $product_name = $_POST['new_product_name_field'];
     }
 
@@ -1229,7 +1229,8 @@ $products_data_result = $conn->query($products_sql);
                 return;
             }
 
-            fetch('../backend/update_product_status.php', { 
+            // Corrected path: ../../backend/update_product_status.php
+            fetch('../../backend/update_product_status.php', { 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1239,7 +1240,25 @@ $products_data_result = $conn->query($products_sql);
                     new_status: newStatus
                 })
             })
-            .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for status update:", text); throw new Error("Server returned non-JSON response for status update"); }}))
+            .then(response => {
+                // Check if the response is OK (status code 200-299)
+                if (!response.ok) {
+                    // If not OK, log the response status and text to help debug
+                    response.text().then(text => {
+                        console.error(`Error from server (${response.status}):`, text);
+                        toastr.error(`Server error (${response.status}). Check console for details.`, { timeOut: 5000, closeButton: true });
+                    });
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+                return response.text().then(text => { 
+                    try { 
+                        return JSON.parse(text); 
+                    } catch (e) { 
+                        console.error("Invalid JSON response for status update:", text); 
+                        throw new Error("Server returned non-JSON response for status update"); 
+                    }
+                })
+            })
             .then(data => {
                 if (data.success) {
                     toastr.success(data.message, { timeOut: 3000, closeButton: true });
@@ -1275,7 +1294,7 @@ $products_data_result = $conn->query($products_sql);
 
 
         function viewIngredients(productId, productType) {
-             let apiUrl = `../pages/api/get_product_ingredients.php?id=${productId}`;
+             let apiUrl = `../pages/api/get_product_ingredients.php?id=${productId}`; // This path seems correct based on previous context
             fetch(apiUrl)
                 .then(response => response.text().then(text => { try { return JSON.parse(text); } catch (e) { console.error("Invalid JSON response for ingredients:", text); throw new Error("Server returned non-JSON response for ingredients"); }}))
                 .then(product => {
@@ -1340,7 +1359,7 @@ $products_data_result = $conn->query($products_sql);
             }
             if (!isValid && rows.length > 0) return;  
 
-            fetch("../pages/api/update_ingredients.php", {
+            fetch("../pages/api/update_ingredients.php", { // This path seems correct based on previous context
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ product_id: productId, product_type: productType, ingredients: ingredients })
@@ -1365,7 +1384,7 @@ $products_data_result = $conn->query($products_sql);
                  toastr.error("Please enter a valid positive amount to adjust.", { timeOut: 3000, closeButton: true });
                  amountInput.focus(); return;
             }
-            fetch("../pages/api/update_stock.php", {
+            fetch("../pages/api/update_stock.php", { // This path seems correct based on previous context
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ product_id: productId, action: action, amount: amount, product_type: productType })
