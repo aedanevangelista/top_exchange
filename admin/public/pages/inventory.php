@@ -162,8 +162,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['formType']) && $_POST[
     }
 
     $stmt = $conn->prepare("UPDATE $table SET category = ?, product_name = ?, item_description = ?, packaging = ?, price = ?, stock_quantity = ?, additional_description = ?, product_image = ?, expiration = ? WHERE product_id = ?");
-    $stmt->bind_param("ssssdiissi", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $expiration_string_to_save, $product_id);
-
+    $stmt->bind_param("ssssdsissi", $category, $product_name, $item_description, $packaging, $price, $stock_quantity, $additional_description, $product_image, $expiration_string_to_save, $product_id);
     if ($stmt->execute()) {
         if ($old_item_description != $item_description && !empty($product_image)) {
             $stmt_update_image = $conn->prepare("UPDATE $table SET product_image = ? WHERE item_description = ? AND product_id != ?");
