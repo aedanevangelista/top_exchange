@@ -1433,7 +1433,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
             if(newQuantity>100){showToast('Maximum quantity per item is 100.','error');newQuantity=100;$(inputElement).val(100);}
             cartItems[itemIndexInCart].quantity=newQuantity;updateOrderSummaryAdd();updateCartItemCountNav();updateCartDisplayAdd();
         }
-        function removeSummaryItemAdd(itemIndexInCart){ // Renamed
+        function removeSummaryItemAdd(itemIndexInCart){ 
             if(itemIndexInCart>=0&&itemIndexInCart<cartItems.length){const removedItem=cartItems.splice(itemIndexInCart,1)[0];showToast(`Removed ${removedItem.item_description} from order.`,'info');updateOrderSummaryAdd();updateCartItemCountNav();updateCartDisplayAdd();}else{showToast('Error removing item. Please try again.','error');}
         }
         function updateCartItemCountNav(){ const count=cartItems.length; $('#cartItemCountNav').text(count); $('#orderSummaryItemCountAdd').text(`(${count} item${count===1?'':'s'})`); if(count===0)$('#orderSummaryItemCountAdd').text('(0 items)');}
