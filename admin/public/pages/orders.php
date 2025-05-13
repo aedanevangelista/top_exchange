@@ -7,30 +7,23 @@ checkRole('Orders');
 $sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'id';
 $sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'DESC';
 
-// --- Allowed columns (Removed driver-related fields) ---
 $allowed_columns = ['id', 'po_number', 'order_type', 'username', 'order_date', 'delivery_date', 'progress', 'total_amount', 'status']; // Added 'order_type'
 if (!in_array($sort_column, $allowed_columns)) {
-    $sort_column = 'id'; // Default sort column if invalid input
+    $sort_column = 'id';
 }
 
-// Validate sort direction
 if (strtoupper($sort_direction) !== 'ASC' && strtoupper($sort_direction) !== 'DESC') {
-    $sort_direction = 'DESC'; // Default to descending
-}
-
-// PHP Helper function to check if a date is a valid delivery day (Mon, Wed, Fri)
-function isValidDeliveryDayPHP($date_str) {
+    $sort_direction = 'DESC';
+}function isValidDeliveryDayPHP($date_str) {
     if (empty($date_str)) return false;
     try {
         $date = new DateTime($date_str);
-        $dayOfWeek = $date->format('N'); // 1 (Mon) to 7 (Sun)
+        $dayOfWeek = $date->format('N'); 
         return ($dayOfWeek == 1 || $dayOfWeek == 3 || $dayOfWeek == 5);
     } catch (Exception $e) {
-        return false; // Invalid date format
+        return false; 
     }
 }
-
-// PHP Helper function to check if delivery date is at least minDays after order date
 function isValidDeliveryGapPHP($orderDate_str, $deliveryDate_str, $minDays = 5) {
     if (empty($orderDate_str) || empty($deliveryDate_str)) return false;
     try {
