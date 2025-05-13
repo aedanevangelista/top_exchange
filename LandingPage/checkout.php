@@ -141,10 +141,35 @@ function processCheckoutForm() {
     $deliveryFee = 0;
     $total = $subtotal;
 
-    // Generate PO number in format PO-[username]-00[x]
+    // Generate a PO number in format PO-XXXX-00#
     $username = $_SESSION['username'];
-    $nextOrderNum = getNextOrderNumber($conn, $username) + 1;
-    $poNumber = sprintf("PO-%s-%03d", $username, $nextOrderNum);
+
+    // Get first 4 letters of username and convert to uppercase
+    $usernamePrefix = strtoupper(substr($username, 0, 4));
+
+    // Get the next order number for this username
+    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM orders WHERE po_number LIKE ?");
+    $poPattern = "PO-$usernamePrefix-%";
+    $stmt->bind_param("s", $poPattern);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    $nextOrderNum = ($row['count'] ?? 0) + 1;
+
+    // Format the PO number
+    $poNumber = sprintf("PO-%s-%03d", $usernamePrefix, $nextOrderNum);
+
+    // Get the company name from clients_accounts
+    $companyName = null;
+    $companyStmt = $conn->prepare("SELECT company FROM clients_accounts WHERE username = ?");
+    $companyStmt->bind_param("s", $username);
+    $companyStmt->execute();
+    $companyResult = $companyStmt->get_result();
+    if ($companyResult->num_rows > 0) {
+        $companyRow = $companyResult->fetch_assoc();
+        $companyName = $companyRow['company'];
+    }
+    $companyStmt->close();
 
     // Log the generated PO number for debugging
     error_log("Generated PO number: " . $poNumber);
@@ -164,6 +189,7 @@ function processCheckoutForm() {
             $stmt = $conn->prepare("INSERT INTO orders (
                 po_number,
                 username,
+                company,
                 order_date,
                 delivery_date,
                 delivery_address,
@@ -174,13 +200,15 @@ function processCheckoutForm() {
                 special_instructions,
                 subtotal,
                 payment_method,
-                payment_status
-            ) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, 'Pending', ?, ?, ?, 'Pending')");
+                payment_status,
+                order_type
+            ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'Pending', ?, ?, ?, 'Pending', 'Online')");
         } else {
             // Insert order into database without payment_method and payment_status
             $stmt = $conn->prepare("INSERT INTO orders (
                 po_number,
                 username,
+                company,
                 order_date,
                 delivery_date,
                 delivery_address,
@@ -189,8 +217,9 @@ function processCheckoutForm() {
                 total_amount,
                 status,
                 special_instructions,
-                subtotal
-            ) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, 'Pending', ?, ?)");
+                subtotal,
+                order_type
+            ) VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?, 'Pending', ?, ?, 'Online')");
         }
 
         if (!$stmt) {
@@ -224,9 +253,10 @@ function processCheckoutForm() {
         if ($hasPaymentColumns) {
             // Bind parameters with payment_method
             $bindResult = $stmt->bind_param(
-                "ssssssdsds",
+                "sssssssdsds",
                 $poNumber,
                 $username,
+                $companyName,
                 $deliveryDate,
                 $deliveryAddress,
                 $contactNumber,
@@ -239,9 +269,10 @@ function processCheckoutForm() {
         } else {
             // Bind parameters without payment_method
             $bindResult = $stmt->bind_param(
-                "ssssssdsd",
+                "sssssssdsd",
                 $poNumber,
                 $username,
+                $companyName,
                 $deliveryDate,
                 $deliveryAddress,
                 $contactNumber,
