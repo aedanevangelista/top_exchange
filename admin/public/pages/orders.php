@@ -712,7 +712,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
              <div class="overlay-header"><h2 class="overlay-title"><i class="fas fa-box-open"></i> Select Products</h2><button class="cart-btn" onclick="window.openCartModal()"><i class="fas fa-shopping-cart"></i> View Cart (<span id="cartItemCountNav">0</span>)</button><button type="button" class="cancel-btn" onclick="closeInventoryOverlay()"><i class="fas fa-times"></i> Close</button></div>
              <div class="inventory-filter-section"><input type="text" id="inventorySearch" placeholder="Search products..."><select id="inventoryFilter"><option value="all">All Categories</option></select></div>
              <div class="inventory-table-container"><table class="inventory-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody class="inventory"></tbody></table></div>
-             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="cancel-btn" onclick="closeInventoryOverlay()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="confirm-btn" onclick="saveCartChangesAndClose()"><i class="fas fa-check"></i> Confirm Selection</button></div>
+             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="cancel-btn" onclick="closeInventoryOverlay()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="confirm-btn" onclick="closeInventoryOverlay()()"><i class="fas fa-check"></i> Confirm Selection</button></div>
         </div>
     </div>
 
