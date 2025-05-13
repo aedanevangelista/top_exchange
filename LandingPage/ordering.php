@@ -2,6 +2,11 @@
 // Include the header
 require_once 'header.php';
 
+// Define the base URL for admin-served assets
+// *** IMPORTANT: Make sure this is the correct URL for your admin assets ***
+// Use https:// if your admin site uses SSL
+define('ADMIN_ASSET_URL', 'http://admin.topexchangefood.com'); 
+
 // Clear any leftover order session variables to prevent checkout issues
 if (isset($_SESSION['new_order']) || isset($_SESSION['order_id']) || isset($_SESSION['redirect'])) {
     // Clear these variables as we're starting a new ordering process
@@ -12,12 +17,12 @@ if (isset($_SESSION['new_order']) || isset($_SESSION['order_id']) || isset($_SES
 }
 
 // Database connection - we need to reconnect because header.php might have closed the connection
-require_once 'db_connection.php';
+require_once 'db_connection.php'; // Verify this path
 
 // Fetch all products from the database
-$products = [];
+$products = []; // Keep for category filter population if needed
 $groupedProducts = []; // For storing products grouped by name
-$query = "SELECT * FROM products ORDER BY category, item_description";
+$query = "SELECT * FROM products ORDER BY category, product_name, price ASC"; // Ensure consistent grouping
 
 // Add error handling for the query
 try {
@@ -25,37 +30,43 @@ try {
 
     if ($result && $result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-            // Store in regular category-based array for backward compatibility
-            $products[$row['category']][] = $row;
+            // Group by product name for variant handling
+            $productName = !empty($row['product_name']) ? $row['product_name'] : preg_replace('/\\s*\\([A-Z][^)]*\\)$/', '', $row['item_description']);
+            $category = $row['category'];
 
-            // Also group by product name for variant handling
-            $productName = !empty($row['product_name']) ? $row['product_name'] : preg_replace('/\s*\([A-Z][^)]*\)$/', '', $row['item_description']);
+            // Populate category list for filter dropdown
+            if (!isset($products[$category])) {
+                $products[$category] = [];
+            }
+            // $products[$category][] = $row; // Optional: keep if needed elsewhere
 
-            if (!isset($groupedProducts[$row['category']][$productName])) {
-                $groupedProducts[$row['category']][$productName] = [
-                    'main_product' => $row,
-                    'variants' => []
+            if (!isset($groupedProducts[$category][$productName])) {
+                // Initialize the group with the first product found as 'main_product'
+                $groupedProducts[$category][$productName] = [
+                    'main_product' => $row, // This will be the first one encountered (lowest price due to ORDER BY)
+                    'variants' => [$row] // Add itself as the first variant
                 ];
             } else {
-                // If this isn't the first product with this name, add it as a variant
-                $groupedProducts[$row['category']][$productName]['variants'][] = $row;
+                // If the group already exists, just add this row as another variant
+                $groupedProducts[$category][$productName]['variants'][] = $row;
             }
         }
     } else {
-        // Log the error or display a message for debugging
         error_log("No products found or query failed: " . $conn->error);
     }
 } catch (Exception $e) {
-    // Log the exception
-    error_log("Exception in ordering.php: " . $e->getMessage());
+    error_log("Exception in ordering.php database query: " . $e->getMessage());
 }
 
 // Close the connection after we're done with it
 $conn->close();
 
-// Make sure we have at least an empty array to avoid errors
+// Ensure arrays exist to prevent errors in loops/keys
+if (empty($groupedProducts)) {
+    $groupedProducts = [];
+}
 if (empty($products)) {
-    $products = [];
+    $products = []; // Used for category filter
 }
 
 // Debug information - set to true to enable debugging
@@ -67,28 +78,29 @@ if ($debug_mode) {
     echo '<hr>';
     echo '<h5>Session Data:</h5>';
     echo '<pre>'; print_r($_SESSION); echo '</pre>';
-    echo '<h5>Products Data:</h5>';
-    echo '<pre>'; print_r($products); echo '</pre>';
-    echo '<h5>Database Connection:</h5>';
-    echo 'Connection Status: ' . ($conn->connect_errno ? 'Error: ' . $conn->connect_error : 'Connected');
+    echo '<h5>Grouped Products Data:</h5>';
+    echo '<pre>'; print_r($groupedProducts); echo '</pre>';
     echo '</div>';
 }
 ?>
 
 <!-- jQuery and Bootstrap JS are loaded in header.php and footer.php -->
 
+<!-- CSS styles remain the same -->
 <style>
     /* Reset some styles that might conflict with the header */
     body {
-        padding-top: 0;
+        padding-top: 0; /* Adjust if header has fixed height */
     }
 
     /* Main content styling */
     .ordering-container {
         max-width: 1200px;
-        margin: 0 auto;
+        margin: 20px auto; /* Added top margin */
         padding: 20px;
         background-color: #fff;
+        border-radius: 8px; /* Optional: adds rounded corners */
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* Optional: subtle shadow */
     }
 
     .page-title {
@@ -129,6 +141,9 @@ if ($debug_mode) {
         overflow: hidden;
         transition: all 0.3s ease;
         box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        display: flex; /* Use flexbox for layout */
+        flex-direction: column; /* Stack elements vertically */
+        cursor: pointer; /* Make the whole card clickable */
     }
 
     .product-card:hover {
@@ -143,7 +158,7 @@ if ($debug_mode) {
         align-items: center;
         justify-content: center;
         background-color: #f9f9f9;
-        position: relative;
+        position: relative; /* Needed for overlay/badges if added */
     }
 
     .product-image {
@@ -151,31 +166,26 @@ if ($debug_mode) {
         max-height: 100%;
         object-fit: contain;
         padding: 10px;
+        transition: transform 0.3s ease; /* Add zoom effect on hover */
+    }
+    .product-card:hover .product-image {
+         transform: scale(1.05); /* Slight zoom on hover */
     }
 
-    .pre-order-badge {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background-color: #ff6b6b;
-        color: white;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        z-index: 2;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
 
     .product-info {
         padding: 15px;
+        flex-grow: 1; /* Allow info section to grow */
+        display: flex;
+        flex-direction: column;
     }
 
     .product-name {
         font-weight: 600;
         color: #333;
-        margin-bottom: 10px;
+        margin-bottom: 5px; /* Reduced margin */
         font-size: 1.1rem;
+        flex-grow: 1; /* Push details hint down */
     }
 
     .product-description {
@@ -183,6 +193,11 @@ if ($debug_mode) {
         font-size: 0.9rem;
         margin-bottom: 10px;
         line-height: 1.4;
+        /* Limit description lines */
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* Limit to 2 lines */
+        -webkit-box-orient: vertical;
     }
 
     .product-description p {
@@ -192,85 +207,28 @@ if ($debug_mode) {
     .view-details-hint {
         color: #9a7432;
         font-size: 0.85rem;
-        margin-top: 10px;
+        margin-top: auto; /* Pushes to the bottom */
         text-align: center;
         padding: 5px;
         background-color: #f9f9f9;
         border-radius: 4px;
         transition: all 0.2s ease;
+        border: 1px dashed #eee; /* Subtle border */
     }
 
     .product-card:hover .view-details-hint {
         background-color: #9a7432;
         color: white;
+        border-color: #9a7432;
     }
 
-    /* Product packaging styling moved to the variant section */
-
-    .product-price {
-        font-weight: 700;
-        color: #9a7432;
-        font-size: 1.2rem;
-        margin-bottom: 15px;
-    }
-
-    .add-to-cart-btn {
-        background-color: #9a7432;
-        color: white;
-        border: none;
-        padding: 8px 15px;
-        border-radius: 4px;
-        cursor: pointer;
-        width: 100%;
-        transition: background-color 0.3s;
-        font-weight: 500;
-    }
-
-    .add-to-cart-btn:hover {
-        background-color: #b08a3e;
-    }
-
-    /* Login indicator for add to cart button */
+    /* Login indicator for add to cart button (if needed on card) */
     .add-to-cart-btn.login-required {
         background-color: #6c757d;
     }
 
     .add-to-cart-btn.login-required:hover {
         background-color: #5a6268;
-    }
-
-    /* Quantity controls */
-    .quantity-controls {
-        display: flex;
-        margin-bottom: 15px;
-        align-items: center;
-    }
-
-    .quantity-btn {
-        width: 30px;
-        height: 30px;
-        background-color: #f0f0f0;
-        border: none;
-        font-size: 1rem;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .quantity-input {
-        width: 50px;
-        height: 30px;
-        text-align: center;
-        border: 1px solid #ddd;
-        margin: 0 5px;
-        -moz-appearance: textfield;
-    }
-
-    .quantity-input::-webkit-outer-spin-button,
-    .quantity-input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
     }
 
     /* Search and filter section */
@@ -280,6 +238,9 @@ if ($debug_mode) {
         flex-wrap: wrap;
         gap: 15px;
         align-items: center;
+        background-color: #f8f9fa; /* Light background */
+        padding: 15px;
+        border-radius: 5px;
     }
 
     .search-box {
@@ -293,10 +254,10 @@ if ($debug_mode) {
         padding: 10px 15px;
         border: 1px solid #ddd;
         border-radius: 4px;
-        padding-left: 40px;
+        padding-left: 40px; /* Space for icon */
     }
 
-    .search-box i {
+    .search-box i.fa-search { /* Target only search icon */
         position: absolute;
         left: 15px;
         top: 50%;
@@ -306,7 +267,7 @@ if ($debug_mode) {
 
     .clear-search {
         position: absolute;
-        right: 15px;
+        right: 10px; /* Adjusted position */
         top: 50%;
         transform: translateY(-50%);
         background: none;
@@ -314,13 +275,14 @@ if ($debug_mode) {
         color: #aaa;
         cursor: pointer;
         padding: 0;
-        font-size: 14px;
-        width: 20px;
-        height: 20px;
+        font-size: 16px; /* Slightly larger */
+        width: 24px; /* Increased size */
+        height: 24px; /* Increased size */
         display: flex;
         align-items: center;
         justify-content: center;
         border-radius: 50%;
+        line-height: 1; /* Ensure icon centers */
     }
 
     .clear-search:hover {
@@ -337,78 +299,80 @@ if ($debug_mode) {
         padding: 10px;
         border: 1px solid #ddd;
         border-radius: 4px;
+        background-color: white; /* Ensure white background */
     }
 
-    /* Variant selector styling */
-    .variant-selector {
-        margin-bottom: 10px;
-    }
-
-    .variant-label {
-        display: block;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-bottom: 4px;
-        color: #555;
-    }
-
-    .variant-dropdown {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ddd;
+    /* Active Filters Display */
+     #active-filters {
+        margin-bottom: 20px;
+        padding: 10px;
+        background-color: #e9ecef;
         border-radius: 4px;
-        background-color: #f9f9f9;
-        font-size: 0.9rem;
-        color: #333;
-    }
-
-    .variant-dropdown:focus {
-        border-color: #9a7432;
-        outline: none;
-        box-shadow: 0 0 0 2px rgba(154, 116, 50, 0.2);
-    }
-
-    /* Packaging styling */
-    .packaging-container {
         display: flex;
         align-items: center;
-        margin-bottom: 10px;
+        gap: 10px;
+        flex-wrap: wrap; /* Allow wrapping */
     }
-
-    .packaging-label {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #555;
-        margin-right: 5px;
+    #active-filters .badge {
+        font-size: 0.9rem;
+        padding: 0.4em 0.8em;
+        display: inline-flex; /* Use flex for alignment */
+        align-items: center;
     }
-
-    .product-packaging {
-        margin: 0;
-        padding: 3px 8px;
-        background-color: #f5f5f5;
-        border-radius: 4px;
-        display: inline-block;
-        border-left: 3px solid #9a7432;
-        font-size: 0.85rem;
-        color: #666;
+     #active-filters .badge i {
+         margin-right: 5px;
+     }
+    #active-filters .badge .close {
+        font-size: 1.1rem; /* Make 'x' slightly larger */
+        margin-left: 8px;
+        line-height: 1;
+        padding: 0 3px; /* Add padding */
+        background-color: rgba(0,0,0,0.1); /* Subtle background */
+        border-radius: 50%;
+        opacity: 0.7;
+        cursor: pointer;
     }
+     #active-filters .badge .close:hover {
+        opacity: 1;
+        background-color: rgba(0,0,0,0.2);
+     }
+     #clearFilters {
+         margin-left: auto; /* Push clear button to the right */
+     }
 
     /* Product Modal Styling */
+    .modal-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .modal-title {
+        color: #495057;
+    }
+    .modal-content {
+        border-radius: 0.3rem;
+        border: none;
+    }
+    .modal-body {
+        padding: 1.5rem; /* More padding */
+    }
+
     .product-modal-image-container {
         height: 300px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: #f9f9f9;
+        background-color: #fff; /* White background */
         border-radius: 8px;
         overflow: hidden;
-        margin-bottom: 15px;
+        margin-bottom: 20px; /* Increased margin */
+        border: 1px solid #eee; /* Subtle border */
     }
 
     .product-modal-image-container img {
         max-height: 100%;
         max-width: 100%;
         object-fit: contain;
+        padding: 10px; /* Padding inside container */
     }
 
     #modal-product-name {
@@ -416,166 +380,338 @@ if ($debug_mode) {
         font-weight: 700;
         border-bottom: 2px solid #f0f0f0;
         padding-bottom: 10px;
+        margin-bottom: 20px; /* Spacing below name */
+        font-size: 1.75rem; /* Larger name */
     }
 
-    #modal-product-price {
-        font-size: 1.3rem;
+    /* Styling for modal info sections */
+    .modal-info-section {
+        margin-bottom: 12px; /* Consistent spacing */
+        display: flex;
+        align-items: baseline; /* Align text nicely */
+        min-height: 24px; /* Ensure consistent height */
+    }
+    .modal-info-section .info-label {
+        font-weight: 600;
+        color: #555;
+        width: 90px; /* Fixed width for labels */
+        flex-shrink: 0; /* Prevent label shrinking */
+    }
+    .modal-info-section .info-value {
+        color: #333;
+    }
+
+    #modal-product-price .info-value {
+        font-size: 1.4rem; /* Larger price */
         color: #9a7432 !important;
+        font-weight: 700;
     }
 
-    #modal-product-packaging {
-        background-color: #f5f5f5;
-        color: #666;
-        padding: 5px 10px;
+    #modal-product-packaging .info-value {
+        background-color: #e9ecef;
+        color: #495057;
+        padding: 3px 8px;
         border-radius: 4px;
-        border-left: 3px solid #9a7432;
+        font-size: 0.9rem;
     }
 
+    #modal-description-container {
+        margin-top: 15px; /* Space above description */
+    }
+     #modal-description-container .info-label {
+        display: block; /* Make label block */
+        margin-bottom: 5px;
+     }
     #modal-product-description {
-        background-color: #f9f9f9;
-        padding: 10px;
+        background-color: #f8f9fa;
+        padding: 10px 15px;
         border-radius: 4px;
         font-size: 0.9rem;
         color: #555;
+        border-left: 3px solid #9a7432;
+        line-height: 1.5;
     }
 
+    /* Modal Variant Selector */
+    #modal-variant-select-group label {
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 0.3rem; /* Space below label */
+        display: block;
+    }
+    #modal-variant-select {
+        background-color: #fff;
+        border-color: #ced4da;
+    }
+    #modal-variant-select:disabled {
+        background-color: #e9ecef;
+        opacity: 0.7;
+    }
+
+    /* Modal Quantity Controls */
+    .modal-quantity-controls {
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+    .modal-quantity-controls label { /* Using .info-label class */
+         margin-right: 10px;
+         margin-bottom: 0; /* Remove default margin */
+    }
+    .modal-quantity-controls .quantity-controls {
+        display: flex;
+        align-items: center;
+    }
+    .modal-quantity-controls .quantity-btn {
+        width: 34px; /* Slightly larger */
+        height: 34px;
+        background-color: #e9ecef;
+        border: 1px solid #ced4da;
+        color: #495057;
+        font-size: 1.1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        transition: background-color 0.2s;
+    }
+    .modal-quantity-controls .quantity-btn:hover {
+        background-color: #dee2e6;
+    }
+    .modal-quantity-controls .quantity-btn.decrease {
+        border-radius: 4px 0 0 4px;
+    }
+     .modal-quantity-controls .quantity-btn.increase {
+        border-radius: 0 4px 4px 0;
+    }
+    .modal-quantity-controls .quantity-input {
+        width: 50px;
+        height: 34px;
+        text-align: center;
+        border: 1px solid #ced4da;
+        border-left: none;
+        border-right: none;
+        margin: 0;
+        font-size: 1rem;
+        padding: 0 5px;
+        -moz-appearance: textfield;
+    }
+    .modal-quantity-controls .quantity-input::-webkit-outer-spin-button,
+    .modal-quantity-controls .quantity-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    /* Modal Ingredients */
     #modal-ingredients-container {
-        background-color: #f9f9f9;
+        background-color: #f8f9fa;
         padding: 15px;
         border-radius: 8px;
-        margin-top: 20px;
+        margin-top: 25px; /* More space above */
+        border: 1px solid #eee;
     }
-
     #modal-ingredients-container h5 {
         color: #9a7432;
         border-bottom: 1px solid #e0e0e0;
         padding-bottom: 8px;
+        margin-bottom: 15px; /* Space below title */
+        font-weight: 600;
     }
-
     .ingredient-item {
         display: flex;
         align-items: center;
         margin-bottom: 8px;
-        padding: 5px;
+        padding: 8px 10px; /* More padding */
         background-color: #fff;
         border-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border: 1px solid #eee;
+        transition: box-shadow 0.2s;
     }
-
+    .ingredient-item:hover {
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
     .ingredient-name {
-        font-weight: 600;
+        font-weight: 500; /* Slightly lighter */
         color: #555;
+        flex-grow: 1; /* Take available space */
     }
-
     .ingredient-amount {
         color: #777;
         font-size: 0.85rem;
-        margin-left: 5px;
+        margin-left: 8px; /* More space */
+        white-space: nowrap; /* Prevent wrapping */
     }
 
+    /* Modal Add to Cart Button */
     #modal-add-to-cart-btn {
         background-color: #9a7432;
         border-color: #9a7432;
         font-weight: 600;
         padding: 10px 15px;
         transition: all 0.3s ease;
+        font-size: 1.1rem; /* Slightly larger text */
     }
-
-    #modal-add-to-cart-btn:hover {
+    #modal-add-to-cart-btn:hover:not(:disabled) { /* Add :not(:disabled) */
         background-color: #8a6422;
         border-color: #8a6422;
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-
-    /* Make product cards clickable */
-    .product-card {
-        cursor: pointer;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .product-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-    }
+     #modal-add-to-cart-btn:disabled {
+        background-color: #c0a16b; /* Lighter color when disabled */
+        border-color: #c0a16b;
+        cursor: not-allowed;
+        opacity: 0.65;
+     }
 
     /* Responsive adjustments */
+    @media (max-width: 991px) { /* Adjust breakpoint for modal layout */
+        .modal-body .row {
+            flex-direction: column; /* Stack image and info vertically */
+        }
+         .modal-body .col-md-5, .modal-body .col-md-7 {
+            width: 100%;
+            max-width: 100%;
+            flex: 0 0 100%;
+         }
+         .product-modal-image-container {
+            height: 250px; /* Adjust height */
+         }
+    }
     @media (max-width: 768px) {
         .product-grid {
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         }
-
         .page-title {
             font-size: 2rem;
         }
-
-        .product-modal-image-container {
-            height: 200px;
+        .modal-dialog {
+            max-width: 95%; /* Wider modal on smaller screens */
         }
     }
 
     @media (max-width: 576px) {
         .product-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr; /* Single column */
         }
-
         .search-filter-section {
             flex-direction: column;
+            align-items: stretch; /* Stretch items */
         }
-
         .search-box, .category-filter {
             width: 100%;
+            min-width: unset;
         }
-
+         #clearFilters {
+             margin-left: 0; /* Align left on small screens */
+             margin-top: 10px;
+             width: 100%;
+         }
         .modal-dialog {
-            margin: 0.5rem;
+            margin: 0.5rem; /* Smaller margin */
+            max-width: calc(100% - 1rem); /* Full width minus margin */
         }
+         .product-modal-image-container {
+            height: 200px;
+         }
+         #modal-product-name {
+            font-size: 1.5rem;
+         }
+         .modal-info-section .info-label {
+            width: 80px; /* Adjust label width */
+         }
+         #modal-ingredients-container .row .col-md-4 {
+            flex: 0 0 50%; /* 2 columns on small screens */
+            max-width: 50%;
+         }
     }
+
+    /* No results message */
+    #no-results-message {
+        background-color: #fff3cd; /* Warning background */
+        color: #664d03; /* Warning text */
+        border-color: #ffecb5; /* Warning border */
+    }
+
+    /* Login Alert */
+    .login-alert {
+        background-color: #e2f3ff;
+        border-color: #b8e0ff;
+        color: #0056b3;
+    }
+    .login-alert .alert-link {
+        color: #004085;
+        font-weight: 600;
+    }
+
+    /* Global Popup Style */
+    #globalPopup {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1060; /* Above modals */
+        padding: 1rem 1.5rem;
+        border-radius: 0.25rem;
+        color: white;
+        display: none;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        min-width: 250px;
+        text-align: center;
+    }
+    #globalPopup.alert-success {
+        background-color: #28a745; /* Bootstrap success green */
+    }
+    #globalPopup.alert-danger {
+         background-color: #dc3545; /* Bootstrap danger red */
+    }
+
 </style>
 
 <div class="ordering-container">
     <h1 class="page-title">Our Products</h1>
 
     <?php if (!isset($_SESSION['username'])): ?>
-    <div class="alert alert-info" role="alert" style="margin-bottom: 20px;">
-        <i class="fas fa-info-circle"></i> Please <a href="/LandingPage/login.php" class="alert-link">login</a> to add products to your cart.
+    <div class="alert login-alert" role="alert" style="margin-bottom: 20px;">
+        <i class="fas fa-info-circle mr-2"></i> Please <a href="/LandingPage/login.php" class="alert-link">login</a> or <a href="/LandingPage/register.php" class="alert-link">register</a> to add items to your cart.
     </div>
     <?php endif; ?>
 
     <div class="search-filter-section">
         <div class="search-box">
             <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" placeholder="Search products...">
-            <button type="button" id="clearSearch" class="clear-search" style="display: none;">
+            <input type="text" id="searchInput" class="form-control" placeholder="Search products by name...">
+            <button type="button" id="clearSearch" class="clear-search" style="display: none;" aria-label="Clear search">
                 <i class="fas fa-times"></i>
             </button>
         </div>
         <div class="category-filter">
-            <select id="categoryFilter">
+            <select id="categoryFilter" class="form-control">
                 <option value="">All Categories</option>
                 <?php foreach (array_keys($products) as $category): ?>
                     <option value="<?php echo htmlspecialchars($category); ?>"><?php echo htmlspecialchars($category); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
-        <button type="button" id="clearFilters" class="btn btn-sm btn-outline-secondary ml-2" style="display: none;">
-            <i class="fas fa-times-circle"></i> Clear Filters
-        </button>
     </div>
 
     <div id="active-filters" class="mb-3" style="display: none;">
-        <span class="badge badge-pill badge-light mr-2" id="search-filter-badge" style="display: none;">
+        <span class="badge badge-pill badge-secondary mr-2" id="search-filter-badge" style="display: none;">
             <i class="fas fa-search"></i> <span id="search-term-display"></span>
-            <button type="button" class="close ml-1" aria-label="Close" onclick="$('#searchInput').val('').trigger('input');">
+            <button type="button" class="close ml-1" aria-label="Remove search filter" onclick="$('#searchInput').val('').trigger('input');">
                 <span aria-hidden="true">&times;</span>
             </button>
         </span>
-        <span class="badge badge-pill badge-light" id="category-filter-badge" style="display: none;">
+        <span class="badge badge-pill badge-secondary" id="category-filter-badge" style="display: none;">
             <i class="fas fa-tag"></i> <span id="category-display"></span>
-            <button type="button" class="close ml-1" aria-label="Close" onclick="$('#categoryFilter').val('').trigger('change');">
+            <button type="button" class="close ml-1" aria-label="Remove category filter" onclick="$('#categoryFilter').val('').trigger('change');">
                 <span aria-hidden="true">&times;</span>
             </button>
         </span>
+         <button type="button" id="clearFilters" class="btn btn-sm btn-outline-danger" style="display: none;">
+            <i class="fas fa-times-circle mr-1"></i> Clear All Filters
+        </button>
     </div>
 
     <?php if (empty($groupedProducts)): ?>
@@ -595,35 +731,46 @@ if ($debug_mode) {
                 <div class="product-grid">
                     <?php foreach ($categoryProducts as $productName => $productGroup): ?>
                         <?php
+                            // Use the main_product data for the card display
                             $mainProduct = $productGroup['main_product'];
-                            $variants = $productGroup['variants'];
-                            $hasVariants = !empty($variants);
+                            $variants = $productGroup['variants']; // We know variants exist from the grouping logic
+                            $displayProductName = $productName; // Use the grouped product name
+
+                            // *** FIX APPLIED HERE ***
+                            // Construct the full image URL using the ADMIN_ASSET_URL constant
+                            // Assumes $mainProduct['product_image'] stores a path like 'uploads/products/image.png'
+                            // or '/uploads/products/image.png'. Adjust ltrim if your path is different.
+                            $relative_image_path = $mainProduct['product_image'] ? ltrim($mainProduct['product_image'], '/') : null;
+                            $image_url = $relative_image_path ? (ADMIN_ASSET_URL . '/' . $relative_image_path) : null;
+
+                            // --- Alternative for Option 2 (if admin is just /admin/ directory) ---
+                            // Comment out the two lines above and uncomment the two lines below if needed:
+                            // $relative_image_path = $mainProduct['product_image'] ? ltrim($mainProduct['product_image'], '/') : null;
+                            // $image_url = $relative_image_path ? ('/admin/' . $relative_image_path) : null;
+                            // --- End Alternative ---
+
                         ?>
                         <div class="product-card"
-                             data-name="<?php echo htmlspecialchars(strtolower($productName)); ?>"
-                             data-category="<?php echo htmlspecialchars(strtolower($category)); ?>"
-                             data-stock="<?php echo $mainProduct['stock_quantity']; ?>">
+                             data-name="<?php echo htmlspecialchars($displayProductName); ?>"
+                             data-category="<?php echo htmlspecialchars($category); ?>">
                             <div class="product-image-container">
-                                <?php if (isset($mainProduct['stock_quantity']) && $mainProduct['stock_quantity'] <= 0): ?>
-                                <div class="pre-order-badge">Pre-order</div>
-                                <?php endif; ?>
-                                <img src="<?php echo htmlspecialchars($mainProduct['product_image'] ?: '/LandingPage/images/default-product.jpg'); ?>"
-                                     alt="<?php echo htmlspecialchars($productName); ?>"
-                                     class="product-image"
-                                     id="product-image-<?php echo $mainProduct['product_id']; ?>">
+                                <!-- Use the constructed $image_url -->
+                                <img src="<?php echo htmlspecialchars($image_url ?: '/LandingPage/images/default-product.jpg'); ?>"
+                                     alt="<?php echo htmlspecialchars($displayProductName); ?>"
+                                     class="product-image">
                             </div>
                             <div class="product-info">
-                                <h3 class="product-name"><?php echo htmlspecialchars($productName); ?></h3>
+                                <h3 class="product-name"><?php echo htmlspecialchars($displayProductName); ?></h3>
 
                                 <?php if (!empty($mainProduct['additional_description'])): ?>
                                 <div class="product-description">
-                                    <p><?php echo htmlspecialchars(substr($mainProduct['additional_description'], 0, 100)); ?>
-                                    <?php if (strlen($mainProduct['additional_description']) > 100): ?>...<?php endif; ?></p>
+                                    <!-- Use paragraph for description -->
+                                    <p><?php echo htmlspecialchars($mainProduct['additional_description']); ?></p>
                                 </div>
                                 <?php endif; ?>
 
                                 <div class="view-details-hint">
-                                    <i class="fas fa-search-plus"></i> Click to view details
+                                    <i class="fas fa-info-circle mr-1"></i> View Details & Variants
                                 </div>
                             </div>
                         </div>
@@ -631,771 +778,11 @@ if ($debug_mode) {
                 </div>
             </div>
         <?php endforeach; ?>
+         <div id="no-results-message" class="alert alert-warning text-center my-4" style="display: none;">
+            <i class="fas fa-exclamation-triangle mr-2"></i> No products found matching your criteria.
+        </div>
     <?php endif; ?>
 </div>
-
-<script>
-$(document).ready(function() {
-    // Check if user is logged in
-    const isLoggedIn = <?php echo isset($_SESSION['username']) ? 'true' : 'false'; ?>;
-
-    // Apply login-required class to buttons if user is not logged in
-    if (!isLoggedIn) {
-        $('.add-to-cart-btn').addClass('login-required');
-    }
-
-    // Initialize search and filter state
-    let currentSearchTerm = '';
-    let currentCategory = '';
-
-    // Handle variant selection dropdown changes
-    $(document).on('change', '.variant-dropdown', function() {
-        const selectElement = $(this);
-        const selectedOption = selectElement.find('option:selected');
-        const productId = selectedOption.val();
-        const price = selectedOption.data('price');
-        const packaging = selectedOption.data('packaging');
-        const imagePath = selectedOption.data('image');
-        const productName = selectedOption.data('name');
-
-        // Update product ID in related elements
-        const productCard = selectElement.closest('.product-card');
-        const quantityControls = productCard.find('.quantity-controls');
-        const addToCartBtn = productCard.find('.add-to-cart-btn');
-
-        // Update quantity buttons and input
-        quantityControls.find('.quantity-btn').attr('data-product-id', productId);
-        quantityControls.find('.quantity-input').attr('data-product-id', productId);
-
-        // Update add to cart button attributes
-        addToCartBtn.attr('data-product-id', productId);
-        addToCartBtn.attr('data-product-name', productName);
-        addToCartBtn.attr('data-product-price', price);
-        addToCartBtn.attr('data-product-image', imagePath);
-        addToCartBtn.attr('data-product-packaging', packaging);
-
-        // Update displayed price
-        const priceElement = productCard.find('.product-price');
-        priceElement.text('₱' + parseFloat(price).toFixed(2));
-
-        // Update packaging information
-        const packagingElement = productCard.find('.product-packaging');
-        if (packagingElement.length) {
-            packagingElement.text(packaging || 'Not specified');
-        }
-
-        // Update product image if it exists
-        const imageElement = productCard.find('.product-image');
-        if (imageElement.length) {
-            imageElement.attr('src', imagePath);
-            imageElement.attr('alt', productName);
-        }
-
-        console.log('Variant changed:', {
-            productId: productId,
-            productName: productName,
-            price: price,
-            packaging: packaging,
-            imagePath: imagePath
-        });
-    });
-
-    // Product card click handler to show modal
-    $(document).on('click', '.product-card', function(e) {
-        // Don't trigger modal if clicking on buttons or inputs
-        if ($(e.target).closest('.add-to-cart-btn, .quantity-controls, .variant-dropdown').length) {
-            return;
-        }
-
-        const productCard = $(this);
-        const productName = productCard.data('name');
-        const category = productCard.data('category');
-
-        // Show loading state
-        $('#modal-product-name').text('Loading...');
-        $('#modal-product-image').attr('src', '/LandingPage/images/loading.gif');
-        $('#modal-product-packaging').text('');
-        $('#modal-product-price').text('');
-        $('#modal-product-description').text('');
-        $('#modal-ingredients-list').empty();
-        $('#modal-variant-select').empty();
-
-        // Show the modal
-        $('#productDetailModal').modal('show');
-
-        // Fetch product details
-        $.ajax({
-            url: '/LandingPage/get_product_modal_data.php',
-            type: 'POST',
-            data: {
-                product_name: productName,
-                category: category
-            },
-            success: function(response) {
-                console.log('Product modal data:', response);
-
-                if (response.success) {
-                    const mainProduct = response.main_product;
-                    const variants = response.variants;
-
-                    // Update modal title
-                    $('#modal-product-name').text(productName);
-
-                    // Update product image
-                    $('#modal-product-image').attr('src', mainProduct.product_image || '/LandingPage/images/default-product.jpg');
-                    $('#modal-product-image').attr('alt', productName);
-
-                    // Update description if available
-                    if (mainProduct.additional_description) {
-                        $('#modal-product-description').text(mainProduct.additional_description);
-                        $('#modal-description-container').show();
-                    } else {
-                        $('#modal-description-container').hide();
-                    }
-
-                    // Populate variant dropdown
-                    $('#modal-variant-select').empty();
-                    variants.forEach(function(variant) {
-                        $('#modal-variant-select').append(
-                            $('<option></option>')
-                                .val(variant.product_id)
-                                .text(variant.item_description + ' - ₱' + parseFloat(variant.price).toFixed(2))
-                                .data('price', variant.price)
-                                .data('packaging', variant.packaging)
-                                .data('image', variant.product_image || '/LandingPage/images/default-product.jpg')
-                                .data('name', variant.item_description)
-                                .data('description', variant.additional_description)
-                                .data('ingredients', variant.ingredients_array)
-                                .data('stock', variant.stock_quantity)
-                        );
-                    });
-
-                    // Set initial values
-                    updateModalFromVariant();
-
-                    // Show ingredients if available
-                    if (mainProduct.ingredients_array && mainProduct.ingredients_array.length > 0) {
-                        renderIngredients(mainProduct.ingredients_array);
-                        $('#modal-ingredients-container').show();
-                    } else {
-                        $('#modal-ingredients-container').hide();
-                    }
-                } else {
-                    console.error('Error fetching product details:', response.error);
-                    $('#productDetailModal').modal('hide');
-                    showPopup('Error loading product details', true);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX error:', status, error);
-                $('#productDetailModal').modal('hide');
-                showPopup('Error loading product details: ' + error, true);
-            }
-        });
-    });
-
-    // Handle variant selection in modal
-    $('#modal-variant-select').on('change', function() {
-        updateModalFromVariant();
-    });
-
-    // Function to update modal content based on selected variant
-    function updateModalFromVariant() {
-        const selectedOption = $('#modal-variant-select option:selected');
-        const productId = selectedOption.val();
-        const price = selectedOption.data('price');
-        const packaging = selectedOption.data('packaging');
-        const imagePath = selectedOption.data('image');
-        const productName = selectedOption.data('name');
-        const description = selectedOption.data('description');
-        const ingredients = selectedOption.data('ingredients');
-        const stockQuantity = selectedOption.data('stock');
-
-        // Check if item is in stock or pre-order
-        const isPreOrder = stockQuantity <= 0;
-
-        // Update modal content
-        $('#modal-product-packaging').text(packaging || 'Not specified');
-        $('#modal-product-price').text('₱' + parseFloat(price).toFixed(2));
-
-        // Update stock status
-        if (isPreOrder) {
-            $('#modal-stock-status').text('Pre-order').removeClass('badge-success').addClass('badge-danger');
-            $('#modal-add-to-cart-btn').text('Pre-order Now');
-        } else {
-            $('#modal-stock-status').text('In Stock').removeClass('badge-danger').addClass('badge-success');
-            $('#modal-add-to-cart-btn').text('Add to Cart');
-        }
-
-        // Update image if it exists
-        if (imagePath) {
-            $('#modal-product-image').attr('src', imagePath);
-            $('#modal-product-image').attr('alt', productName);
-        }
-
-        // Update description if available
-        if (description) {
-            $('#modal-product-description').text(description);
-            $('#modal-description-container').show();
-        } else {
-            $('#modal-description-container').hide();
-        }
-
-        // Update ingredients if available
-        if (ingredients && ingredients.length > 0) {
-            renderIngredients(ingredients);
-            $('#modal-ingredients-container').show();
-        } else {
-            $('#modal-ingredients-container').hide();
-        }
-
-        // Update add to cart button
-        $('#modal-add-to-cart-btn').data('product-id', productId);
-        $('#modal-add-to-cart-btn').data('product-name', productName);
-        $('#modal-add-to-cart-btn').data('product-price', price);
-        $('#modal-add-to-cart-btn').data('product-image', imagePath);
-        $('#modal-add-to-cart-btn').data('product-packaging', packaging);
-        $('#modal-add-to-cart-btn').data('stock-quantity', stockQuantity);
-        $('#modal-add-to-cart-btn').data('is-preorder', isPreOrder);
-    }
-
-    // Function to render ingredients list
-    function renderIngredients(ingredients) {
-        const ingredientsList = $('#modal-ingredients-list');
-        ingredientsList.empty();
-
-        if (ingredients && ingredients.length > 0) {
-            ingredients.forEach(function(ingredient) {
-                if (Array.isArray(ingredient) && ingredient.length >= 2) {
-                    const name = ingredient[0];
-                    const amount = ingredient[1];
-
-                    const ingredientItem = $('<div class="col-md-4 col-6 mb-2"></div>');
-                    const itemContent = $('<div class="ingredient-item"></div>');
-
-                    itemContent.append('<span class="ingredient-name">' + name + '</span>');
-                    if (amount) {
-                        itemContent.append('<span class="ingredient-amount">(' + amount + 'g)</span>');
-                    }
-
-                    ingredientItem.append(itemContent);
-                    ingredientsList.append(ingredientItem);
-                }
-            });
-        } else {
-            ingredientsList.append('<div class="col-12"><p class="text-muted">No ingredients information available</p></div>');
-        }
-    }
-
-    // Modal quantity controls - using direct event binding to prevent double-triggering
-    $('#modal-quantity-decrease').on('click', function(e) {
-        e.stopPropagation(); // Prevent event bubbling
-        let quantity = parseInt($('#modal-quantity-input').val());
-        if (quantity > 1) {
-            $('#modal-quantity-input').val(quantity - 1);
-        }
-    });
-
-    $('#modal-quantity-increase').on('click', function(e) {
-        e.stopPropagation(); // Prevent event bubbling
-        let quantity = parseInt($('#modal-quantity-input').val());
-        if (quantity < 100) {
-            $('#modal-quantity-input').val(quantity + 1);
-        }
-    });
-
-    $('#modal-quantity-input').on('change', function(e) {
-        e.stopPropagation(); // Prevent event bubbling
-        let quantity = parseInt($(this).val());
-        if (isNaN(quantity) || quantity < 1) {
-            $(this).val(1);
-        } else if (quantity > 100) {
-            $(this).val(100);
-        }
-    });
-
-    // Modal add to cart button
-    $('#modal-add-to-cart-btn').on('click', function(e) {
-        e.stopPropagation(); // Prevent event bubbling
-
-        // Check if user is logged in
-        if (!isLoggedIn) {
-            // Show login prompt
-            showPopup('Please login to add items to cart', true);
-
-            // Redirect to login page after a short delay
-            setTimeout(function() {
-                window.location.href = '/LandingPage/login.php';
-            }, 2000);
-
-            return;
-        }
-
-        const button = $(this);
-        const productId = $('#modal-variant-select').val();
-        const productName = $('#modal-variant-select option:selected').data('name');
-        const productPrice = $('#modal-variant-select option:selected').data('price');
-        const productImage = $('#modal-variant-select option:selected').data('image');
-        const productPackaging = $('#modal-variant-select option:selected').data('packaging');
-        const productCategory = $('.category-section:visible').data('category') || '';
-        const quantity = parseInt($('#modal-quantity-input').val());
-        const stockQuantity = $('#modal-variant-select option:selected').data('stock');
-        const isPreOrder = stockQuantity <= 0;
-
-        // Validate data before sending
-        if (!productId || !productName || !productPrice) {
-            console.error('Missing required product data:', {
-                productId: productId,
-                productName: productName,
-                productPrice: productPrice
-            });
-            showPopup('Error: Missing product data', true);
-            return;
-        }
-
-        // Disable the button to prevent multiple clicks
-        button.prop('disabled', true).text('Adding...');
-
-        // Show a temporary message
-        showPopup('Adding to cart...');
-
-        // Log the data being sent
-        console.log('Adding to cart:', {
-            product_id: productId,
-            product_name: productName,
-            price: productPrice,
-            image_path: productImage,
-            packaging: productPackaging,
-            quantity: quantity,
-            is_preorder: isPreOrder
-        });
-
-        $.ajax({
-            url: '/LandingPage/add_to_cart.php',
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                product_id: productId,
-                product_name: productName,
-                price: productPrice,
-                image_path: productImage,
-                packaging: productPackaging,
-                category: productCategory, // Include category information
-                quantity: quantity,
-                is_preorder: isPreOrder
-            },
-            success: function(response) {
-                console.log('Response received:', response);
-
-                try {
-                    if (response.success) {
-                        // Update cart count
-                        $('#cart-count').text(response.cart_count);
-
-                        // Show success message based on pre-order status
-                        if (isPreOrder) {
-                            showPopup('Pre-order added to cart');
-                        } else {
-                            showPopup('Item added to cart');
-                        }
-
-                        // Reset quantity to 1
-                        $('#modal-quantity-input').val(1);
-
-                        // Close the modal
-                        $('#productDetailModal').modal('hide');
-
-                        // Update cart modal if it's open
-                        if ($('#cartModal').hasClass('show')) {
-                            updateCartModal();
-                        }
-                    } else {
-                        showPopup(response.message || 'Error adding to cart', true);
-                        console.error('Server error:', response);
-                    }
-                } catch (e) {
-                    console.error('Error parsing response:', e);
-                    console.error('Raw response:', response);
-                    showPopup('Error processing response from server', true);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX error:', status, error);
-                console.error('Response text:', xhr.responseText);
-                showPopup('Error adding to cart: ' + error, true);
-            },
-            complete: function() {
-                // Re-enable the button
-                button.prop('disabled', false).text('Add to Cart');
-            }
-        });
-    });
-
-    // Function to update the clear search button visibility
-    function updateClearSearchButton() {
-        if ($('#searchInput').val().trim() !== '') {
-            $('#clearSearch').show();
-        } else {
-            $('#clearSearch').hide();
-        }
-    }
-
-    // Clear search button functionality
-    $('#clearSearch').on('click', function() {
-        $('#searchInput').val('');
-        $('#searchInput').trigger('input');
-        $(this).hide();
-    });
-
-    // Update clear button on input
-    $('#searchInput').on('input', function() {
-        updateClearSearchButton();
-    });
-
-    // Function to update filter badges and clear filters button
-    function updateFilterDisplay() {
-        const searchTerm = $('#searchInput').val().trim();
-        const selectedCategory = $('#categoryFilter').val();
-
-        // Update search filter badge
-        if (searchTerm !== '') {
-            $('#search-term-display').text(searchTerm);
-            $('#search-filter-badge').show();
-        } else {
-            $('#search-filter-badge').hide();
-        }
-
-        // Update category filter badge
-        if (selectedCategory !== '') {
-            $('#category-display').text(selectedCategory);
-            $('#category-filter-badge').show();
-        } else {
-            $('#category-filter-badge').hide();
-        }
-
-        // Show/hide active filters container and clear filters button
-        if (searchTerm !== '' || selectedCategory !== '') {
-            $('#active-filters').show();
-            $('#clearFilters').show();
-        } else {
-            $('#active-filters').hide();
-            $('#clearFilters').hide();
-        }
-    }
-
-    // Clear all filters button
-    $('#clearFilters').on('click', function() {
-        $('#searchInput').val('');
-        $('#categoryFilter').val('');
-
-        // Trigger events to update the UI
-        $('#searchInput').trigger('input');
-        $('#categoryFilter').trigger('change');
-
-        // Hide filter badges and clear button
-        $('#active-filters').hide();
-        $(this).hide();
-
-        showPopup('All filters cleared');
-    });
-
-    // Search functionality
-    $('#searchInput').on('input', function() {
-        const searchTerm = $(this).val().toLowerCase().trim();
-        currentSearchTerm = searchTerm;
-
-        // Update filter display
-        updateFilterDisplay();
-
-        // If search is empty, show all products (or respect category filter)
-        if (searchTerm === '') {
-            // Get the current category filter value
-            const selectedCategory = $('#categoryFilter').val();
-
-            if (selectedCategory === '') {
-                // If no category is selected, show all products
-                $('.product-card').show();
-                $('.category-section').show();
-            } else {
-                // If a category is selected, only show products from that category
-                $('.category-section').hide();
-                $(`.category-section[data-category="${selectedCategory}"]`).show();
-
-                $('.product-card').hide();
-                $(`.product-card[data-category="${selectedCategory.toLowerCase()}"]`).show();
-            }
-            return;
-        }
-
-        // Filter products based on search term
-        $('.product-card').each(function() {
-            const productName = $(this).data('name') || '';
-            const productCategory = $(this).data('category') || '';
-            const productInfo = $(this).find('.product-name').text().toLowerCase() + ' ' +
-                               $(this).find('.product-packaging').text().toLowerCase();
-
-            // Check if product name, category, or any product info contains the search term
-            if (productName.includes(searchTerm) ||
-                productCategory.includes(searchTerm) ||
-                productInfo.includes(searchTerm)) {
-                $(this).show();
-            } else {
-                $(this).hide();
-            }
-        });
-
-        // Show/hide category sections based on visible products
-        $('.category-section').each(function() {
-            const category = $(this);
-            const visibleProducts = category.find('.product-card:visible').length;
-
-            if (visibleProducts > 0) {
-                category.show();
-            } else {
-                category.hide();
-            }
-        });
-
-        // Show a message if no products match the search
-        if ($('.product-card:visible').length === 0) {
-            if ($('#no-results-message').length === 0) {
-                $('.ordering-container').append(
-                    '<div id="no-results-message" class="alert alert-info text-center my-4">' +
-                    '<i class="fas fa-search mr-2"></i> No products found matching "' + searchTerm + '"</div>'
-                );
-            } else {
-                $('#no-results-message').html(
-                    '<i class="fas fa-search mr-2"></i> No products found matching "' + searchTerm + '"'
-                ).show();
-            }
-        } else {
-            $('#no-results-message').hide();
-        }
-    });
-
-    // Category filter functionality
-    $('#categoryFilter').on('change', function() {
-        const selectedCategory = $(this).val();
-        currentCategory = selectedCategory;
-
-        // Clear any existing search
-        $('#searchInput').val('');
-        $('#no-results-message').hide();
-
-        // Update filter display
-        updateFilterDisplay();
-
-        if (selectedCategory === '') {
-            // Show all categories and products
-            $('.category-section').show();
-            $('.product-card').show();
-        } else {
-            // Hide all categories first
-            $('.category-section').hide();
-            // Show only the selected category
-            $(`.category-section[data-category="${selectedCategory}"]`).show();
-
-            // Hide all products first
-            $('.product-card').hide();
-            // Show only products in the selected category
-            $(`.product-card[data-category="${selectedCategory.toLowerCase()}"]`).show();
-        }
-
-        // Show a message if the category is empty
-        if (selectedCategory !== '' && $(`.product-card[data-category="${selectedCategory.toLowerCase()}"]:visible`).length === 0) {
-            if ($('#no-results-message').length === 0) {
-                $('.ordering-container').append(
-                    '<div id="no-results-message" class="alert alert-info text-center my-4">' +
-                    '<i class="fas fa-info-circle mr-2"></i> No products found in the "' + selectedCategory + '" category</div>'
-                );
-            } else {
-                $('#no-results-message').html(
-                    '<i class="fas fa-info-circle mr-2"></i> No products found in the "' + selectedCategory + '" category'
-                ).show();
-            }
-        }
-
-        // Show a success message when filter is applied
-        if (selectedCategory !== '') {
-            showPopup(`Showing products in "${selectedCategory}" category`);
-        } else {
-            showPopup('Showing all products');
-        }
-
-        // Update clear search button visibility
-        updateClearSearchButton();
-    });
-
-    // Quantity controls - using event delegation for better reliability
-    $(document).on('click', '.quantity-btn', function() {
-        console.log('Quantity button clicked:', this);
-
-        // Find the quantity input within the same quantity-controls div
-        const quantityControls = $(this).closest('.quantity-controls');
-        const input = quantityControls.find('.quantity-input');
-
-        console.log('Found input:', input);
-
-        let quantity = parseInt(input.val()) || 1;
-
-        if ($(this).hasClass('decrease')) {
-            if (quantity > 1) {
-                quantity--;
-                input.val(quantity);
-                console.log('Decreased quantity to: ' + quantity);
-            }
-        } else if ($(this).hasClass('increase')) {
-            if (quantity < 100) {
-                quantity++;
-                input.val(quantity);
-                console.log('Increased quantity to: ' + quantity);
-            }
-        }
-    });
-
-    // Quantity input validation - using event delegation
-    $(document).on('change', '.quantity-input', function() {
-        let quantity = parseInt($(this).val());
-
-        if (isNaN(quantity) || quantity < 1) {
-            $(this).val(1);
-        } else if (quantity > 100) {
-            $(this).val(100);
-        }
-
-        console.log('Quantity changed to: ' + $(this).val());
-    });
-
-    // Add to cart functionality - using event delegation for better reliability
-    $(document).on('click', '.add-to-cart-btn', function() {
-        console.log('Add to cart button clicked');
-
-        // Check if user is logged in
-        if (!isLoggedIn) {
-            // Show login prompt
-            showPopup('Please login to add items to cart', true);
-
-            // Redirect to login page after a short delay
-            setTimeout(function() {
-                window.location.href = '/LandingPage/login.php';
-            }, 2000);
-
-            return;
-        }
-
-        const button = $(this);
-        const productId = button.data('product-id');
-        const productName = button.data('product-name');
-        const productPrice = button.data('product-price');
-        const productImage = button.data('product-image');
-        const productPackaging = button.data('product-packaging');
-        // Get category from the product card's parent category section
-        const productCategory = button.closest('.product-card').data('category') || button.data('product-category') || '';
-
-        // Find the quantity input - need to look in parent container first
-        const productCard = button.closest('.product-info');
-        const quantityControls = productCard.find('.quantity-controls');
-        const quantityInput = quantityControls.find('.quantity-input');
-
-        console.log('Product card:', productCard);
-        console.log('Quantity controls:', quantityControls);
-        console.log('Quantity input:', quantityInput);
-
-        // Default to 1 if we can't find the input or parse the value
-        let quantity = 1;
-        if (quantityInput.length > 0) {
-            quantity = parseInt(quantityInput.val()) || 1;
-        }
-
-        console.log('Adding to cart:', {
-            product_id: productId,
-            product_name: productName,
-            price: productPrice,
-            quantity: quantity
-        });
-
-        // Disable the button to prevent multiple clicks
-        button.prop('disabled', true).text('Adding...');
-
-        // Show a temporary message
-        showPopup('Adding to cart...');
-
-        // Log the data being sent
-        console.log('AJAX request data:', {
-            url: '/LandingPage/add_to_cart.php',
-            type: 'POST',
-            data: {
-                product_id: productId,
-                product_name: productName,
-                price: productPrice,
-                image_path: productImage,
-                packaging: productPackaging,
-                category: productCategory,
-                quantity: quantity
-            }
-        });
-
-        $.ajax({
-            url: '/LandingPage/add_to_cart.php',
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                product_id: productId,
-                product_name: productName,
-                price: productPrice,
-                image_path: productImage,
-                packaging: productPackaging,
-                category: productCategory,
-                quantity: quantity
-            },
-            success: function(response) {
-                console.log('Response received:', response);
-
-                try {
-                    // Handle the response
-                    if (response.success) {
-                        // Update cart count
-                        $('#cart-count').text(response.cart_count);
-
-                        // Show success message
-                        showPopup('Item added to cart');
-
-                        // Reset quantity to 1
-                        quantityInput.val(1);
-
-                        // Update cart modal if it's open
-                        if ($('#cartModal').hasClass('show')) {
-                            updateCartModal();
-                        }
-                    } else {
-                        showPopup(response.message || 'Error adding to cart', true);
-                    }
-                } catch (e) {
-                    console.error('Error handling response:', e);
-                    console.error('Raw response:', response);
-                    showPopup('Error processing response from server', true);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX error:', status, error);
-                console.error('Response text:', xhr.responseText);
-                showPopup('Error adding to cart: ' + error, true);
-            },
-            complete: function() {
-                // Re-enable the button
-                button.prop('disabled', false).text(isLoggedIn ? 'Add to Cart' : 'Login to Add to Cart');
-            }
-        });
-    });
-
-    // Use the global showPopup function defined at the bottom of the page
-});
-</script>
-
-<?php
-// Include the footer
-require_once 'footer.php';
-?>
 
 <!-- Product Detail Modal -->
 <div class="modal fade" id="productDetailModal" tabindex="-1" role="dialog" aria-labelledby="productDetailModalLabel" aria-hidden="true">
@@ -1411,76 +798,657 @@ require_once 'footer.php';
                 <div class="row">
                     <div class="col-md-5">
                         <div class="product-modal-image-container">
-                            <img src="" alt="Product Image" id="modal-product-image" class="img-fluid">
+                             <!-- Initial state handled by JS -->
+                            <img src="" alt="" id="modal-product-image" class="img-fluid">
                         </div>
                     </div>
                     <div class="col-md-7">
+                         <!-- Initial state handled by JS -->
                         <h3 id="modal-product-name" class="mb-3"></h3>
 
-                        <div class="form-group mb-3">
-                            <label for="modal-variant-select" class="font-weight-bold">Select Variant:</label>
-                            <select class="form-control" id="modal-variant-select"></select>
+                        <!-- Variant Selector -->
+                        <div class="form-group mb-3" id="modal-variant-select-group">
+                            <label for="modal-variant-select" class="info-label">Variant:</label>
+                            <select class="form-control" id="modal-variant-select">
+                                <!-- Options populated by JS -->
+                            </select>
                         </div>
 
-                        <div class="mb-3">
-                            <span class="font-weight-bold">Packaging:</span>
-                            <span id="modal-product-packaging" class="ml-2 badge badge-light"></span>
+                        <!-- Packaging Info -->
+                        <div class="modal-info-section" id="modal-product-packaging">
+                             <span class="info-label">Packaging:</span>
+                             <span class="info-value badge badge-light"></span>
                         </div>
 
-                        <div class="mb-3">
-                            <span class="font-weight-bold">Price:</span>
-                            <span id="modal-product-price" class="ml-2 text-success font-weight-bold"></span>
-                        </div>
+                        <!-- Price Info -->
+                         <div class="modal-info-section" id="modal-product-price">
+                             <span class="info-label">Price:</span>
+                             <span class="info-value"></span>
+                         </div>
 
-                        <div class="mb-3" id="modal-stock-status-container">
-                            <span class="font-weight-bold">Status:</span>
-                            <span id="modal-stock-status" class="ml-2 badge"></span>
-                        </div>
-
-                        <div class="mb-3" id="modal-description-container">
-                            <span class="font-weight-bold">Description:</span>
+                        <!-- Description -->
+                        <div id="modal-description-container" style="display: none;">
+                            <span class="info-label d-block mb-1">Description:</span>
                             <p id="modal-product-description" class="mt-1"></p>
                         </div>
 
-                        <div class="quantity-controls mb-3">
-                            <label class="font-weight-bold">Quantity:</label>
-                            <div class="d-flex align-items-center">
-                                <button class="quantity-btn decrease" id="modal-quantity-decrease">-</button>
-                                <input type="number" class="quantity-input" id="modal-quantity-input" value="1" min="1" max="100">
-                                <button class="quantity-btn increase" id="modal-quantity-increase">+</button>
+                        <!-- Quantity Controls -->
+                        <div class="modal-quantity-controls mb-3">
+                            <label class="info-label">Quantity:</label>
+                            <div class="quantity-controls">
+                                <button type="button" class="quantity-btn decrease" id="modal-quantity-decrease" aria-label="Decrease quantity">-</button>
+                                <input type="number" class="quantity-input" id="modal-quantity-input" value="1" min="1" max="100" aria-label="Quantity">
+                                <button type="button" class="quantity-btn increase" id="modal-quantity-increase" aria-label="Increase quantity">+</button>
                             </div>
                         </div>
 
-                        <button class="btn btn-primary btn-block" id="modal-add-to-cart-btn">
-                            <i class="fas fa-cart-plus mr-2"></i> Add to Cart
+                        <!-- Add to Cart Button -->
+                        <button type="button" class="btn btn-primary btn-block" id="modal-add-to-cart-btn" <?php echo !isset($_SESSION['username']) ? 'disabled' : ''; ?>>
+                            <!-- Text/Icon set by JS -->
                         </button>
+                         <?php if (!isset($_SESSION['username'])): ?>
+                            <small class="form-text text-muted text-center mt-2">You must be logged in to add items to the cart.</small>
+                         <?php endif; ?>
                     </div>
                 </div>
 
-                <div class="mt-4" id="modal-ingredients-container">
+                <!-- Ingredients Section -->
+                <div class="mt-4" id="modal-ingredients-container" style="display: none;">
                     <h5 class="mb-3">Ingredients</h5>
-                    <div id="modal-ingredients-list" class="row"></div>
+                    <div id="modal-ingredients-list" class="row">
+                        <!-- Content populated by JS -->
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- jQuery and Bootstrap scripts are now loaded in the head section -->
+<!-- Global Popup Placeholder (can be added here or in footer) -->
+<div id="globalPopup"></div>
 
-<!-- Initialize Bootstrap components -->
+<!-- **** START: COMPLETELY REWRITTEN JavaScript Block **** -->
 <script>
-    // Initialize Bootstrap components when the page is fully loaded
-    $(document).ready(function() {
-        // Initialize tooltips
-        $('[data-toggle="tooltip"]').tooltip();
+$(document).ready(function() {
+    // Check if user is logged in
+    const isLoggedIn = <?php echo isset($_SESSION['username']) ? 'true' : 'false'; ?>;
+    // Define admin asset URL for JS usage (ensure consistency with PHP)
+    const adminAssetUrl = '<?php echo ADMIN_ASSET_URL; ?>';
+    const fallbackImageUrl = '/LandingPage/images/default-product.jpg';
 
-        // Initialize popovers
-        $('[data-toggle="popover"]').popover();
+    // Helper function to build the correct image URL in JS
+    function buildImageUrl(imagePath) {
+        if (!imagePath) {
+            return fallbackImageUrl;
+        }
+        // Remove potential leading slash from DB path
+        const relativePath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+        // Combine with admin base URL
+        return `${adminAssetUrl}/${relativePath}`;
 
-        // Initialize modals
-        $('.modal').modal({
-            show: false
+        // --- Alternative for Option 2 (if admin is just /admin/ directory) ---
+        // Comment out the line above and uncomment the line below if needed:
+        // return `/admin/${relativePath}`;
+        // --- End Alternative ---
+    }
+
+    // --- Product Card Click Handler ---
+    $(document).on('click', '.product-card', function(e) {
+        if ($(e.target).closest('button, a, input, select').length) {
+            return;
+        }
+
+        const productCard = $(this);
+        const productName = productCard.data('name');
+        const category = productCard.data('category');
+
+        // Reset modal and show loading state
+        resetModalToLoadingState();
+
+        // Store category and product name in the modal for reference
+        const modal = $('#productDetailModal');
+        modal.data('category', category);
+        modal.data('product-name', productName);
+
+        // Show the modal while data loads
+        modal.modal('show');
+
+        // Fetch product data
+        fetchProductData(productName, category);
+    });
+
+    // --- Function to reset the modal to loading state ---
+    function resetModalToLoadingState() {
+        $('#productDetailModalLabel').text('Product Details');
+        $('#modal-product-name').text('Loading...');
+        // Use fallback image initially
+        $('#modal-product-image').attr('src', fallbackImageUrl).attr('alt', 'Loading Product Image');
+
+        // Clear and disable variant dropdown
+        const variantSelect = $('#modal-variant-select');
+        variantSelect.empty().html('<option>Loading variants...</option>').prop('disabled', true);
+        $('#modal-variant-select-group').show();
+
+        // Reset other fields
+        $('#modal-product-packaging .info-value').text('-');
+        $('#modal-product-price .info-value').text('-');
+        $('#modal-product-description').text('');
+        $('#modal-description-container').hide();
+        $('#modal-ingredients-list').html('<p class="col-12 text-muted">Loading ingredients...</p>');
+        $('#modal-ingredients-container').hide();
+        $('#modal-quantity-input').val(1);
+
+        // Set button text based on login state
+        const initialBtnText = isLoggedIn ?
+            '<i class="fas fa-spinner fa-spin mr-2"></i> Loading...' :
+            '<i class="fas fa-lock mr-2"></i> Login to Add';
+        $('#modal-add-to-cart-btn').prop('disabled', true).html(initialBtnText);
+    }
+
+    // --- Function to fetch product data via AJAX ---
+    function fetchProductData(productName, category) {
+        console.log(`Fetching data for: ${productName} in ${category}`);
+
+        $.ajax({
+            url: '/LandingPage/get_product_modal_data.php', // *** Ensure this endpoint returns CORRECTLY PREFIXED image paths ***
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                product_name: productName,
+                category: category
+            },
+            success: function(response) {
+                console.log('AJAX success: Product data received');
+
+                if (response && response.success && response.variants && Array.isArray(response.variants)) {
+                    // Pass the raw response, populateModal will handle URL construction
+                    populateModalWithProductData(response, productName);
+                } else {
+                    handleProductDataError(response?.error || 'Invalid data received', productName);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX error fetching product details:', error);
+                handleProductDataError('Error contacting server: ' + error, productName);
+            }
+        });
+    }
+
+    // --- Function to handle product data errors ---
+    function handleProductDataError(errorMessage, productName) {
+        $('#productDetailModalLabel').text(productName || 'Error');
+        $('#modal-product-name').text('Error Loading Details');
+        showGlobalPopup(errorMessage || 'Failed to load product details.', true);
+        $('#modal-add-to-cart-btn').prop('disabled', true).text('Error');
+        $('#modal-variant-select').empty().append('<option>Error</option>').prop('disabled', true);
+    }
+
+    // --- Function to populate the modal with product data ---
+    function populateModalWithProductData(data, productName) {
+        const mainProduct = data.main_product;
+        const variants = data.variants;
+
+        // Validate data again
+        if (!mainProduct || !variants || !Array.isArray(variants) || variants.length === 0) {
+            handleProductDataError('Invalid product data format received', productName);
+            return;
+        }
+
+        // Set product name
+        $('#productDetailModalLabel').text(productName);
+        $('#modal-product-name').text(productName);
+
+        // Clear variant select dropdown
+        const variantSelect = $('#modal-variant-select');
+        variantSelect.empty();
+
+        // Populate variant dropdown
+        // *** Pass the buildImageUrl function so it can construct URLs correctly ***
+        populateVariantDropdown(variants, variantSelect, buildImageUrl);
+
+        // Update modal content based on first variant
+        if (variantSelect.find('option').length > 0) {
+            updateModalFromVariant(); // This will now use the correctly stored URLs
+
+            // Enable Add to Cart button if user is logged in
+            if (isLoggedIn) {
+                $('#modal-add-to-cart-btn').prop('disabled', false)
+                    .html('<i class="fas fa-cart-plus mr-2"></i> Add to Cart');
+            }
+        } else {
+            // No valid variants
+            $('#modal-product-packaging .info-value').text('N/A');
+            $('#modal-product-price .info-value').text('N/A');
+            $('#modal-product-image').attr('src', fallbackImageUrl) // Use fallback
+                .attr('alt', 'No variants available');
+
+            const buttonText = !isLoggedIn ?
+                '<i class="fas fa-lock mr-2"></i> Login to Add' :
+                '<i class="fas fa-times-circle mr-2"></i> Not Available';
+            $('#modal-add-to-cart-btn').prop('disabled', true).html(buttonText);
+        }
+    }
+
+    // --- Function to populate the variant dropdown ---
+    // *** Added urlBuilder function as parameter ***
+    function populateVariantDropdown(variants, variantSelect, urlBuilder) {
+        let optionsCount = 0;
+
+        // Sort variants by item_description to ensure consistent order
+        variants.sort((a, b) => {
+            if (a.item_description < b.item_description) return -1;
+            if (a.item_description > b.item_description) return 1;
+            return 0;
+        });
+
+        // Create and append each option
+        variants.forEach(function(variant) {
+            // Skip invalid variants
+            if (!variant || !variant.product_id) return;
+
+            // Create option element
+            const option = document.createElement('option');
+            option.value = variant.product_id;
+
+            // Set option text - show item description and price
+            const variantName = variant.item_description || 'Unknown Variant';
+            const priceDisplay = variant.price ? ` - ₱${parseFloat(variant.price).toFixed(2)}` : '';
+            option.textContent = variantName + priceDisplay;
+
+            // *** Use the urlBuilder to store the CORRECT, full image URL ***
+            const correctImageUrl = urlBuilder(variant.product_image);
+
+            // Store variant data as attributes for easy access
+            option.setAttribute('data-price', variant.price || '');
+            option.setAttribute('data-packaging', variant.packaging || '');
+            option.setAttribute('data-image', correctImageUrl); // Store the corrected URL
+            option.setAttribute('data-name', variantName);
+            option.setAttribute('data-description', variant.additional_description || '');
+            option.setAttribute('data-stock', variant.stock_quantity || 0);
+
+            // Store ingredients as JSON string
+            if (variant.ingredients_array && Array.isArray(variant.ingredients_array)) {
+                option.setAttribute('data-ingredients', JSON.stringify(variant.ingredients_array));
+            } else {
+                option.setAttribute('data-ingredients', '[]');
+            }
+
+            // Append to select
+            variantSelect.append(option);
+            optionsCount++;
+        });
+
+        // Show/hide variant selector based on number of options
+        if (optionsCount <= 1) {
+            $('#modal-variant-select-group').hide();
+            variantSelect.prop('disabled', true);
+        } else {
+            $('#modal-variant-select-group').show();
+            variantSelect.prop('disabled', false);
+        }
+
+        console.log(`Added ${optionsCount} variant options to dropdown`);
+    }
+
+    // --- Function to update modal content based on selected variant ---
+    function updateModalFromVariant() {
+        const selectedOption = $('#modal-variant-select option:selected');
+        if (!selectedOption.length) {
+            console.warn('updateModalFromVariant called but no option selected.');
+            return;
+        }
+
+        // Get data from selected option
+        const productId = selectedOption.val();
+        const variantName = selectedOption.data('name');
+        const price = selectedOption.data('price');
+        const packaging = selectedOption.data('packaging');
+        // *** Get the CORRECT image path stored in the data attribute ***
+        const imagePath = selectedOption.data('image');
+        const description = selectedOption.data('description');
+
+        // Parse ingredients from data attribute
+        let ingredients = [];
+        try {
+            const ingredientsStr = selectedOption.attr('data-ingredients');
+            if (ingredientsStr) {
+                ingredients = JSON.parse(ingredientsStr);
+            }
+        } catch (e) {
+            console.error('Error parsing ingredients:', e);
+        }
+
+        console.log(`Updating modal for variant: ${variantName}`);
+
+        // Update UI elements
+        $('#modal-product-packaging .info-value').text(packaging || '-');
+        $('#modal-product-price .info-value').text(price ? '₱' + parseFloat(price).toFixed(2) : '-');
+        // *** Use the correct imagePath directly ***
+        $('#modal-product-image').attr('src', imagePath || fallbackImageUrl)
+                               .attr('alt', variantName || 'Product Image');
+
+        // Update description
+        if (description) {
+            $('#modal-product-description').text(description);
+            $('#modal-description-container').show();
+        } else {
+            $('#modal-product-description').text('');
+            $('#modal-description-container').hide();
+        }
+
+        // Render ingredients list
+        renderIngredients(ingredients);
+
+        // Update Add to Cart button data
+        const addToCartBtn = $('#modal-add-to-cart-btn');
+        addToCartBtn.data('product-id', productId);
+        addToCartBtn.data('product-name', variantName);
+        addToCartBtn.data('product-price', price);
+        // *** Store the correct image path for the cart ***
+        addToCartBtn.data('product-image', imagePath);
+        addToCartBtn.data('product-packaging', packaging);
+
+        // Reset quantity to 1 when variant changes
+        $('#modal-quantity-input').val(1);
+    }
+
+    // --- Handle variant selection change ---
+    $('#modal-variant-select').on('change', function() {
+        updateModalFromVariant();
+    });
+
+    // --- Function to render ingredients list ---
+    function renderIngredients(ingredients) {
+        const ingredientsList = $('#modal-ingredients-list');
+        ingredientsList.empty();
+
+        if (ingredients && Array.isArray(ingredients) && ingredients.length > 0) {
+            let hasValidIngredient = false;
+
+            ingredients.forEach(function(ingredient) {
+                if (Array.isArray(ingredient) && ingredient.length >= 1 && ingredient[0]) {
+                    hasValidIngredient = true;
+                    const name = ingredient[0];
+                    const amount = (ingredient.length >= 2 && (ingredient[1] || ingredient[1] === 0)) ? ingredient[1] : null;
+
+                    const ingredientItemCol = $('<div class="col-md-4 col-6 mb-2"></div>');
+                    const itemContent = $('<div class="ingredient-item"></div>');
+
+                    itemContent.append($('<span class="ingredient-name"></span>').text(name));
+
+                    if (amount !== null) {
+                        let amountDisplay = (typeof amount === 'number') ? `(${amount}g)` : `(${amount})`;
+                        itemContent.append($('<span class="ingredient-amount"></span>').text(amountDisplay));
+                    }
+
+                    ingredientItemCol.append(itemContent);
+                    ingredientsList.append(ingredientItemCol);
+                }
+            });
+
+            $('#modal-ingredients-container').toggle(hasValidIngredient);
+        } else {
+            $('#modal-ingredients-container').hide();
+        }
+    }
+
+    // --- Modal Quantity Controls ---
+    $('#modal-quantity-decrease').on('click', function() {
+        const input = $('#modal-quantity-input');
+        let quantity = parseInt(input.val());
+        if (!isNaN(quantity) && quantity > 1) {
+            input.val(quantity - 1).trigger('change');
+        }
+    });
+
+    $('#modal-quantity-increase').on('click', function() {
+        const input = $('#modal-quantity-input');
+        let quantity = parseInt(input.val());
+        const maxQuantity = 100;
+
+        if (!isNaN(quantity) && quantity < maxQuantity) {
+            input.val(quantity + 1).trigger('change');
+        } else if (isNaN(quantity)) {
+            input.val(1).trigger('change');
+        }
+    });
+
+    $('#modal-quantity-input').on('change input', function() {
+        let quantity = parseInt($(this).val());
+        const minQuantity = 1;
+        const maxQuantity = 100;
+
+        if (isNaN(quantity) || quantity < minQuantity) {
+            if ($(this).val() !== '') {
+                $(this).val(minQuantity);
+            }
+        } else if (quantity > maxQuantity) {
+            $(this).val(maxQuantity);
+        }
+    }).on('blur', function() {
+        let quantity = parseInt($(this).val());
+        const minQuantity = 1;
+
+        if (isNaN(quantity) || quantity < minQuantity) {
+            $(this).val(minQuantity);
+        }
+    });
+
+    // --- Modal Add to Cart Button ---
+    $('#modal-add-to-cart-btn').on('click', function() {
+        if (!isLoggedIn) {
+            showGlobalPopup('Please login to add items to cart.', true);
+            return;
+        }
+
+        const button = $(this);
+        const productId = button.data('product-id');
+        const productName = button.data('product-name');
+        const productPrice = button.data('product-price');
+        // *** Get the CORRECT image path from button data ***
+        const productImage = button.data('product-image');
+        const productPackaging = button.data('product-packaging');
+        const productCategory = $('#productDetailModal').data('category') || '';
+        const quantity = parseInt($('#modal-quantity-input').val());
+
+        if (!productId || !productName || typeof productPrice === 'undefined' || isNaN(quantity) || quantity < 1) {
+            console.error('Missing or invalid data for add to cart');
+            showGlobalPopup('Error: Could not add item. Invalid data selected.', true);
+            return;
+        }
+
+        // Disable button and show loading state
+        button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Adding...');
+        showGlobalPopup('Adding item to cart...');
+
+        console.log('Adding to cart:', {
+            product_id: productId,
+            product_name: productName,
+            price: productPrice,
+            quantity: quantity
+        });
+
+        // Send to server
+        $.ajax({
+            url: '/LandingPage/add_to_cart.php', // *** Ensure this endpoint can handle the CORRECT image path ***
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                product_id: productId,
+                product_name: productName,
+                price: productPrice,
+                // *** Send the corrected image path ***
+                image_path: productImage,
+                packaging: productPackaging,
+                category: productCategory,
+                quantity: quantity
+            },
+            success: function(response) {
+                if (response && response.success) {
+                    $('#cart-count').text(response.cart_count || 0);
+                    showGlobalPopup('Item added to cart successfully!');
+                    $('#productDetailModal').modal('hide');
+                } else {
+                    showGlobalPopup(response.message || 'Error adding item to cart.', true);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX error adding to cart:', error);
+                showGlobalPopup('Error contacting server: ' + error, true);
+            },
+            complete: function() {
+                if (isLoggedIn) {
+                    button.prop('disabled', false)
+                        .html('<i class="fas fa-cart-plus mr-2"></i> Add to Cart');
+                }
+            }
         });
     });
+
+    // --- Search and Filter Logic ---
+    function updateFilterDisplay() {
+        const searchTerm = $('#searchInput').val().trim();
+        const selectedCategory = $('#categoryFilter').val();
+        let filtersActive = false;
+
+        // Handle search filter badge
+        if (searchTerm !== '') {
+            $('#search-term-display').text(searchTerm);
+            $('#search-filter-badge').show();
+            filtersActive = true;
+        } else {
+            $('#search-filter-badge').hide();
+        }
+
+        // Handle category filter badge
+        if (selectedCategory !== '') {
+            const categoryText = $('#categoryFilter option:selected').text();
+            $('#category-display').text(categoryText);
+            $('#category-filter-badge').show();
+            filtersActive = true;
+        } else {
+            $('#category-filter-badge').hide();
+        }
+
+        // Show/hide active filters area and clear button
+        if (filtersActive) {
+            $('#active-filters').slideDown(200);
+            $('#clearFilters').show();
+        } else {
+            $('#active-filters').slideUp(200);
+            $('#clearFilters').hide();
+        }
+
+        // Show/hide search clear button
+        $('#clearSearch').toggle(searchTerm !== '');
+    }
+
+    // *** UPDATED applyFilters function START ***
+    function applyFilters() {
+        const searchTerm = $('#searchInput').val().toLowerCase().trim();
+        const selectedCategory = $('#categoryFilter').val();
+        let resultsFound = false;
+
+        console.log(`Applying filters - Search: '${searchTerm}', Category: '${selectedCategory}'`);
+
+        // Iterate through each category section
+        $('.category-section').each(function() {
+            const section = $(this);
+            const sectionCategory = section.data('category');
+            let sectionHasVisibleCards = false;
+
+            // Determine if this section *could* be visible based on the category filter
+            const categoryFilterMatch = (selectedCategory === '' || sectionCategory === selectedCategory);
+
+            // Iterate through product cards within this section
+            section.find('.product-card').each(function() {
+                const card = $(this);
+                const productName = card.data('name').toLowerCase();
+
+                // Determine if this card *could* be visible based on the search term
+                const searchFilterMatch = (searchTerm === '' || productName.includes(searchTerm));
+
+                // Card should be visible ONLY if its section matches the category filter
+                // AND the card itself matches the search filter.
+                if (categoryFilterMatch && searchFilterMatch) {
+                    card.show(); // Show the card
+                    sectionHasVisibleCards = true; // Mark that this section has at least one visible card
+                    resultsFound = true; // Mark that at least one result was found overall
+                } else {
+                    card.hide(); // Hide the card
+                }
+            });
+
+            // Now, show or hide the entire section based ONLY on whether it ended up
+            // having any visible cards inside it after applying both filters.
+            if (sectionHasVisibleCards) {
+                 section.show();
+            } else {
+                 section.hide();
+            }
+        });
+
+        // Show/hide the "no results" message based on the overall flag
+        $('#no-results-message').toggle(!resultsFound);
+
+        // Update the filter badges display
+        updateFilterDisplay();
+    }
+    // *** UPDATED applyFilters function END ***
+
+    // Debounce function to prevent excessive filter application
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Bind filter events
+    $('#searchInput').on('input', debounce(applyFilters, 300));
+    $('#categoryFilter').on('change', applyFilters);
+    $('#clearSearch').on('click', function() {
+        $('#searchInput').val('').trigger('input'); // Clears input and triggers the filter update
+    });
+    $('#clearFilters').on('click', function() {
+        $('#searchInput').val('');
+        $('#categoryFilter').val('');
+        applyFilters(); // Apply empty filters
+        showGlobalPopup('All filters cleared');
+    });
+
+    // --- Global Popup Function ---
+    function showGlobalPopup(message, isError = false) {
+        let popup = $('#globalPopup');
+
+        if (!popup.length) {
+            console.error("Global popup element #globalPopup not found.");
+            alert(message);
+            return;
+        }
+
+        popup.removeClass('alert-success alert-danger')
+             .addClass(isError ? 'alert-danger' : 'alert-success');
+        popup.text(message);
+        popup.stop(true, true).fadeIn(200).delay(3000).fadeOut(400);
+    }
+
+    // Make showGlobalPopup available globally
+    window.showGlobalPopup = showGlobalPopup;
+
+    // Initialize Bootstrap tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+
+}); // End $(document).ready()
 </script>
+<!-- **** END: COMPLETELY REWRITTEN JavaScript Block **** -->
+
+<?php
+// Include the footer
+require_once 'footer.php'; // Verify this path
+?>
