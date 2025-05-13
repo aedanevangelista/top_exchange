@@ -1,8 +1,8 @@
 <?php
 // Based on commit: dfe8bc989ea063004ce0bef65815a6d013e7d9e8
-// Modifications: Integrated raw material checks in JS for Pending status,
-// and logic to send raw material management flags during status updates.
-// Also handles 'recommend_pending' from add_order.php.
+// (Original header comment: // Based on commit: e801e509bf62bd6fdb304d4fb4a20d6b43b2ecb6)
+// Modifications: Restricted delivery dates to Mon/Wed/Fri, 5-day min, email notifications, delivery date updates
+// ADDED Console logs to viewOrderDetails and viewOrderInfo for debugging
 
 session_start();
 include "../../backend/db_connection.php";
@@ -14,192 +14,162 @@ $sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'id';
 $sort_direction = isset($_GET['direction']) ? $_GET['direction'] : 'DESC';
 
 // --- Allowed columns (Removed driver-related fields) ---
-$allowed_columns = ['id', 'po_number', 'order_type', 'username', 'order_date', 'delivery_date', 'progress', 'total_amount', 'status']; // Added 'order_type'
+$allowed_columns = ['id', 'po_number', 'username', 'order_date', 'delivery_date', 'progress', 'total_amount', 'status']; // Added 'status'
 if (!in_array($sort_column, $allowed_columns)) {
     $sort_column = 'id'; // Default sort column if invalid input
 }
 
 // Validate sort direction
-if (strtoupper($sort_direction) !== 'ASC' && strtoupper($sort_direction) !== 'DESC') {
+if ($sort_direction !== 'ASC' && $sort_direction !== 'DESC') {
     $sort_direction = 'DESC'; // Default to descending
 }
 
-// PHP Helper function to check if a date is a valid delivery day (Mon, Wed, Fri)
-function isValidDeliveryDayPHP($date_str) {
-    if (empty($date_str)) return false;
-    try {
-        $date = new DateTime($date_str);
-        $dayOfWeek = $date->format('N'); // 1 (Mon) to 7 (Sun)
-        return ($dayOfWeek == 1 || $dayOfWeek == 3 || $dayOfWeek == 5);
-    } catch (Exception $e) {
-        return false; // Invalid date format
-    }
-}
-
-// PHP Helper function to check if delivery date is at least minDays after order date
-function isValidDeliveryGapPHP($orderDate_str, $deliveryDate_str, $minDays = 5) {
-    if (empty($orderDate_str) || empty($deliveryDate_str)) return false;
-    try {
-        $orderDateTime = new DateTime($orderDate_str);
-        $deliveryDateTime = new DateTime($deliveryDate_str);
-        
-        $minDeliveryDateTime = clone $orderDateTime;
-        $minDeliveryDateTime->modify("+{$minDays} days");
-        
-        // Compare only dates, ignore time part for this check
-        $orderDateTime->setTime(0,0,0);
-        $deliveryDateTime->setTime(0,0,0);
-        $minDeliveryDateTime->setTime(0,0,0);
-
-        return $deliveryDateTime >= $minDeliveryDateTime;
-    } catch (Exception $e) {
-        return false; 
-    }
-}
-
-
 // Process delivery date update if submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_delivery_date']) && isset($_POST['po_number']) && isset($_POST['new_delivery_date'])) {
-    $po_number = $_POST['po_number'];
-    $new_delivery_date = $_POST['new_delivery_date'];
+    $po_number_update = $_POST['po_number']; // Renamed to avoid conflict
+    $new_delivery_date_update = $_POST['new_delivery_date']; // Renamed
     
-    // Get order date to validate 5-day minimum
-    $stmt_order_details = $conn->prepare("SELECT order_date, username, order_type FROM orders WHERE po_number = ?");
-    $stmt_order_details->bind_param("s", $po_number);
-    $stmt_order_details->execute();
-    $result_order_details = $stmt_order_details->get_result();
-    $order = $result_order_details->fetch_assoc();
-    $stmt_order_details->close();
+    $day_of_week_update = date('N', strtotime($new_delivery_date_update));
+    $is_valid_day_update = ($day_of_week_update == 1 || $day_of_week_update == 3 || $day_of_week_update == 5);
     
-    if ($order) {
-        if ($order['order_type'] === 'Walk In') {
-             $_SESSION['message'] = "Delivery date cannot be changed for Walk-In orders.";
-             $_SESSION['message_type'] = "warning";
-        } elseif (isValidDeliveryDayPHP($new_delivery_date) && isValidDeliveryGapPHP($order['order_date'], $new_delivery_date, 5)) {
-            // Update delivery date
-            $stmt_update = $conn->prepare("UPDATE orders SET delivery_date = ? WHERE po_number = ?");
-            $stmt_update->bind_param("ss", $new_delivery_date, $po_number);
-            if ($stmt_update->execute()) {
-                // Send email notification about delivery date change
-                $username = $order['username'];
+    $stmt_order_date = $conn->prepare("SELECT order_date, username FROM orders WHERE po_number = ?");
+    $stmt_order_date->bind_param("s", $po_number_update);
+    $stmt_order_date->execute();
+    $result_order_date = $stmt_order_date->get_result();
+    $order_for_date_update = $result_order_date->fetch_assoc(); // Renamed
+    $stmt_order_date->close();
+    
+    $order_date_dt_update = new DateTime($order_for_date_update['order_date']);
+    $delivery_date_dt_update = new DateTime($new_delivery_date_update);
+    $days_difference_update = $delivery_date_dt_update->diff($order_date_dt_update)->days;
+    
+    $is_valid_days_gap_update = ($days_difference_update >= 5);
+    
+    if ($is_valid_day_update && $is_valid_days_gap_update) {
+        $stmt_update_delivery = $conn->prepare("UPDATE orders SET delivery_date = ? WHERE po_number = ?");
+        $stmt_update_delivery->bind_param("ss", $new_delivery_date_update, $po_number_update);
+        if ($stmt_update_delivery->execute()) {
+            $username_for_email = $order_for_date_update['username'];
+            
+            $stmt_user_email = $conn->prepare("SELECT email FROM clients_accounts WHERE username = ?");
+            $stmt_user_email->bind_param("s", $username_for_email);
+            $stmt_user_email->execute();
+            $result_user_email = $stmt_user_email->get_result();
+            $user_data_for_email = $result_user_email->fetch_assoc();
+            $stmt_user_email->close();
+            
+            if ($user_data_for_email && !empty($user_data_for_email['email'])) {
+                $user_email_address = $user_data_for_email['email'];
                 
-                $stmt_email = $conn->prepare("SELECT email FROM clients_accounts WHERE username = ?");
-                $stmt_email->bind_param("s", $username);
-                $stmt_email->execute();
-                $result_email = $stmt_email->get_result();
-                $user_data = $result_email->fetch_assoc();
-                $stmt_email->close();
-                
-                if ($user_data && !empty($user_data['email'])) {
-                    $user_email = $user_data['email'];
-                    $subject = "Top Exchange Food Corp: Delivery Date Changed";
-                    $message_body = "Dear $username,\n\nThe delivery date for your order (PO: $po_number) has been updated.\n";
-                    $message_body .= "New Delivery Date: " . date('F j, Y', strtotime($new_delivery_date)) . "\n\n";
-                    $message_body .= "If you have any questions regarding this change, please contact us.\n\n";
-                    $message_body .= "Thank you,\nTop Exchange Food Corp";
-                    $headers = "From: no-reply@topexchange.com"; // Replace with your actual sender email
-                    mail($user_email, $subject, $message_body, $headers);
-                }
-                $_SESSION['message'] = "Delivery date updated successfully.";
-                $_SESSION['message_type'] = "success";
-            } else {
-                $_SESSION['message'] = "Error updating delivery date: " . $stmt_update->error;
-                $_SESSION['message_type'] = "error";
+                $email_subject_update = "Top Exchange Food Corp: Delivery Date Changed";
+                $email_message_update = "Dear $username_for_email,\n\n";
+                $email_message_update .= "The delivery date for your order (PO: $po_number_update) has been updated.\n";
+                $email_message_update .= "New Delivery Date: " . date('F j, Y', strtotime($new_delivery_date_update)) . "\n\n";
+                $email_message_update .= "If you have any questions regarding this change, please contact us.\n\n";
+                $email_message_update .= "Thank you,\nTop Exchange Food Corp";
+                $email_headers_update = "From: no-reply@topexchange.com";
+                mail($user_email_address, $email_subject_update, $email_message_update, $email_headers_update);
             }
-            $stmt_update->close();
+            
+            $_SESSION['message'] = "Delivery date updated successfully.";
+            $_SESSION['message_type'] = "success";
         } else {
-            if (!isValidDeliveryDayPHP($new_delivery_date)) {
-                $_SESSION['message'] = "Delivery date must be Monday, Wednesday, or Friday.";
-            } else {
-                $_SESSION['message'] = "Delivery date must be at least 5 days after the order date (" . date("M d, Y", strtotime($order['order_date'])) . ").";
-            }
+            $_SESSION['message'] = "Error updating delivery date.";
             $_SESSION['message_type'] = "error";
         }
+        $stmt_update_delivery->close();
     } else {
-        $_SESSION['message'] = "Order not found for PO: " . htmlspecialchars($po_number);
+        if (!$is_valid_day_update) {
+            $_SESSION['message'] = "Delivery date must be Monday, Wednesday, or Friday.";
+        } else {
+            $_SESSION['message'] = "Delivery date must be at least 5 days after the order date.";
+        }
         $_SESSION['message_type'] = "error";
     }
-    header("Location: orders.php" . (isset($_GET['sort']) ? "?sort=".htmlspecialchars($_GET['sort'])."&direction=".htmlspecialchars($_GET['direction']) : ""));
+    header("Location: orders.php");
     exit();
 }
 
-// Fetch active clients for the dropdown
-$clients_list = []; // Renamed from $clients to avoid conflict
-$clients_data_map = []; // To store company, address, email by username
-
-$stmt_clients_fetch = $conn->prepare("SELECT username, company_address, company, email FROM clients_accounts WHERE status = 'active' ORDER BY username ASC");
+$clients_arr = [];
+$clients_with_company_address_map = [];
+$clients_with_company_map = [];
+$clients_with_email_map = [];
+$stmt_clients_fetch = $conn->prepare("SELECT username, company_address, company, email FROM clients_accounts WHERE status = 'active'");
 if ($stmt_clients_fetch === false) {
-    die('Prepare failed (clients_accounts): ' . htmlspecialchars($conn->error));
+    die('Prepare failed: ' . htmlspecialchars($conn->error));
 }
 $stmt_clients_fetch->execute();
 $result_clients_fetch = $stmt_clients_fetch->get_result();
-while ($row_client = $result_clients_fetch->fetch_assoc()) {
-    $clients_list[] = $row_client['username'];
-    $clients_data_map[$row_client['username']] = [
-        'company_address' => $row_client['company_address'],
-        'company' => $row_client['company'],
-        'email' => $row_client['email']
-    ];
+while ($row_clients_item = $result_clients_fetch->fetch_assoc()) {
+    $clients_arr[] = $row_clients_item['username'];
+    $clients_with_company_address_map[$row_clients_item['username']] = $row_clients_item['company_address'];
+    $clients_with_company_map[$row_clients_item['username']] = $row_clients_item['company'];
+    $clients_with_email_map[$row_clients_item['username']] = $row_clients_item['email'];
 }
 $stmt_clients_fetch->close();
 
-
-// Query to show orders based on status (Pending, Rejected, Active < 100% progress)
-// And also Completed, For Delivery for comprehensive view (Can be filtered by JS search if needed)
-$orders_data = []; // Renamed from $orders
-$sql_orders_fetch = "SELECT o.id, o.po_number, o.order_type, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress,
+$orders_list = []; // Renamed
+$sql_fetch_orders = "SELECT o.id, o.po_number, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress,
         o.company, o.special_instructions
-        FROM orders o ";
-// Example: If you want to filter by default:
-// $sql_orders_fetch .= " WHERE o.status IN ('Pending', 'Rejected', 'Active', 'For Delivery') ";
-// For now, fetching all and relying on JS search/sort for initial view.
+        FROM orders o
+        WHERE o.status IN ('Pending', 'Rejected')
+        OR (o.status = 'Active' AND o.progress < 100)"; 
 
-// Construct the ORDER BY clause
-$orderByClause = 'o.' . $conn->real_escape_string($sort_column);
-$sql_orders_fetch .= " ORDER BY {$orderByClause} {$conn->real_escape_string($sort_direction)}";
-
-
-$stmt_orders_fetch = $conn->prepare($sql_orders_fetch);
-if ($stmt_orders_fetch === false) {
-     die('Prepare failed (orders fetch): ' . htmlspecialchars($conn->error) . ' - SQL: ' . $sql_orders_fetch);
+$orderByClause_orders = $sort_column; // Renamed
+if (in_array($sort_column, ['id', 'po_number', 'username', 'order_date', 'delivery_date', 'progress', 'total_amount', 'status'])) {
+    $orderByClause_orders = 'o.' . $sort_column;
 }
-$stmt_orders_fetch->execute();
-$result_orders_fetch = $stmt_orders_fetch->get_result();
-if ($result_orders_fetch && $result_orders_fetch->num_rows > 0) {
-    while ($row_order_item = $result_orders_fetch->fetch_assoc()) {
-        $orders_data[] = $row_order_item;
+$sql_fetch_orders .= " ORDER BY {$orderByClause_orders} {$sort_direction}";
+
+$stmt_all_orders = $conn->prepare($sql_fetch_orders); // Renamed
+if ($stmt_all_orders === false) {
+     die('Prepare failed after correction: ' . htmlspecialchars($conn->error) . ' - SQL: ' . $sql_fetch_orders);
+}
+$stmt_all_orders->execute();
+$result_all_orders = $stmt_all_orders->get_result();
+if ($result_all_orders && $result_all_orders->num_rows > 0) {
+    while ($row_order_item = $result_all_orders->fetch_assoc()) {
+        $orders_list[] = $row_order_item;
     }
 }
-$stmt_orders_fetch->close();
+$stmt_all_orders->close();
 
-// Helper function to generate sort URL (using your existing function)
 function getSortUrl($column, $currentColumn, $currentDirection) {
-    $newDirection = (strtoupper($currentDirection) === 'ASC' && $column === $currentColumn) ? 'DESC' : 'ASC';
-    return "?" . http_build_query(['sort' => $column, 'direction' => $newDirection]);
+    $newDirection = ($column === $currentColumn && $currentDirection === 'ASC') ? 'DESC' : 'ASC';
+    return "?sort=" . urlencode($column) . "&direction=" . urlencode($newDirection);
 }
 
-// Helper function to display sort icon (using your existing function)
 function getSortIcon($column, $currentColumn, $currentDirection) {
-    // if ($column === 'id') return ''; // Your original comment, kept if 'id' isn't a visible column header
+    if ($column === 'id') return '';
     if ($column !== $currentColumn) return '<i class="fas fa-sort"></i>';
-    return (strtoupper($currentDirection) === 'ASC') ? '<i class="fas fa-sort-up"></i>' : '<i class="fas fa-sort-down"></i>';
+    return ($currentDirection === 'ASC') ? '<i class="fas fa-sort-up"></i>' : '<i class="fas fa-sort-down"></i>';
 }
 
-// Helper function to get next available delivery date (using your existing function)
-// Note: This PHP version is for initial date setting in Add Order form if needed on server-side. JS version handles client-side.
-function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
+function getNextAvailableDeliveryDatePHPFunc($minDaysAfter = 5) { // Renamed
     $startDate = new DateTime();
     $startDate->modify("+{$minDaysAfter} days"); 
     $daysToAdd = 0;
     $dayOfWeek = $startDate->format('N');
     if (!($dayOfWeek == 1 || $dayOfWeek == 3 || $dayOfWeek == 5)) {
         if ($dayOfWeek == 2) $daysToAdd = 1; 
-        elseif ($dayOfWeek == 4) $daysToAdd = 1;
+        elseif ($dayOfWeek == 4) $daysToAdd = 1; 
         elseif ($dayOfWeek == 6) $daysToAdd = 2; 
         elseif ($dayOfWeek == 7) $daysToAdd = 1; 
     }
-    if ($daysToAdd > 0) $startDate->modify("+{$daysToAdd} days");
+    $startDate->modify("+{$daysToAdd} days");
     return $startDate->format('Y-m-d');
+}
+
+function isValidDeliveryDayPHP($date_str) { // Renamed
+    $dayOfWeek = date('N', strtotime($date_str));
+    return ($dayOfWeek == 1 || $dayOfWeek == 3 || $dayOfWeek == 5);
+}
+
+function isValidDeliveryGapPHP($orderDate_str, $deliveryDate_str) { // Renamed
+    $orderDateTime = new DateTime($orderDate_str);
+    $deliveryDateTime = new DateTime($deliveryDate_str);
+    $days = $deliveryDateTime->diff($orderDateTime)->days;
+    return ($days >= 5);
 }
 ?>
 <!DOCTYPE html>
@@ -207,7 +177,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orders - Top Exchange</title> <!-- Changed title slightly -->
+    <title>Orders</title>
     <link rel="stylesheet" href="/css/orders.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <link rel="stylesheet" href="/css/toast.css">
@@ -217,209 +187,211 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        /* --- Styles exactly as provided in commit dfe8bc989ea063004ce0bef65815a6d013e7d9e8 --- */
-        /* --- Including all your specific styles for modals, tables, buttons, etc. --- */
+        /* --- Styles exactly as provided in commit dfe8bc9... --- */
         .order-summary { margin-top: 20px; margin-bottom: 20px; }
         .summary-table { width: 100%; border-collapse: collapse; }
-        .summary-table tbody { display: block; max-height: 250px; overflow-y: auto; border: 1px solid #ddd;}
-        .summary-table thead, .summary-table tbody tr { display: table; width: 100%; table-layout: fixed; }
-        .summary-table thead { width: calc(100% - 17px)); /* Adjust 17px based on scrollbar width */ }
+        .summary-table tbody { display: block; max-height: 250px; overflow-y: auto; }
+        .summary-table thead, .summary-table tbody tr { display: table; width: 100%; }
+        .summary-table thead { width: calc(100% - 17px); }
         .summary-table th, .summary-table td { padding: 8px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid #ddd; }
-        .summary-table th:nth-child(1), .summary-table td:nth-child(1) { width: 20%; } /* Category */
-        .summary-table th:nth-child(2), .summary-table td:nth-child(2) { width: 30%; } /* Product */
-        .summary-table th:nth-child(3), .summary-table td:nth-child(3) { width: 15%; } /* Packaging */
-        .summary-table th:nth-child(4), .summary-table td:nth-child(4) { width: 15%; text-align:right; } /* Price */
-        .summary-table th:nth-child(5), .summary-table td:nth-child(5) { width: 10%; text-align:center;} /* Quantity */
-        .summary-table th:nth-child(6), .summary-table td:nth-child(6) { width: 10%; text-align: center; } /* Action */
+        .summary-table th:nth-child(1), .summary-table td:nth-child(1) { width: 20%; }
+        .summary-table th:nth-child(2), .summary-table td:nth-child(2) { width: 30%; }
+        .summary-table th:nth-child(3), .summary-table td:nth-child(3) { width: 15%; }
+        .summary-table th:nth-child(4), .summary-table td:nth-child(4) { width: 15%; }
+        .summary-table th:nth-child(5), .summary-table td:nth-child(5) { width: 10%; }
+        .summary-table th:nth-child(6), .summary-table td:nth-child(6) { width: 10%; text-align: center; }
         .summary-total { margin-top: 10px; text-align: right; font-weight: bold; border-top: 1px solid #ddd; padding-top: 10px; }
-        .summary-quantity { width: 80px; max-width: 100%; text-align: center; padding: 6px; border: 1px solid #ccc; border-radius: 4px;}
+        .summary-quantity { width: 80px; max-width: 100%; text-align: center; }
         .download-btn { padding: 6px 12px; background-color: #17a2b8; color: white; border: none; border-radius: 40px; cursor: pointer; font-size: 12px; margin-left: 5px; }
-        .download-btn:hover { background-color: #138496; } .download-btn i { margin-right: 5px; }
+        .download-btn:hover { background-color: #138496; }
+        .download-btn i { margin-right: 5px; }
         .po-container { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: white; }
-        .po-header { text-align: center; margin-bottom: 30px; } .po-company { font-size: 22px; font-weight: bold; margin-bottom: 10px; }
+        .po-header { text-align: center; margin-bottom: 30px; }
+        .po-company { font-size: 22px; font-weight: bold; margin-bottom: 10px; }
         .po-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; }
-        .po-details { display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 12px;}
-        .po-left, .po-right { width: 48%; } .po-detail-row { margin-bottom: 8px; } .po-detail-label { font-weight: bold; display: inline-block; width: 110px; }
-        .po-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 11px;}
-        .po-table th, .po-table td { border: 1px solid #ddd; padding: 8px; text-align: left; } .po-table th { background-color: #f2f2f2; }
-        .po-table td:nth-child(4), .po-table td:nth-child(5), .po-table td:nth-child(6) { text-align: right;} /* Qty, Unit Price, Total */
-        .po-total { text-align: right; font-weight: bold; font-size: 13px; margin-bottom: 30px; padding-top:10px; border-top: 1px solid #000;}
-        .po-signature { display: flex; justify-content: space-between; margin-top: 50px; } .po-signature-block { width: 40%; text-align: center; font-size:12px;}
+        .po-details { display: flex; justify-content: space-between; margin-bottom: 30px; }
+        .po-left, .po-right { width: 48%; }
+        .po-detail-row { margin-bottom: 10px; }
+        .po-detail-label { font-weight: bold; display: inline-block; width: 120px; }
+        .po-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        .po-table th, .po-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .po-table th { background-color: #f2f2f2; }
+        .po-total { text-align: right; font-weight: bold; font-size: 14px; margin-bottom: 30px; }
+        .po-signature { display: flex; justify-content: space-between; margin-top: 50px; }
+        .po-signature-block { width: 40%; text-align: center; }
         .po-signature-line { border-bottom: 1px solid #000; margin-bottom: 10px; padding-top: 40px; }
-        #pdfPreview { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 1070; overflow: auto; }
-        .pdf-container { background-color: white; width: 90%; max-width: 850px; margin: 30px auto; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); position: relative; }
-        .close-pdf { position: absolute; top: 10px; right: 15px; font-size: 20px; background: none; border: none; cursor: pointer; color: #333; }
-        .pdf-actions { text-align: center; margin-top: 20px; } .pdf-actions button.download-pdf-btn { padding: 10px 20px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
-        .instructions-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
-        .instructions-modal-content { background-color: #fff; margin: 10% auto; padding: 0; border-radius: 8px; width: 90%; max-width: 600px; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 80vh; display: flex; flex-direction: column; }
-        .instructions-header { background-color: #343a40; color: white; padding: 15px 20px; border-top-left-radius: 8px; border-top-right-radius: 8px; display:flex; justify-content:space-between; align-items:center; }
-        .instructions-header h3 { margin: 0; font-size: 1.1em; } .instructions-po-number { font-size: 0.9em; opacity: 0.9; }
+        #pdfPreview { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 1000; overflow: auto; }
+        .pdf-container { background-color: white; width: 80%; margin: 50px auto; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); position: relative; }
+        .close-pdf { position: absolute; top: 10px; right: 10px; font-size: 18px; background: none; border: none; cursor: pointer; color: #333; }
+        .pdf-actions { text-align: center; margin-top: 20px; }
+        .pdf-actions button { padding: 10px 20px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .instructions-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.7); }
+        .instructions-modal-content { background-color: #ffffff; margin: auto; padding: 0; border-radius: 8px; width: 60%; max-width: 600px; position: relative; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); animation: modalFadeIn 0.3s ease-in-out; max-height: 80vh; display: flex; flex-direction: column; }
+        @keyframes modalFadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .instructions-header { background-color: #2980b9; color: white; padding: 15px 20px; position: relative; border-top-left-radius: 8px; border-top-right-radius: 8px; }
+        .instructions-header h3 { margin: 0; font-size: 16px; font-weight: 600; }
+        .instructions-po-number { font-size: 12px; margin-top: 5px; opacity: 0.9; }
         .instructions-body { padding: 20px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; background-color: #f8f9fa; flex-grow: 1; overflow-y: auto; }
         .instructions-body.empty { color: #6c757d; font-style: italic; text-align: center; padding: 40px 20px; }
-        .instructions-footer { padding: 15px 20px; text-align: right; background-color: #fff; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; border-top: 1px solid #eee; }
-        .close-instructions-btn { background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9em; transition: background-color 0.2s; }
-        .close-instructions-btn:hover { background-color: #5a6268; }
-        .instructions-btn { padding: 5px 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s; }
-        .instructions-btn:hover { background-color: #0056b3; } .no-instructions { color: #6c757d; font-style: italic; font-size: 12px; }
-        #contentToDownload { font-size: 14px; } #contentToDownload .po-table { font-size: 11px; } #contentToDownload .po-title { font-size: 16px; } #contentToDownload .po-company { font-size: 20px; } #contentToDownload .po-total { font-size: 12px; }
-        .status-badge { padding: 0.3em 0.6em; border-radius: 0.25rem; font-size: 0.85em; font-weight: 600; display: inline-block; text-align: center; min-width: 85px; line-height: 1.2; }
-        .status-active { background-color: #d1e7ff; color: #084298; border: 1px solid #a6cfff; } .status-pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-        .status-rejected { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; } .status-for_delivery, .status-in_transit { background-color: #e2e3e5; color: #383d41; border: 1px solid #ced4da; } /* Adjusted for underscore */
-        .status-completed { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .btn-info { font-size: 0.75em; opacity: 0.8; margin-top: 3px; display: block; }
-        .raw-materials-container { overflow: visible; margin-bottom: 15px; } .raw-materials-container h3, .raw-materials-container h4 { margin-top: 0; margin-bottom: 10px; color: #333; font-size: 1em; }
-        .materials-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size:0.9em; }
-        .materials-table tbody { display: block; max-height: 180px; overflow-y: auto; border: 1px solid #ddd; }
+        .instructions-footer { padding: 15px 20px; text-align: right; background-color: #ffffff; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; border-top: 1px solid #eee; }
+        .close-instructions-btn { background-color: #2980b9; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s; }
+        .close-instructions-btn:hover { background-color: #2471a3; }
+        .instructions-btn { padding: 6px 12px; background-color: #2980b9; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; min-width: 60px; text-align: center; transition: background-color 0.2s; }
+        .instructions-btn:hover { background-color: #2471a3; }
+        .no-instructions { color: #6c757d; font-style: italic; }
+        #contentToDownload { font-size: 14px; }
+        #contentToDownload .po-table { font-size: 12px; }
+        #contentToDownload .po-title { font-size: 16px; }
+        #contentToDownload .po-company { font-size: 20px; }
+        #contentToDownload .po-total { font-size: 12px; }
+        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; text-align: center; min-width: 80px; }
+        .status-active { background-color: #d1e7ff; color: #084298; }
+        .status-pending { background-color: #fff3cd; color: #856404; }
+        .status-rejected { background-color: #f8d7da; color: #842029; }
+        .status-delivery { background-color: #e2e3e5; color: #383d41; }
+        .status-completed { background-color: #d1e7dd; color: #0f5132; }
+        .btn-info { font-size: 10px; opacity: 0.8; margin-top: 3px; }
+        .raw-materials-container { overflow: visible; margin-bottom: 15px; }
+        .raw-materials-container h3 { margin-top: 0; margin-bottom: 10px; color: #333; font-size: 16px; }
+        .materials-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        .materials-table tbody { display: block; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; }
         .materials-table thead, .materials-table tbody tr { display: table; width: 100%; table-layout: fixed; }
-        .materials-table th, .materials-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #ddd; }
-        .materials-table thead { background-color: #f2f2f2; display: table; width: calc(100% - 17px)); /* scrollbar */ table-layout: fixed; }
-        .materials-table th { background-color: #f8f9fa; font-weight:600; }
-        .material-sufficient { color: #28a745; font-weight: bold; } .material-insufficient { color: #dc3545; font-weight: bold; }
-        .materials-status { padding: 8px; border-radius: 4px; font-weight: bold; font-size: 0.9em; margin-top: 10px; text-align: center; }
-        .status-sufficient { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; } .status-insufficient { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .active-progress { background-color: #d1e7ff; color: #084298; } .pending-progress, .rejected-progress { background-color: #f8d7da; color: #721c24; }
+        .materials-table th, .materials-table td { padding: 6px; text-align: left; border: 1px solid #ddd; font-size: 13px; }
+        .materials-table thead { background-color: #f2f2f2; display: table; width: calc(100% - 17px); table-layout: fixed; }
+        .materials-table th { background-color: #f2f2f2; }
+        .material-sufficient { color: #28a745; }
+        .material-insufficient { color: #dc3545; }
+        .materials-status { padding: 8px; border-radius: 4px; font-weight: bold; font-size: 14px; margin-top: 10px; }
+        .status-sufficient { background-color: #d4edda; color: #155724; }
+        .status-insufficient { background-color: #f8d7da; color: #721c24; }
+        .active-progress { background-color: #d1e7ff; color: #084298; }
+        .pending-progress, .rejected-progress { background-color: #f8d7da; color: #842029; }
         .order-details-footer { display: flex; justify-content: flex-end; margin-top: 15px; padding-top: 10px; border-top: 1px solid #ddd; }
-        .total-amount { font-weight: bold; font-size: 1.1em; padding: 5px 10px; background-color: #f8f9fa; border-radius: 4px; }
+        .total-amount { font-weight: bold; font-size: 16px; padding: 5px 10px; background-color: #f8f9fa; border-radius: 4px; }
         .search-container { display: flex; align-items: center; }
-        .search-container input { padding: 8px 12px; border-radius: 20px 0 0 20px; border: 1px solid #ddd; font-size: 13px; width: 250px; transition: border-color 0.2s; }
-        .search-container input:focus { border-color: #007bff; outline:none; }
-        .search-container .search-btn { background-color: #007bff; color: white; border: none; border-radius: 0 20px 20px 0; padding: 8px 12px; cursor: pointer; transition: background-color 0.2s; }
-        .search-container .search-btn:hover { background-color: #0056b3; }
+        .search-container input { padding: 8px 12px; border-radius: 20px 0 0 20px; border: 1px solid #ddd; font-size: 12px; width: 220px; }
+        .search-container .search-btn { background-color: #2980b9; color: white; border: none; border-radius: 0 20px 20px 0; padding: 8px 12px; cursor: pointer; }
+        .search-container .search-btn:hover { background-color: #2471a3; }
         .orders-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; width: 100%; }
-        .orders-header h1 { flex-grow: 1; margin:0; font-size: 1.8em; color: #333; }
-        .add-order-btn { display: inline-flex; align-items: center; background-color: #28a745; color: white; border: none; border-radius: 20px; padding: 10px 20px; cursor: pointer; font-size: 14px; transition: background-color 0.2s; white-space: nowrap; }
-        .add-order-btn:hover { background-color: #218838; } .add-order-btn i { margin-right: 8px; }
-        #special_instructions_textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical; font-family: inherit; margin-bottom: 15px; min-height: 60px; }
-        .confirmation-modal { display: none; position: fixed; z-index: 1100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow: hidden;}
-        .confirmation-content { background-color: #fff; margin: 15% auto; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .confirmation-title { font-size: 1.3em; margin-bottom: 15px; color: #333; font-weight: 600; } .confirmation-message { margin-bottom: 25px; color: #555; font-size: 1em; line-height:1.5; }
+        .orders-header h1 { flex: 1; }
+        .search-container { flex: 1; display: flex; justify-content: center; }
+        .add-order-btn { display: inline-flex; align-items: center; justify-content: flex-end; background-color: #4a90e2; color: white; border: none; border-radius: 40px; padding: 8px 16px; cursor: pointer; font-size: 14px; width: auto; white-space: nowrap; margin-left: auto; }
+        .add-order-btn:hover { background-color: #357abf; }
+        #special_instructions_textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical; font-family: inherit; margin-bottom: 15px; }
+        .confirmation-modal { display: none; position: fixed; z-index: 1100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); overflow: hidden; }
+        .confirmation-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border-radius: 8px; width: 350px; max-width: 90%; text-align: center; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); animation: modalPopIn 0.3s; }
+        @keyframes modalPopIn { from {transform: scale(0.8); opacity: 0;} to {transform: scale(1); opacity: 1;} }
+        .confirmation-title { font-size: 20px; margin-bottom: 15px; color: #333; }
+        .confirmation-message { margin-bottom: 20px; color: #555; font-size: 14px; }
         .confirmation-buttons { display: flex; justify-content: center; gap: 15px; }
-        .confirm-yes, .confirm-no { border: none; padding: 10px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: background-color 0.2s, transform 0.1s; font-size:0.95em; }
-        .confirm-yes { background-color: #007bff; color: white; } .confirm-yes:hover { background-color: #0056b3; transform: translateY(-1px); }
-        .confirm-no { background-color: #6c757d; color: white; } .confirm-no:hover { background-color: #5a6268; transform: translateY(-1px); }
+        .confirm-yes { background-color: #4a90e2; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
+        .confirm-yes:hover { background-color: #357abf; }
+        .confirm-no { background-color: #f1f1f1; color: #333; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
+        .confirm-no:hover { background-color: #e1e1e1; }
         #toast-container .toast-close-button { display: none; }
-        .inventory-table-container { max-height: 350px; overflow-y: auto; margin-top: 15px; border: 1px solid #ddd; border-radius: 4px;}
+        .inventory-table-container { max-height: 400px; overflow-y: auto; margin-top: 15px; }
         .inventory-table { width: 100%; border-collapse: collapse; }
-        .inventory-table th, .inventory-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
-        .inventory-table th { background-color: #f8f9fa; position: sticky; top: 0; z-index: 10; font-weight: 600; }
-        .inventory-table td:nth-child(4), .inventory-table td:nth-child(5) { text-align: center; } /* Price, Quantity */
-        .inventory-quantity { width: 70px; text-align: center; padding: 6px; border:1px solid #ccc; border-radius:4px; }
-        .add-to-cart-btn { background-color: #007bff; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size:0.9em; transition: background-color 0.2s; }
-        .add-to-cart-btn:hover { background-color: #0056b3; } .add-to-cart-btn i { margin-right: 5px; }
-        .inventory-filter-section { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
-        .inventory-filter-section input, .inventory-filter-section select { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-        .remove-item-btn { background-color: #dc3545; color: white; border: none; border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size:0.9em; transition: background-color 0.2s; }
-        .remove-item-btn:hover { background-color: #c82333; } .cart-quantity { width: 70px; text-align: center; padding: 6px; border:1px solid #ccc; border-radius:4px; }
-        #addOrderOverlay .overlay-content, #inventoryOverlay .overlay-content, #cartModal .overlay-content, #orderDetailsModal .overlay-content { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            max-height: 90vh; overflow-y: auto; margin: 0; background-color: #fff; 
-            padding: 20px 25px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); 
-            width: 90%; max-width: 800px;
-        }
-        #inventoryOverlay .overlay-content { max-width: 900px; }
-        #cartModal .overlay-content { max-width: 700px; }
-        #orderDetailsModal .overlay-content { max-width: 950px; }
+        .inventory-table th, .inventory-table td { padding: 8px; text-align: left; border: 1px solid #ddd; }
+        .inventory-table th { background-color: #f2f2f2; position: sticky; top: 0; z-index: 10; }
+        .inventory-quantity { width: 60px; text-align: center; }
+        .add-to-cart-btn { background-color: #4a90e2; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+        .add-to-cart-btn:hover { background-color: #357abf; }
+        .inventory-filter-section { display: flex; gap: 10px; margin-bottom: 15px; }
+        .inventory-filter-section input, .inventory-filter-section select { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .remove-item-btn { background-color: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; margin-left: 5px; }
+        .remove-item-btn:hover { background-color: #c82333; }
+        .cart-quantity { width: 60px; text-align: center; }
+        #addOrderOverlay .overlay-content, #inventoryOverlay .overlay-content, #cartModal .overlay-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-height: 90vh; overflow-y: auto; margin: 0; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 80%; max-width: 800px; }
         #statusModal .modal-content, #pendingStatusModal .modal-content, #rejectedStatusModal .modal-content { max-height: 85vh; overflow-y: auto; }
-        .edit-date-btn { padding: 4px 8px; background-color: #ffc107; color: #212529; border: none; border-radius: 15px; cursor: pointer; font-size: 11px; margin-left: 5px; transition: background-color 0.2s; }
-        .edit-date-btn:hover { background-color: #e0a800; } .edit-date-btn i { font-size: 10px; }
-        #editDateModal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); }
-        .edit-date-modal-content { background-color: #fff; margin: 15% auto; padding: 25px; border-radius: 8px; width: 90%; max-width: 450px; text-align: left; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .edit-date-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        .edit-date-modal-header h3 { margin: 0; font-size: 1.2em; color: #333; }
-        .edit-date-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #aaa; transition: color 0.2s; } .edit-date-close:hover { color: #333; }
-        .edit-date-form { display: flex; flex-direction: column; } .edit-date-form label { margin-bottom: 8px; font-weight: 600; font-size:0.95em; color:#555; }
-        .edit-date-form input[type="text"], .edit-date-form input[type="date"] { padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; font-size: 1em; }
-        .edit-date-form input[readonly] { background-color: #e9ecef; }
-        .edit-date-note { margin-bottom: 15px; font-size: 0.85em; color: #666; background-color: #f8f9fa; padding: 8px; border-radius: 4px; border-left: 3px solid #007bff; }
-        .edit-date-footer { text-align: right; margin-top: 10px; }
-        .edit-date-save-btn { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size:0.95em; transition: background-color 0.2s; }
-        .edit-date-save-btn:hover { background-color: #0056b3; } .edit-date-save-btn i { margin-right: 5px; }
-        .alert { padding: 15px 20px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 5px; text-align: center; font-size: 1em; }
-        .alert-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
-        .alert-error { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
-        .main-content { padding: 25px; margin-left: 260px; transition: margin-left 0.3s; background-color: #f4f6f9; min-height: 100vh;}
-        .orders-table-container { width: 100%; overflow-x: auto; background-color: #fff; padding:15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .orders-table { width: 100%; min-width: 1500px; border-collapse: collapse; }
-        .orders-table th, .orders-table td { padding: 12px 15px; text-align: left; font-size: 13px; vertical-align: middle; white-space: nowrap; border-bottom: 1px solid #dee2e6; }
-        .orders-table td:nth-child(7), .orders-table td:nth-child(9), .orders-table td:nth-child(12) { text-align: center; } /* Progress, Total, Actions */
-        .orders-table td:nth-child(9) { font-weight: 500; } /* Total Amount */
-        .orders-table thead th { background-color: #343a40; color: white; font-weight: 600; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #23272b; }
-        .orders-table tbody tr:hover { background-color: #f8f9fa; }
+        .edit-date-btn { padding: 3px 8px; background-color: #4a90e2; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 10px; margin-left: 5px; }
+        .edit-date-btn:hover { background-color: #3573b9; }
+        #editDateModal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); }
+        .edit-date-modal-content { background-color: #fff; margin: 15% auto; padding: 20px; border-radius: 8px; width: 400px; max-width: 90%; text-align: left; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); }
+        .edit-date-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        .edit-date-modal-header h3 { margin: 0; font-size: 18px; }
+        .edit-date-close { background: none; border: none; font-size: 20px; cursor: pointer; }
+        .edit-date-form { display: flex; flex-direction: column; }
+        .edit-date-form label { margin-bottom: 5px; font-weight: 600; }
+        .edit-date-form input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px; }
+        .edit-date-footer { text-align: right; margin-top: 15px; }
+        .edit-date-save-btn { background-color: #4a90e2; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .edit-date-save-btn:hover { background-color: #3573b9; }
+        .alert { padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 4px; text-align: center; }
+        .alert-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
+        .alert-error { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
+        .main-content { padding: 20px; margin-left: 250px; transition: margin-left 0.3s; }
+        .orders-table-container { width: 100%; overflow-x: auto; }
+        .orders-table { width: 100%; min-width: 1200px; border-collapse: collapse; }
+        .orders-table th, .orders-table td { padding: 10px 12px; text-align: center; font-size: 13px; vertical-align: middle; white-space: nowrap; }
+        .orders-table thead th { background-color:rgb(34, 34, 34); color: white; font-weight: 600; position: sticky; top: 0; z-index: 10; } /* Added color: white to header text */
+        .orders-table tbody tr:hover { background-color: #f1f3f5; }
         .orders-table th.sortable a { color: inherit; text-decoration: none; display: flex; justify-content: space-between; align-items: center; }
-        .orders-table th.sortable a:hover { color: #ced4da; }
-        .orders-table th.sortable a i { margin-left: 8px; color: #adb5bd; } .orders-table th.sortable a:hover i { color: #fff; }
-        .action-buttons { display: flex; gap: 8px; justify-content: center; }
-        .action-buttons button, .view-orders-btn { padding: 6px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 4px; transition: background-color 0.2s, box-shadow 0.2s; white-space: nowrap; }
-        .view-orders-btn { background-color: #17a2b8; color: white; } .view-orders-btn:hover { background-color: #138496; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .status-btn { background-color: #ffc107; color: #212529; } .status-btn:hover { background-color: #e0a800; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .progress-bar-container { width: 100px; background-color: #e9ecef; border-radius: 0.25rem; overflow: hidden; position: relative; height: 18px; margin: auto; }
-        .progress-bar { background-color: #0d6efd; height: 100%; line-height: 18px; color: white; text-align: center; white-space: nowrap; transition: width .6s ease; font-size: 10px; }
-        .progress-text { position: absolute; width: 100%; text-align: center; line-height: 18px; color: #000; font-size: 10px; font-weight: bold; }
-        .order-details-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
-        .order-details-table th, .order-details-table td { padding: 10px; text-align: left; border: 1px solid #ddd; }
-        .order-details-table thead th { background-color: #343a40; color:white; }
-        .overlay { display: none; position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; outline: 0; background-color: rgba(0,0,0,0.55); }
-        .modal { display: none; position: fixed; z-index: 1060; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; outline: 0; background-color: rgba(0,0,0,0.55); }
-        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 25px; border: none; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
-        .modal-content h2 { font-size: 1.4em; margin-top:0; margin-bottom:15px; color:#333; }
-        .modal-content p { margin-bottom: 20px; line-height: 1.6; color: #555; }
-        .modal-footer { padding-top: 20px; text-align: right; border-top: 1px solid #e9ecef; margin-top: 20px; }
-        .modal-cancel-btn { background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
-        .modal-cancel-btn:hover { background-color: #5a6268; }
-        .modal-status-btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.95em; margin: 5px; flex-grow: 1; text-align: center; transition: background-color 0.2s, box-shadow 0.2s; }
-        .modal-status-btn:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.15); transform: translateY(-1px); }
-        .modal-status-btn.delivery { background-color: #0dcaf0; color: white; } .modal-status-btn.pending { background-color: #ffc107; color: #212529; }
-        .modal-status-btn.rejected { background-color: #dc3545; color: white; } .modal-status-btn.active { background-color: #198754; color: white; }
-        .modal-status-btn:disabled { background-color: #e9ecef; color: #6c757d; cursor: not-allowed; box-shadow: none; transform: none; }
-        .status-buttons { display: flex; justify-content: space-around; margin-top: 15px; gap:10px; }
-        .no-orders td { text-align: center; padding: 30px 20px; color: #6c757d; font-style: italic; font-size: 1.1em; }
+        .orders-table th.sortable a i { margin-left: 5px; color: #adb5bd; }
+        .orders-table th.sortable a:hover i { color: #e9ecef; } /* Lighter color for hover on sort icon */
+        .action-buttons { display: flex; gap: 5px; justify-content: center; }
+        .action-buttons button, .view-orders-btn { padding: 5px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 3px; }
+        .view-orders-btn { background-color: #0dcaf0; color: white; }
+        .view-orders-btn:hover { background-color: #0aa3bf; }
+        .status-btn { background-color: #ffc107; color: white; } /* Default for Manage/Update/Review */
+        .status-btn:hover { background-color: #e0a800; }
+        .progress-bar-container { width: 100%; background-color: #e9ecef; border-radius: 0.25rem; overflow: hidden; position: relative; height: 20px; }
+        .progress-bar { background-color: #0d6efd; height: 100%; line-height: 20px; color: white; text-align: center; white-space: nowrap; transition: width .6s ease; }
+        .progress-text { position: absolute; width: 100%; text-align: center; line-height: 20px; color: #000; font-size: 12px; font-weight: bold; }
+        .order-details-table { width: 100%; border-collapse: collapse; }
+        .order-details-table th, .order-details-table td { padding: 8px; text-align: left; border: 1px solid #ddd; }
+        .order-details-table thead th { background-color:rgb(29, 29, 29); color: white; } /* Added color: white */
+        .overlay { display: none; position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; outline: 0; background-color: rgba(0, 0, 0, 0.5); }
+        .overlay-content { position: relative; margin: 10% auto; padding: 20px; background: #fff; border-radius: 8px; width: 80%; max-width: 800px; max-height: 80vh; overflow-y: auto; }
+        .modal { display: none; position: fixed; z-index: 1060; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; outline: 0; background-color: rgba(0, 0, 0, 0.5); }
+        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-footer { padding-top: 15px; text-align: right; border-top: 1px solid #e5e5e5; margin-top: 15px; }
+        .modal-cancel-btn { background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+        .modal-status-btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; margin: 5px; flex-grow: 1; text-align: center; }
+        .modal-status-btn.delivery { background-color: #0dcaf0; color: white; }
+        .modal-status-btn.pending { background-color: #ffc107; color: white; }
+        .modal-status-btn.rejected { background-color: #dc3545; color: white; }
+        .modal-status-btn.active { background-color: #198754; color: white; }
+        .modal-status-btn:disabled { background-color: #e9ecef; color: #6c757d; cursor: not-allowed; }
+        .status-buttons { display: flex; justify-content: space-around; margin-top: 15px; }
+        .no-orders td { text-align: center; padding: 20px; color: #6c757d; font-style: italic; }
         .item-progress-bar-container { width: 100%; background-color: #e9ecef; border-radius: 4px; overflow: hidden; height: 16px; margin-top: 5px; position: relative; }
         .item-progress-bar { background-color: #198754; height: 100%; transition: width .3s ease; }
         .item-progress-text { position: absolute; width: 100%; text-align: center; line-height: 16px; color: #000; font-size: 10px; font-weight: bold; }
         .item-contribution-text { font-size: 9px; color: #6c757d; text-align: center; margin-top: 2px; }
-        .status-cell { vertical-align: middle; } .completed-item { background-color: #e6ffed !important; } .completed { background-color: #d1e7dd !important; }
-        .expand-units-btn { background: none; border: none; cursor: pointer; color: #007bff; padding: 0 5px; font-size:0.9em; }
-        .unit-row td { font-size: 0.85em; padding: 6px 10px 6px 35px; background-color: #fdfdfd; border-top: 1px dashed #eee;}
+        .status-cell { vertical-align: middle; }
+        .completed-item { background-color: #f0fff0 !important; }
+        .completed { background-color: #e0ffe0 !important; }
+        .expand-units-btn { background: none; border: none; cursor: pointer; color: #0d6efd; padding: 0 5px; }
+        .unit-row td { font-size: 0.9em; padding: 4px 8px 4px 30px; background-color: #fdfdfd; }
         .unit-action-row td { text-align: right; padding: 10px; background-color: #f8f9fa; }
-        .unit-action-row button { font-size: 0.8em; padding: 4px 8px; margin-left: 5px; }
-        .units-divider td { border: none; padding: 1px 0; background-color: #e0e0e0; height: 1px; }
-        .overlay-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 15px; }
-        .overlay-title { margin: 0; font-size: 1.5rem; color: #333; }
-        .overlay-header .cancel-btn, .overlay-header .cart-btn { font-size: 0.85em; padding: 6px 12px; } 
-        .cart-btn { background-color: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; }
-        .cart-btn i { margin-right: 5px; } .cart-btn:hover { background-color: #5a6268; }
-        .cart-table-container { max-height: 350px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #ddd; border-radius:4px; }
-        .cart-table { width: 100%; border-collapse: collapse; font-size:0.9em; }
-        .cart-table th, .cart-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
-        .cart-table th { background-color: #f8f9fa; font-weight:600; }
-        .cart-table td:nth-child(4), .cart-table td:nth-child(5) { text-align: center; } /* Price, Qty */
-        .cart-total { text-align: right; margin-top:15px; margin-bottom: 20px; font-weight: bold; font-size: 1.2em; }
-        .form-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
-        .cancel-btn, .back-btn, .save-btn, .confirm-btn { border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 5px; font-weight:500; transition: background-color 0.2s, box-shadow 0.2s; }
-        .cancel-btn, .back-btn { background-color: #6c757d; color: white; } .cancel-btn:hover, .back-btn:hover { background-color: #5a6268; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .save-btn, .confirm-btn { background-color: #007bff; color: white; } .save-btn:hover, .confirm-btn:hover { background-color: #0056b3; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .save-btn i, .confirm-btn i, .cancel-btn i, .back-btn i { margin-right: 6px; }
-        .order-form .form-group { margin-bottom: 18px; } /* Your original form-group style */
-        .order-form label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: #495057; }
-        .order-form input[type="text"], .order-form input[type="date"], .order-form select, .order-form textarea { 
-            width: 100%; padding: 10px 12px; margin-bottom: 0; /* Your original was 15px, changed to 0 for tighter layout */
-            border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box; font-size: 14px;
-            transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-        }
-        .order-form input:focus, .order-form select:focus, .order-form textarea:focus { border-color: #80bdff; outline: 0; box-shadow: 0 0 0 .2rem rgba(0,123,255,.25); }
+        .unit-action-row button { font-size: 0.8em; padding: 3px 6px; margin-left: 5px; }
+        .units-divider td { border: none; padding: 2px 0; background-color: #e9ecef; height: 2px; }
+        .overlay-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #dee2e6; padding-bottom: 10px; }
+        .overlay-title { margin: 0; font-size: 1.5rem; }
+        .cart-btn { background-color: #6c757d; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+        .cart-btn i { margin-right: 5px; }
+        .cart-table-container { max-height: 400px; overflow-y: auto; margin-bottom: 15px; }
+        .cart-table { width: 100%; border-collapse: collapse; }
+        .cart-table th, .cart-table td { padding: 8px; text-align: left; border: 1px solid #ddd; }
+        .cart-table th { background-color: #f8f9fa; }
+        .form-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .cancel-btn, .back-btn { background-color: #6c757d; color: white; }
+        .save-btn, .confirm-btn { background-color: #4a90e2; color: white; }
+        .cancel-btn, .back-btn, .save-btn, .confirm-btn { border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 5px; }
+        .cancel-btn:hover, .back-btn:hover { background-color: #5a6268; }
+        .save-btn:hover, .confirm-btn:hover { background-color: #357abf; }
+        .order-form .left-section { width: 100%; }
+        .order-form label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        .order-form input[type="text"], .order-form select, .order-form textarea { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .order-form input[readonly] { background-color: #e9ecef; cursor: not-allowed; }
-        .centered-button { text-align: center; margin: 20px 0; }
-        .open-inventory-btn { background-color: #28a745; color: white; border: none; padding: 10px 18px; border-radius: 5px; cursor: pointer; font-size: 14px; transition: background-color 0.2s; }
-        .open-inventory-btn:hover { background-color: #218838; } .open-inventory-btn i { margin-right: 8px; }
-        #onlineSpecificInputs .form-group, #walkInSpecificInputs .form-group { margin-bottom: 18px; }
-        #commonOrderFields { margin-top: 15px; }
-        /* End of your provided styles */
+        .centered-button { text-align: center; margin-bottom: 15px; }
+        .open-inventory-btn { background-color: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .open-inventory-btn:hover { background-color: #218838; }
     </style>
 </head>
 <body>
-    <?php include '../sidebar.php'; // Ensure this path is correct for your structure ?>
+    <?php include '../sidebar.php'; ?>
     <div class="main-content">
-        <!-- Display message if set -->
         <?php if (isset($_SESSION['message'])): ?>
             <div class="alert alert-<?php echo htmlspecialchars($_SESSION['message_type']); ?>">
                 <?php echo htmlspecialchars($_SESSION['message']); ?>
@@ -431,10 +403,10 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         <?php endif; ?>
         
         <div class="orders-header">
-            <h1>Manage Orders</h1> <!-- Changed from "Orders" to "Manage Orders" for clarity -->
+            <h1>Orders</h1>
             <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search PO, Type, User, Company...">
-                <button class="search-btn" aria-label="Search"><i class="fas fa-search"></i></button>
+                <input type="text" id="searchInput" placeholder="Search by PO Number, Username...">
+                <button class="search-btn"><i class="fas fa-search"></i></button>
             </div>
             <button onclick="openAddOrderForm()" class="add-order-btn">
                 <i class="fas fa-plus"></i> Add New Order
@@ -445,85 +417,85 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
                 <thead>
                     <tr>
                         <th class="sortable"><a href="<?= getSortUrl('po_number', $sort_column, $sort_direction) ?>">PO Number <?= getSortIcon('po_number', $sort_column, $sort_direction) ?></a></th>
-                        <th class="sortable"><a href="<?= getSortUrl('order_type', $sort_column, $sort_direction) ?>">Order Type <?= getSortIcon('order_type', $sort_column, $sort_direction) ?></a></th>
                         <th class="sortable"><a href="<?= getSortUrl('username', $sort_column, $sort_direction) ?>">Username <?= getSortIcon('username', $sort_column, $sort_direction) ?></a></th>
-                        <th class="sortable"><a href="<?= getSortUrl('company', $sort_column, $sort_direction) ?>">Company <?= getSortIcon('company', $sort_column, $sort_direction) ?></a></th>
                         <th class="sortable"><a href="<?= getSortUrl('order_date', $sort_column, $sort_direction) ?>">Order Date <?= getSortIcon('order_date', $sort_column, $sort_direction) ?></a></th>
                         <th class="sortable"><a href="<?= getSortUrl('delivery_date', $sort_column, $sort_direction) ?>">Delivery Date <?= getSortIcon('delivery_date', $sort_column, $sort_direction) ?></a></th>
                         <th class="sortable"><a href="<?= getSortUrl('progress', $sort_column, $sort_direction) ?>">Progress <?= getSortIcon('progress', $sort_column, $sort_direction) ?></a></th>
-                        <th>Items</th>
+                        <th>Orders</th>
                         <th class="sortable"><a href="<?= getSortUrl('total_amount', $sort_column, $sort_direction) ?>">Total Amount <?= getSortIcon('total_amount', $sort_column, $sort_direction) ?></a></th>
-                        <th>Instructions</th>
+                        <th>Special Instructions</th>
                         <th class="sortable"><a href="<?= getSortUrl('status', $sort_column, $sort_direction) ?>">Status <?= getSortIcon('status', $sort_column, $sort_direction) ?></a></th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (count($orders_data) > 0): ?>
-                        <?php foreach ($orders_data as $order_item_row): // Renamed from $order to $order_item_row ?>
-                            <tr data-current-status="<?= htmlspecialchars($order_item_row['status']) ?>" data-po-number="<?= htmlspecialchars($order_item_row['po_number']) ?>">
-                                <td><?= htmlspecialchars($order_item_row['po_number']) ?></td>
-                                <td><?= htmlspecialchars($order_item_row['order_type'] ?? 'N/A') ?></td>
-                                <td><?= htmlspecialchars($order_item_row['username'] ?? 'N/A') ?></td>
-                                <td><?= htmlspecialchars($order_item_row['company'] ?? ($clients_data_map[$order_item_row['username']]['company'] ?? 'N/A')) ?></td>
-                                <td><?= htmlspecialchars(date("M d, Y", strtotime($order_item_row['order_date']))) ?></td>
+                    <?php if (count($orders_list) > 0): ?>
+                        <?php foreach ($orders_list as $order_item_loop): // Renamed loop variable ?>
+                            <tr data-current-status="<?= htmlspecialchars($order_item_loop['status']) ?>">
+                                <td><?= htmlspecialchars($order_item_loop['po_number']) ?></td>
+                                <td><?= htmlspecialchars($order_item_loop['username']) ?></td>
+                                <td><?= htmlspecialchars($order_item_loop['order_date']) ?></td>
                                 <td>
-                                    <?php 
-                                    if ($order_item_row['order_type'] === 'Walk In' && $order_item_row['order_date'] === $order_item_row['delivery_date']) { echo 'N/A (Walk-In)'; } 
-                                    elseif (empty($order_item_row['delivery_date'])) { echo 'N/A'; } 
-                                    else { echo htmlspecialchars(date("M d, Y", strtotime($order_item_row['delivery_date']))); }
-                                    ?>
-                                    <?php if ($order_item_row['order_type'] !== 'Walk In' && !empty($order_item_row['delivery_date'])): ?>
-                                    <button class="edit-date-btn" onclick="openEditDateModal('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['delivery_date']) ?>', '<?= htmlspecialchars($order_item_row['order_date']) ?>')" aria-label="Edit Delivery Date">
+                                    <?= htmlspecialchars($order_item_loop['delivery_date']) ?>
+                                    <button class="edit-date-btn" onclick="openEditDateModal('<?= htmlspecialchars($order_item_loop['po_number']) ?>', '<?= htmlspecialchars($order_item_loop['delivery_date']) ?>', '<?= htmlspecialchars($order_item_loop['order_date']) ?>')">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if (in_array($order_item_row['status'], ['Active', 'For Delivery', 'Completed', 'In Transit'])): // Added 'In Transit' ?>
+                                    <?php 
+                                    if ($order_item_loop['status'] === 'Active'): ?>
                                     <div class="progress-bar-container">
-                                        <div class="progress-bar" style="width: <?= $order_item_row['progress'] ?? 0 ?>%"></div>
-                                        <div class="progress-text"><?= $order_item_row['progress'] ?? 0 ?>%</div>
+                                        <div class="progress-bar" style="width: <?= $order_item_loop['progress'] ?? 0 ?>%"></div>
+                                        <div class="progress-text"><?= $order_item_loop['progress'] ?? 0 ?>%</div>
                                     </div>
-                                    <?php else: // For Pending, Rejected ?>
-                                        <span class="status-badge status-<?= strtolower(str_replace(' ', '_', htmlspecialchars($order_item_row['status']))) ?>"><?= htmlspecialchars($order_item_row['status']) ?></span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                     <?php if ($order_item_row['status'] === 'Active'): ?>
-                                        <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order_item_row['po_number']) ?>')"><i class="fas fa-tasks"></i> Manage Items</button>
                                     <?php else: ?>
-                                        <button class="view-orders-btn" onclick="viewOrderInfo('<?= htmlspecialchars(addslashes($order_item_row['orders'])) ?>', '<?= htmlspecialchars($order_item_row['status']) ?>', '<?= htmlspecialchars($order_item_row['po_number']) ?>')"><i class="fas fa-eye"></i> View Items</button>
+                                        <span class="status-badge <?= strtolower(htmlspecialchars($order_item_loop['status'])) ?>-progress"><?= $order_item_loop['status'] === 'Pending' ? 'Pending' : 'Not Available' ?></span>
                                     <?php endif; ?>
                                 </td>
-                                <td>PHP <?= htmlspecialchars(number_format((float)$order_item_row['total_amount'], 2)) ?></td>
                                 <td>
-                                    <?php if (!empty($order_item_row['special_instructions'])): ?>
-                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order_item_row['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order_item_row['special_instructions'])) ?>')"><i class="fas fa-comment-alt"></i> View</button>
+                                    <?php 
+                                    if ($order_item_loop['status'] === 'Active'): ?>
+                                        <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order_item_loop['po_number']) ?>')"><i class="fas fa-clipboard-list"></i> View</button>
+                                    <?php else: // For Pending, Rejected, etc. ?>
+                                        <button class="view-orders-btn" onclick="viewOrderInfo('<?= htmlspecialchars(addslashes($order_item_loop['orders'])) ?>', '<?= htmlspecialchars($order_item_loop['status']) ?>')"><i class="fas fa-eye"></i> View</button>
+                                    <?php endif; ?>
+                                </td>
+                                <td>PHP <?= htmlspecialchars(number_format($order_item_loop['total_amount'], 2)) ?></td>
+                                <td>
+                                    <?php if (!empty($order_item_loop['special_instructions'])): ?>
+                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order_item_loop['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order_item_loop['special_instructions'])) ?>')"><i class="fas fa-comment-alt"></i> View</button>
                                     <?php else: ?>
                                         <span class="no-instructions">None</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="status-badge status-<?= strtolower(str_replace(' ', '_', htmlspecialchars($order_item_row['status']))) ?>"><?= htmlspecialchars($order_item_row['status']) ?></span>
+                                    <?php
+                                    $status_class_display = ''; // Renamed
+                                    switch ($order_item_loop['status']) {
+                                        case 'Active': $status_class_display = 'status-active'; break;
+                                        case 'Pending': $status_class_display = 'status-pending'; break;
+                                        case 'Rejected': $status_class_display = 'status-rejected'; break;
+                                        case 'For Delivery': $status_class_display = 'status-delivery'; break;
+                                        case 'Completed': $status_class_display = 'status-completed'; break;
+                                        default: $status_class_display = 'status-' . strtolower(htmlspecialchars($order_item_loop['status'])); 
+                                    }
+                                    ?>
+                                    <span class="status-badge <?= $status_class_display ?>"><?= htmlspecialchars($order_item_loop['status']) ?></span>
                                 </td>
                                 <td class="action-buttons">
-                                    <?php if ($order_item_row['status'] === 'Pending'): ?>
-                                        <button class="status-btn" onclick="confirmPendingStatusChange('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['username'] ?? 'Walk-In') ?>', '<?= htmlspecialchars(addslashes($order_item_row['orders'])) ?>', 'Pending')"><i class="fas fa-cogs"></i> Manage</button>
-                                    <?php elseif ($order_item_row['status'] === 'Active' && ((int)($order_item_row['progress'] ?? 0)) < 100): ?>
-                                        <button class="status-btn" onclick="confirmStatusChange('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['username'] ?? 'Walk-In') ?>', 'Active')"><i class="fas fa-sync-alt"></i> Update</button>
-                                    <?php elseif ($order_item_row['status'] === 'Rejected'): ?>
-                                        <button class="status-btn" onclick="confirmRejectedStatusChange('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['username'] ?? 'Walk-In') ?>', 'Rejected')"><i class="fas fa-undo"></i> Review</button>
+                                    <?php if ($order_item_loop['status'] === 'Pending'): ?>
+                                        <button class="status-btn" onclick="confirmPendingStatusChange('<?= htmlspecialchars($order_item_loop['po_number']) ?>', '<?= htmlspecialchars($order_item_loop['username']) ?>', '<?= htmlspecialchars(addslashes($order_item_loop['orders'])) ?>', 'Pending')"><i class="fas fa-cogs"></i> Manage</button>
+                                    <?php elseif ($order_item_loop['status'] === 'Active' && ((int)($order_item_loop['progress'] ?? 0)) < 100 ): ?>
+                                        <button class="status-btn" onclick="confirmStatusChange('<?= htmlspecialchars($order_item_loop['po_number']) ?>', '<?= htmlspecialchars($order_item_loop['username']) ?>', 'Active')"><i class="fas fa-sync-alt"></i> Update</button>
+                                    <?php elseif ($order_item_loop['status'] === 'Rejected'): ?>
+                                        <button class="status-btn" onclick="confirmRejectedStatusChange('<?= htmlspecialchars($order_item_loop['po_number']) ?>', '<?= htmlspecialchars($order_item_loop['username']) ?>', 'Rejected')"><i class="fas fa-undo"></i> Review</button>
                                     <?php endif; ?>
-                                    <button class="download-btn" 
-                                            onclick="prepareAndShowPOPreview('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['username'] ?? 'Walk-In') ?>', '<?= htmlspecialchars($order_item_row['company'] ?? ($clients_data_map[$order_item_row['username']]['company'] ?? 'N/A')) ?>', '<?= htmlspecialchars($order_item_row['order_date']) ?>', '<?= htmlspecialchars($order_item_row['delivery_date'] ?? '') ?>', '<?= htmlspecialchars($order_item_row['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order_item_row['orders'])) ?>', '<?= htmlspecialchars($order_item_row['total_amount']) ?>', '<?= htmlspecialchars(addslashes($order_item_row['special_instructions'] ?? '')) ?>', '<?= htmlspecialchars($order_item_row['order_type']) ?>')">
-                                        <i class="fas fa-file-pdf"></i> Invoice
-                                    </button>
+                                    <button class="download-btn" onclick="confirmDownloadPO('<?= htmlspecialchars($order_item_loop['po_number']) ?>', '<?= htmlspecialchars($order_item_loop['username']) ?>', '<?= htmlspecialchars($order_item_loop['company'] ?? '') ?>', '<?= htmlspecialchars($order_item_loop['order_date']) ?>', '<?= htmlspecialchars($order_item_loop['delivery_date']) ?>', '<?= htmlspecialchars($order_item_loop['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order_item_loop['orders'])) ?>', '<?= htmlspecialchars($order_item_loop['total_amount']) ?>', '<?= htmlspecialchars(addslashes($order_item_loop['special_instructions'] ?? '')) ?>')"><i class="fas fa-file-pdf"></i> Invoice</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="12" class="no-orders">No orders found.</td></tr> <!-- Adjusted colspan -->
+                        <tr><td colspan="10" class="no-orders">No orders found matching criteria.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -532,45 +504,40 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
 
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- PDF Preview Modal (Using your structure) -->
-    <div id="pdfPreview">
+    <div id="pdfPreview" style="display: none;">
         <div class="pdf-container">
             <button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button>
             <div id="contentToDownload">
                 <div class="po-container">
                      <div class="po-header"><div class="po-company" id="printCompany"></div><div class="po-title">Sales Invoice</div></div>
                      <div class="po-details">
-                         <div class="po-left"><div class="po-detail-row"><span class="po-detail-label">PO Number:</span> <span id="printPoNumber"></span></div><div class="po-detail-row"><span class="po-detail-label">Client/Company:</span> <span id="printUsername"></span></div><div class="po-detail-row"><span class="po-detail-label">Address:</span> <span id="printDeliveryAddress"></span></div></div>
-                         <div class="po-right"><div class="po-detail-row"><span class="po-detail-label">Order Date:</span> <span id="printOrderDate"></span></div><div class="po-detail-row" id="printDeliveryDateRow"><span class="po-detail-label">Delivery Date:</span> <span id="printDeliveryDate"></span></div></div>
+                         <div class="po-left"><div class="po-detail-row"><span class="po-detail-label">PO Number:</span> <span id="printPoNumber"></span></div><div class="po-detail-row"><span class="po-detail-label">Client:</span> <span id="printUsername"></span></div><div class="po-detail-row"><span class="po-detail-label">Address:</span> <span id="printDeliveryAddress"></span></div></div>
+                         <div class="po-right"><div class="po-detail-row"><span class="po-detail-label">Order Date:</span> <span id="printOrderDate"></span></div><div class="po-detail-row"><span class="po-detail-label">Delivery Date:</span> <span id="printDeliveryDate"></span></div></div>
                      </div>
-                     <div id="printInstructionsSection" style="margin-bottom:20px;display:none;font-size:12px;"><strong>Special Instructions:</strong><div id="printSpecialInstructions" style="white-space:pre-wrap;word-wrap:break-word;padding:5px;border:1px solid #eee;margin-top:5px;border-radius:4px;"></div></div>
-                     <table class="po-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Unit Price</th><th style="text-align:right;">Total</th></tr></thead><tbody id="printOrderItems"></tbody></table>
-                     <div class="po-total">Grand Total: PHP <span id="printTotalAmount"></span></div>
-                     <div class="po-signature"><div class="po-signature-block"><div class="po-signature-line"></div>Prepared by</div><div class="po-signature-block"><div class="po-signature-line"></div>Received by / Signature</div></div>
+                     <div id="printInstructionsSection" style="margin-bottom: 20px; display: none;"><strong>Special Instructions:</strong><div id="printSpecialInstructions" style="white-space: pre-wrap;word-wrap:break-word;"></div></div>
+                     <table class="po-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Quantity</th><th>Unit Price</th><th>Total</th></tr></thead><tbody id="printOrderItems"></tbody></table>
+                     <div class="po-total">Total Amount: PHP <span id="printTotalAmount"></span></div>
                 </div>
             </div>
-            <div class="pdf-actions"><button class="download-pdf-btn" onclick="downloadCurrentPODataAsPDF()"><i class="fas fa-download"></i> Download PDF</button></div>
+            <div class="pdf-actions"><button class="download-pdf-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button></div>
         </div>
     </div>
 
-    <!-- Special Instructions Modal (Using your structure) -->
     <div id="specialInstructionsModal" class="instructions-modal">
-        <div class="instructions-modal-content"><div class="instructions-header"><h3>Special Instructions for <span id="instructionsPoNumber"></span></h3><button class="close-instructions-btn" onclick="closeSpecialInstructions()" style="background:none;border:none;color:white;font-size:1.2em;padding:0;">&times;</button></div><div class="instructions-body" id="instructionsContent"></div><div class="instructions-footer"><button class="close-instructions-btn" onclick="closeSpecialInstructions()">Close</button></div></div>
+        <div class="instructions-modal-content"><div class="instructions-header"><h3>Special Instructions</h3><div class="instructions-po-number" id="instructionsPoNumber"></div></div><div class="instructions-body" id="instructionsContent"></div><div class="instructions-footer"><button class="close-instructions-btn" onclick="closeSpecialInstructions()">Close</button></div></div>
     </div>
-    
-    <!-- Order Details Modal (Using your structure) -->
-    <div id="orderDetailsModal" class="overlay">
+
+    <div id="orderDetailsModal" class="overlay" style="display: none;">
         <div class="overlay-content">
-            <div class="overlay-header"><h2 class="overlay-title"><i class="fas fa-tasks"></i> Order Item Details (<span id="orderStatusView"></span>)</h2><button type="button" class="cancel-btn" onclick="closeOrderDetailsModal()" style="padding: 8px 15px; font-size: 13px;"><i class="fas fa-times"></i> Close</button></div>
-            <div id="overall-progress-info" style="margin-bottom:15px;display:none;"><strong>Overall Order Progress:</strong><div class="progress-bar-container" style="margin-top:5px;height:22px;"><div class="progress-bar" id="overall-progress-bar" style="width:0%;line-height:22px;font-size:12px;"></div><div class="progress-text" id="overall-progress-text" style="line-height:22px;font-size:12px;">0%</div></div></div>
-            <div class="order-details-container"><table class="order-details-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Price</th><th style="text-align:center;">Qty</th><th id="status-header-cell" style="text-align:center;">Item Status/Progress</th></tr></thead><tbody id="orderDetailsBody"></tbody></table></div>
-            <div class="order-details-footer"><div class="total-amount" id="orderTotalAmount">Total: PHP 0.00</div></div>
+            <h2><i class="fas fa-box-open"></i> Order Details (<span id="orderStatus"></span>)</h2>
+             <div id="overall-progress-info" style="margin-bottom: 15px; display: none;"><strong>Overall Progress:</strong><div class="progress-bar-container" style="margin-top: 5px;"><div class="progress-bar" id="overall-progress-bar" style="width:0%;"></div><div class="progress-text" id="overall-progress-text">0%</div></div></div>
+            <div class="order-details-container"><table class="order-details-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th id="status-header-cell">Status/Progress</th></tr></thead><tbody id="orderDetailsBody"></tbody></table></div>
+             <div class="order-details-footer"><div class="total-amount" id="orderTotalAmount">Total: PHP 0.00</div></div>
             <div class="form-buttons"><button type="button" class="back-btn" onclick="closeOrderDetailsModal()"><i class="fas fa-arrow-left"></i> Back</button><button type="button" class="save-btn save-progress-btn" onclick="confirmSaveProgress()" style="display:none;"><i class="fas fa-save"></i> Save Progress</button></div>
         </div>
     </div>
 
-    <!-- Status Modal (for Active Orders - Using your structure) -->
-    <div id="statusModal" class="modal">
+    <div id="statusModal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2>Change Status</h2><p id="statusMessage"></p>
             <div class="status-buttons">
@@ -581,8 +548,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         </div>
     </div>
 
-    <!-- Rejected Status Modal (Using your structure) -->
-    <div id="rejectedStatusModal" class="modal">
+    <div id="rejectedStatusModal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2>Change Status</h2><p id="rejectedStatusMessage"></p>
             <div class="status-buttons"><button onclick="confirmStatusAction('Pending')" class="modal-status-btn pending"><i class="fas fa-clock"></i> Pending<div class="btn-info">(Return to pending)</div></button></div>
@@ -590,11 +556,10 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         </div>
     </div>
 
-    <!-- Pending Status Modal (Using your structure, with #rawMaterialsContainer for material info) -->
-    <div id="pendingStatusModal" class="modal">
+    <div id="pendingStatusModal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2>Change Status</h2><p id="pendingStatusMessage"></p>
-            <div id="rawMaterialsContainer" class="raw-materials-container"><h3>Loading inventory status...</h3></div> <!-- Your existing container ID -->
+            <div id="rawMaterialsContainer" class="raw-materials-container"><h3>Loading inventory status...</h3></div>
             <div class="status-buttons">
                 <button id="activeStatusBtn" onclick="confirmStatusAction('Active')" class="modal-status-btn active" disabled><i class="fas fa-check"></i> Active<div class="btn-info">(Deduct stock)</div></button>
                 <button onclick="confirmStatusAction('Rejected')" class="modal-status-btn rejected"><i class="fas fa-times-circle"></i> Reject</button>
@@ -603,25 +568,20 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         </div>
     </div>
 
-    <!-- Edit Delivery Date Modal (Using your structure) -->
     <div id="editDateModal" class="modal">
         <div class="edit-date-modal-content">
             <div class="edit-date-modal-header">
                 <h3>Edit Delivery Date</h3>
                 <button class="edit-date-close" onclick="closeEditDateModal()">&times;</button>
             </div>
-            <form id="editDateForm" method="POST" class="edit-date-form" onsubmit="return validateEditDateForm(event)"> <!-- Added onsubmit -->
+            <form id="editDateForm" method="POST" class="edit-date-form">
                 <input type="hidden" id="edit_po_number" name="po_number">
-                <div class="form-group"> <!-- Added form-group for consistency -->
-                    <label for="current_delivery_date">Current Delivery Date:</label>
-                    <input type="text" id="current_delivery_date" class="form-control" readonly> <!-- Added form-control class -->
-                </div>
-                <div class="form-group">
-                    <label for="new_delivery_date_input_edit">New Delivery Date:</label> <!-- Changed ID to avoid conflict with add form -->
-                    <input type="text" id="new_delivery_date_input_edit" name="new_delivery_date" class="form-control" autocomplete="off" required>
-                </div>
+                <label for="current_delivery_date">Current Delivery Date:</label>
+                <input type="text" id="current_delivery_date" readonly>
+                <label for="new_delivery_date">New Delivery Date:</label>
+                <input type="text" id="new_delivery_date" name="new_delivery_date" autocomplete="off" required>
                 <div class="edit-date-note" style="margin-bottom: 15px; font-size: 12px; color: #666;">
-                    <i class="fas fa-info-circle"></i> Delivery dates must be Mon, Wed, or Fri, and at least 5 days after the order date (<span id="edit_order_date_display_modal"></span>). <!-- Changed ID -->
+                    <i class="fas fa-info-circle"></i> Delivery dates must be Monday, Wednesday, or Friday, and at least 5 days after the order date.
                 </div>
                 <div class="edit-date-footer">
                     <input type="hidden" name="update_delivery_date" value="1">
@@ -631,738 +591,1161 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         </div>
     </div>
 
-    <!-- Add New Order Overlay (Using your structure, added order_type fields) -->
-    <div id="addOrderOverlay" class="overlay">
+    <div id="addOrderOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
-            <div class="overlay-header"><h2 class="overlay-title"><i class="fas fa-cart-plus"></i> Add New Order</h2></div>
+            <h2><i class="fas fa-plus"></i> Add New Order</h2>
             <form id="addOrderForm" method="POST" class="order-form">
-                <div class="form-group"> <!-- Added form-group -->
-                    <label for="order_type_selection_add">Order Type:</label> <!-- Changed ID -->
-                    <select id="order_type_selection_add" onchange="toggleOrderFormFieldsAdd()" class="form-control"> <!-- Changed onchange function name -->
-                        <option value="" disabled selected>--- Select Order Type ---</option>
-                        <option value="Online">Online Order (Existing Client)</option>
-                        <option value="Walk In">Walk-In / New Client</option>
+                <div class="left-section">
+                    <label for="username_select_add_order">Username:</label> <!-- Changed ID -->
+                    <select id="username_select_add_order" name="username" required onchange="generatePONumber();">
+                        <option value="" disabled selected>Select User</option>
+                        <?php foreach ($clients_arr as $client_item_form): ?>
+                            <option value="<?= htmlspecialchars($client_item_form) ?>"
+                                    data-company-address="<?= htmlspecialchars($clients_with_company_address_map[$client_item_form] ?? '') ?>"
+                                    data-company="<?= htmlspecialchars($clients_with_company_map[$client_item_form] ?? '') ?>">
+                                <?= htmlspecialchars($client_item_form) ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
-                    <input type="hidden" name="order_type" id="order_type_hidden_for_submit_add"> <!-- Changed ID -->
-                </div>
-
-                <div id="onlineSpecificInputsAdd" style="display:none;"> <!-- Changed ID -->
-                    <div class="form-group">
-                        <label for="username_online_select_add">Client Username:</label> <!-- Changed ID -->
-                        <select id="username_online_select_add" name="username_online" onchange="handleOnlineUserChangeAdd()" class="form-control"> <!-- Changed ID and onchange -->
-                            <option value="" disabled selected>--- Select Client ---</option>
-                            <?php foreach ($clients_list as $client_username_item):?>
-                                <option value="<?= htmlspecialchars($client_username_item) ?>" 
-                                        data-company="<?= htmlspecialchars($clients_data_map[$client_username_item]['company'] ?? '') ?>" 
-                                        data-company-address="<?= htmlspecialchars($clients_data_map[$client_username_item]['company_address'] ?? '') ?>">
-                                    <?= htmlspecialchars($client_username_item) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="online_company_display_add">Company:</label> <!-- Changed ID -->
-                        <input type="text" id="online_company_display_add" class="form-control" readonly>
-                    </div>
-                </div>
-
-                <div id="walkInSpecificInputsAdd" style="display:none;"> <!-- Changed ID -->
-                    <div class="form-group">
-                        <label for="walk_in_name_company_input_add">Full Name / Company Name:</label> <!-- Changed ID -->
-                        <input type="text" id="walk_in_name_company_input_add" name="walk_in_name_company_input" class="form-control" placeholder="Enter client's full name or company name">
-                    </div>
-                </div>
-                
-                <div id="commonOrderFieldsAdd" style="display:none;"> <!-- Changed ID -->
-                    <div class="form-group">
-                        <label for="order_date_add">Order Date:</label> <!-- Changed ID -->
-                        <input type="text" id="order_date_add" name="order_date" class="form-control" readonly>
-                    </div>
-                    <div class="form-group" id="delivery_date_form_group_add" style="display:none;"> <!-- Changed ID -->
-                        <label for="delivery_date_add">Requested Delivery Date:</label> <!-- Changed ID -->
-                        <input type="text" id="delivery_date_add" name="delivery_date" class="form-control" autocomplete="off" placeholder="Select a Mon, Wed, or Fri">
-                        <small class="form-text text-muted">Deliveries: Mon, Wed, Fri. Min. 5 days from order date.</small>
-                    </div>
-                    <div class="form-group" id="delivery_address_type_form_group_add" style="display:none;"> <!-- Changed ID -->
-                        <label for="delivery_address_type_select_add">Delivery Address Type:</label> <!-- Changed ID -->
-                        <select id="delivery_address_type_select_add" onchange="toggleDeliveryAddressOptionsAdd()" class="form-control"> <!-- Changed onchange -->
-                            <option value="custom" selected>Enter Custom Address</option>
-                            <option value="company" id="company_address_option_for_delivery_add" style="display:none;">Use Client's Registered Address</option> <!-- Changed ID -->
-                        </select>
-                    </div>
-                    <div id="company_address_container_div_add" style="display:none;" class="form-group"> <!-- Changed ID -->
-                        <label for="company_address_display_field_add">Registered Company Address:</label> <!-- Changed ID -->
-                        <input type="text" id="company_address_display_field_add" class="form-control" readonly>
-                    </div>
-                    <div id="custom_address_container_div_add" class="form-group" style="display:none;"> <!-- Changed ID -->
-                        <label for="custom_address_input_field_add" id="custom_address_label_add">Custom Delivery Address:</label> <!-- Changed ID -->
-                        <textarea id="custom_address_input_field_add" name="custom_address" rows="3" class="form-control" placeholder="Enter complete address"></textarea> <!-- Removed direct name from textarea, will use hidden field -->
-                    </div>
-                    <input type="hidden" name="delivery_address" id="delivery_address_for_submit_add"> <!-- Changed ID -->
-                    <div class="form-group">
-                        <label for="special_instructions_input_add">Special Instructions / Notes:</label> <!-- Changed ID -->
-                        <textarea id="special_instructions_input_add" name="special_instructions" rows="3" class="form-control" placeholder="e.g., Contact person, landmark"></textarea>
-                    </div>
+                    <label for="order_date_add_form">Order Date:</label> <input type="text" id="order_date_add_form" name="order_date" readonly>
+                    <label for="delivery_date_add_form">Delivery Date:</label> <input type="text" id="delivery_date_add_form" name="delivery_date" autocomplete="off" required>
+                    <label for="delivery_address_type_add_form">Delivery Address:</label><select id="delivery_address_type_add_form" name="delivery_address_type" onchange="toggleDeliveryAddress()"> <option value="company">Company Address</option><option value="custom">Custom Address</option></select>
+                    <div id="company_address_container_add_form"><input type="text" id="company_address_add_form" name="company_address" readonly placeholder="Company address"></div>
+                    <div id="custom_address_container_add_form" style="display: none;"><textarea id="custom_address_add_form" name="custom_address" rows="3" placeholder="Enter delivery address"></textarea></div>
+                    <input type="hidden" name="delivery_address" id="delivery_address_hidden_add_form">
+                    <label for="special_instructions_textarea_add_form">Special Instructions:</label> <textarea id="special_instructions_textarea_add_form" name="special_instructions" rows="3" placeholder="Enter special instructions"></textarea>
                     <div class="centered-button"><button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()"><i class="fas fa-box-open"></i> Select Products</button></div>
-                    <div class="order-summary"><h3>Order Summary <span id="orderSummaryItemCountAdd">(0 items)</span></h3><table class="summary-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Price</th><th style="text-align:center;">Qty</th><th style="text-align:center;">Action</th></tr></thead><tbody id="summaryBodyAdd"><tr><td colspan="6" style="text-align:center;padding:15px;">No products selected.</td></tr></tbody></table><div class="summary-total">Order Total: <span class="summary-total-amount-add">PHP 0.00</span></div></div>
+                    <div class="order-summary"><h3>Order Summary</h3><table class="summary-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody id="summaryBody"></tbody></table><div class="summary-total">Total: <span class="summary-total-amount">PHP 0.00</span></div></div>
+                    <input type="hidden" name="po_number" id="po_number_add_form">
+                    <input type="hidden" name="orders" id="orders_json_add_form">
+                    <input type="hidden" name="total_amount" id="total_amount_add_form">
+                    <input type="hidden" name="company_hidden" id="company_hidden_add_form">
                 </div>
-                <input type="hidden" name="po_number" id="po_number_for_submit_add"> <!-- Changed ID -->
-                <input type="hidden" name="orders" id="orders_json_for_submit_add"> <!-- Changed ID -->
-                <input type="hidden" name="total_amount" id="total_amount_for_submit_add"> <!-- Changed ID -->
-                <input type="hidden" name="company_name_final" id="company_name_final_for_submit_add"> <!-- Changed ID -->
-                <div class="form-buttons"><button type="button" class="cancel-btn" onclick="closeAddOrderForm()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="save-btn" onclick="confirmAddOrder()" id="confirmAddOrderBtnAdd" style="display:none;"><i class="fas fa-check-circle"></i> Review & Confirm</button></div>
+                <div class="form-buttons"><button type="button" class="cancel-btn" onclick="closeAddOrderForm()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="save-btn" onclick="confirmAddOrder()"><i class="fas fa-save"></i> Add Order</button></div>
             </form>
         </div>
     </div>
 
-    <!-- Confirmation modals (Using your structure, removed driver confirmation) -->
-    <div id="addConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm New Order</div><div class="confirmation-message">Are you sure you want to add this order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeAddConfirmation()">No, Go Back</button><button class="confirm-yes" onclick="submitAddOrder()">Yes, Add Order</button></div></div></div>
-    <div id="saveProgressConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Save Progress</div><div class="confirmation-message">Save current item progress for this order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeSaveProgressConfirmation()">No</button><button class="confirm-yes" onclick="saveProgressChanges()">Yes, Save</button></div></div></div>
-    <div id="statusConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Status Change</div><div class="confirmation-message" id="statusConfirmationMessage"></div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeStatusConfirmation()">No</button><button class="confirm-yes" onclick="executeStatusChange()">Yes, Confirm</button></div></div></div>
-    <div id="downloadConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Download</div><div class="confirmation-message">Download this PO?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeDownloadConfirmation()">No</button><button class="confirm-yes" onclick="downloadPODirectly()">Yes, Download</button></div></div></div>
+    <div id="addConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Add Order</div><div class="confirmation-message">Add this order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeAddConfirmation()">No</button><button class="confirm-yes" onclick="submitAddOrder()">Yes</button></div></div></div>
+    <div id="saveProgressConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Save Progress</div><div class="confirmation-message">Save progress?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeSaveProgressConfirmation()">No</button><button class="confirm-yes" onclick="saveProgressChanges()">Yes</button></div></div></div>
+    <div id="statusConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Status Change</div><div class="confirmation-message" id="statusConfirmationMessage"></div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeStatusConfirmation()">No</button><button class="confirm-yes" onclick="executeStatusChange()">Yes</button></div></div></div>
+    <div id="downloadConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Download</div><div class="confirmation-message">Download this PO?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeDownloadConfirmation()">No</button><button class="confirm-yes" onclick="downloadPODirectly()">Yes</button></div></div></div>
 
-    <!-- Inventory Overlay (Using your structure) -->
-    <div id="inventoryOverlay" class="overlay">
+    <div id="inventoryOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
-             <div class="overlay-header"><h2 class="overlay-title"><i class="fas fa-box-open"></i> Select Products</h2><button class="cart-btn" onclick="window.openCartModal()"><i class="fas fa-shopping-cart"></i> View Cart (<span id="cartItemCountNav">0</span>)</button></div>
-             <div class="inventory-filter-section"><input type="text" id="inventorySearch" placeholder="Search products..."><select id="inventoryFilter"><option value="all">All Categories</option></select></div>
+             <div class="overlay-header"><h2 class="overlay-title"><i class="fas fa-box-open"></i> Select Products</h2><button class="cart-btn" onclick="window.openCartModal()"><i class="fas fa-shopping-cart"></i> View Cart (<span id="cartItemCount">0</span>)</button></div>
+             <div class="inventory-filter-section"><input type="text" id="inventorySearch" placeholder="Search..."><select id="inventoryFilter"><option value="all">All Categories</option></select></div>
              <div class="inventory-table-container"><table class="inventory-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody class="inventory"></tbody></table></div>
-             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="cancel-btn" onclick="closeInventoryOverlay()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="save-btn" onclick="closeInventoryOverlay()"><i class="fas fa-check"></i> Done Selecting</button></div>
+             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="cancel-btn" onclick="closeInventoryOverlay()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="save-btn" onclick="closeInventoryOverlay()"><i class="fas fa-check"></i> Done</button></div>
         </div>
     </div>
 
-    <!-- Cart Modal (Using your structure) -->
-    <div id="cartModal" class="overlay">
+    <div id="cartModal" class="overlay" style="display: none;">
         <div class="overlay-content">
-             <h2><i class="fas fa-shopping-cart"></i> Selected Products for New Order</h2>
-             <div class="cart-table-container"><table class="cart-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody class="cart"></tbody></table><p class="no-products-in-cart-row" style="text-align:center;padding:15px;display:none;">No products selected yet.</p></div>
-             <div class="cart-total" style="text-align: right; margin-bottom: 20px; font-weight: bold; font-size: 1.1em;">Total: <span class="total-amount-cart">PHP 0.00</span></div>
-             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="back-btn" onclick="closeCartModal()"><i class="fas fa-arrow-left"></i> Back to Inventory</button><button type="button" class="confirm-btn" onclick="saveCartChangesAndClose()"><i class="fas fa-check"></i> Confirm Items</button></div>
+             <h2><i class="fas fa-shopping-cart"></i> Selected Products</h2>
+             <div class="cart-table-container"><table class="cart-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody class="cart"></tbody></table><p class="no-products" style="text-align:center;display:none;">No products selected.</p></div>
+             <div class="cart-total" style="text-align: right; margin-bottom: 20px; font-weight: bold; font-size: 1.1em;">Total: <span class="total-amount">PHP 0.00</span></div>
+             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="back-btn" onclick="closeCartModal()"><i class="fas fa-arrow-left"></i> Back</button><button type="button" class="confirm-btn" onclick="saveCartChanges()"><i class="fas fa-check"></i> Confirm</button></div>
         </div>
     </div>
 
     <script>
-        // --- Global Variables (Using your structure, adapted where needed) ---
+        // --- Global Variables ---
         let currentPoNumber = '';
-        let currentOrderOriginalStatus = ''; // Used to determine material return logic
-        let currentOrderItems = []; // For item progress in viewOrderDetails
-        let completedItems = []; // For item progress in viewOrderDetails (deprecated, use quantityProgressData)
-        let quantityProgressData = {}; // For item progress in viewOrderDetails
-        let itemProgressPercentages = {}; // For item progress in viewOrderDetails
-        let itemContributions = {}; // For item progress in viewOrderDetails
-        let overallProgress = 0; // For item progress in viewOrderDetails
-        let currentPODataForPDF = null; // MODIFIED: Using this for PDF preview/download logic
-        let selectedStatus = ''; // For status change confirmation flow
-        // let poDownloadData = null; // REMOVED: Replaced by currentPODataForPDF
-        let cartItems = []; // For new order form
-        let editingOrderDate = ''; // Store order date when editing delivery date (your existing variable)
-        const clientsDataFromPHPOrders = <?php echo json_encode($clients_data_map); ?>; // Added suffix to avoid conflict if any other clientsData exists
+        let currentOrderOriginalStatus = '';
+        let currentOrderItems = [];
+        let completedItems = []; // Used for items with 0 quantity or overall completion
+        let quantityProgressData = {}; // { itemIndex: { unitIndex: boolean } }
+        let itemProgressPercentages = {}; // { itemIndex: percentage }
+        let itemContributions = {}; // { itemIndex: contributionToOverall }
+        let overallProgress = 0;
+        let currentPOData = null; // For PDF download
+        let selectedStatus = ''; // For status change confirmation
+        let poDownloadData = null; // For PDF download confirmation
+        let cartItems = []; // For add order form
+        let editingOrderDate = ''; 
 
-        // --- Utility Functions (Using your structure) ---
-        function showToast(message, type = 'info', duration = 3500) { // Added duration parameter
+        // --- Utility Functions ---
+        function showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toast-container');
              if (!toastContainer) { console.error("Toast container not found!"); return; }
             const toast = document.createElement('div');
-            toast.className = `toast ${type}`; // Using template literal for class
-            let iconClass = 'fa-info-circle';
-            if (type === 'success') iconClass = 'fa-check-circle';
-            else if (type === 'error') iconClass = 'fa-times-circle';
-            else if (type === 'warning') iconClass = 'fa-exclamation-triangle';
-            toast.innerHTML = `<div class="toast-icon"><i class="fas ${iconClass}"></i></div><div class="toast-message">${message}</div>`; // Simplified toast HTML
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<div class="toast-content"><i class="fas ${type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-times-circle' : 'fa-info-circle')}"></i><div class="message">${message}</div></div>`;
             toastContainer.appendChild(toast);
-            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, duration); // Fade out before removing
+            setTimeout(() => { toast.remove(); }, 3000);
         }
-        function formatWeight(weightInGrams) { // Your existing function
-            if (isNaN(parseFloat(weightInGrams))) return '0 g'; // Handle NaN
-            weightInGrams = parseFloat(weightInGrams);
-            if (weightInGrams >= 1000) return (weightInGrams / 1000).toFixed(weightInGrams % 1000 === 0 ? 0 : 2) + ' kg';
-            return weightInGrams.toFixed(weightInGrams % 1 === 0 ? 0 : 2) + ' g';
-        }
-        function isValidDeliveryDayJS(dateStr){ // Added JS suffix to distinguish from PHP
-            if(!dateStr)return false;
-            try{ const dt=new Date(dateStr+'T00:00:00'); const day=dt.getDay(); return(day===1||day===3||day===5); /* 0=Sun, 1=Mon */ }
-            catch(e){ console.error("isValidDeliveryDayJS error:",e); return false; }
-        }
-        function isValidDeliveryGapJS(orderDateStr,deliveryDateStr,minDays=5){ // Added JS suffix
-            if(!orderDateStr||!deliveryDateStr)return false;
-            try{ const odt=new Date(orderDateStr+'T00:00:00'); const ddt=new Date(deliveryDateStr+'T00:00:00'); const mdt=new Date(odt); mdt.setDate(odt.getDate()+minDays); mdt.setHours(0,0,0,0); ddt.setHours(0,0,0,0); return ddt>=mdt; }
-            catch(e){ console.error("isValidDeliveryGapJS error:",e); return false; }
-        }
-        function getNextAvailableDeliveryDateJS(baseDateStr=null,minDaysAfter=5){ // Added JS suffix
-            let startDate;
-            if(baseDateStr){ startDate=new Date(baseDateStr.includes('T')?baseDateStr:baseDateStr+'T00:00:00'); }
-            else{ startDate=new Date(); startDate.setHours(0,0,0,0); }
-            startDate.setDate(startDate.getDate()+minDaysAfter);
-            while(true){ const dayOfWeek=startDate.getDay(); if(dayOfWeek===1||dayOfWeek===3||dayOfWeek===5){break;} startDate.setDate(startDate.getDate()+1); }
-            const year=startDate.getFullYear(); const month=(startDate.getMonth()+1).toString().padStart(2,'0'); const day=startDate.getDate().toString().padStart(2,'0');
-            return`${year}-${month}-${day}`;
+        function formatWeight(weightInGrams) {
+            if (weightInGrams >= 1000) return (weightInGrams / 1000).toFixed(2) + ' kg';
+            return (weightInGrams ? parseFloat(weightInGrams).toFixed(2) : '0.00') + ' g';
         }
 
-
-        // --- PDF Preview and Download Logic (MODIFIED to use currentPODataForPDF and direct download) ---
-        function prepareAndShowPOPreview(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJsonString, totalAmount, specialInstructions, orderType) {
-            currentPODataForPDF = { poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJsonString, totalAmount, specialInstructions, orderType }; // Store globally
-            try {
-                $('#printCompany').text(company || 'N/A');
-                $('#printPoNumber').text(poNumber);
-                $('#printUsername').text(username + (company && company !== 'N/A' ? ` (${company})` : ''));
-                
-                let displayAddress = deliveryAddress;
-                if (orderType === 'Walk In' && deliveryAddress === company) { // Assuming company name is used as address placeholder for Walk-In
-                    displayAddress = 'N/A (Walk-In)';
-                } else if (orderType === 'Walk In' && !deliveryAddress) {
-                     displayAddress = 'N/A (Walk-In Address Not Set)';
-                }
-                $('#printDeliveryAddress').text(displayAddress || 'N/A');
-                
-                $('#printOrderDate').text(orderDate ? new Date(orderDate + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A');
-
-                if (orderType === 'Walk In' || !deliveryDate || orderDate === deliveryDate) {
-                    $('#printDeliveryDateRow').hide();
-                } else {
-                    $('#printDeliveryDate').text(new Date(deliveryDate + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
-                    $('#printDeliveryDateRow').show();
-                }
-
-                const instrSec = $('#printInstructionsSection');
-                const instrContent = $('#printSpecialInstructions');
-                if (specialInstructions && specialInstructions.trim()) {
-                    instrContent.html(specialInstructions.replace(/\n/g, '<br>')); // Use html for <br>
-                    instrSec.show();
-                } else {
-                    instrSec.hide();
-                }
-
-                const itemsArray = JSON.parse(ordersJsonString);
-                const itemsBody = $('#printOrderItems').empty();
-                if (itemsArray && itemsArray.length > 0) {
-                    itemsArray.forEach(item => {
-                        const itemTotal = (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0);
-                        itemsBody.append(`<tr><td>${item.category||'N/A'}</td><td>${item.item_description||'N/A'}</td><td>${item.packaging||'N/A'}</td><td style="text-align:right;">${item.quantity||0}</td><td style="text-align:right;">${(parseFloat(item.price)||0).toFixed(2)}</td><td style="text-align:right;">${itemTotal.toFixed(2)}</td></tr>`);
-                    });
-                } else {
-                    itemsBody.append('<tr><td colspan="6" style="text-align:center;">No items in this order.</td></tr>');
-                }
-                $('#printTotalAmount').text(parseFloat(totalAmount).toFixed(2));
-                
-                $('#pdfPreview').show(); // Show the modal with the populated data
-
-            } catch (e) {
-                showToast('Error preparing PO preview data: ' + e.message, 'error');
-                console.error("Error in prepareAndShowPOPreview:", e, {poNumber, ordersJsonString});
-                currentPODataForPDF = null; // Clear data on error
-                closePDFPreview();
-            }
-        }
-        function downloadCurrentPODataAsPDF() { // Renamed from downloadPDF
-            if (!currentPODataForPDF) {
-                showToast('No PO data available to download.', 'error');
-                return;
-            }
-            const pdfElement = document.getElementById('contentToDownload');
-            const pdfOptions = {
-                margin: [10, 8, 10, 8], // Adjusted margins slightly
-                filename: `SalesInvoice_${currentPODataForPDF.poNumber}.pdf`,
-                image: { type: 'jpeg', quality: 0.95 },
-                html2canvas: { scale: 2, useCORS: true, logging: false }, // logging false for cleaner console
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-            
-            const downloadButton = $('.download-pdf-btn'); // Target the button inside the modal
-            const originalButtonText = downloadButton.html();
-            downloadButton.html('<i class="fas fa-spinner fa-spin"></i> Generating...').prop('disabled', true);
-
-            html2pdf().set(pdfOptions).from(pdfElement).save()
-                .then(() => {
-                    showToast(`Sales Invoice PDF for PO ${currentPODataForPDF.poNumber} downloaded.`, 'success');
-                })
-                .catch(err => {
-                    showToast('Error generating PDF: ' + err.message, 'error');
-                    console.error("PDF Generation Error:", err);
-                })
-                .finally(() => {
-                    downloadButton.html(originalButtonText).prop('disabled', false);
-                    // Do not close preview automatically, user might want to look at it more.
-                    // currentPODataForPDF = null; // Keep data if user wants to download again without re-opening
-                });
-        }
-        function closePDFPreview() { $('#pdfPreview').hide(); /* currentPODataForPDF can be cleared here if preferred */ }
-        // REMOVED confirmDownloadPO and downloadPODirectly as they are replaced by the new flow
-
-
-        // --- Status Change Logic (Using your structure, integrated raw material checks) ---
-        function confirmStatusChange(poNumber, username, originalStatus) { // For 'Active' orders
+        // --- Status Change Logic ---
+        function confirmStatusChange(poNumber, username, originalStatus) {
             currentPoNumber = poNumber;
             currentOrderOriginalStatus = originalStatus;
             $('#statusMessage').text(`Change status for order ${poNumber} (${username})`);
             $('#statusModal').css('display', 'flex');
         }
-        function confirmRejectedStatusChange(poNumber, username, originalStatus) { // For 'Rejected' orders
+        function confirmRejectedStatusChange(poNumber, username, originalStatus) {
             currentPoNumber = poNumber;
             currentOrderOriginalStatus = originalStatus;
-            $('#rejectedStatusModal').data('po_number', poNumber); // Your original code
+            $('#rejectedStatusModal').data('po_number', poNumber); // Store PO for potential future use
             $('#rejectedStatusMessage').text(`Change status for rejected order ${poNumber} (${username})`);
             $('#rejectedStatusModal').css('display', 'flex');
         }
-
-        // MODIFIED confirmPendingStatusChange for raw material check
         function confirmPendingStatusChange(poNumber, username, ordersJson, originalStatus) {
             currentPoNumber = poNumber;
-            currentOrderOriginalStatus = originalStatus; // Should be 'Pending'
-            $('#pendingStatusModal').data('po_number', poNumber); // Your original code
-            $('#pendingStatusMessage').text('Change order status for ' + poNumber + '. Reviewing raw materials...');
-            
-            const materialContainer = $('#rawMaterialsContainer'); // Your existing container ID
-            materialContainer.html('<h3><i class="fas fa-spinner fa-spin"></i> Loading inventory status...</h3>'); // Loading state
-            $('#activeStatusBtn').prop('disabled', true); // Disable button until check is complete
+            currentOrderOriginalStatus = originalStatus;
+            $('#pendingStatusModal').data('po_number', poNumber);
+            $('#pendingStatusMessage').text('Change order status for ' + poNumber);
+            const materialContainer = $('#rawMaterialsContainer');
+            materialContainer.html('<h3>Loading inventory status...</h3>');
             $('#pendingStatusModal').css('display', 'flex');
-            
             try {
-                 if (!ordersJson) throw new Error("Order items data missing for material check.");
-                 // Basic check if ordersJson seems valid (not a fool-proof validation)
-                 if (ordersJson.length > 5 && !ordersJson.includes('"product_id":') && !ordersJson.includes('"item_description":')) { 
-                     console.warn("Received ordersJson might be missing product_id or item_description:", ordersJson.substring(0, 100) + "...");
-                     // Depending on your ordersJson structure, this check might need adjustment
-                     // If product_id is essential for raw material check, this is important.
+                 if (!ordersJson) throw new Error("Order items data missing for inventory check.");
+                 // Basic check, more robust parsing/validation might be needed if JSON is complex
+                 if (ordersJson.length > 5 && !ordersJson.includes('"product_id"')) { 
+                     console.warn("Received ordersJson might be missing product_id for material check:", ordersJson.substring(0, 100) + "...");
+                     // Proceed but log a warning, or throw error if product_id is strictly necessary for check_raw_materials.php
                  }
-                 JSON.parse(ordersJson); // Validate JSON structure
-
+                 JSON.parse(ordersJson); // Validate if it's at least parseable
                 $.ajax({
-                    url: '/backend/check_raw_materials.php', // This script should ONLY check raw materials now
-                    type: 'POST',
-                    data: { orders: ordersJson, po_number: poNumber },
-                    dataType: 'json',
+                    url: '/backend/check_raw_materials.php', type: 'POST',
+                    data: { orders: ordersJson, po_number: poNumber }, dataType: 'json',
                     success: function(response) {
-                        console.log("Raw Material Check (Pending Modal):", response);
-                        if (response && response.success) {
-                            // Call a new function to display ONLY raw materials
-                            displayRawMaterialsForPendingModal(response.materials, '#rawMaterialsContainer');
-                            $('#activeStatusBtn').prop('disabled', !response.all_sufficient); // Enable/disable based on raw material sufficiency
-                            if (!response.all_sufficient) {
-                                let missingNames = Object.entries(response.materials)
-                                    .filter(([name, details]) => !details.sufficient)
-                                    .map(([name, details]) => `${name} (short by ${formatWeight(details.shortfall)})`)
-                                    .join(', ');
-                                if (missingNames) {
-                                   showToast(`Cannot activate order: Insufficient raw materials. Missing: ${missingNames}`, 'warning', 7000);
-                                } else {
-                                   showToast(`Cannot activate order: Raw material check indicates insufficiency.`, 'warning', 7000);
-                                }
+                        console.log("Inventory Check (Pending):", response);
+                        if (response.success) {
+                            const needsMfg = displayFinishedProducts(response.finishedProducts, '#rawMaterialsContainer');
+                            if (needsMfg && response.materials) { 
+                                displayRawMaterials(response.materials, '#rawMaterialsContainer #raw-materials-section'); 
+                            } else if (needsMfg) { 
+                                $('#rawMaterialsContainer #raw-materials-section').html('<h3>Raw Materials Required</h3><p>Information unavailable or not applicable.</p>'); 
+                            } else if (!needsMfg && response.finishedProducts) { 
+                                materialContainer.append('<p>All required finished products are in stock.</p>'); 
+                                $('#rawMaterialsContainer #raw-materials-section').hide(); 
+                            } else if (!response.finishedProducts && !response.materials) { 
+                                materialContainer.html('<h3>Inventory Status</h3><p>No specific inventory details available for this order.</p>'); 
                             }
-                        } else {
-                            materialContainer.html(`<h3>Raw Material Check Failed</h3><p style="color:red;">${response.message || 'Could not verify raw materials.'}</p><p>Activation button disabled.</p>`);
-                            $('#activeStatusBtn').prop('disabled', true);
+                            updatePendingOrderActionStatus(response);
+                        } else { 
+                            materialContainer.html(`<h3>Inventory Check Error</h3><p style="color:red;">${response.message || 'Unknown error during inventory check.'}</p><p>Status change to Active might be allowed, but inventory could not be verified.</p>`); 
+                            $('#activeStatusBtn').prop('disabled', false); // Allow manual override if check fails
                         }
                     },
                     error: function(xhr, status, error) {
-                        console.error("AJAX Error (Raw Material Check):", status, error, xhr.responseText);
-                        let errorMsg = `Could not check raw materials: ${error || status}`;
-                        if (status === 'parsererror') { errorMsg = `Could not check raw materials: Invalid response from server.`; }
-                        materialContainer.html(`<h3>Server Error</h3><p style="color:red;">${errorMsg}</p><p>Activation button disabled.</p>`);
-                        $('#activeStatusBtn').prop('disabled', true);
+                        console.error("AJAX Error (Inventory Check):", status, error, xhr.responseText); 
+                        let errorMsg = `Could not check inventory: ${error || 'Server error'}`;
+                        if (status === 'parsererror') { errorMsg = `Could not check inventory: Invalid response from server. Please check console.`; }
+                        materialContainer.html(`<h3>Server Error</h3><p style="color:red;">${errorMsg}</p><p>Status change to Active might be allowed, but inventory could not be verified.</p>`); 
+                        $('#activeStatusBtn').prop('disabled', false); // Allow manual override
                     }
                 });
-            } catch (e) {
-                 materialContainer.html(`<h3>Data Error</h3><p style="color:red;">${e.message}</p><p>Activation button disabled.</p>`);
-                 $('#activeStatusBtn').prop('disabled', true);
-                 console.error("Error processing ordersJson for material check:", e);
+            } catch (e) { 
+                materialContainer.html(`<h3>Data Error</h3><p style="color:red;">${e.message}</p><p>Status change to Active might be allowed, but inventory data is problematic.</p>`); 
+                $('#activeStatusBtn').prop('disabled', false); // Allow manual override
+                console.error("Error in confirmPendingStatusChange (JSON parsing or setup):", e); 
             }
         }
-
-        // NEW function to display raw materials in the pending modal
-        function displayRawMaterialsForPendingModal(materialsData, containerSelector) {
-            const container = $(containerSelector);
-            if (!container.length) return;
-            let html = '<h4>Raw Material Stock Check:</h4>';
-            if (!materialsData || Object.keys(materialsData).length === 0) {
-                container.html(html + '<p class="text-muted" style="text-align:center;padding:10px;">No specific raw materials required for this order or information unavailable.</p>');
-                return;
-            }
-            html += `<table class="materials-table"><thead><tr><th>Material</th><th style="text-align:right;">Available</th><th style="text-align:right;">Required</th><th>Status</th></tr></thead><tbody>`;
-            let allSufficientForTable = true;
-            Object.entries(materialsData).forEach(([materialName, data]) => {
-                html += `<tr><td>${materialName}</td>
-                             <td style="text-align:right;">${formatWeight(data.available)}</td>
-                             <td style="text-align:right;">${formatWeight(data.required)}</td>
-                             <td class="${data.sufficient ? 'material-sufficient' : 'material-insufficient'}">${data.sufficient ? '<i class="fas fa-check-circle"></i> Sufficient' : '<i class="fas fa-times-circle"></i> Insufficient'}</td></tr>`;
-                if (!data.sufficient) allSufficientForTable = false;
-            });
-            html += `</tbody></table>`;
-            const overallMsg = allSufficientForTable ? 'All raw materials are currently sufficient.' : 'Some raw materials are insufficient for this order.';
-            html += `<p class="materials-status ${allSufficientForTable ? 'status-sufficient' : 'status-insufficient'}" style="margin-top:10px;">${overallMsg}</p>`;
-            container.html(html);
-        }
-
-
-        function confirmStatusAction(status) { // Your existing function
+        function confirmStatusAction(status) {
             selectedStatus = status;
             let confirmationMsg = `Are you sure you want to change the status to ${selectedStatus}?`;
-            if (selectedStatus === 'Active' && currentOrderOriginalStatus === 'Pending') { confirmationMsg += ' This will deduct required raw materials from inventory.'; }
-            else if (currentOrderOriginalStatus === 'Active' && (selectedStatus === 'Pending' || selectedStatus === 'Rejected')) { confirmationMsg += ' This will attempt to return deducted raw materials to inventory.'; }
+            if (selectedStatus === 'Active') { confirmationMsg += ' This will deduct required stock from inventory.'; }
+            else if (currentOrderOriginalStatus === 'Active' && (selectedStatus === 'Pending' || selectedStatus === 'Rejected')) { confirmationMsg += ' This will attempt to return deducted stock to inventory.'; }
             $('#statusConfirmationMessage').text(confirmationMsg);
             $('#statusConfirmationModal').css('display', 'block');
             $('#statusModal, #pendingStatusModal, #rejectedStatusModal').css('display', 'none');
         }
-        function closeStatusConfirmation() { // Your existing function
+        function closeStatusConfirmation() {
             $('#statusConfirmationModal').css('display', 'none');
              if (currentOrderOriginalStatus === 'Pending') $('#pendingStatusModal').css('display', 'flex');
              else if (currentOrderOriginalStatus === 'Rejected') $('#rejectedStatusModal').css('display', 'flex');
              else if (currentOrderOriginalStatus === 'Active') $('#statusModal').css('display', 'flex');
              selectedStatus = '';
         }
-        function executeStatusChange() { // Your existing function, calls the modified updateOrderStatus
+        function executeStatusChange() {
             $('#statusConfirmationModal').css('display', 'none');
-            // Flags for material deduction/return are determined here based on transition
-            let manageRawMaterialsAction = null;
-            if (selectedStatus === 'Active' && currentOrderOriginalStatus === 'Pending') {
-                manageRawMaterialsAction = 'deduct';
-            } else if ((selectedStatus === 'Pending' || selectedStatus === 'Rejected') && currentOrderOriginalStatus === 'Active') {
-                manageRawMaterialsAction = 'return';
-            }
-            updateOrderStatus(selectedStatus, manageRawMaterialsAction); // Pass the action
+            let deductMaterials = (selectedStatus === 'Active');
+            let returnMaterials = (currentOrderOriginalStatus === 'Active' && (selectedStatus === 'Pending' || selectedStatus === 'Rejected'));
+            updateOrderStatus(selectedStatus, deductMaterials, returnMaterials);
         }
-
-        // MODIFIED updateOrderStatus to send manage_raw_materials action
-        function updateOrderStatus(status, manageRawMaterialsAction = null) { // manageRawMaterialsAction can be 'deduct' or 'return'
+        function updateOrderStatus(status, deductMaterials, returnMaterials) {
             const formData = new FormData();
             formData.append('po_number', currentPoNumber);
             formData.append('status', status);
-
-            if (manageRawMaterialsAction) {
-                formData.append('manage_raw_materials', manageRawMaterialsAction);
-            }
-            
-            if (status === 'For Delivery' || status === 'Completed') { // Your logic for progress
+            formData.append('deduct_materials', deductMaterials ? '1' : '0');
+            formData.append('return_materials', returnMaterials ? '1' : '0');
+            if (status === 'For Delivery') {
                  formData.append('progress', '100');
             }
-
             console.log("Sending status update:", Object.fromEntries(formData)); 
-
             fetch('/backend/update_order_status.php', { method: 'POST', body: formData })
-            .then(response => response.text().then(text => {
+            .then(response => response.text().then(text => { 
                  try {
                      const jsonData = JSON.parse(text);
                      if (!response.ok) throw new Error(jsonData.message || jsonData.error || `Server error: ${response.status}`);
                      return jsonData;
-                 } catch (e) { console.error('Invalid JSON in updateOrderStatus:', text); throw new Error('Invalid server response during status update.'); }
+                 } catch (e) { console.error('Invalid JSON in updateOrderStatus:', text); throw new Error('Invalid server response. Check console for raw text.'); }
             }))
             .then(data => {
                 console.log("Status update response:", data);
                 if (data.success) {
                     let message = `Status updated to ${status} successfully`;
-                    if (data.material_message) message += `. ${data.material_message}`; // Append material message from backend
+                    if (deductMaterials && data.material_deduction_message) message += ` ${data.material_deduction_message}`;
+                    else if (deductMaterials) message += '. Inventory deduction initiated.';
+                    if (returnMaterials && data.material_return_message) message += ` ${data.material_return_message}`;
+                    else if (returnMaterials) message += '. Inventory return initiated.';
                     showToast(message, 'success');
                     sendStatusNotificationEmail(currentPoNumber, status);
-                    setTimeout(() => { window.location.reload(); }, 1800); // Increased timeout slightly
+                    setTimeout(() => { window.location.reload(); }, 1500);
                 } else { throw new Error(data.message || 'Unknown error updating status.'); }
             })
             .catch(error => {
                 console.error("Update status fetch error:", error);
                 showToast('Error updating status: ' + error.message, 'error');
             })
-            .finally(() => { closeRelevantStatusModals(); });
+            .finally(() => { closeRelevantStatusModals(); }); 
         }
         
-        function sendStatusNotificationEmail(poNumber, newStatus) { // Your existing function
+        function sendStatusNotificationEmail(poNumber, newStatus) {
             fetch('/backend/send_status_notification.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded', },
-                body: `po_number=${encodeURIComponent(poNumber)}&new_status=${encodeURIComponent(newStatus)}`
+                body: `po_number=${poNumber}&new_status=${newStatus}`
             })
-            .then(response => response.json())
-            .then(data => { console.log(data.success ? "Status notification email sent/queued." : "Status notification email failed: " + data.message); })
-            .catch(error => { console.error("Error sending status notification email AJAX:", error); });
+            .then(response => response.json().catch(() => ({}))) // Catch JSON parse error on empty/non-JSON response
+            .then(data => { console.log("Email notification attempt response:", data); })
+            .catch(error => { console.error("Error sending status email notification:", error); });
         }
 
         function closeStatusModal() { $('#statusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; }
         function closeRejectedStatusModal() { $('#rejectedStatusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; $('#rejectedStatusModal').removeData('po_number');}
-        function closePendingStatusModal() { $('#pendingStatusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; $('#pendingStatusModal').removeData('po_number'); $('#rawMaterialsContainer').html('<h3>Loading inventory status...</h3>'); $('#activeStatusBtn').prop('disabled', true); } // Reset container
+        function closePendingStatusModal() { $('#pendingStatusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; $('#pendingStatusModal').removeData('po_number'); }
         function closeRelevantStatusModals() { closeStatusModal(); closePendingStatusModal(); closeRejectedStatusModal(); }
 
-        // --- Material Display Helpers (Your existing functions, kept for reference if needed elsewhere) ---
-        function displayFinishedProducts(productsData, containerSelector) { /* Your existing logic */ }
-        function displayRawMaterials(materialsData, containerSelector) { /* Your existing logic */ }
-        function updatePendingOrderActionStatus(response) { /* Your existing logic, may need adjustment if only raw materials are shown */ }
+        function displayFinishedProducts(productsData, containerSelector) {
+             const container = $(containerSelector); if (!container.length) return false;
+             let html = `<h3>Finished Products Status</h3>`;
+             if (!productsData || Object.keys(productsData).length === 0) { html += '<p>No finished product information available for this order.</p>'; container.html(html).append('<div id="raw-materials-section"></div>'); return false;}
+             html += `<table class="materials-table"><thead><tr><th>Product</th><th>In Stock</th><th>Required</th><th>Status</th></tr></thead><tbody>`;
+             Object.keys(productsData).forEach(product => {
+                 const data = productsData[product];
+                 const available = parseInt(data.available) || 0; const required = parseInt(data.required) || 0; const isSufficient = data.sufficient; const shortfall = data.shortfall || 0;
+                 html += `<tr><td>${product}</td><td>${available}</td><td>${required}</td><td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">${isSufficient ? 'In Stock' : 'Needs Mfg (' + shortfall + ' short)'}</td></tr>`;
+             });
+             html += `</tbody></table>`; container.html(html);
+             const needsMfg = Object.values(productsData).some(p => !p.sufficient);
+             if (needsMfg) container.append('<div id="raw-materials-section" style="margin-top:15px;"><h3>Raw Materials Required</h3><p>Loading...</p></div>');
+             return needsMfg;
+        }
+        function displayRawMaterials(materialsData, containerSelector) {
+             const container = $(containerSelector); if (!container.length) return true; // Or false, depending on desired behavior if selector invalid
+             let html = '<h3>Raw Materials Required</h3>';
+             if (!materialsData || Object.keys(materialsData).length === 0) { container.html(html + '<p>No specific raw materials information available or needed if finished products are in stock.</p>'); return true; } // All sufficient if no data
+             let allSufficient = true; let insufficient = [];
+             html += `<table class="materials-table"><thead><tr><th>Material</th><th>Available</th><th>Required</th><th>Status</th></tr></thead><tbody>`;
+             Object.keys(materialsData).forEach(material => {
+                 const data = materialsData[material]; const available = parseFloat(data.available) || 0; const required = parseFloat(data.required) || 0; 
+                 const isSufficient = data.sufficient === undefined ? (available >= required) : data.sufficient; // Infer if not provided
+                 if (!isSufficient) { allSufficient = false; insufficient.push(material); }
+                 html += `<tr><td>${material}</td><td>${formatWeight(available)}</td><td>${formatWeight(required)}</td><td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">${isSufficient ? 'Sufficient' : 'Insufficient'}</td></tr>`;
+             });
+             html += `</tbody></table>`;
+             const msg = allSufficient ? 'All raw materials are sufficient for manufacturing.' : `Insufficient raw materials for manufacturing: ${insufficient.join(', ')}.`;
+             const cls = allSufficient ? 'status-sufficient' : 'status-insufficient';
+             container.html(html + `<p class="materials-status ${cls}">${msg}</p>`);
+             return allSufficient;
+        }
+        function updatePendingOrderActionStatus(response) {
+             let canActivate = true; 
+             let msg = 'Ready to activate.'; 
+             const cont = $('#rawMaterialsContainer');
+             const prods = response.finishedProducts || {};
+             const needsMfg = response.needsManufacturing === true || Object.values(prods).some(p => !p.sufficient);
 
-        // --- Order Details Modal Functions (Using your structure) ---
-        // (Assuming these are largely correct from your provided file, focusing on integration points)
-        function viewOrderDetails(poNumber) { /* Your existing complex logic */ }
-        function viewOrderInfo(ordersJson, orderStatus) { /* Your existing logic */ }
-        function toggleQuantityProgress(itemIndex, button) { /* Your existing logic, adapted from my previous full version */ $(`.unit-for-item-${itemIndex}, #units-divider-${itemIndex}`).slideToggle(200); $(button).find('i').toggleClass('fa-chevron-down fa-chevron-up');}
-        function updateUnitStatus(checkbox) { /* Your existing complex logic */ }
-        function updateItemProgress(itemIndex) { /* Your existing complex logic */ }
-        function updateOverallProgressDisplay() { /* Your existing logic */ }
-        function updateOverallProgress() { /* Your existing complex logic */ }
-        function updateItemStatusBasedOnUnits(itemIndex, allComplete) { /* Your existing logic */ }
-        function selectAllUnits(itemIndex, quantity) { /* Your existing logic */ }
-        function deselectAllUnits(itemIndex, quantity) { /* Your existing logic */ }
-        function updateRowStyle(checkbox) { /* Your existing logic */ }
-        function closeOrderDetailsModal() { $('#orderDetailsModal').css('display', 'none'); /* Reset any relevant global vars for this modal */ }
-        function confirmSaveProgress() { $('#saveProgressConfirmationModal').css('display', 'block'); }
-        function closeSaveProgressConfirmation() { $('#saveProgressConfirmationModal').css('display', 'none'); }
-        function saveProgressChanges() { /* Your existing logic, ensure it calls updateOrderStatus('For Delivery', false, false) when progress is 100% */ }
+             if (Object.keys(prods).length === 0 && !needsMfg) { // No finished products listed, assume direct material check or not applicable
+                 msg = 'No specific product stock info; assuming direct material usage or not applicable. Ready to activate.';
+             } else if (needsMfg) { // Manufacturing is needed for one or more finished products
+                 msg = 'Manufacturing required. ';
+                 const mats = response.materials || {};
+                 const allMatsSufficient = Object.values(mats).every(m => m.sufficient === true);
+                 if (Object.keys(mats).length === 0 && !response.all_raw_materials_sufficient_for_mfg) { // No materials listed, but backend says not all suff for mfg
+                    canActivate = false;
+                    msg += 'Cannot activate: Overall raw materials are insufficient for manufacturing.';
+                 } else if (!allMatsSufficient) {
+                    canActivate = false;
+                    msg += 'Cannot activate: Some raw materials are insufficient.';
+                 } else {
+                    msg += 'All required raw materials appear sufficient. Ready.';
+                 }
+             } else { // All listed finished products are in stock
+                 msg = 'All required finished products are in stock. Ready to activate.';
+             }
+             
+             if (response.all_sufficient === false && canActivate) { // Overall backend flag
+                // This case implies finished products might be okay, but overall raw materials (maybe for something not listed as a "finished product" itself) are not.
+                // Or, it's a general "not sufficient" flag from a simpler check.
+                // Let's ensure canActivate reflects this if not already false.
+                // canActivate = false; // Uncomment if this should always override
+                // msg = response.message || "Overall check indicates insufficiency."; // Use backend message
+             }
 
-        // --- Edit Delivery Date Functions (Using your structure) ---
-        function openEditDateModal(poNumber, currentDate, orderDate) {
+
+             $('#activeStatusBtn').prop('disabled', !canActivate);
+             let statEl = cont.children('.materials-status').last(); // Get the last status message if multiple
+             const cls = canActivate ? 'status-sufficient' : 'status-insufficient';
+             if (statEl.length) statEl.removeClass('status-sufficient status-insufficient').addClass(cls).text(msg);
+             else cont.append(`<p class="materials-status ${cls}" style="margin-top:10px;">${msg}</p>`);
+        }
+
+        // --- Order Details Modal Functions (WITH DEBUGGING LOGS) ---
+        function viewOrderDetails(poNumber) {
+            console.log('viewOrderDetails called with PO:', poNumber); // DEBUG
             currentPoNumber = poNumber;
-            editingOrderDate = orderDate; // Your variable
-            
-            $('#edit_po_number').val(poNumber);
-            $('#current_delivery_date').val(currentDate); // Assuming this ID is in your HTML for this modal
-            $('#edit_order_date_display_modal').text(orderDate ? new Date(orderDate+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'N/A');
+            // The modal title is static in HTML: <h2><i class="fas fa-box-open"></i> Order Details (<span id="orderStatus"></span>)</h2>
+            // We will update #orderStatus span. The h2 also contains the PO, if we want to add it there, we'd modify the h2's html.
+            // For now, just updating the status span and ensuring the main title is clear.
+            $('#orderDetailsModal h2').html(`<i class="fas fa-box-open"></i> Manage Items - PO: ${poNumber} (<span id="orderStatus">Loading...</span>)`);
 
 
-            if ($.datepicker) {
-                $("#new_delivery_date_input_edit").datepicker("destroy"); // Use the corrected ID
-                let minDateForPicker = new Date(orderDate+'T00:00:00');
-                minDateForPicker.setDate(minDateForPicker.getDate() + 5);
-                $("#new_delivery_date_input_edit").datepicker({
-                    dateFormat: 'yy-mm-dd',
-                    minDate: minDateForPicker, 
-                    beforeShowDay: function(date) {
-                        var day = date.getDay(); // 0 (Sun) to 6 (Sat)
-                        return [(day == 1 || day == 3 || day == 5), '']; // Monday, Wednesday, Friday
-                    }
-                    // Removed onSelect to avoid double validation, using onsubmit instead
+            fetch(`/backend/get_order_details.php?po_number=${encodeURIComponent(poNumber)}`)
+            .then(r => {
+                console.log('viewOrderDetails - Fetch response status:', r.status); // DEBUG
+                if (!r.ok) {
+                    return r.text().then(text => {
+                        console.error('viewOrderDetails - Fetch failed response text:', text); // DEBUG
+                        throw new Error(`Network response was not ok: ${r.status} ${r.statusText}. Server said: ${text}`);
+                    });
+                }
+                return r.json().catch(jsonError => { 
+                    console.error('viewOrderDetails - JSON.parse error:', jsonError, "Raw text was:", r.text()); // DEBUG
+                    throw new Error('Failed to parse JSON response from server.');
                 });
-            }
-            $('#editDateModal').css('display', 'flex'); // Your display method
-        }
-        function closeEditDateModal() { $('#editDateModal').css('display', 'none'); }
-        function validateEditDateForm(event) { // Added event parameter
-            const newDateStr = $('#new_delivery_date_input_edit').val(); // Use corrected ID
-            if (!newDateStr) { showToast('New delivery date cannot be empty.', 'error'); event.preventDefault(); return false; }
-            if (!isValidDeliveryDayJS(newDateStr)) { showToast('New delivery date must be a Monday, Wednesday, or Friday.', 'error'); event.preventDefault(); return false; }
-            if (!isValidDeliveryGapJS(editingOrderDate, newDateStr, 5)) { showToast('New delivery date must be at least 5 days after the order date.', 'error', 5000); event.preventDefault(); return false; }
-            return true; // Allow form submission
-        }
-
-
-        // --- Special Instructions Modal (Using your structure) ---
-        function viewSpecialInstructions(poNumber, instructions) { $('#instructionsPoNumber').text('PO: ' + poNumber); const content = $('#instructionsContent'); if (instructions && instructions.trim()){ content.html(instructions.replace(/\n/g,'<br>')).removeClass('empty'); } else { content.text('No special instructions provided.').addClass('empty'); } $('#specialInstructionsModal').show(); }
-        function closeSpecialInstructions() { $('#specialInstructionsModal').hide(); }
-
-        // --- Add New Order Form Functions (Using your structure, with unique IDs for Add Order Form) ---
-        function initializeDeliveryDatePickerAdd() { // Renamed
-            if ($.datepicker) { 
-                $("#delivery_date_add").datepicker("destroy"); 
-                const orderDateVal = $("#order_date_add").val();
-                const minD = getNextAvailableDeliveryDateJS(orderDateVal, 5); // Use JS helper
-                $("#delivery_date_add").datepicker({ 
-                    dateFormat: 'yy-mm-dd', 
-                    minDate: minD,
-                    beforeShowDay: function(date) { var day = date.getDay(); return [(day == 1 || day == 3 || day == 5), '']; }
-                }); 
-                $("#delivery_date_add").datepicker("setDate", minD); // Set default
-            }
-        }
-        function openAddOrderForm() { 
-            $('#addOrderForm')[0].reset(); 
-            cartItems = []; // Use global cartItems, not currentCartItems to avoid conflict
-            updateOrderSummaryAdd(); // Call new summary update function
-            updateCartItemCountNav(); // Call new cart count update
-            
-            const today = new Date(); 
-            const fmtDate = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`;
-            $('#order_date_add').val(fmtDate); // Use new ID
-            
-            $('#order_type_selection_add').val("").trigger('change'); // Reset and trigger change for toggleOrderFormFieldsAdd
-            $('#onlineSpecificInputsAdd, #walkInSpecificInputsAdd, #commonOrderFieldsAdd, #confirmAddOrderBtnAdd').hide();
-            $('#delivery_date_form_group_add, #delivery_address_type_form_group_add, #company_address_container_div_add, #custom_address_container_div_add').hide();
-            $('#custom_address_label_add').text('Custom Delivery Address:'); // Reset label
-
-            $('#addOrderOverlay').css('display', 'flex'); 
-        }
-        function closeAddOrderForm() { $('#addOrderOverlay').hide(); }
-        function toggleOrderFormFieldsAdd(){ // Renamed
-            const selectedOrderType=$('#order_type_selection_add').val();
-            $('#order_type_hidden_for_submit_add').val(selectedOrderType);
-            $('#onlineSpecificInputsAdd, #walkInSpecificInputsAdd, #commonOrderFieldsAdd, #confirmAddOrderBtnAdd').hide();
-            $('#delivery_date_form_group_add, #delivery_address_type_form_group_add, #company_address_container_div_add, #custom_address_container_div_add').hide();
-            $('#custom_address_label_add').text('Custom Delivery Address:'); 
-            $('#username_online_select_add').val(''); $('#online_company_display_add').val(''); $('#walk_in_name_company_input_add').val('');
-            $('#delivery_date_add').val(''); $('#custom_address_input_field_add').val(''); $('#delivery_address_for_submit_add').val(''); $('#po_number_for_submit_add').val('');
-
-            if(selectedOrderType==="Online"){$('#onlineSpecificInputsAdd, #commonOrderFieldsAdd, #confirmAddOrderBtnAdd').show();$('#delivery_date_form_group_add, #delivery_address_type_form_group_add').show();$('#company_address_option_for_delivery_add').show();$('#delivery_address_type_select_add').val('company');handleOnlineUserChangeAdd();}
-            else if(selectedOrderType==="Walk In"){$('#walkInSpecificInputsAdd, #commonOrderFieldsAdd, #confirmAddOrderBtnAdd').show();$('#custom_address_label_add').text('Address (for Walk-In):');$('#custom_address_container_div_add').show();$('#delivery_address_type_select_add').val('custom');fetchAndSetWalkInPONumberAdd();$('#company_name_final_for_submit_add').val('');}
-            
-            if(selectedOrderType){ const today=new Date(); const formattedToday=`${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`; $('#order_date_add').val(formattedToday); if(selectedOrderType==="Online"){initializeDeliveryDatePickerAdd();}}
-            cartItems=[]; updateOrderSummaryAdd(); updateCartItemCountNav(); toggleDeliveryAddressOptionsAdd();
-        }
-        function fetchAndSetWalkInPONumberAdd(){ // Renamed
-            $('#po_number_for_submit_add').val('Generating...');
-            fetch('/backend/get_next_walkin_po.php') // Assuming this backend endpoint exists and is correct
-            .then(response=>response.json())
-            .then(data=>{ if(data.success&&typeof data.next_sequence_number!=='undefined'){ const po=`WI-${String(data.next_sequence_number).padStart(3,'0')}`; $('#po_number_for_submit_add').val(po); } else { throw new Error(data.message||'Invalid data for PO number.'); } })
-            .catch(error=>{ showToast('Error generating Walk-In PO: '+error.message,'error'); $('#po_number_for_submit_add').val(''); });
-        }
-        function handleOnlineUserChangeAdd(){ // Renamed
-            const selectedUserOption=$('#username_online_select_add option:selected'); const username=selectedUserOption.val();
-            if(username){ const companyName=selectedUserOption.data('company')||'N/A'; const companyAddr=selectedUserOption.data('company-address')||'';
-                $('#online_company_display_add').val(companyName); $('#company_name_final_for_submit_add').val(companyName);
-                $('#company_address_display_field_add').val(companyAddr); // Assuming this ID exists for display
-                if($('#delivery_address_type_select_add').val()==='company')$('#delivery_address_for_submit_add').val(companyAddr);
-                $('#po_number_for_submit_add').val(generateOnlinePONumberAdd(username)); // Use new PO gen
-            } else { $('#online_company_display_add, #company_name_final_for_submit_add, #company_address_display_field_add, #po_number_for_submit_add').val(''); if($('#delivery_address_type_select_add').val()==='company')$('#delivery_address_for_submit_add').val('');}
-        }
-        function generateOnlinePONumberAdd(username){ // Renamed
-            if(!username)return ''; const d=new Date(); const userPart=username.substring(0,Math.min(username.length,4)).toUpperCase().replace(/[^A-Z0-9]/g,'');
-            // Using a simpler random part for PO for now, backend should ensure uniqueness if this is an issue
-            const po=`PO-${userPart||'CLNT'}-${d.getFullYear().toString().slice(-2)}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getDate().toString().padStart(2,'0')}-${Math.floor(1000+Math.random()*9000)}`;
-            return po;
-        }
-        function toggleDeliveryAddressOptionsAdd(){ // Renamed
-            const deliveryTypeSelected=$('#delivery_address_type_select_add').val(); const currentOrderType=$('#order_type_selection_add').val();
-            if(currentOrderType==="Walk In"){$('#company_address_container_div_add').hide();$('#custom_address_container_div_add').show();$('#delivery_address_for_submit_add').val($('#custom_address_input_field_add').val().trim());return;}
-            if(deliveryTypeSelected==='company'){$('#company_address_container_div_add').show();$('#custom_address_container_div_add').hide();$('#delivery_address_for_submit_add').val($('#company_address_display_field_add').val());}
-            else{$('#company_address_container_div_add').hide();$('#custom_address_container_div_add').show();$('#delivery_address_for_submit_add').val($('#custom_address_input_field_add').val().trim());}
-        }
-        $('#custom_address_input_field_add').on('input',function(){ // Bind to new ID
-            const currentOrderType=$('#order_type_selection_add').val();
-            if(currentOrderType==="Walk In"||$('#delivery_address_type_select_add').val()==='custom'){$('#delivery_address_for_submit_add').val($(this).val().trim());}
-        });
-        function prepareOrderDataForSubmitAdd(){ // Renamed
-            const selectedOrderType=$('#order_type_selection_add').val(); $('#order_type_hidden_for_submit_add').val(selectedOrderType);
-            if(!selectedOrderType){showToast('Please select an Order Type.','error');return false;}
-            let finalUsernameForDB='';let finalCompanyForDB='';
-            if(selectedOrderType==="Online"){ finalUsernameForDB=$('#username_online_select_add').val(); if(!finalUsernameForDB){showToast('Please select a Client Username for an Online order.','error');return false;} finalCompanyForDB=$('#online_company_display_add').val(); const deliveryDateStr=$('#delivery_date_add').val(); const orderDateStr=$('#order_date_add').val(); if(!deliveryDateStr){showToast('Requested Delivery Date is required for Online orders.','error');return false;} if(!isValidDeliveryDayJS(deliveryDateStr)){showToast('Delivery date must be a Monday, Wednesday, or Friday.','error');return false;} if(!isValidDeliveryGapJS(orderDateStr,deliveryDateStr,5)){showToast('Delivery date must be at least 5 days after the order date.','error',5000);return false;}
-            } else if(selectedOrderType==="Walk In"){ finalUsernameForDB='Walk-In Customer'; finalCompanyForDB=$('#walk_in_name_company_input_add').val().trim(); if(!finalCompanyForDB){showToast('Please enter Full Name / Company Name for Walk-In order.','error');return false;} }
-            $('#company_name_final_for_submit_add').val(finalCompanyForDB);
-            if(cartItems.length===0){showToast('Order cannot be empty. Please select products.','error');return false;}
-            $('#orders_json_for_submit_add').val(JSON.stringify(cartItems));
-            let currentTotalAmount=0; cartItems.forEach(item=>{currentTotalAmount+=(parseFloat(item.price)||0)*(parseInt(item.quantity)||0);});
-            $('#total_amount_for_submit_add').val(currentTotalAmount.toFixed(2));
-            const deliveryAddress=$('#delivery_address_for_submit_add').val().trim(); if(!deliveryAddress){const addressLabel=selectedOrderType==="Walk In"?"Address (for Walk-In)":"Custom Delivery Address";showToast(`${addressLabel} is required.`,'error');return false;}
-            if(!$('#po_number_for_submit_add').val()||($('#po_number_for_submit_add').val()==='Generating...')){showToast('PO Number is not yet generated or is invalid.','error');return false;}
-            return true;
-        }
-        function confirmAddOrder(){ if(prepareOrderDataForSubmitAdd()){ $('#addConfirmationModal .confirmation-message').text('Are you sure you want to submit this order? Please double-check all details.'); $('#addConfirmationModal').show(); } }
-        function closeAddConfirmation(){ $('#addConfirmationModal').hide(); }
-        // MODIFIED submitAddOrder to handle recommend_pending
-        function submitAddOrder(){ 
-            $('#addConfirmationModal').hide(); 
-            if(!prepareOrderDataForSubmitAdd())return; // Use new validation function
-            const formElement=document.getElementById('addOrderForm'); 
-            const formData=new FormData(formElement); 
-            const orderType=formData.get('order_type'); // This comes from order_type_hidden_for_submit_add
-            // Ensure correct fields are sent based on order type
-            if(orderType==="Walk In"){ formData.delete('username_online'); formData.delete('delivery_date'); }
-            else if (orderType === "Online") { formData.delete('walk_in_name_company_input'); }
-
-            fetch('/backend/add_order.php',{method:'POST',body:formData})
-            .then(response=>response.json())
-            .then(data=>{
-                if(data.success){
-                    showToast('Order successfully added! PO Number: '+(data.po_number||formData.get('po_number')),'success',4000);
-                    const clientUsernameForEmail=orderType==="Online"?formData.get('username_online'):'Walk-In Client'; // Use correct username field
-                    sendNewOrderEmail(clientUsernameForEmail,data.po_number||formData.get('po_number'));
+            })
+            .then(d => {
+                console.log('viewOrderDetails - Data received:', d); // DEBUG
+                if (d.success) {
+                    currentOrderItems = d.orderItems || [];
+                    completedItems = d.completedItems || []; 
+                    quantityProgressData = d.quantity_progress_data || d.quantityProgressData || {}; 
+                    itemProgressPercentages = d.item_progress_percentages || d.itemProgressPercentages || {}; 
+                    overallProgress = d.overall_progress || d.overallProgress || 0; 
                     
-                    if(data.recommend_pending){ // Check for the new flag
-                        showToast('Order created as "Pending" due to insufficient raw materials. Please review.','warning',7000);
-                        setTimeout(()=>{window.location.href='orders.php';},3500); // Longer delay for warning
-                    } else {
-                        setTimeout(()=>{window.location.href='orders.php';},2000);
+                    $('#orderStatus').text(d.order_status || 'Active'); 
+                    const orderDetailsBody = $('#orderDetailsBody').empty();
+                    $('#status-header-cell').show(); 
+                    
+                    const totalItemsCount = currentOrderItems.length; 
+                    itemContributions = {}; 
+                    let calculatedOverallProgress = 0;
+
+                    if (totalItemsCount === 0) {
+                        orderDetailsBody.html('<tr><td colspan="6" style="text-align:center;padding:20px;">No items found for this order.</td></tr>');
+                        $('#overall-progress-info, .save-progress-btn').hide();
+                        $('#orderTotalAmount').text('Total: PHP 0.00');
+                        console.log('viewOrderDetails - Showing modal (no items).'); // DEBUG
+                        $('#orderDetailsModal').css('display', 'flex');
+                        return;
                     }
-                }else{
-                    showToast('Error adding order: '+(data.message||'An unknown server error occurred.'),'error',5000);
-                    console.error("Add order error response:",data);
+
+                    currentOrderItems.forEach((item, index) => {
+                        const itemQuantity = parseInt(item.quantity) || 0;
+                        const contributionPerItem = totalItemsCount > 0 ? (100 / totalItemsCount) : 0; 
+                        itemContributions[index] = contributionPerItem;
+
+                        let unitCompletedCount = 0; 
+                        if (quantityProgressData[index] && typeof quantityProgressData[index] === 'object') { // Ensure it's an object/array
+                            for (let i = 0; i < itemQuantity; i++) {
+                                if (quantityProgressData[index][i] === true) unitCompletedCount++; 
+                            }
+                        }
+                        
+                        let unitProgress = 0;
+                        if (itemQuantity > 0) {
+                            unitProgress = (unitCompletedCount / itemQuantity) * 100;
+                        } else if (itemProgressPercentages[index] !== undefined) { // Use pre-calculated for 0-qty items if available
+                            unitProgress = itemProgressPercentages[index];
+                        } else if (completedItems.includes(index)) { 
+                             unitProgress = 100;
+                        }
+                        itemProgressPercentages[index] = unitProgress; // Store/update
+                        
+                        const contributionToOverall = (unitProgress / 100) * contributionPerItem; 
+                        calculatedOverallProgress += contributionToOverall;
+                        
+                        const mainRow = $('<tr>').addClass('item-header-row').toggleClass('completed-item', unitProgress >= 99.9).attr('data-item-index', index);
+                        mainRow.html(`<td>${item.category||'N/A'}</td><td>${item.item_description||'N/A'}</td><td>${item.packaging||'N/A'}</td><td style="text-align:right;">PHP ${(parseFloat(item.price)||0).toFixed(2)}</td><td style="text-align:center;">${itemQuantity}</td>
+                            <td class="status-cell">
+                                <div style="display: flex; flex-direction:column; align-items:center; gap: 5px;">
+                                    ${itemQuantity > 0 ? `<button class="expand-units-btn btn btn-sm btn-outline-secondary py-0 px-1" onclick="toggleQuantityProgress(${index}, this)"><i class="fas fa-chevron-down"></i> Units</button>` : ''}
+                                    <div class="item-progress-bar-container" style="width:120px;"> <!-- Ensure this width is desired -->
+                                        <div class="item-progress-bar" id="item-progress-bar-${index}" style="width: ${unitProgress.toFixed(0)}%;"></div>
+                                        <div class="item-progress-text" id="item-progress-text-${index}">${unitProgress.toFixed(0)}%</div>
+                                    </div>
+                                    <div class="item-contribution-text" id="contribution-text-${index}" style="font-size:9px;color:#666;">(Contr. ${contributionPerItem.toFixed(1)}%)</div>
+                                    ${itemQuantity === 0 ? `<input type="checkbox" class="item-status-checkbox form-check-input mt-1" data-index="${index}" onchange="updateRowStyle(this)" ${unitProgress === 100 ? 'checked' : ''}>` : ''}
+                                </div>
+                            </td>`);
+                        orderDetailsBody.append(mainRow);
+                        
+                        if (itemQuantity > 0) {
+                             const dividerRow = $('<tr>').addClass('units-divider').attr('id', `units-divider-${index}`).hide().html(`<td colspan="6" style="border: none; padding: 1px 0; background-color: #e0e0e0; height: 1px;"></td>`);
+                             orderDetailsBody.append(dividerRow);
+                             for (let i = 0; i < itemQuantity; i++) { 
+                                 const isUnitCompleted = quantityProgressData[index] && quantityProgressData[index][i] === true; 
+                                 const unitRow = $('<tr>').addClass(`unit-row unit-for-item-${index}`).hide().toggleClass('completed',isUnitCompleted)
+                                     .html(`<td colspan="5" style="padding-left:30px; font-size:0.9em;">Unit ${i+1}</td><td style="text-align:center;"><input type="checkbox" class="unit-status-checkbox form-check-input" data-item-index="${index}" data-unit-index="${i}" onchange="updateUnitStatus(this)" ${isUnitCompleted?'checked':''}></td>`);
+                                 orderDetailsBody.append(unitRow);
+                             }
+                             const actionRow = $('<tr>').addClass(`unit-row unit-action-row unit-for-item-${index}`).hide()
+                                 .html(`<td colspan="6" style="text-align:right; padding:8px;"><button class="btn btn-sm btn-outline-success py-0 px-1 me-1" onclick="selectAllUnits(${index},${itemQuantity})">All Done</button><button class="btn btn-sm btn-outline-warning py-0 px-1" onclick="deselectAllUnits(${index},${itemQuantity})">Reset Units</button></td>`);
+                             orderDetailsBody.append(actionRow);
+                        }
+                    });
+                    overallProgress = calculatedOverallProgress; 
+                    updateOverallProgressDisplay(); 
+                    let totalAmount = currentOrderItems.reduce((sum, item) => sum + (parseFloat(item.price || 0) * parseInt(item.quantity || 0)), 0);
+                    $('#orderTotalAmount').text(`Total: PHP ${totalAmount.toFixed(2)}`);
+                    $('#overall-progress-info, .save-progress-btn').show();
+                    console.log('viewOrderDetails - Showing modal (with items).'); // DEBUG
+                    $('#orderDetailsModal').css('display', 'flex'); 
+                } else {
+                    showToast('Error fetching order details: ' + (d.message || 'Unknown error from backend'), 'error');
+                    console.error('viewOrderDetails - Backend success false:', d.message); // DEBUG
+                     $('#orderDetailsModal h2').html(`<i class="fas fa-exclamation-triangle"></i> Error Loading Details`); // Update title on error
                 }
             })
-            .catch(error=>{
-                showToast('Network or server error while adding order: '+error.message,'error',5000);
-                console.error("Full error details:",error);
+            .catch(error => {
+                showToast('Network or server error fetching order details: ' + error.message, 'error');
+                console.error('viewOrderDetails - Fetch catch error:', error); // DEBUG
+                $('#orderDetailsModal h2').html(`<i class="fas fa-exclamation-triangle"></i> Error Loading Details`); // Update title on error
             });
         }
-        function sendNewOrderEmail(usernameForEmail,poNumberForEmail){ // Your existing function
-            fetch('/backend/send_new_order_notification.php',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded',}, body:`username=${encodeURIComponent(usernameForEmail)}&po_number=${encodeURIComponent(poNumberForEmail)}`})
-            .then(response=>response.json())
-            .then(data=>{ if(data.success)console.log("New order notification email successfully sent/queued for:",usernameForEmail,poNumberForEmail); else console.warn("Failed to send new order notification email:",data.message); })
-            .catch(error=>console.error("Error sending new order notification email (AJAX):",error));
+
+        function viewOrderInfo(ordersJsonString, orderStatus) { // This is the original signature from dfe8bc9...
+            // PO number is not directly passed here. If needed in title, PHP onclick must be changed or PO extracted from ordersJsonString.
+            console.log('viewOrderInfo called with Status:', orderStatus); // DEBUG. 
+            // console.log('viewOrderInfo - Raw ordersJsonString:', ordersJsonString); // DEBUG - Be careful if long
+
+            let orderDetailsArray;
+            try {
+                orderDetailsArray = JSON.parse(ordersJsonString); 
+                console.log('viewOrderInfo - Successfully parsed ordersJsonString:', orderDetailsArray); // DEBUG
+            } catch (e) {
+                showToast('Error displaying order information: Invalid items data format.', 'error');
+                console.error('viewOrderInfo - JSON.parse error:', e, "Input was:", ordersJsonString); // DEBUG
+                return; 
+            }
+
+            const itemsBody = $('#orderDetailsBody').empty();
+            $('#status-header-cell').hide(); 
+            // The modal title is static in HTML: <h2><i class="fas fa-box-open"></i> Order Details (<span id="orderStatus"></span>)</h2>
+            // We update the span
+            $('#orderStatus').text(orderStatus); 
+            // For consistency, if we want PO in title, we'd need to adjust the h2.
+            // Let's try to find PO from first item if possible, or leave it generic.
+            let poForTitle = 'N/A';
+            if(orderDetailsArray && orderDetailsArray.length > 0 && orderDetailsArray[0].po_number) { // Assuming po_number might be in item details
+                poForTitle = orderDetailsArray[0].po_number;
+            } else if (currentPoNumber && orderStatus !== 'Active') { // If currentPoNumber is set from another context (less reliable here)
+                // This is less ideal as currentPoNumber is for Active orders usually.
+                // The PHP should pass PO for this function for clarity.
+            }
+            // Updating the main H2 title of the modal.
+             $('#orderDetailsModal h2').html(`<i class="fas fa-eye"></i> View Order Items (<span id="orderStatus">${orderStatus}</span>)`);
+            // If PO number is crucial for the title here, the PHP `onclick` for non-active orders should also pass the PO number.
+            // Example: onclick="viewOrderInfo('JSON', 'Status', 'PO_NUMBER_HERE')"
+            // Then JS: function viewOrderInfo(ordersJsonString, orderStatus, poNumberForTitle)
+
+            let totalAmountCalc = 0;
+
+            if (orderDetailsArray && orderDetailsArray.length > 0) {
+                orderDetailsArray.forEach(p => {
+                    totalAmountCalc += (parseFloat(p.price) || 0) * (parseInt(p.quantity) || 0);
+                    itemsBody.append(`<tr><td>${p.category||'N/A'}</td><td>${p.item_description||'N/A'}</td><td>${p.packaging||'N/A'}</td><td style="text-align:right;">PHP ${(parseFloat(p.price)||0).toFixed(2)}</td><td style="text-align:center;">${p.quantity||0}</td><td>N/A (Status: ${orderStatus})</td></tr>`);
+                });
+            } else {
+                itemsBody.html('<tr><td colspan="6" style="text-align:center;padding:20px;">No items found for this order.</td></tr>');
+            }
+            $('#orderTotalAmount').text(`Total: PHP ${totalAmountCalc.toFixed(2)}`);
+            $('#overall-progress-info, .save-progress-btn').hide(); 
+            console.log('viewOrderInfo - Showing modal.'); // DEBUG
+            $('#orderDetailsModal').css('display', 'flex'); 
         }
         
-        // --- Inventory Overlay and Cart Functions (Using your structure, with unique IDs for Add Order Form) ---
-        function openInventoryOverlay(){ $('#inventoryOverlay').css('display', 'flex'); const inventoryBody=$('.inventory').html('<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading inventory...</p></td></tr>'); fetch('/backend/get_inventory.php').then(response=>{if(!response.ok)throw new Error(`Network error: ${response.status}`);return response.json();}).then(data=>{if(data.success&&data.inventory){populateInventoryTable(data.inventory);populateCategoryFilter(data.categories||[]);}else{inventoryBody.html('<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Error: '+(data.message||'No inventory data.')+'</td></tr>');showToast('Error loading inventory: '+(data.message||'Unknown'),'error');}}).catch(error=>{inventoryBody.html('<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Failed: '+error.message+'</td></tr>');showToast('Failed to load inventory: '+error.message,'error');});}
-        function populateInventoryTable(inventoryItems){ const inventoryBody=$('.inventory').empty(); if(!inventoryItems||inventoryItems.length===0){inventoryBody.html('<tr><td colspan="6" style="text-align:center;padding:20px;color:#6c757d;">No products found.</td></tr>');return;} inventoryItems.forEach(item=>{const price=parseFloat(item.price);if(isNaN(price)||item.product_id===undefined||item.product_id===null){return;}inventoryBody.append(`<tr><td>${item.category||'Uncategorized'}</td><td>${item.item_description||'N/A'}</td><td>${item.packaging||'N/A'}</td><td style="text-align:center;">PHP ${price.toFixed(2)}</td><td style="text-align:center;"><input type="number" class="inventory-quantity form-control form-control-sm" value="1" min="1" max="100" style="width:70px;margin:auto;"></td><td style="text-align:center;"><button class="add-to-cart-btn btn btn-primary btn-sm" onclick="addToCartFromInventory(this,'${item.product_id}','${item.category||''}','${item.item_description||''}','${item.packaging||''}','${price}')"><i class="fas fa-cart-plus"></i> Add</button></td></tr>`);});}
-        function populateCategoryFilter(categories){ const categorySelect=$('#inventoryFilter'); categorySelect.find('option:not(:first-child)').remove(); if(!categories||categories.length===0)return; categories.forEach(cat=>categorySelect.append(`<option value="${cat}">${cat}</option>`));}
-        function filterInventory(){ const selectedCategory=$('#inventoryFilter').val(); const searchTerm=$('#inventorySearch').val().toLowerCase().trim(); $('.inventory tr').each(function(){const row=$(this);const rowCategory=row.find('td:first-child').text();const rowTextContent=row.text().toLowerCase();const categoryMatch=(selectedCategory==='all'||rowCategory===selectedCategory);const searchTermMatch=(searchTerm===''||rowTextContent.includes(searchTerm));row.toggle(categoryMatch&&searchTermMatch);});}
+        function toggleQuantityProgress(itemIndex, buttonElement) { 
+            $(`.unit-for-item-${itemIndex}, #units-divider-${itemIndex}`).slideToggle(200); 
+            $(buttonElement).find('i').toggleClass('fa-chevron-down fa-chevron-up');
+        }
+        function updateUnitStatus(checkbox) {
+            const itemIndex = parseInt(checkbox.dataset.itemIndex); const unitIndex = parseInt(checkbox.dataset.unitIndex); const isChecked = checkbox.checked; $(checkbox).closest('tr').toggleClass('completed', isChecked);
+            if (!quantityProgressData[itemIndex] || typeof quantityProgressData[itemIndex] !== 'object') { quantityProgressData[itemIndex] = {}; } // Initialize if not an object
+            quantityProgressData[itemIndex][unitIndex] = isChecked; 
+            updateItemProgress(itemIndex); 
+            updateOverallProgress();
+        }
+        function updateItemProgress(itemIndex) {
+            const item = currentOrderItems[itemIndex]; 
+            const qty = parseInt(item.quantity) || 0; 
+            if (qty === 0) { // Handle 0-quantity items based on main checkbox if one exists or pre-set progress
+                const progressPercentage = itemProgressPercentages[itemIndex] !== undefined ? itemProgressPercentages[itemIndex] : ($(`.item-status-checkbox[data-index="${itemIndex}"]`).is(':checked') ? 100 : 0);
+                itemProgressPercentages[itemIndex] = progressPercentage;
+                $(`#item-progress-bar-${itemIndex}`).css('width', `${progressPercentage.toFixed(0)}%`); 
+                $(`#item-progress-text-${itemIndex}`).text(`${progressPercentage.toFixed(0)}%`);
+                updateItemStatusBasedOnUnits(itemIndex, progressPercentage >= 99.9);
+                return;
+            }
+            let completedUnits = 0;
+            if (quantityProgressData[itemIndex] && typeof quantityProgressData[itemIndex] === 'object') {
+                for (let i = 0; i < qty; i++) {
+                    if (quantityProgressData[itemIndex][i]) completedUnits++;
+                }
+            }
+            const progressPercentage = (completedUnits / qty) * 100; 
+            itemProgressPercentages[itemIndex] = progressPercentage; 
+            $(`#item-progress-bar-${itemIndex}`).css('width', `${progressPercentage.toFixed(0)}%`); 
+            $(`#item-progress-text-${itemIndex}`).text(`${progressPercentage.toFixed(0)}%`); 
+            updateItemStatusBasedOnUnits(itemIndex, completedUnits === qty);
+        }
+        function updateOverallProgressDisplay() { 
+            const rounded = Math.round(overallProgress); 
+            $('#overall-progress-bar').css('width', `${rounded}%`); 
+            $('#overall-progress-text').text(`${rounded}%`); 
+        }
+        function updateOverallProgress() {
+            let newCalculatedProgress = 0; 
+            currentOrderItems.forEach((item, index) => { // Iterate through currentOrderItems to ensure all are considered
+                const prog = itemProgressPercentages[index] || 0; // Default to 0 if not set
+                const contrib = itemContributions[index] || 0; // Default to 0
+                newCalculatedProgress += (prog / 100) * contrib;
+            });
+            overallProgress = newCalculatedProgress; 
+            updateOverallProgressDisplay(); 
+            return Math.round(overallProgress);
+        }
+        function updateItemStatusBasedOnUnits(itemIndex, allUnitsComplete) {
+            const intIndex = parseInt(itemIndex); 
+            $(`tr[data-item-index="${intIndex}"]`).toggleClass('completed-item', allUnitsComplete); 
+        }
+        function selectAllUnits(itemIndex, quantity) {
+            const checkboxes = $(`.unit-status-checkbox[data-item-index="${itemIndex}"]`).prop('checked', true); 
+            checkboxes.closest('tr').addClass('completed');
+            if (!quantityProgressData[itemIndex] || typeof quantityProgressData[itemIndex] !== 'object') quantityProgressData[itemIndex] = {}; 
+            for (let i = 0; i < quantity; i++) quantityProgressData[itemIndex][i] = true;
+            updateItemProgress(itemIndex); updateOverallProgress();
+        }
+        function deselectAllUnits(itemIndex, quantity) {
+            const checkboxes = $(`.unit-status-checkbox[data-item-index="${itemIndex}"]`).prop('checked', false); 
+            checkboxes.closest('tr').removeClass('completed');
+            if (!quantityProgressData[itemIndex] || typeof quantityProgressData[itemIndex] !== 'object') quantityProgressData[itemIndex] = {}; 
+            for (let i = 0; i < quantity; i++) quantityProgressData[itemIndex][i] = false;
+            updateItemProgress(itemIndex); updateOverallProgress();
+        }
+        function updateRowStyle(checkbox) { // For items with 0 quantity (main checkbox)
+            const index = parseInt(checkbox.dataset.index); 
+            const isChecked = checkbox.checked; 
+            $(checkbox).closest('tr.item-header-row').toggleClass('completed-item', isChecked);
+            itemProgressPercentages[index] = isChecked ? 100 : 0; 
+            // Also update the visual progress bar for this 0-quantity item
+            $(`#item-progress-bar-${index}`).css('width', `${itemProgressPercentages[index].toFixed(0)}%`); 
+            $(`#item-progress-text-${index}`).text(`${itemProgressPercentages[index].toFixed(0)}%`);
+            updateOverallProgress();
+        }
+        function closeOrderDetailsModal() { $('#orderDetailsModal').css('display', 'none'); }
+        function confirmSaveProgress() { $('#saveProgressConfirmationModal').css('display', 'block'); }
+        function closeSaveProgressConfirmation() { $('#saveProgressConfirmationModal').css('display', 'none'); }
+
+        function saveProgressChanges() {
+            $('#saveProgressConfirmationModal').hide();
+            const finalProgress = updateOverallProgress(); 
+
+            if (finalProgress >= 99.9) { // Use a threshold for floating point
+                showToast('Progress reached 100%. Updating status to For Delivery...', 'info');
+                updateOrderStatus('For Delivery', false, false); 
+            } else {
+                fetch('/backend/update_order_progress.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        po_number: currentPoNumber,
+                        quantity_progress: quantityProgressData,
+                        item_progress_percentages: itemProgressPercentages, // Send this too
+                        overall_progress: finalProgress 
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('Progress updated successfully', 'success');
+                        setTimeout(() => { window.location.reload(); }, 1000);
+                    } else {
+                        showToast('Error saving progress: ' + (data.message || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('Network error saving progress: ' + error, 'error');
+                    console.error('Save progress error:', error);
+                });
+            }
+        }
+
+        function openEditDateModal(poNumber, currentDate, orderDate) {
+            currentPoNumber = poNumber;
+            editingOrderDate = orderDate; // Store the order_date for validation
+            $('#edit_po_number').val(poNumber);
+            $('#current_delivery_date').val(currentDate);
+            $('#new_delivery_date').val(''); // Clear previous new date
+            
+            if ($.datepicker) {
+                $("#new_delivery_date").datepicker("destroy"); // Destroy to re-initialize options
+                $("#new_delivery_date").datepicker({
+                    dateFormat: 'yy-mm-dd',
+                    minDate: calculateMinDeliveryDate(orderDate), // Calculate minDate based on orderDate
+                    beforeShowDay: function(date) {
+                        var day = date.getDay(); // 0 (Sun) to 6 (Sat)
+                        // Allow Monday (1), Wednesday (3), Friday (5)
+                        return [(day == 1 || day == 3 || day == 5), ''];
+                    }
+                });
+            }
+            $('#editDateModal').css('display', 'flex');
+        }
+
+        function calculateMinDeliveryDate(orderDateStr) {
+            const orderDate = new Date(orderDateStr);
+            const minDate = new Date(orderDate);
+            minDate.setDate(orderDate.getDate() + 5); // At least 5 days after order date
+            return minDate;
+        }
+        
+        function closeEditDateModal() {
+            $('#editDateModal').css('display', 'none');
+        }
+        
+        // Removed validateDeliveryDate JS function as primary validation is in PHP
+        // and client-side datepicker already restricts choices.
+
+        function confirmDownloadPO(...args) {
+             poDownloadData = { poNumber: args[0], username: args[1], company: args[2], orderDate: args[3], deliveryDate: args[4], deliveryAddress: args[5], ordersJson: args[6], totalAmount: args[7], specialInstructions: args[8] };
+             console.log("Data for PDF:", poDownloadData);
+             $('#downloadConfirmationModal .confirmation-message').text(`Download Invoice for PO ${poDownloadData.poNumber}?`);
+             $('#downloadConfirmationModal').show();
+         }
+        function closeDownloadConfirmation() { $('#downloadConfirmationModal').hide(); poDownloadData = null; }
+        function downloadPODirectly() {
+            $('#downloadConfirmationModal').hide(); if (!poDownloadData) { showToast('No data for PO download', 'error'); return; }
+            try {
+                currentPOData = poDownloadData;
+                $('#printCompany').text(currentPOData.company || 'N/A'); 
+                $('#printPoNumber').text(currentPOData.poNumber); 
+                $('#printUsername').text(currentPOData.username); 
+                $('#printDeliveryAddress').text(currentPOData.deliveryAddress || 'N/A');
+                $('#printOrderDate').text(currentPOData.orderDate || 'N/A'); 
+                $('#printDeliveryDate').text(currentPOData.deliveryDate || 'N/A');
+
+                const instrSec = $('#printInstructionsSection');
+                const instrContent = $('#printSpecialInstructions');
+                if (currentPOData.specialInstructions && String(currentPOData.specialInstructions).trim()) { 
+                    instrContent.text(String(currentPOData.specialInstructions)); instrSec.show(); 
+                } else { 
+                    instrSec.hide(); instrContent.text(''); 
+                }
+                
+                const items = JSON.parse(currentPOData.ordersJson); 
+                const body = $('#printOrderItems').empty();
+                items.forEach(item => { 
+                    const total = (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0); 
+                    body.append(`<tr><td>${item.category||'N/A'}</td><td>${item.item_description||'N/A'}</td><td>${item.packaging||'N/A'}</td><td style="text-align:center;">${item.quantity||0}</td><td style="text-align:right;">${(parseFloat(item.price)||0).toFixed(2)}</td><td style="text-align:right;">${total.toFixed(2)}</td></tr>`);
+                });
+                
+                const element = document.getElementById('contentToDownload'); 
+                const opt = { margin: [10,10,10,10], filename: `PO_${currentPOData.poNumber}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }};
+                $('#printTotalAmount').text(parseFloat(currentPOData.totalAmount).toFixed(2));
+                html2pdf().set(opt).from(element).save().then(() => { 
+                    showToast(`Invoice downloaded.`, 'success'); currentPOData = null; poDownloadData = null; 
+                }).catch(e => { 
+                    console.error('PDF generation error:', e); showToast('PDF generation error: ' + e.message, 'error'); currentPOData = null; poDownloadData = null; 
+                });
+            } catch (e) { 
+                console.error('PDF preparation error:', e); showToast('PDF data error: ' + e.message, 'error'); currentPOData = null; poDownloadData = null; 
+            }
+        }
+        function downloadPDF() { 
+            if (!currentPOData) { showToast('No data available for PDF generation.', 'error'); return; } 
+            const element = document.getElementById('contentToDownload'); 
+            const opt = { margin: [10,10,10,10], filename: `PO_${currentPOData.poNumber}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }}; 
+            html2pdf().set(opt).from(element).save().then(() => { 
+                showToast(`Invoice downloaded.`, 'success'); 
+            }).catch(e => { 
+                console.error('PDF generation error:', e); showToast('PDF generation error: ' + e.message, 'error'); 
+            });
+        }
+        function closePDFPreview() { $('#pdfPreview').hide(); currentPOData = null; }
+
+        function viewSpecialInstructions(poNumber, instructions) { 
+            $('#instructionsPoNumber').text('PO: ' + poNumber); 
+            const content = $('#instructionsContent'); 
+            const decodedInstructions = $('<textarea />').html(instructions).text(); // Decode HTML entities
+            if (decodedInstructions && decodedInstructions.trim()){ 
+                content.text(decodedInstructions).removeClass('empty'); 
+            } else { 
+                content.text('No special instructions provided.').addClass('empty'); 
+            } 
+            $('#specialInstructionsModal').show(); 
+        }
+        function closeSpecialInstructions() { $('#specialInstructionsModal').hide(); }
+
+        function initializeDeliveryDatePicker(formPrefix = "") { 
+            const deliveryDateInput = $(`#${formPrefix}delivery_date`);
+            const orderDateInput = $(`#${formPrefix}order_date`); // Assuming an order_date input exists for add form
+            const orderDateValue = orderDateInput.length ? orderDateInput.val() : new Date().toISOString().split('T')[0];
+
+
+            if ($.datepicker && deliveryDateInput.length) { 
+                deliveryDateInput.datepicker("destroy"); 
+                deliveryDateInput.datepicker({ 
+                    dateFormat: 'yy-mm-dd', 
+                    minDate: calculateMinDeliveryDate(orderDateValue),
+                    beforeShowDay: function(date) {
+                        var day = date.getDay();
+                        return [(day == 1 || day == 3 || day == 5), ''];
+                    }
+                }); 
+                if (!deliveryDateInput.val()) { // Set default only if empty
+                    var nextDate = getNextAvailableDeliveryDateJS(orderDateValue);
+                    deliveryDateInput.datepicker("setDate", nextDate);
+                }
+            }
+        }
+        
+        function getNextAvailableDeliveryDateJS(baseDateStr) { // Renamed to avoid conflict
+            var date = baseDateStr ? new Date(baseDateStr) : new Date();
+            date.setDate(date.getDate() + 5); 
+            while (true) {
+                var day = date.getDay();
+                if (day === 1 || day === 3 || day === 5) { break; }
+                date.setDate(date.getDate() + 1);
+            }
+            return date;
+        }
+        
+        function openAddOrderForm() { 
+            $('#addOrderForm')[0].reset(); 
+            cartItems = []; 
+            updateOrderSummary(); 
+            updateCartItemCount(); 
+            const today = new Date(); 
+            const fmtDate = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`;
+            $('#order_date_add_form').val(fmtDate); // Use specific ID
+            initializeDeliveryDatePicker("delivery_date_add_form", fmtDate); // Pass ID and order date
+             // Corrected IDs for add order form elements
+            $('#username_select_add_order').val(''); // Reset user select
+            $('#company_address_add_form').val('');
+            $('#custom_address_add_form').val('');
+            $('#delivery_address_hidden_add_form').val('');
+            $('#special_instructions_textarea_add_form').val('');
+            $('#po_number_add_form').val('');
+            $('#orders_json_add_form').val('');
+            $('#total_amount_add_form').val('');
+            $('#company_hidden_add_form').val('');
+            toggleDeliveryAddress(true); // Pass true to indicate it's for the add form
+            generatePONumber(); // Call after resetting username
+            $('#addOrderOverlay').css('display', 'flex'); 
+        }
+        
+        function closeAddOrderForm() { $('#addOrderOverlay').hide(); }
+
+        // Modified toggleDeliveryAddress to accept a flag for add form
+        function toggleDeliveryAddress(isAddForm = false) { 
+            const prefix = isAddForm ? "_add_form" : "";
+            const type = $(`#delivery_address_type${prefix}`).val(); 
+            const isCompany = type === 'company'; 
+            $(`#company_address_container${prefix}`).toggle(isCompany); 
+            $(`#custom_address_container${prefix}`).toggle(!isCompany); 
+            if(isCompany){
+                $(`#delivery_address${isAddForm ? '_hidden_add_form' : ''}`).val($(`#company_address${prefix}`).val());
+            } else {
+                $(`#delivery_address${isAddForm ? '_hidden_add_form' : ''}`).val($(`#custom_address${prefix}`).val());
+            }
+        }
+
+        // Modified generatePONumber to use correct selector for Add Order form
+        function generatePONumber() { 
+            const userSelect = $('#username_select_add_order'); // Corrected ID
+            const username = userSelect.val(); 
+            const companyHiddenInput = $('#company_hidden_add_form'); // Corrected ID
+            const companyAddressInput = $('#company_address_add_form'); // Corrected ID
+            const selectedOption = userSelect.find('option:selected'); 
+            companyHiddenInput.val(selectedOption.data('company') || ''); 
+            companyAddressInput.val(selectedOption.data('company-address') || ''); 
+            if (username) { 
+                const now = new Date(); 
+                const po = `PO-${username.substring(0,3).toUpperCase()}${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}`; 
+                $('#po_number_add_form').val(po); // Corrected ID
+            } else { 
+                $('#po_number_add_form').val(''); // Corrected ID
+            } 
+            toggleDeliveryAddress(true); // Ensure correct address field is updated
+        }
+
+        // Modified prepareOrderData for Add Order form
+        function prepareOrderData() { 
+            toggleDeliveryAddress(true); // Ensure correct address context
+            const addr = $('#delivery_address_hidden_add_form').val(); 
+            if (!$('#delivery_address_type_add_form').val() === 'company' && !addr && $('#delivery_address_type_add_form').val() === 'custom') { 
+                showToast('Custom address cannot be empty if selected.', 'error'); return false; 
+            } 
+            if (cartItems.length === 0) { showToast('Order summary cannot be empty. Please select products.', 'error'); return false; } 
+            $('#orders_json_add_form').val(JSON.stringify(cartItems)); 
+            let total = 0; 
+            cartItems.forEach(item => total += (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0)); 
+            $('#total_amount_add_form').val(total.toFixed(2)); 
+            // Company name is already set in company_hidden_add_form by generatePONumber
+            return true; 
+        }
+        
+        function confirmAddOrder() { 
+            const deliveryDateStr = $('#delivery_date_add_form').val();
+            const orderDateStr = $('#order_date_add_form').val();
+            
+            if (!deliveryDateStr) { showToast('Delivery date is required.', 'error'); return; }
+            if (!orderDateStr) { showToast('Order date is required.', 'error'); return; } // Should be auto-filled
+
+            const isValidDate = validateClientSideDeliveryDate(deliveryDateStr, orderDateStr);
+            
+            if (isValidDate && prepareOrderData()) {
+                $('#addConfirmationModal').show();
+            }
+        }
+
+        function validateClientSideDeliveryDate(deliveryDateStr, orderDateStr) {
+            const deliveryDate = new Date(deliveryDateStr);
+            const orderDate = new Date(orderDateStr);
+            
+            // Check if deliveryDate is valid
+            if (isNaN(deliveryDate.getTime())) {
+                showToast('Invalid delivery date format.', 'error');
+                return false;
+            }
+
+            // Check for Mon, Wed, Fri
+            const dayOfWeek = deliveryDate.getDay(); // 0 (Sun) to 6 (Sat)
+            if (!(dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5)) {
+                showToast('Delivery date must be a Monday, Wednesday, or Friday.', 'error');
+                return false;
+            }
+
+            // Check for 5-day gap
+            const minDeliveryDate = new Date(orderDate);
+            minDeliveryDate.setDate(orderDate.getDate() + 5);
+            // Normalize to compare dates only, ignoring time
+            minDeliveryDate.setHours(0,0,0,0);
+            deliveryDate.setHours(0,0,0,0);
+
+            if (deliveryDate < minDeliveryDate) {
+                showToast('Delivery date must be at least 5 days after the order date.', 'error');
+                return false;
+            }
+            return true;
+        }
+
+
+        function closeAddConfirmation() { $('#addConfirmationModal').hide(); }
+        function submitAddOrder() { 
+            $('#addConfirmationModal').hide(); 
+            const form = document.getElementById('addOrderForm'); 
+            const fd = new FormData(form); 
+            
+            // Ensure the hidden fields populated by JS are included correctly
+            fd.set('orders', $('#orders_json_add_form').val());
+            fd.set('total_amount', $('#total_amount_add_form').val());
+            fd.set('po_number', $('#po_number_add_form').val());
+            fd.set('company', $('#company_hidden_add_form').val()); // Use 'company' as key if backend expects that
+            fd.set('delivery_address', $('#delivery_address_hidden_add_form').val());
+
+
+            console.log("Submitting Add Order FormData:", Object.fromEntries(fd));
+            
+            fetch('/backend/add_order.php', { method: 'POST', body: fd })
+            .then(response => response.json().catch(err => {
+                console.error("Add order - JSON parse error:", err);
+                return response.text().then(text => { throw new Error("Invalid JSON response from server: " + text);});
+            }))
+            .then(data => {
+                if (data.success) {
+                    showToast('Order added successfully!', 'success');
+                    const usernameVal = $('#username_select_add_order').val(); 
+                    const poNumberVal = fd.get('po_number'); // Get from FormData as it's set there
+                    sendNewOrderEmail(usernameVal, poNumberVal);
+                    setTimeout(() => { window.location.href = 'orders.php'; }, 1500);
+                } else {
+                    showToast('Error adding order: ' + (data.message || 'Unknown error from backend.'), 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error submitting order: ' + error.message, 'error');
+                console.error('Add order submission fetch/network error:', error);
+            });
+        }
+        
+        function sendNewOrderEmail(username, poNumber) {
+            fetch('/backend/send_new_order_notification.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', },
+                body: `username=${encodeURIComponent(username)}&po_number=${encodeURIComponent(poNumber)}`
+            })
+            .then(response => response.json().catch(() => ({})))
+            .then(data => { console.log("New order email notification attempt response:", data); })
+            .catch(error => { console.error("Error sending new order email notification:", error); });
+        }
+
+        function openInventoryOverlay() { 
+            $('#inventoryOverlay').css('display', 'flex'); 
+            const inventoryBody = $('.inventory').html('<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>'); 
+            $.getJSON('/backend/get_inventory.php', function(data) { 
+                if (data.success) { 
+                    populateInventory(data.inventory); 
+                    populateCategories(data.categories); 
+                } else { 
+                    inventoryBody.html('<tr><td colspan="6" style="text-align:center;color:red;">Error: ' + (data.message || 'Could not load inventory.') + '</td></tr>'); 
+                } 
+            }).fail(() => { 
+                inventoryBody.html('<tr><td colspan="6" style="text-align:center;color:red;">Failed to load inventory. Server error or invalid response.</td></tr>');
+            });
+        }
+        function populateInventory(inventory) {
+            const body = $('.inventory').empty(); 
+            if (!inventory || inventory.length === 0) { 
+                body.html('<tr><td colspan="6" style="text-align:center;padding:20px;">No inventory items found.</td></tr>'); return; 
+            }
+            inventory.forEach(item => {
+                const price = parseFloat(item.price);
+                if (isNaN(price) || item.product_id === undefined || item.product_id === null) {
+                    console.warn("Skipping inventory item due to invalid price or missing product_id:", item);
+                    return;
+                }
+                body.append(`<tr><td>${item.category||'Uncategorized'}</td><td>${item.item_description||'N/A'}</td><td>${item.packaging||'N/A'}</td><td style="text-align:right;">PHP ${price.toFixed(2)}</td><td><input type="number" class="inventory-quantity form-control form-control-sm" value="1" min="1" max="100" style="width:70px;"></td><td style="text-align:center;"><button class="add-to-cart-btn btn btn-sm btn-primary" onclick="addToCart(this,'${item.product_id}','${item.category||''}','${item.item_description||''}','${item.packaging||''}','${price}')"><i class="fas fa-plus"></i> Add</button></td></tr>`);
+             });
+        }
+        function populateCategories(categories) { 
+            const sel = $('#inventoryFilter'); 
+            sel.find('option:not(:first-child)').remove(); // Keep "All Categories"
+            if (!categories || categories.length === 0) return; 
+            categories.forEach(cat => sel.append(`<option value="${cat}">${cat}</option>`));
+        }
+        function filterInventory() { 
+            const cat = $('#inventoryFilter').val(); 
+            const search = $('#inventorySearch').val().toLowerCase().trim(); 
+            $('.inventory tr').each(function() { 
+                const row = $(this); 
+                const categoryMatch = (cat === 'all' || row.find('td:first-child').text() === cat);
+                const searchMatch = (row.text().toLowerCase().indexOf(search) > -1);
+                row.toggle(categoryMatch && searchMatch); 
+            });
+        }
         $('#inventorySearch, #inventoryFilter').off('input change', filterInventory).on('input change', filterInventory);
-        function closeInventoryOverlay(){ $('#inventoryOverlay').hide(); }
-        function addToCartFromInventory(button,productId,category,itemDesc,packaging,price){ const quantityInput=$(button).closest('tr').find('.inventory-quantity'); let quantity=parseInt(quantityInput.val()); if(isNaN(quantity)||quantity<1){showToast('Quantity must be at least 1.','error');quantityInput.val(1);return;} if(quantity>100){showToast('Maximum quantity per item is 100.','error');quantity=100;quantityInput.val(100);} const existingCartItemIndex=cartItems.findIndex(i=>String(i.product_id)===String(productId)&&i.packaging===packaging); if(existingCartItemIndex>=0){let newTotalQuantity=cartItems[existingCartItemIndex].quantity+quantity;if(newTotalQuantity>100){showToast(`Cannot add ${quantity}. Total for ${itemDesc} would exceed 100. Current: ${cartItems[existingCartItemIndex].quantity}. Max is 100.`,'warning',4000);return;}else{cartItems[existingCartItemIndex].quantity=newTotalQuantity;}}else{cartItems.push({product_id:productId,category,item_description:itemDesc,packaging,price:parseFloat(price),quantity:quantity});}showToast(`${quantity} x ${itemDesc} added to your order.`,'success');quantityInput.val(1);updateOrderSummaryAdd();updateCartItemCountNav();}
-        function updateOrderSummaryAdd(){ // Renamed
-            const summaryTableBody=$('#summaryBodyAdd').empty(); let currentOrderTotal=0;
-            if(cartItems.length===0){summaryTableBody.html('<tr><td colspan="6" style="text-align:center;padding:15px;color:#6c757d;">No products selected yet. Click "Select Products".</td></tr>');$('#orderSummaryItemCountAdd').text('(0 items)');}
-            else{cartItems.forEach((item,index)=>{currentOrderTotal+=(item.price||0)*(item.quantity||0);summaryTableBody.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td style="text-align:right;">PHP ${(parseFloat(item.price||0)).toFixed(2)}</td><td style="text-align:center;"><input type="number" class="cart-quantity summary-quantity form-control form-control-sm" value="${item.quantity}" min="1" max="100" data-cart-item-index="${index}" onchange="updateSummaryItemQuantityAdd(this)" style="width:70px;margin:auto;"></td><td style="text-align:center;"><button class="remove-item-btn btn btn-danger btn-sm" onclick="removeSummaryItemAdd(${index})"><i class="fas fa-trash-alt"></i></button></td></tr>`);});$('#orderSummaryItemCountAdd').text(`(${cartItems.length} item${cartItems.length===1?'':'s'})`);}
-            $('.summary-total-amount-add').text(`PHP ${currentOrderTotal.toFixed(2)}`);$('#total_amount_for_submit_add').val(currentOrderTotal.toFixed(2));
+        function closeInventoryOverlay() { $('#inventoryOverlay').hide(); }
+        
+        function addToCart(button, productId, category, itemDesc, packaging, price) {
+            const qtyInput = $(button).closest('tr').find('.inventory-quantity');
+            let qty = parseInt(qtyInput.val()); 
+
+            if (qty > 100) {
+                showToast('Quantity cannot exceed 100.', 'error');
+                qty = 100; 
+                qtyInput.val(100); 
+            }
+            if (isNaN(qty) || qty < 1) { 
+                showToast('Quantity must be at least 1.', 'error');
+                qtyInput.val(1); return;
+            }
+
+            const existingItemIndex = cartItems.findIndex(i => String(i.product_id) === String(productId) && i.packaging === packaging);
+
+            if (existingItemIndex >= 0) {
+                 let newQty = cartItems[existingItemIndex].quantity + qty;
+                 if (newQty > 100) {
+                     showToast(`Cannot add ${qty}. Total quantity for ${itemDesc} (${packaging}) would exceed 100. Max quantity (100) retained.`, 'warning');
+                     cartItems[existingItemIndex].quantity = 100; 
+                 } else {
+                     cartItems[existingItemIndex].quantity = newQty;
+                 }
+            } else {
+                cartItems.push({ product_id: String(productId), category, item_description: itemDesc, packaging, price: parseFloat(price), quantity: qty });
+            }
+            showToast(`Added ${qty} x ${itemDesc} (${packaging}) to cart.`, 'success');
+            qtyInput.val(1); 
+            updateOrderSummary();
+            updateCartItemCount();
         }
-        function updateSummaryItemQuantityAdd(inputElement){ // Renamed
-            const itemIndexInCart=parseInt($(inputElement).data('cart-item-index'));let newQuantity=parseInt($(inputElement).val());
-            if(isNaN(newQuantity)||newQuantity<1){showToast('Quantity must be at least 1.','error');$(inputElement).val(cartItems[itemIndexInCart].quantity);return;}
-            if(newQuantity>100){showToast('Maximum quantity per item is 100.','error');newQuantity=100;$(inputElement).val(100);}
-            cartItems[itemIndexInCart].quantity=newQuantity;updateOrderSummaryAdd();updateCartItemCountNav();updateCartDisplayAdd();
+        function updateOrderSummary() {
+            const summaryBody = $('#summaryBody').empty(); 
+            let totalOrderAmountVal = 0; // Renamed
+            if (cartItems.length === 0) { 
+                summaryBody.html('<tr><td colspan="6" style="text-align:center; padding: 10px; color: #6c757d;">No products selected.</td></tr>'); 
+            } else { 
+                cartItems.forEach((item, index) => {
+                    totalOrderAmountVal += (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0);
+                    summaryBody.append(`<tr><td>${item.category||'N/A'}</td><td>${item.item_description||'N/A'}</td><td>${item.packaging||'N/A'}</td><td style="text-align:right;">PHP ${(parseFloat(item.price)||0).toFixed(2)}</td><td><input type="number" class="cart-quantity summary-quantity form-control form-control-sm" value="${item.quantity}" min="1" max="100" data-index="${index}" onchange="updateSummaryItemQuantity(this)" style="width:70px;"></td><td style="text-align:center;"><button type="button" class="remove-item-btn btn btn-sm btn-danger" onclick="removeSummaryItem(${index})"><i class="fas fa-trash-alt"></i></button></td></tr>`);
+                }); 
+            }
+            $('.summary-total-amount').text(`PHP ${totalOrderAmountVal.toFixed(2)}`);
         }
-        function removeSummaryItemAdd(itemIndexInCart){ // Renamed
-            if(itemIndexInCart>=0&&itemIndexInCart<cartItems.length){const removedItem=cartItems.splice(itemIndexInCart,1)[0];showToast(`Removed ${removedItem.item_description} from order.`,'info');updateOrderSummaryAdd();updateCartItemCountNav();updateCartDisplayAdd();}
+        function updateSummaryItemQuantity(input) {
+            const itemIndex = parseInt($(input).data('index')); // Renamed
+            let newQuantity = parseInt($(input).val()); // Renamed
+
+            if (newQuantity > 100) {
+                showToast('Quantity cannot exceed 100.', 'error');
+                newQuantity = 100; 
+                $(input).val(100); 
+            }
+            if (isNaN(newQuantity) || newQuantity < 1) { 
+                showToast('Quantity must be at least 1.', 'error');
+                $(input).val(cartItems[itemIndex].quantity); 
+                return;
+            }
+            cartItems[itemIndex].quantity = newQuantity; 
+            updateOrderSummary(); 
+            updateCartItemCount();
+            updateCartDisplay(); 
         }
-        function updateCartItemCountNav(){ const count=cartItems.length; $('#cartItemCountNav').text(count); $('#orderSummaryItemCountAdd').text(`(${count} item${count===1?'':'s'})`); if(count===0)$('#orderSummaryItemCountAdd').text('(0 items)');} // Updated target
-        window.openCartModal=function(){ $('#cartModal').css('display', 'flex'); updateCartDisplayAdd(); } // Use new display function
-        function closeCartModal(){ $('#cartModal').hide(); }
-        function saveCartChangesAndClose(){ updateOrderSummaryAdd(); closeCartModal(); showToast('Selected items confirmed for the order.','success'); }
-        function updateCartDisplayAdd(){ // Renamed
-            const cartTableBody=$('.cart').empty(); const noProductsRow=$('.no-products-in-cart-row'); const cartTotalElement=$('.total-amount-cart'); let currentCartModalTotal=0;
-            if(cartItems.length===0){if(noProductsRow.length)noProductsRow.show();else cartTableBody.html('<tr class="no-products-in-cart-row"><td colspan="6" style="text-align:center;padding:20px;color:#6c757d;">No products currently selected.</td></tr>');cartTotalElement.text('PHP 0.00');}
-            else{if(noProductsRow.length)noProductsRow.hide();cartItems.forEach((item,index)=>{currentCartModalTotal+=(item.price||0)*(item.quantity||0);cartTableBody.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td style="text-align:center;">PHP ${(parseFloat(item.price)||0).toFixed(2)}</td><td style="text-align:center;"><input type="number" class="cart-quantity form-control form-control-sm" value="${item.quantity}" min="1" max="100" data-cart-item-index="${index}" onchange="updateCartModalItemQuantityAdd(this)" style="width:70px;margin:auto;"></td><td style="text-align:center;"><button class="remove-item-btn btn btn-danger btn-sm" onclick="removeCartModalItemAdd(${index})"><i class="fas fa-trash-alt"></i></button></td></tr>`);});cartTotalElement.text(`PHP ${currentCartModalTotal.toFixed(2)}`);}
+        function removeSummaryItem(index) { 
+            if (index >= 0 && index < cartItems.length) { 
+                const removedItem = cartItems.splice(index, 1)[0]; // Renamed
+                showToast(`Removed ${removedItem.item_description}`, 'info'); 
+                updateOrderSummary(); updateCartItemCount(); updateCartDisplay(); 
+            } 
         }
-        function updateCartModalItemQuantityAdd(inputElement){ // Renamed
-            const itemIndexInCart=parseInt($(inputElement).data('cart-item-index'));let newQuantity=parseInt($(inputElement).val());
-            if(isNaN(newQuantity)||newQuantity<1){showToast('Quantity must be at least 1.','error');$(inputElement).val(cartItems[itemIndexInCart].quantity);return;}
-            if(newQuantity>100){showToast('Maximum quantity is 100.','error');newQuantity=100;$(inputElement).val(100);}
-            cartItems[itemIndexInCart].quantity=newQuantity;updateCartDisplayAdd();updateOrderSummaryAdd();
-        }
-        function removeCartModalItemAdd(itemIndexInCart){ // Renamed
-            if(itemIndexInCart>=0&&itemIndexInCart<cartItems.length){const removedItem=cartItems.splice(itemIndexInCart,1)[0];showToast(`Removed ${removedItem.item_description} from selection.`,'info');updateCartDisplayAdd();updateOrderSummaryAdd();updateCartItemCountNav();}
+        function updateCartItemCount() { $('#cartItemCount').text(cartItems.length); }
+        window.openCartModal = function() { $('#cartModal').css('display', 'flex'); updateCartDisplay(); }
+        function closeCartModal() { $('#cartModal').hide(); }
+        function updateCartDisplay() { 
+            const cartTableBody = $('.cart').empty(); // Renamed
+            const noProductsMsg = $('#cartModal .no-products'); // More specific selector
+            const cartTotalAmountEl = $('#cartModal .total-amount'); // More specific selector
+            let currentCartTotal = 0; // Renamed
+            if (cartItems.length === 0) { 
+                if(noProductsMsg.length) noProductsMsg.show(); else cartTableBody.html('<tr><td colspan="6" style="text-align:center;padding:15px;">No products in cart.</td></tr>');
+                cartTotalAmountEl.text('PHP 0.00'); 
+            } else { 
+                if(noProductsMsg.length) noProductsMsg.hide(); 
+                cartItems.forEach((item, idx) => { 
+                    const itemSubTotal = (parseFloat(item.price)||0) * (parseInt(item.quantity)||0); // Renamed
+                    currentCartTotal += itemSubTotal; 
+                    cartTableBody.append(`<tr><td>${item.category||'N/A'}</td><td>${item.item_description||'N/A'}</td><td>${item.packaging||'N/A'}</td><td style="text-align:right;">PHP ${(parseFloat(item.price)||0).toFixed(2)}</td><td><input type="number" class="cart-quantity form-control form-control-sm" value="${item.quantity}" min="1" max="100" data-index="${idx}" onchange="updateCartItemQuantity(this)" style="width:70px;"></td><td style="text-align:center;"><button type="button" class="remove-item-btn btn btn-sm btn-danger" onclick="removeCartItem(${idx})"><i class="fas fa-trash-alt"></i></button></td></tr>`);
+                }); 
+                cartTotalAmountEl.text(`PHP ${currentCartTotal.toFixed(2)}`); 
+            } 
         }
         
-        // --- Document Ready (Using your structure, adapted for new Add Order Form IDs) ---
+        function updateCartItemQuantity(input) { // This function is duplicated, ensure the correct one is used or merge. This one is specific to cart modal.
+            const itemIndexInCart = parseInt($(input).data('index')); // Renamed
+            let newCartQuantity = parseInt($(input).val()); // Renamed
+
+            if (newCartQuantity > 100) {
+                showToast('Quantity cannot exceed 100.', 'error');
+                newCartQuantity = 100; 
+                $(input).val(100); 
+            }
+
+            if (isNaN(newCartQuantity) || newCartQuantity < 1) {
+                showToast('Quantity must be between 1 and 100.', 'error'); 
+                $(input).val(cartItems[itemIndexInCart].quantity); 
+                return;
+            }
+            cartItems[itemIndexInCart].quantity = newCartQuantity;
+            updateCartDisplay(); 
+            updateOrderSummary(); // Reflect changes in the main form's summary as well
+        }
+        
+        function removeCartItem(indexInCart) { // Renamed
+            if (indexInCart >= 0 && indexInCart < cartItems.length) { 
+                const removedCartItem = cartItems.splice(indexInCart, 1)[0]; // Renamed
+                showToast(`Removed ${removedCartItem.item_description} from cart.`, 'info'); 
+                updateCartDisplay(); 
+                updateOrderSummary(); 
+                updateCartItemCount(); 
+            } 
+        }
+        
+        function saveCartChanges() { 
+            updateOrderSummary(); // This ensures the main form's hidden 'orders' input is updated
+            closeCartModal(); 
+            showToast('Order items confirmed from cart.', 'success');
+        }
+
         $(document).ready(function() {
-            setTimeout(function() { $(".alert").fadeOut("slow"); }, 3500);
+            setTimeout(function() {
+                $(".alert").fadeOut("slow");
+            }, 3000);
             
             $("#searchInput").on("input", function() { 
-                const search = $(this).val().toLowerCase().trim(); 
-                $(".orders-table tbody tr").each(function() { $(this).toggle($(this).text().toLowerCase().indexOf(search) > -1); }); 
+                const searchTerm = $(this).val().toLowerCase().trim(); // Renamed
+                $(".orders-table tbody tr").each(function() { 
+                    $(this).toggle($(this).text().toLowerCase().indexOf(searchTerm) > -1); 
+                }); 
             });
-            $(".search-btn").on("click", () => $("#searchInput").trigger("input")); // Your search button
             
-            // Initialize Add Order Form (using new function names)
-            $('#order_type_selection_add').val("").trigger('change'); // Reset and trigger for toggleOrderFormFieldsAdd
-            $('#onlineSpecificInputsAdd,#walkInSpecificInputsAdd,#commonOrderFieldsAdd,#delivery_date_form_group_add,#delivery_address_type_form_group_add,#company_address_container_div_add,#custom_address_container_div_add').hide();
+            $(".search-btn").on("click", () => $("#searchInput").trigger("input")); // No change needed
             
-            // Universal modal closer (your existing logic, adapted slightly for clarity)
-            $(document).on('click', function(event) {
-                const $target = $(event.target);
-                if ($target.hasClass('overlay') || $target.hasClass('modal') || $target.hasClass('instructions-modal') || $target.hasClass('confirmation-modal')) {
-                    if (event.target === event.currentTarget) { 
-                        if ($target.is('#addOrderOverlay:visible')) closeAddOrderForm();
-                        else if ($target.is('#inventoryOverlay:visible')) closeInventoryOverlay();
-                        else if ($target.is('#cartModal:visible')) closeCartModal();
-                        else if ($target.is('#orderDetailsModal:visible')) closeOrderDetailsModal();
-                        else if ($target.is('#pdfPreview:visible')) closePDFPreview();
-                        else if ($target.is('#statusModal:visible')) closeStatusModal();
-                        else if ($target.is('#pendingStatusModal:visible')) closePendingStatusModal();
-                        else if ($target.is('#rejectedStatusModal:visible')) closeRejectedStatusModal();
-                        else if ($target.is('#editDateModal:visible')) closeEditDateModal();
-                        else if ($target.is('#specialInstructionsModal:visible')) closeSpecialInstructions();
-                        else if ($target.hasClass('confirmation-modal')) $target.hide();
-                    }
+            initializeDeliveryDatePicker("delivery_date_add_form", new Date().toISOString().split('T')[0]); // Initialize for add form
+            toggleDeliveryAddress(true); // For add form
+            generatePONumber(); // For add form
+            
+            // More specific event listener for closing overlays/modals
+            $(window).on('click', function(event) {
+                const target = $(event.target);
+                if (target.is('.instructions-modal')) closeSpecialInstructions();
+                if (target.is('.confirmation-modal')) { 
+                    target.hide(); 
+                    if (target.attr('id') === 'statusConfirmationModal') closeStatusConfirmation(); 
+                }
+                if (target.is('.overlay')) { // General overlay click
+                    const overlayId = target.attr('id');
+                    if (overlayId === 'addOrderOverlay') closeAddOrderForm(); 
+                    else if (overlayId === 'inventoryOverlay') closeInventoryOverlay(); 
+                    else if (overlayId === 'cartModal') closeCartModal();
+                    else if (overlayId === 'orderDetailsModal') closeOrderDetailsModal();
+                }
+                // For modals that might not have the .overlay class directly on the backdrop
+                if (target.is('.modal') && target.children('.modal-content, .edit-date-modal-content').length > 0 && !target.find('.modal-content, .edit-date-modal-content').has(event.target).length && !$(event.target).closest('.modal-content, .edit-date-modal-content').length) {
+                    const modalId = target.attr('id');
+                    if (modalId === 'statusModal') closeStatusModal();
+                    else if (modalId === 'pendingStatusModal') closePendingStatusModal();
+                    else if (modalId === 'rejectedStatusModal') closeRejectedStatusModal();
+                    else if (modalId === 'editDateModal') closeEditDateModal();
                 }
             });
-
-            // Initial call to your email status checker (if you keep this functionality)
-            // checkEmailSendingStatus(); 
-            // setInterval(checkEmailSendingStatus, 180000);
+             // Ensure custom address textarea updates the hidden delivery_address field for the add form
+            $('#custom_address_add_form').on('input', function() { 
+                if ($('#delivery_address_type_add_form').val() === 'custom') {
+                    $('#delivery_address_hidden_add_form').val($(this).val());
+                }
+            });
         });
-
-        // --- Your Email Checking Script (kept as is, if you use it) ---
-        function checkEmailSendingStatus() { /* Your existing function */ }
+    </script>
+    
+    <script>
+        function checkEmailSendingStatus() {
+            fetch('/backend/check_email_status.php')
+            .then(response => response.json().catch(() => ({ unsent_notifications: 0, message: "Error parsing email status response." })))
+            .then(data => {
+                if (data.unsent_notifications > 0) {
+                    showToast(`${data.unsent_notifications} email notifications are pending to be sent.`, 'info');
+                } else if (data.message && data.unsent_notifications === 0 && data.message !== "No pending notifications."){ // Log other messages if any
+                    console.log("Email status check message:", data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Error checking email status:", error);
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            checkEmailSendingStatus();
+            setInterval(checkEmailSendingStatus, 180000); // 3 minutes
+        });
     </script>
 </body>
 </html>
