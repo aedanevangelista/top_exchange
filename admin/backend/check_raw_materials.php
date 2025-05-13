@@ -86,16 +86,15 @@ try {
     //    This queries the 'raw_materials' table.
     $raw_material_stock_levels = [];
     if (!empty($all_distinct_material_names)) {
-        $material_names_sql_safe = array_map(function($name) use ($conn) {
-            return "'" . $conn->real_escape_string($name) . "'";
+        $material_names_sql_safe = array_map(function($name_param) use ($conn) {
+            return "'" . $conn->real_escape_string($name_param) . "'";
         }, $all_distinct_material_names);
         $material_names_list_sql = implode(",", $material_names_sql_safe);
 
-        // --- MODIFIED SQL QUERY ---
-        // Assumes 'raw_materials' table has:
-        //   - 'material_name' (or similar) for the name of the raw material (e.g., "Minced Pork")
-        //   - 'stock_quantity' for its current stock.
-        $sql_raw_material_stocks = "SELECT material_name, stock_quantity FROM raw_materials WHERE material_name IN ({$material_names_list_sql})";
+        // --- CORRECTED SQL QUERY ---
+        // Uses 'name' for the raw material's name column in 'raw_materials' table
+        // Uses 'stock_quantity' for its current stock in 'raw_materials' table
+        $sql_raw_material_stocks = "SELECT name, stock_quantity FROM raw_materials WHERE name IN ({$material_names_list_sql})";
         
         $result_raw_material_stocks = $conn->query($sql_raw_material_stocks);
 
@@ -103,9 +102,9 @@ try {
             throw new Exception("Error fetching raw material stocks from 'raw_materials' table: " . $conn->error . ". Query: " . $sql_raw_material_stocks);
         }
         while ($row_stock = $result_raw_material_stocks->fetch_assoc()) {
-            // --- ADJUSTED ARRAY KEYS ---
-            // Uses 'material_name' from the SELECT to key the stocks, and 'stock_quantity' for the value.
-            $raw_material_stock_levels[$row_stock['material_name']] = floatval($row_stock['stock_quantity']);
+            // --- CORRECTED ARRAY KEYS ---
+            // Uses 'name' from the SELECT to key the stocks, and 'stock_quantity' for the value.
+            $raw_material_stock_levels[$row_stock['name']] = floatval($row_stock['stock_quantity']);
         }
     }
 
@@ -116,15 +115,16 @@ try {
 
         if ($product_id && $order_quantity > 0 && isset($product_material_requirements[$product_id])) {
             foreach ($product_material_requirements[$product_id] as $ingredient_recipe) {
-                $material_name = $ingredient_recipe['material_name'];
+                $material_name = $ingredient_recipe['material_name']; // This is the name like "Minced Pork" from the product's recipe
                 $qty_per_product_unit = floatval($ingredient_recipe['quantity_required']);
                 $total_needed_for_this_item_and_material = $qty_per_product_unit * $order_quantity;
 
+                // Get current stock for this material using its name as the key
                 $current_stock_for_material = $raw_material_stock_levels[$material_name] ?? 0;
 
                 if (!isset($required_raw_materials_aggregated[$material_name])) {
                     $required_raw_materials_aggregated[$material_name] = [
-                        'name' => $material_name,
+                        'name' => $material_name, // Keep this for the response structure
                         'total_required' => 0,
                         'available' => $current_stock_for_material
                     ];
@@ -140,7 +140,7 @@ try {
         if (!$is_sufficient) {
             $all_raw_materials_sufficient = false;
         }
-        $raw_material_details_for_response[$material_name] = [
+        $raw_material_details_for_response[$material_name] = [ // Keyed by material name
             'required' => $data['total_required'],
             'available' => $data['available'],
             'sufficient' => $is_sufficient,
