@@ -42,20 +42,23 @@ try {
 
     $db_username = '';
     $db_company = $company_name_final;
-    $db_delivery_date = null; // Initialize, will be set below
+    $db_delivery_date = null;
     $db_generated_po_number = '';
+    $db_status = 'Pending'; // Default status
+    $db_progress = 0;       // Default progress
 
     if ($order_type === 'Walk In') {
         $db_username = 'Walk-In Customer';
         $db_generated_po_number = $po_number_from_frontend;
+        $db_status = 'Completed'; // MODIFICATION: Status for Walk-In
+        $db_progress = 100;       // MODIFICATION: Progress for Walk-In
         
-        // Ensure order_date is available before assigning it to delivery_date
         if (empty($order_date)) {
             error_log("add_order.php - Validation failed: Order date is missing for Walk-In and needed for delivery date.");
             echo json_encode(['success' => false, 'message' => 'Order date is missing and required for Walk-In orders.']);
             exit;
         }
-        $db_delivery_date = $order_date; // Set delivery_date to order_date for Walk-In
+        $db_delivery_date = $order_date; 
 
         if (empty($db_company)) {
             error_log("add_order.php - Validation failed: Full Name/Company Name required for Walk-In.");
@@ -65,13 +68,15 @@ try {
     } elseif ($order_type === 'Online') {
         $db_username = $username_online;
         $db_delivery_date = $delivery_date_frontend;
+        // $db_status remains 'Pending' for Online
+        // $db_progress remains 0 for Online
 
         if (empty($db_username)) {
             error_log("add_order.php - Validation failed: Username required for Online order.");
             echo json_encode(['success' => false, 'message' => 'Username is required for Online orders.']);
             exit;
         }
-        if (empty($db_delivery_date)) { // For Online, delivery_date from frontend is expected
+        if (empty($db_delivery_date)) { 
             error_log("add_order.php - Validation failed: Delivery date required for Online order.");
             echo json_encode(['success' => false, 'message' => 'Delivery date is required for Online orders.']);
             exit;
@@ -117,7 +122,7 @@ try {
     if (empty($order_type)) $errors[] = "Order type is missing.";
     if (empty($db_username)) $errors[] = "Username could not be determined.";
     if (empty($order_date)) $errors[] = "Order date is missing.";
-    if (empty($db_delivery_date)) $errors[] = "Delivery date could not be determined (it should be set for both Online and Walk-In)."; // Added this check
+    if (empty($db_delivery_date)) $errors[] = "Delivery date could not be determined.";
     if (empty($delivery_address)) $errors[] = "Address is missing.";
     if (empty($orders_json)) $errors[] = "Order items are missing.";
     if ($total_amount === null || !is_numeric($total_amount) || $total_amount < 0) $errors[] = "Invalid total amount.";
@@ -136,8 +141,7 @@ try {
         exit;
     }
 
-    $status = 'Pending';
-    $progress = 0;
+    // $status and $progress are now $db_status and $db_progress
     $driver_assigned_default = 0;
 
     $sql_insert = "INSERT INTO orders
@@ -153,17 +157,16 @@ try {
 
     $stmt_insert->bind_param(
         "ssssssdsissi",
-        $db_generated_po_number, $db_username, $order_date, $db_delivery_date, // $db_delivery_date is now always set
-        $delivery_address, $orders_json, $total_amount, $status, $progress,
+        $db_generated_po_number, $db_username, $order_date, $db_delivery_date,
+        $delivery_address, $orders_json, $total_amount, $db_status, $db_progress, // Use $db_status and $db_progress
         $db_company, $special_instructions, $driver_assigned_default
     );
 
-    error_log("add_order.php - Attempting INSERT. PO: '{$db_generated_po_number}', User: '{$db_username}', Company: '{$db_company}', OrderDate: '{$order_date}', DeliveryDate: '{$db_delivery_date}'");
+    error_log("add_order.php - Attempting INSERT. PO: '{$db_generated_po_number}', User: '{$db_username}', Company: '{$db_company}', OrderDate: '{$order_date}', DeliveryDate: '{$db_delivery_date}', Status: '{$db_status}', Progress: '{$db_progress}'");
 
     if ($stmt_insert->execute()) {
         error_log("add_order.php - INSERT successful for PO: " . $db_generated_po_number);
         echo json_encode(['success' => true, 'message' => 'Order added successfully!', 'po_number' => $db_generated_po_number]);
-        // No exit here, let it fall through to finally
     } else {
         error_log("Execute failed (insert order): (" . $stmt_insert->errno . ") " . $stmt_insert->error . " PO: " . $db_generated_po_number);
         if ($stmt_insert->errno == 1062) {
@@ -171,7 +174,6 @@ try {
         } else {
             echo json_encode(['success' => false, 'message' => 'Database error saving order. Error: ' . htmlspecialchars($stmt_insert->error)]);
         }
-        // No exit here, let it fall through to finally
     }
 
     if (isset($stmt_insert)) {
@@ -187,13 +189,12 @@ try {
     }
     echo json_encode([
         'success' => false,
-        'message' => 'A critical server error occurred. Error: ' . $e->getMessage() // Potentially show more specific error if safe
+        'message' => 'A critical server error occurred. Error: ' . $e->getMessage()
     ]);
-    // No exit here, let it fall through to finally
 } finally {
     if (isset($conn) && $conn instanceof mysqli) {
         $conn->close();
     }
-    exit; // Ensure script terminates after finally block
+    exit; 
 }
 ?>
