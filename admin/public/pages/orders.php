@@ -463,7 +463,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if (in_array($order_item_row['status'], ['Active', 'For Delivery', 'Completed', 'In Transit'])): // Added 'In Transit' ?>
+                                    <?php if (in_array($order_item_row['status'], ['Active', 'Completed', 'Rejected'])): // Added 'In Transit' ?>
                                     <div class="progress-bar-container">
                                         <div class="progress-bar" style="width: <?= $order_item_row['progress'] ?? 0 ?>%"></div>
                                         <div class="progress-text"><?= $order_item_row['progress'] ?? 0 ?>%</div>
