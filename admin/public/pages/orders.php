@@ -432,10 +432,12 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                                 <td><?= htmlspecialchars($order_item['company'] ?? ($clients_data_map[$order_item['username']]['company'] ?? 'N/A')) ?></td>
                                 <td><?= htmlspecialchars(date("M d, Y", strtotime($order_item['order_date']))) ?></td>
                                 <td>
-                                    <?= htmlspecialchars(date("M d, Y", strtotime($order_item['delivery_date']))) ?>
+                                    <?= ($order_item['order_type'] === 'Walk In' || empty($order_item['delivery_date'])) ? 'N/A (Walk-In)' : htmlspecialchars(date("M d, Y", strtotime($order_item['delivery_date']))) ?>
+                                    <?php if ($order_item['order_type'] !== 'Walk In' && !empty($order_item['delivery_date'])): ?>
                                     <button class="edit-date-btn" onclick="openEditDateModal('<?= htmlspecialchars($order_item['po_number']) ?>', '<?= htmlspecialchars($order_item['delivery_date']) ?>', '<?= htmlspecialchars($order_item['order_date']) ?>')" aria-label="Edit Delivery Date">
                                         <i class="fas fa-edit"></i>
                                     </button>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <?php if ($order_item['status'] === 'Active' || $order_item['status'] === 'For Delivery'): ?>
@@ -484,7 +486,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                                     <?php elseif ($order_item['status'] === 'Rejected'): ?>
                                         <button class="status-btn" onclick="confirmRejectedStatusChange('<?= htmlspecialchars($order_item['po_number']) ?>', '<?= htmlspecialchars($order_item['username'] ?? 'Walk-In') ?>', 'Rejected')"><i class="fas fa-undo"></i> Review Rejected</button>
                                     <?php endif; ?>
-                                    <button class="download-btn" onclick="confirmDownloadPO('<?= htmlspecialchars($order_item['po_number']) ?>', '<?= htmlspecialchars($order_item['username'] ?? 'Walk-In') ?>', '<?= htmlspecialchars($order_item['company'] ?? ($clients_data_map[$order_item['username']]['company'] ?? 'N/A')) ?>', '<?= htmlspecialchars($order_item['order_date']) ?>', '<?= htmlspecialchars($order_item['delivery_date']) ?>', '<?= htmlspecialchars($order_item['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order_item['orders'])) ?>', '<?= htmlspecialchars($order_item['total_amount']) ?>', '<?= htmlspecialchars(addslashes($order_item['special_instructions'] ?? '')) ?>')"><i class="fas fa-file-pdf"></i> Invoice</button>
+                                    <button class="download-btn" onclick="confirmDownloadPO('<?= htmlspecialchars($order_item['po_number']) ?>', '<?= htmlspecialchars($order_item['username'] ?? 'Walk-In') ?>', '<?= htmlspecialchars($order_item['company'] ?? ($clients_data_map[$order_item['username']]['company'] ?? 'N/A')) ?>', '<?= htmlspecialchars($order_item['order_date']) ?>', '<?= htmlspecialchars($order_item['delivery_date'] ?? '') ?>', '<?= htmlspecialchars($order_item['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order_item['orders'])) ?>', '<?= htmlspecialchars($order_item['total_amount']) ?>', '<?= htmlspecialchars(addslashes($order_item['special_instructions'] ?? '')) ?>')"><i class="fas fa-file-pdf"></i> Invoice</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -498,7 +500,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
 
     <div class="toast-container" id="toast-container"></div>
 
-    <div id="pdfPreview" style="display: none;"><div class="pdf-container"><button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button><div id="contentToDownload"><div class="po-container"><div class="po-header"><div class="po-company" id="printCompany"></div><div class="po-title">Sales Invoice</div></div><div class="po-details"><div class="po-left"><div class="po-detail-row"><span class="po-detail-label">PO Number:</span> <span id="printPoNumber"></span></div><div class="po-detail-row"><span class="po-detail-label">Client/Company:</span> <span id="printUsername"></span></div><div class="po-detail-row"><span class="po-detail-label">Delivery Address:</span> <span id="printDeliveryAddress"></span></div></div><div class="po-right"><div class="po-detail-row"><span class="po-detail-label">Order Date:</span> <span id="printOrderDate"></span></div><div class="po-detail-row"><span class="po-detail-label">Delivery Date:</span> <span id="printDeliveryDate"></span></div></div></div><div id="printInstructionsSection" style="margin-bottom: 20px; display: none; font-size:12px;"><strong>Special Instructions:</strong><div id="printSpecialInstructions" style="white-space: pre-wrap; word-wrap: break-word; padding: 5px; border: 1px solid #eee; margin-top:5px; border-radius:4px;"></div></div><table class="po-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Unit Price</th><th style="text-align:right;">Total</th></tr></thead><tbody id="printOrderItems"></tbody></table><div class="po-total">Grand Total: PHP <span id="printTotalAmount"></span></div><div class="po-signature"><div class="po-signature-block"><div class="po-signature-line"></div>Prepared by</div><div class="po-signature-block"><div class="po-signature-line"></div>Received by / Signature</div></div></div></div><div class="pdf-actions"><button class="download-pdf-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button></div></div></div>
+    <div id="pdfPreview"><div class="pdf-container"><button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button><div id="contentToDownload"><div class="po-container"><div class="po-header"><div class="po-company" id="printCompany"></div><div class="po-title">Sales Invoice</div></div><div class="po-details"><div class="po-left"><div class="po-detail-row"><span class="po-detail-label">PO Number:</span> <span id="printPoNumber"></span></div><div class="po-detail-row"><span class="po-detail-label">Client/Company:</span> <span id="printUsername"></span></div><div class="po-detail-row"><span class="po-detail-label">Delivery Address:</span> <span id="printDeliveryAddress"></span></div></div><div class="po-right"><div class="po-detail-row"><span class="po-detail-label">Order Date:</span> <span id="printOrderDate"></span></div><div class="po-detail-row" id="printDeliveryDateRow"><span class="po-detail-label">Delivery Date:</span> <span id="printDeliveryDate"></span></div></div></div><div id="printInstructionsSection" style="margin-bottom: 20px; display: none; font-size:12px;"><strong>Special Instructions:</strong><div id="printSpecialInstructions" style="white-space: pre-wrap; word-wrap: break-word; padding: 5px; border: 1px solid #eee; margin-top:5px; border-radius:4px;"></div></div><table class="po-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Unit Price</th><th style="text-align:right;">Total</th></tr></thead><tbody id="printOrderItems"></tbody></table><div class="po-total">Grand Total: PHP <span id="printTotalAmount"></span></div><div class="po-signature"><div class="po-signature-block"><div class="po-signature-line"></div>Prepared by</div><div class="po-signature-block"><div class="po-signature-line"></div>Received by / Signature</div></div></div></div><div class="pdf-actions"><button class="download-pdf-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button></div></div></div>
 
     <div id="specialInstructionsModal" class="instructions-modal"><div class="instructions-modal-content"><div class="instructions-header"><h3>Special Instructions</h3><button class="close-instructions-btn" onclick="closeSpecialInstructions()" style="background:none; border:none; color:white; font-size:1.2em; padding:0;">&times;</button></div><div class="instructions-body" id="instructionsContent"></div><div class="instructions-footer"><button class="close-instructions-btn" onclick="closeSpecialInstructions()">Close</button></div></div></div>
 
@@ -559,12 +561,14 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                         <label for="order_date_input">Order Date:</label>
                         <input type="text" id="order_date_input" name="order_date" class="form-control" readonly>
                     </div>
-                    <div class="form-group">
+                    
+                    <div class="form-group" id="delivery_date_form_group">
                         <label for="delivery_date_input">Requested Delivery Date:</label>
-                        <input type="text" id="delivery_date_input" name="delivery_date" class="form-control" autocomplete="off" required placeholder="Select a Mon, Wed, or Fri">
+                        <input type="text" id="delivery_date_input" name="delivery_date" class="form-control" autocomplete="off" placeholder="Select a Mon, Wed, or Fri">
                          <small class="form-text text-muted">Deliveries only on Mon, Wed, Fri. Min. 5 days from order date.</small>
                     </div>
-                    <div class="form-group">
+
+                    <div class="form-group" id="delivery_address_type_form_group">
                         <label for="delivery_address_type_select">Delivery Address Type:</label>
                         <select id="delivery_address_type_select" name="delivery_address_type_display" onchange="toggleDeliveryAddressOptions()" class="form-control">
                             <option value="custom" selected>Enter Custom Address</option>
@@ -576,10 +580,11 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                         <input type="text" id="company_address_display_field" name="company_address_display" class="form-control" readonly>
                     </div>
                     <div id="custom_address_container_div" class="form-group">
-                        <label for="custom_address_input_field">Custom Delivery Address:</label>
-                        <textarea id="custom_address_input_field" name="custom_address_input" rows="3" class="form-control" placeholder="Enter complete delivery address (Street, Barangay, City, Province, ZIP)"></textarea>
+                        <label for="custom_address_input_field" id="custom_address_label">Custom Delivery Address:</label>
+                        <textarea id="custom_address_input_field" name="custom_address_input" rows="3" class="form-control" placeholder="Enter complete address"></textarea>
                     </div>
                     <input type="hidden" name="delivery_address" id="delivery_address_for_submit">
+
                      <div class="form-group">
                         <label for="special_instructions_input">Special Instructions / Notes:</label>
                         <textarea id="special_instructions_input" name="special_instructions" rows="3" class="form-control" placeholder="e.g., Contact person, landmark, preferred time (no guarantee)"></textarea>
@@ -656,14 +661,14 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             return (parseFloat(weightInGrams).toFixed(2).replace(/\.00$/, '')) + ' g';
         }
 
-        function confirmStatusChange(poNumber, username, originalStatus) { currentPoNumber = poNumber; currentOrderOriginalStatus = originalStatus; $('#statusMessage').text(`Change status for order ${poNumber} (Client: ${username || 'N/A'})? Current: ${originalStatus}.`); $('#statusModal').css('display', 'flex'); }
-        function confirmRejectedStatusChange(poNumber, username, originalStatus) { currentPoNumber = poNumber; currentOrderOriginalStatus = originalStatus; $('#rejectedStatusModal').data('po_number', poNumber); $('#rejectedStatusMessage').text(`Order ${poNumber} (Client: ${username || 'N/A'}) is currently Rejected. Change status?`); $('#rejectedStatusModal').css('display', 'flex'); }
+        function confirmStatusChange(poNumber, username, originalStatus) { currentPoNumber = poNumber; currentOrderOriginalStatus = originalStatus; $('#statusMessage').text(`Change status for order ${poNumber} (Client: ${username || 'N/A'})? Current: ${originalStatus}.`); $('#statusModal').show(); }
+        function confirmRejectedStatusChange(poNumber, username, originalStatus) { currentPoNumber = poNumber; currentOrderOriginalStatus = originalStatus; $('#rejectedStatusModal').data('po_number', poNumber); $('#rejectedStatusMessage').text(`Order ${poNumber} (Client: ${username || 'N/A'}) is currently Rejected. Change status?`); $('#rejectedStatusModal').show(); }
         function confirmPendingStatusChange(poNumber, username, ordersJsonString, originalStatus) {
             currentPoNumber = poNumber; currentOrderOriginalStatus = originalStatus; $('#pendingStatusModal').data('po_number', poNumber); 
             $('#pendingStatusMessage').text(`Order ${poNumber} (Client: ${username || 'N/A'}) is Pending. Review inventory and change status:`);
             const materialContainer = $('#rawMaterialsContainer'); materialContainer.html('<p style="text-align:center; padding:10px;"><i class="fas fa-spinner fa-spin"></i> Loading inventory status...</p>'); 
             $('#activeStatusBtn').prop('disabled', true);
-            $('#pendingStatusModal').css('display', 'flex');
+            $('#pendingStatusModal').show();
             try {
                 if (!ordersJsonString || ordersJsonString.trim() === "") throw new Error("Order items data is missing or empty.");
                 JSON.parse(ordersJsonString);
@@ -694,7 +699,6 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                         }
                     },
                     error: function(xhr, status, error) { 
-                        console.error("AJAX Error (Inventory Check for Pending Modal):", status, error, xhr.responseText); 
                         let errorMsg = `Could not check inventory: ${error || 'Server communication error'}.`; 
                         if (status === 'parsererror') { errorMsg = `Could not check inventory: Invalid data format from server.`; } 
                         materialContainer.html(`<h3 style='color:red;'>Server Error</h3><p style="color:red;">${errorMsg}</p><p>Status change may be attempted, but inventory status is unconfirmed.</p>`); 
@@ -704,7 +708,6 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             } catch (e) { 
                 materialContainer.html(`<h3 style='color:red;'>Data Error</h3><p style="color:red;">Error processing order items: ${e.message}</p><p>Status change may be attempted, but inventory status is unconfirmed.</p>`); 
                 $('#activeStatusBtn').prop('disabled', false);
-                console.error("Error in confirmPendingStatusChange (JSON parse or other):", e);
             }
         }
         function confirmStatusAction(newStatus) {
@@ -714,15 +717,15 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             else if (currentOrderOriginalStatus === 'Active' && (currentSelectedStatus === 'Pending' || currentSelectedStatus === 'Rejected')) { confirmationMsg += ' This action will attempt to return any previously deducted stock to inventory.'; }
             $('#statusConfirmationMessage').text(confirmationMsg); 
             $('#statusConfirmationModal').show();
-            if ($('#statusModal').css('display') === 'flex') $('#statusModal').hide();
-            if ($('#pendingStatusModal').css('display') === 'flex') $('#pendingStatusModal').hide();
-            if ($('#rejectedStatusModal').css('display') === 'flex') $('#rejectedStatusModal').hide();
+            if ($('#statusModal').is(':visible')) $('#statusModal').hide();
+            if ($('#pendingStatusModal').is(':visible')) $('#pendingStatusModal').hide();
+            if ($('#rejectedStatusModal').is(':visible')) $('#rejectedStatusModal').hide();
         }
         function closeStatusConfirmation() { 
             $('#statusConfirmationModal').hide(); 
-            if (currentOrderOriginalStatus === 'Pending') $('#pendingStatusModal').css('display', 'flex'); 
-            else if (currentOrderOriginalStatus === 'Rejected') $('#rejectedStatusModal').css('display', 'flex'); 
-            else if (currentOrderOriginalStatus === 'Active') $('#statusModal').css('display', 'flex');
+            if (currentOrderOriginalStatus === 'Pending') $('#pendingStatusModal').show(); 
+            else if (currentOrderOriginalStatus === 'Rejected') $('#rejectedStatusModal').show(); 
+            else if (currentOrderOriginalStatus === 'Active') $('#statusModal').show();
             currentSelectedStatus = '';
         }
         function executeStatusChange() {
@@ -746,7 +749,6 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                     if (!response.ok) throw new Error(jsonData.message || jsonData.error || `Server error: ${response.status} ${response.statusText}`); 
                     return jsonData; 
                 } catch (e) { 
-                    console.error('Invalid JSON in updateOrderStatus response:', text); 
                     throw new Error('Server returned an invalid response format. Please check server logs.'); 
                 } 
             }))
@@ -763,7 +765,6 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 } 
             })
             .catch(error => { 
-                console.error("Error during updateOrderStatus fetch operation:", error); 
                 showToast(`Error updating status: ${error.message}`, 'error', 5000); 
             })
             .finally(() => { 
@@ -918,7 +919,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                         orderDetailsBody.html('<tr><td colspan="6" style="text-align:center; padding:20px;">No items found in this order.</td></tr>');
                         $('#overall-progress-info, .save-progress-btn').hide();
                         $('#orderTotalAmount').text('Total: PHP 0.00');
-                        $('#orderDetailsModal').css('display', 'flex');
+                        $('#orderDetailsModal').show();
                         return;
                     }
 
@@ -979,14 +980,13 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                     let totalOrderAmount = currentOrderItemsData.reduce((sum, item) => sum + (parseFloat(item.price || 0) * parseInt(item.quantity || 0)), 0);
                     $('#orderTotalAmount').text(`Total: PHP ${totalOrderAmount.toFixed(2)}`);
                     $('#overall-progress-info, .save-progress-btn').show();
-                    $('#orderDetailsModal').css('display', 'flex');
+                    $('#orderDetailsModal').show();
                 } else {
                     showToast('Error fetching order details: ' + (data.message || 'Unknown error'), 'error');
                 }
             })
             .catch(error => {
                 showToast('Network or server error fetching order details: ' + error.message, 'error');
-                console.error('Fetch order details error:', error);
             });
         }
         function viewOrderInfo(ordersJsonString, orderStatus, poNumber) {
@@ -1008,9 +1008,8 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 }
                 $('#orderTotalAmount').text(`Total: PHP ${totalAmountCalc.toFixed(2)}`);
                 $('#overall-progress-info, .save-progress-btn').hide();
-                $('#orderDetailsModal').css('display', 'flex');
+                $('#orderDetailsModal').show();
             } catch (e) {
-                console.error('Error parsing order items JSON for viewOrderInfo:', e, ordersJsonString);
                 showToast('Error displaying order information. Data might be corrupt.', 'error');
             }
         }
@@ -1143,7 +1142,6 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 })
                 .catch(error => {
                     showToast('Network error while saving progress: ' + error.message, 'error', 5000);
-                    console.error('Save progress AJAX error:', error);
                 });
             }
         }
@@ -1170,7 +1168,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                     }
                 }); 
             } 
-            $('#editDateModal').css('display', 'flex'); 
+            $('#editDateModal').show(); 
         }
         function closeEditDateModal() { $('#editDateModal').hide(); }
         function validateEditDateForm(event) {
@@ -1206,7 +1204,13 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 $('#printUsername').text(currentPODataForPDF.username + (currentPODataForPDF.company ? ` (${currentPODataForPDF.company})` : '')); 
                 $('#printDeliveryAddress').text(currentPODataForPDF.deliveryAddress || 'N/A'); 
                 $('#printOrderDate').text(currentPODataForPDF.orderDate ? new Date(currentPODataForPDF.orderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'); 
-                $('#printDeliveryDate').text(currentPODataForPDF.deliveryDate ? new Date(currentPODataForPDF.deliveryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'); 
+                
+                if (currentPODataForPDF.orderType === 'Walk In' || !currentPODataForPDF.deliveryDate) {
+                    $('#printDeliveryDateRow').hide();
+                } else {
+                    $('#printDeliveryDate').text(new Date(currentPODataForPDF.deliveryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+                    $('#printDeliveryDateRow').show();
+                }
                 
                 const instrSec = $('#printInstructionsSection'); const instrContent = $('#printSpecialInstructions');
                 if (currentPODataForPDF.specialInstructions && currentPODataForPDF.specialInstructions.trim()) { 
@@ -1245,7 +1249,6 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                     showToast(`Sales Invoice PDF for PO ${currentPODataForPDF.poNumber} downloaded.`, 'success'); 
                 })
                 .catch(err => { 
-                    console.error('PDF generation/download error:', err); 
                     showToast('Error generating PDF: ' + err.message, 'error'); 
                 })
                 .finally(() => {
@@ -1254,7 +1257,6 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 });
 
             } catch (e) { 
-                console.error('Error preparing data for PDF:', e); 
                 showToast('Error preparing PDF data: ' + e.message, 'error'); 
                 currentPODataForPDF = null; poDownloadDataStore = null; 
                 closePDFPreview();
@@ -1276,7 +1278,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             } else { 
                 contentElement.text('No special instructions provided for this order.').addClass('empty'); 
             } 
-            $('#specialInstructionsModal').css('display', 'flex'); 
+            $('#specialInstructionsModal').show(); 
         }
         function closeSpecialInstructions() { $('#specialInstructionsModal').hide(); }
 
@@ -1308,11 +1310,35 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             }
         }
         
+        function fetchAndSetWalkInPONumber() {
+            $('#po_number_for_submit').val('Generating...');
+            fetch('/backend/get_next_walkin_po.php')
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok for PO number.');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && typeof data.next_sequence_number !== 'undefined') {
+                    const po = `WI-${String(data.next_sequence_number).padStart(3, '0')}`;
+                    $('#po_number_for_submit').val(po);
+                } else {
+                    throw new Error(data.message || 'Invalid data for PO number.');
+                }
+            })
+            .catch(error => {
+                showToast('Error generating Walk-In PO: ' + error.message, 'error');
+                $('#po_number_for_submit').val(''); // Clear on error
+            });
+        }
+
         function toggleOrderFormFields() {
             const selectedOrderType = $('#order_type_selection').val();
             $('#order_type_hidden_for_submit').val(selectedOrderType);
 
             $('#onlineSpecificInputs, #walkInSpecificInputs, #commonOrderFields, #confirmAddOrderBtn').hide();
+            $('#delivery_date_form_group, #delivery_address_type_form_group, #company_address_container_div').hide();
+            $('#custom_address_label').text('Custom Delivery Address:'); // Reset label
+
             $('#username_online_select').val('');
             $('#online_company_display').val('');
             $('#walk_in_name_company_input').val('');
@@ -1322,15 +1348,21 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 $('#onlineSpecificInputs').show();
                 $('#commonOrderFields').show();
                 $('#confirmAddOrderBtn').show();
+                $('#delivery_date_form_group').show(); // Show delivery date for Online
+                $('#delivery_address_type_form_group').show(); // Show address type select for Online
                 $('#company_address_option_for_delivery').show();
                 $('#delivery_address_type_select').val('company');
                 handleOnlineUserChange();
+                $('#po_number_for_submit').val(generateOnlinePONumber($('#username_online_select').val())); // Generate after user potentially selected
             } else if (selectedOrderType === "Walk In") {
                 $('#walkInSpecificInputs').show();
                 $('#commonOrderFields').show();
                 $('#confirmAddOrderBtn').show();
-                $('#delivery_address_type_select').val('custom');
-                $('#po_number_for_submit').val(generateWalkInPONumber());
+                // Delivery date and type selection remain hidden for Walk-In
+                $('#custom_address_label').text('Address (for Walk-In):');
+                $('#custom_address_container_div').show(); // Ensure custom address input is shown
+                $('#delivery_address_type_select').val('custom'); // Internally set to custom
+                fetchAndSetWalkInPONumber();
                 $('#company_name_final_for_submit').val('');
             }
             
@@ -1338,7 +1370,9 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 const today = new Date();
                 const formattedToday = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`;
                 $('#order_date_input').val(formattedToday);
-                initializeDeliveryDatePickerForAddOrder(formattedToday);
+                if (selectedOrderType === "Online") { // Only init delivery date picker for online
+                    initializeDeliveryDatePickerForAddOrder(formattedToday);
+                }
                 toggleDeliveryAddressOptions();
             }
             currentCartItems = [];
@@ -1375,28 +1409,28 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             const deliveryTypeSelected = $('#delivery_address_type_select').val();
             const currentOrderType = $('#order_type_selection').val();
 
-            if (deliveryTypeSelected === 'company' && currentOrderType === 'Online') {
+            if (currentOrderType === "Walk In") {
+                $('#company_address_container_div').hide();
+                $('#custom_address_container_div').show();
+                $('#delivery_address_for_submit').val($('#custom_address_input_field').val().trim());
+                return; // Skip further logic for Walk-In as address type dropdown is hidden
+            }
+
+            // For Online Orders
+            if (deliveryTypeSelected === 'company') {
                 $('#company_address_container_div').show();
                 $('#custom_address_container_div').hide();
                 $('#delivery_address_for_submit').val($('#company_address_display_field').val()); 
-            } else {
+            } else { // Custom address for Online
                 $('#company_address_container_div').hide();
                 $('#custom_address_container_div').show();
-                $('#delivery_address_for_submit').val($('#custom_address_input_field').val());
-            }
-            if (currentOrderType !== 'Online') {
-                $('#company_address_option_for_delivery').hide();
-                if (deliveryTypeSelected === 'company') {
-                    $('#delivery_address_type_select').val('custom'); 
-                    $('#custom_address_container_div').show();
-                }
-            } else {
-                 $('#company_address_option_for_delivery').show();
+                $('#delivery_address_for_submit').val($('#custom_address_input_field').val().trim());
             }
         }
         
         $('#custom_address_input_field').on('input', function() {
-            if ($('#delivery_address_type_select').val() === 'custom') {
+            const currentOrderType = $('#order_type_selection').val();
+            if (currentOrderType === "Walk In" || $('#delivery_address_type_select').val() === 'custom') {
                 $('#delivery_address_for_submit').val($(this).val().trim());
             }
         });
@@ -1408,7 +1442,9 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             updateCartItemCount();
             $('#order_type_selection').val("").trigger('change');
             $('#onlineSpecificInputs, #walkInSpecificInputs, #commonOrderFields, #confirmAddOrderBtn').hide();
-            $('#addOrderOverlay').css('display', 'flex');
+            $('#delivery_date_form_group, #delivery_address_type_form_group, #company_address_container_div').hide(); // Ensure these are hidden initially
+            $('#custom_address_label').text('Custom Delivery Address:'); // Reset label
+            $('#addOrderOverlay').show();
         }
         function closeAddOrderForm() { $('#addOrderOverlay').hide(); }
         
@@ -1419,11 +1455,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             const po = `PO-${userPart}-${d.getFullYear().toString().slice(-2)}${(d.getMonth() + 1).toString().padStart(2, '0')}${d.getDate().toString().padStart(2, '0')}-${d.getHours().toString().padStart(2, '0')}${d.getMinutes().toString().padStart(2, '0')}-${Math.floor(100 + Math.random() * 900)}`;
             return po;
         }
-        function generateWalkInPONumber() {
-            const d = new Date();
-            const po = `WI-${d.getFullYear().toString().slice(-2)}${(d.getMonth() + 1).toString().padStart(2, '0')}${d.getDate().toString().padStart(2, '0')}-${d.getHours().toString().padStart(2, '0')}${d.getMinutes().toString().padStart(2, '0')}${d.getSeconds().toString().padStart(2, '0')}-${Math.floor(100 + Math.random() * 900)}`;
-            return po;
-        }
+        // generateWalkInPONumber is now handled by fetchAndSetWalkInPONumber
 
         function prepareOrderDataForSubmit() {
             const selectedOrderType = $('#order_type_selection').val();
@@ -1438,10 +1470,18 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 finalUsernameForDB = $('#username_online_select').val();
                 if (!finalUsernameForDB) { showToast('Please select a Client Username for an Online order.', 'error'); return false; }
                 finalCompanyForDB = $('#online_company_display').val();
+                
+                const deliveryDateStr = $('#delivery_date_input').val();
+                const orderDateStr = $('#order_date_input').val();
+                if (!deliveryDateStr) { showToast('Requested Delivery Date is required for Online orders.', 'error'); return false; }
+                if (!isValidDeliveryDay(deliveryDateStr)) { showToast('Delivery date must be a Monday, Wednesday, or Friday.', 'error'); return false; }
+                if (!isValidDeliveryGap(orderDateStr, deliveryDateStr, 5)) { showToast(`Delivery date must be at least 5 days after the order date (${new Date(orderDateStr).toLocaleDateString()}).`, 'error', 5000); return false; }
+
             } else if (selectedOrderType === "Walk In") {
                 finalUsernameForDB = 'Walk-In Customer';
                 finalCompanyForDB = $('#walk_in_name_company_input').val().trim();
                 if (!finalCompanyForDB) { showToast('Please enter the Full Name or Company Name for a Walk-In order.', 'error'); return false;}
+                // No delivery date validation for Walk-In
             }
             $('#company_name_final_for_submit').val(finalCompanyForDB);
 
@@ -1453,15 +1493,11 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             $('#total_amount_for_submit').val(currentTotalAmount.toFixed(2));
 
             const deliveryAddress = $('#delivery_address_for_submit').val().trim();
-            if (!deliveryAddress) { showToast('Delivery address is required.', 'error'); return false; }
+            if (!deliveryAddress) { showToast('Address is required.', 'error'); return false; }
             
-            const deliveryDateStr = $('#delivery_date_input').val();
-            const orderDateStr = $('#order_date_input').val();
-            if (!deliveryDateStr) { showToast('Requested Delivery Date is required.', 'error'); return false; }
-            if (!isValidDeliveryDay(deliveryDateStr)) { showToast('Delivery date must be a Monday, Wednesday, or Friday.', 'error'); return false; }
-            if (!isValidDeliveryGap(orderDateStr, deliveryDateStr, 5)) { showToast(`Delivery date must be at least 5 days after the order date (${new Date(orderDateStr).toLocaleDateString()}). Current gap is too short.`, 'error', 5000); return false; }
-            
-            if (!$('#po_number_for_submit').val()) { showToast('PO Number could not be generated. Please check selections.', 'error'); return false; }
+            if (!$('#po_number_for_submit').val() || ($('#po_number_for_submit').val() === 'Generating...')) { 
+                showToast('PO Number is not yet generated or is invalid. Please wait or check selections.', 'error'); return false; 
+            }
 
             return true;
         }
@@ -1484,6 +1520,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             if (orderType === "Walk In") {
                 formData.delete('username_online');
                 formData.append('username_placeholder_for_walkin', 'Walk-In Customer');
+                formData.delete('delivery_date'); // Ensure delivery_date is not sent for Walk-In
             }
             
             fetch('/backend/add_order.php', { method: 'POST', body: formData })
@@ -1500,7 +1537,6 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             })
             .catch(error => {
                 showToast('Network or server error while adding order: ' + error.message, 'error', 5000);
-                console.error('Add order submission error:', error);
             });
         }
         
@@ -1519,7 +1555,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
         }
 
         function openInventoryOverlay() { 
-            $('#inventoryOverlay').css('display', 'flex'); 
+            $('#inventoryOverlay').show(); 
             const inventoryBody = $('.inventory').html('<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading inventory...</p></td></tr>'); 
             fetch('/backend/get_inventory.php')
             .then(response => { 
@@ -1536,7 +1572,6 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 } 
             })
             .catch(error => { 
-                console.error("Fetch inventory AJAX error:", error); 
                 inventoryBody.html('<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Failed to load inventory: ' + error.message + '</td></tr>'); 
                 showToast('Failed to load inventory: ' + error.message, 'error'); 
             }); 
@@ -1639,11 +1674,11 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
         }
         function updateCartItemCount() { 
             const count = currentCartItems.length;
-            $('#cartItemCount, #cartItemCountNav').text(count); // Updated to set only these two
-            $('#orderSummaryItemCount').text(`(${count} item${count === 1 ? '' : 's'})`); // Keep this specific one
+            $('#cartItemCount, #cartItemCountNav').text(count);
+            $('#orderSummaryItemCount').text(`(${count} item${count === 1 ? '' : 's'})`);
             if (count === 0) $('#orderSummaryItemCount').text('(0 items)');
         }
-        window.openCartModal = function() { $('#cartModal').css('display', 'flex'); updateCartDisplay(); }
+        window.openCartModal = function() { $('#cartModal').show(); updateCartDisplay(); }
         function closeCartModal() { $('#cartModal').hide(); }
         function saveCartChangesAndClose() {
             updateOrderSummary();
@@ -1700,29 +1735,27 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             });
             
             $('#order_type_selection').val(""); 
-            $('#onlineSpecificInputs, #walkInSpecificInputs, #commonOrderFields').hide();
+            $('#onlineSpecificInputs, #walkInSpecificInputs, #commonOrderFields, #delivery_date_form_group, #delivery_address_type_form_group, #company_address_container_div').hide();
+            $('#custom_address_label').text('Custom Delivery Address:');
 
-            // Revised Modal Closing Logic for backdrop clicks
-            $(document).on('click', '.overlay, .modal', function(event) {
-                if (event.target === this) { // Click was directly on the backdrop
-                    const id = this.id;
-                    if (id === 'addOrderOverlay') closeAddOrderForm();
-                    else if (id === 'inventoryOverlay') closeInventoryOverlay();
-                    else if (id === 'cartModal') closeCartModal();
-                    else if (id === 'orderDetailsModal') closeOrderDetailsModal();
-                    else if (id === 'pdfPreview') closePDFPreview();
-                    else if (id === 'statusModal') closeStatusModal();
-                    else if (id === 'pendingStatusModal') closePendingStatusModal();
-                    else if (id === 'rejectedStatusModal') closeRejectedStatusModal();
-                    else if (id === 'editDateModal') closeEditDateModal();
-                    else if (id === 'specialInstructionsModal') closeSpecialInstructions();
-                    else if ($(this).hasClass('confirmation-modal')) $(this).hide();
+            $(document).on('click', function(event) {
+                const $target = $(event.target);
+                if ($target.hasClass('overlay') || $target.hasClass('modal') || $target.hasClass('instructions-modal') || $target.hasClass('confirmation-modal')) {
+                    if (event.target === event.currentTarget) { // Click was directly on the backdrop
+                        if ($target.is('#addOrderOverlay:visible')) closeAddOrderForm();
+                        else if ($target.is('#inventoryOverlay:visible')) closeInventoryOverlay();
+                        else if ($target.is('#cartModal:visible')) closeCartModal();
+                        else if ($target.is('#orderDetailsModal:visible')) closeOrderDetailsModal();
+                        else if ($target.is('#pdfPreview:visible')) closePDFPreview();
+                        else if ($target.is('#statusModal:visible')) closeStatusModal();
+                        else if ($target.is('#pendingStatusModal:visible')) closePendingStatusModal();
+                        else if ($target.is('#rejectedStatusModal:visible')) closeRejectedStatusModal();
+                        else if ($target.is('#editDateModal:visible')) closeEditDateModal();
+                        else if ($target.is('#specialInstructionsModal:visible')) closeSpecialInstructions();
+                        else if ($target.hasClass('confirmation-modal')) $target.hide();
+                    }
                 }
             });
-             // Ensure explicit close buttons inside modals still work
-            $('.close-pdf').on('click', closePDFPreview);
-            $('.edit-date-close').on('click', closeEditDateModal);
-            // Other explicit close buttons are handled by their onclick attributes already.
         });
     </script>
 </body>
