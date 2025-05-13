@@ -80,10 +80,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_delivery_date'
                 if ($user_data && !empty($user_data['email'])) {
                     $user_email = $user_data['email'];
                     $subject = "Top Exchange Food Corp: Delivery Date Changed";
-                    $message_body = "Dear $username,\n\nThe delivery date for your order (PO: $po_number) has been updated.\n";
-                    $message_body .= "New Delivery Date: " . date('F j, Y', strtotime($new_delivery_date)) . "\n\n";
-                    $message_body .= "If you have any questions regarding this change, please contact us.\n\n";
-                    $message_body .= "Thank you,\nTop Exchange Food Corp";
+                    $message_body = "Dear $username,\\n\\nThe delivery date for your order (PO: $po_number) has been updated.\\n";
+                    $message_body .= "New Delivery Date: " . date('F j, Y', strtotime($new_delivery_date)) . "\\n\\n";
+                    $message_body .= "If you have any questions regarding this change, please contact us.\\n\\n";
+                    $message_body .= "Thank you,\\nTop Exchange Food Corp";
                     $headers = "From: no-reply@topexchange.com"; // Replace with your actual sender email
                     mail($user_email, $subject, $message_body, $headers);
                 }
@@ -137,6 +137,8 @@ $orders_data = []; // Renamed from $orders
 $sql_orders_fetch = "SELECT o.id, o.po_number, o.order_type, o.username, o.order_date, o.delivery_date, o.delivery_address, o.orders, o.total_amount, o.status, o.progress,
         o.company, o.special_instructions
         FROM orders o ";
+
+$sql_orders_fetch .= " WHERE o.status NOT IN ('For Delivery', 'In Transit') "; // Added this line to filter statuses
 
 $orderByClause = 'o.' . $conn->real_escape_string($sort_column);
 $sql_orders_fetch .= " ORDER BY {$orderByClause} {$conn->real_escape_string($sort_direction)}";
@@ -232,9 +234,9 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         #pdfPreview { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 1070; overflow: auto; }
         .pdf-container { background-color: white; width: 90%; max-width: 850px; margin: 30px auto; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); position: relative; }
         .close-pdf { position: absolute; top: 10px; right: 15px; font-size: 20px; background: none; border: none; cursor: pointer; color: #333; }
-        .pdf-actions { text-align: center; margin-top: 20px; } .pdf-actions button.download-pdf-btn { padding: 10px 20px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .pdf-actions { text-align: center; margin-top: 20px; } .pdf-actions button.download-pdf-btn { padding: 10px 20px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; }
         .instructions-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
-        .instructions-modal-content { background-color: #fff; margin: 10% auto; padding: 0; border-radius: 8px; width: 90%; max-width: 600px; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 80vh; display: flex; flex-direction: column; }
+        .instructions-modal-content { background-color: #fff; margin: 10% auto; padding: 0; border-radius: 8px; width: 90%; max-width: 600px; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
         .instructions-header { background-color: #343a40; color: white; padding: 15px 20px; border-top-left-radius: 8px; border-top-right-radius: 8px; display:flex; justify-content:space-between; align-items:center; }
         .instructions-header h3 { margin: 0; font-size: 1.1em; } .instructions-po-number { font-size: 0.9em; opacity: 0.9; }
         .instructions-body { padding: 20px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; background-color: #f8f9fa; flex-grow: 1; overflow-y: auto; }
@@ -244,13 +246,13 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         .close-instructions-btn:hover { background-color: #5a6268; }
         .instructions-btn { padding: 5px 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background-color 0.2s; }
         .instructions-btn:hover { background-color: #0056b3; } .no-instructions { color: #6c757d; font-style: italic; font-size: 12px; }
-        #contentToDownload { font-size: 14px; } #contentToDownload .po-table { font-size: 11px; } #contentToDownload .po-title { font-size: 16px; } #contentToDownload .po-company { font-size: 20px; } #contentToDownload .po-total { font-size: 12px; }
+        #contentToDownload { font-size: 14px; } #contentToDownload .po-table { font-size: 11px; } #contentToDownload .po-title { font-size: 16px; } #contentToDownload .po-company { font-size: 20px; }
         .status-badge { padding: 0.3em 0.6em; border-radius: 0.25rem; font-size: 0.85em; font-weight: 600; display: inline-block; text-align: center; min-width: 85px; line-height: 1.2; }
         .status-active { background-color: #d1e7ff; color: #084298; border: 1px solid #a6cfff; } .status-pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-        .status-rejected { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; } .status-for_delivery, .status-in_transit { background-color: #e2e3e5; color: #383d41; border: 1px solid #ced4da; } /* Adjusted for underscore */
+        .status-rejected { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; } .status-for_delivery, .status-in_transit { background-color: #e2e3e5; color: #383d41; border: 1px solid #ced4da; }
         .status-completed { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .btn-info { font-size: 0.75em; opacity: 0.8; margin-top: 3px; display: block; }
-        .raw-materials-container { overflow: visible; margin-bottom: 15px; } .raw-materials-container h3, .raw-materials-container h4 { margin-top: 0; margin-bottom: 10px; color: #333; font-size: 1em; }
+        .raw-materials-container { overflow: visible; margin-bottom: 15px; } .raw-materials-container h3, .raw-materials-container h4 { margin-top: 0; margin-bottom: 10px; color: #333; font-size: 1.1em; }
         .materials-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size:0.9em; }
         .materials-table tbody { display: block; max-height: 180px; overflow-y: auto; border: 1px solid #ddd; }
         .materials-table thead, .materials-table tbody tr { display: table; width: 100%; table-layout: fixed; }
@@ -270,11 +272,11 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         .search-container .search-btn:hover { background-color: #0056b3; }
         .orders-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; width: 100%; }
         .orders-header h1 { flex-grow: 1; margin:0; font-size: 1.8em; color: #333; }
-        .add-order-btn { display: inline-flex; align-items: center; background-color: #28a745; color: white; border: none; border-radius: 20px; padding: 10px 20px; cursor: pointer; font-size: 14px; transition: background-color 0.2s; white-space: nowrap; }
+        .add-order-btn { display: inline-flex; align-items: center; background-color: #28a745; color: white; border: none; border-radius: 20px; padding: 10px 20px; cursor: pointer; font-size: 14px; transition: background-color 0.2s; }
         .add-order-btn:hover { background-color: #218838; } .add-order-btn i { margin-right: 8px; }
         #special_instructions_textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical; font-family: inherit; margin-bottom: 15px; min-height: 60px; }
         .confirmation-modal { display: none; position: fixed; z-index: 1100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow: hidden;}
-        .confirmation-content { background-color: #fff; margin: 15% auto; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .confirmation-content { background-color: #fff; margin: 15% auto; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .confirmation-title { font-size: 1.3em; margin-bottom: 15px; color: #333; font-weight: 600; } .confirmation-message { margin-bottom: 25px; color: #555; font-size: 1em; line-height:1.5; }
         .confirmation-buttons { display: flex; justify-content: center; gap: 15px; }
         .confirm-yes, .confirm-no { border: none; padding: 10px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: background-color 0.2s, transform 0.1s; font-size:0.95em; }
@@ -306,7 +308,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         .edit-date-btn { padding: 4px 8px; background-color: #ffc107; color: #212529; border: none; border-radius: 15px; cursor: pointer; font-size: 11px; margin-left: 5px; transition: background-color 0.2s; }
         .edit-date-btn:hover { background-color: #e0a800; } .edit-date-btn i { font-size: 10px; }
         #editDateModal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); }
-        .edit-date-modal-content { background-color: #fff; margin: 15% auto; padding: 25px; border-radius: 8px; width: 90%; max-width: 450px; text-align: left; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .edit-date-modal-content { background-color: #fff; margin: 15% auto; padding: 25px; border-radius: 8px; width: 90%; max-width: 450px; text-align: left; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .edit-date-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
         .edit-date-modal-header h3 { margin: 0; font-size: 1.2em; color: #333; }
         .edit-date-close { background: none; border: none; font-size: 22px; cursor: pointer; color: #aaa; transition: color 0.2s; } .edit-date-close:hover { color: #333; }
@@ -332,7 +334,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         .orders-table th.sortable a:hover { color: #ced4da; }
         .orders-table th.sortable a i { margin-left: 8px; color: #adb5bd; } .orders-table th.sortable a:hover i { color: #fff; }
         .action-buttons { display: flex; gap: 8px; justify-content: center; }
-        .action-buttons button, .view-orders-btn { padding: 6px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 4px; transition: background-color 0.2s, box-shadow 0.2s; white-space: nowrap; }
+        .action-buttons button, .view-orders-btn { padding: 6px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 4px; transition: background-color 0.2s, box-shadow 0.2s; }
         .view-orders-btn { background-color: #17a2b8; color: white; } .view-orders-btn:hover { background-color: #138496; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .status-btn { background-color: #ffc107; color: #212529; } .status-btn:hover { background-color: #e0a800; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .progress-bar-container { width: 100px; background-color: #e9ecef; border-radius: 0.25rem; overflow: hidden; position: relative; height: 18px; margin: auto; }
@@ -349,7 +351,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         .modal-footer { padding-top: 20px; text-align: right; border-top: 1px solid #e9ecef; margin-top: 20px; }
         .modal-cancel-btn { background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
         .modal-cancel-btn:hover { background-color: #5a6268; }
-        .modal-status-btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.95em; margin: 5px; flex-grow: 1; text-align: center; transition: background-color 0.2s, box-shadow 0.2s; }
+        .modal-status-btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.95em; margin: 5px; flex-grow: 1; text-align: center; transition: background-color 0.2s, transform 0.1s; }
         .modal-status-btn:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.15); transform: translateY(-1px); }
         .modal-status-btn.delivery { background-color: #0dcaf0; color: white; } .modal-status-btn.pending { background-color: #ffc107; color: #212529; }
         .modal-status-btn.rejected { background-color: #dc3545; color: white; } .modal-status-btn.active { background-color: #198754; color: white; }
@@ -378,7 +380,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         .cart-table td:nth-child(4), .cart-table td:nth-child(5) { text-align: center; } /* Price, Qty */
         .cart-total { text-align: right; margin-top:15px; margin-bottom: 20px; font-weight: bold; font-size: 1.2em; }
         .form-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
-        .cancel-btn, .back-btn, .save-btn, .confirm-btn { border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 5px; font-weight:500; transition: background-color 0.2s, box-shadow 0.2s; }
+        .cancel-btn, .back-btn, .save-btn, .confirm-btn { border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 5px; }
         .cancel-btn, .back-btn { background-color: #6c757d; color: white; } .cancel-btn:hover, .back-btn:hover { background-color: #5a6268; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .save-btn, .confirm-btn { background-color: #007bff; color: white; } .save-btn:hover, .confirm-btn:hover { background-color: #0056b3; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .save-btn i, .confirm-btn i, .cancel-btn i, .back-btn i { margin-right: 6px; }
@@ -457,7 +459,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
                                     else { echo htmlspecialchars(date("M d, Y", strtotime($order_item_row['delivery_date']))); }
                                     ?>
                                     <?php if ($order_item_row['order_type'] !== 'Walk In' && !empty($order_item_row['delivery_date'])): ?>
-                                    <button class="edit-date-btn" onclick="openEditDateModal('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['delivery_date']) ?>', '<?= htmlspecialchars($order_item_row['order_date']) ?>')" aria-label="Edit Delivery Date">
+                                    <button class="edit-date-btn" onclick="openEditDateModal('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['delivery_date']) ?>', '<?= htmlspecialchars($order_item_row['order_date']) ?>')">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <?php endif; ?>
@@ -476,13 +478,13 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
                                      <?php if ($order_item_row['status'] === 'Active'): ?>
                                         <button class="view-orders-btn" onclick="viewOrderDetails('<?= htmlspecialchars($order_item_row['po_number']) ?>')"><i class="fas fa-tasks"></i> Manage Items</button>
                                     <?php else: ?>
-                                        <button class="view-orders-btn" onclick="viewOrderInfo('<?= htmlspecialchars(addslashes($order_item_row['orders'])) ?>', '<?= htmlspecialchars($order_item_row['status']) ?>', '<?= htmlspecialchars($order_item_row['po_number']) ?>')"><i class="fas fa-eye"></i> View Items</button>
+                                        <button class="view-orders-btn" onclick="viewOrderInfo('<?= htmlspecialchars(addslashes($order_item_row['orders'])) ?>', '<?= htmlspecialchars($order_item_row['status']) ?>')"><i class="fas fa-eye"></i> View Items</button>
                                     <?php endif; ?>
                                 </td>
                                 <td>PHP <?= htmlspecialchars(number_format((float)$order_item_row['total_amount'], 2)) ?></td>
                                 <td>
                                     <?php if (!empty($order_item_row['special_instructions'])): ?>
-                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order_item_row['po_number'])) ?>', '<?= htmlspecialchars(addslashes($order_item_row['special_instructions'])) ?>')"><i class="fas fa-comment-alt"></i> View</button>
+                                        <button class="instructions-btn" onclick="viewSpecialInstructions('<?= htmlspecialchars(addslashes($order_item_row['po_number'])) ?>', '<?= htmlspecialchars(addslashes(str_replace(["\r\n", "\r", "\n"], "\\n", $order_item_row['special_instructions']))) ?>')"><i class="fas fa-info-circle"></i> View</button>
                                     <?php else: ?>
                                         <span class="no-instructions">None</span>
                                     <?php endif; ?>
@@ -492,14 +494,14 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
                                 </td>
                                 <td class="action-buttons">
                                     <?php if ($order_item_row['status'] === 'Pending'): ?>
-                                        <button class="status-btn" onclick="confirmPendingStatusChange('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['username'] ?? 'Walk-In') ?>', '<?= htmlspecialchars(addslashes($order_item_row['orders'])) ?>', 'Pending')"><i class="fas fa-cogs"></i> Manage</button>
+                                        <button class="status-btn" onclick="confirmPendingStatusChange('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['username']) ?>', '<?= htmlspecialchars(addslashes($order_item_row['orders'])) ?>', '<?= htmlspecialchars($order_item_row['status']) ?>')"><i class="fas fa-edit"></i> Status</button>
                                     <?php elseif ($order_item_row['status'] === 'Active' && ((int)($order_item_row['progress'] ?? 0)) < 100): ?>
-                                        <button class="status-btn" onclick="confirmStatusChange('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['username'] ?? 'Walk-In') ?>', 'Active')"><i class="fas fa-sync-alt"></i> Update</button>
+                                        <button class="status-btn" onclick="confirmStatusChange('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['username']) ?>', '<?= htmlspecialchars($order_item_row['status']) ?>')"><i class="fas fa-edit"></i> Status</button>
                                     <?php elseif ($order_item_row['status'] === 'Rejected'): ?>
-                                        <button class="status-btn" onclick="confirmRejectedStatusChange('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['username'] ?? 'Walk-In') ?>', 'Rejected')"><i class="fas fa-undo"></i> Review</button>
+                                        <button class="status-btn" onclick="confirmRejectedStatusChange('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['username']) ?>', '<?= htmlspecialchars($order_item_row['status']) ?>')"><i class="fas fa-edit"></i> Status</button>
                                     <?php endif; ?>
                                     <button class="download-btn" 
-                                            onclick="prepareAndShowPOPreview('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['username'] ?? 'Walk-In') ?>', '<?= htmlspecialchars($order_item_row['company'] ?? ($clients_data_map[$order_item_row['username']]['company'] ?? 'N/A')) ?>', '<?= htmlspecialchars($order_item_row['order_date']) ?>', '<?= htmlspecialchars($order_item_row['delivery_date'] ?? '') ?>', '<?= htmlspecialchars($order_item_row['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order_item_row['orders'])) ?>', '<?= htmlspecialchars($order_item_row['total_amount']) ?>', '<?= htmlspecialchars(addslashes($order_item_row['special_instructions'] ?? '')) ?>', '<?= htmlspecialchars($order_item_row['order_type']) ?>')">
+                                            onclick="prepareAndShowPOPreview('<?= htmlspecialchars($order_item_row['po_number']) ?>', '<?= htmlspecialchars($order_item_row['username'] ?? 'Walk-In Customer') ?>', '<?= htmlspecialchars($order_item_row['company'] ?? ($clients_data_map[$order_item_row['username']]['company'] ?? 'N/A')) ?>', '<?= htmlspecialchars($order_item_row['order_date']) ?>', '<?= htmlspecialchars($order_item_row['delivery_date']) ?>', '<?= htmlspecialchars(addslashes($order_item_row['delivery_address'])) ?>', '<?= htmlspecialchars(addslashes($order_item_row['orders'])) ?>', '<?= htmlspecialchars($order_item_row['total_amount']) ?>', '<?= htmlspecialchars(addslashes(str_replace(["\r\n", "\r", "\n"], "\\n", $order_item_row['special_instructions']))) ?>', '<?= htmlspecialchars($order_item_row['order_type']) ?>')">
                                         <i class="fas fa-file-pdf"></i> Invoice
                                     </button>
                                 </td>
@@ -523,13 +525,13 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
                 <div class="po-container">
                      <div class="po-header"><div class="po-company" id="printCompany"></div><div class="po-title">Sales Invoice</div></div>
                      <div class="po-details">
-                         <div class="po-left"><div class="po-detail-row"><span class="po-detail-label">PO Number:</span> <span id="printPoNumber"></span></div><div class="po-detail-row"><span class="po-detail-label">Client/Company:</span> <span id="printUsername"></span></div><div class="po-detail-row"><span class="po-detail-label">Address:</span> <span id="printDeliveryAddress"></span></div></div>
+                         <div class="po-left"><div class="po-detail-row"><span class="po-detail-label">PO Number:</span> <span id="printPoNumber"></span></div><div class="po-detail-row"><span class="po-detail-label">Client:</span> <span id="printUsername"></span></div><div class="po-detail-row"><span class="po-detail-label">Address:</span> <span id="printDeliveryAddress"></span></div></div>
                          <div class="po-right"><div class="po-detail-row"><span class="po-detail-label">Order Date:</span> <span id="printOrderDate"></span></div><div class="po-detail-row" id="printDeliveryDateRow"><span class="po-detail-label">Delivery Date:</span> <span id="printDeliveryDate"></span></div></div>
                      </div>
-                     <div id="printInstructionsSection" style="margin-bottom:20px;display:none;font-size:12px;"><strong>Special Instructions:</strong><div id="printSpecialInstructions" style="white-space:pre-wrap;word-wrap:break-word;padding:5px;border:1px solid #eee;margin-top:5px;border-radius:4px;"></div></div>
-                     <table class="po-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Unit Price</th><th style="text-align:right;">Total</th></tr></thead><tbody id="printOrderItems"></tbody></table>
+                     <div id="printInstructionsSection" style="margin-bottom:20px;display:none;font-size:12px;"><strong>Special Instructions:</strong><div id="printSpecialInstructions" style="white-space:pre-wrap; word-wrap:break-word; margin-top:5px; padding:8px; background-color:#f9f9f9; border-radius:4px;"></div></div>
+                     <table class="po-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Unit Price</th><th style="text-align:right;">Total Price</th></tr></thead><tbody id="printOrderItems"></tbody></table>
                      <div class="po-total">Grand Total: PHP <span id="printTotalAmount"></span></div>
-                     <div class="po-signature"><div class="po-signature-block"><div class="po-signature-line"></div>Prepared by</div><div class="po-signature-block"><div class="po-signature-line"></div>Received by / Signature</div></div>
+                     <div class="po-signature"><div class="po-signature-block"><div class="po-signature-line"></div>Prepared by</div><div class="po-signature-block"><div class="po-signature-line"></div>Received by</div></div>
                 </div>
             </div>
             <div class="pdf-actions"><button class="download-pdf-btn" onclick="downloadCurrentPODataAsPDF()"><i class="fas fa-download"></i> Download PDF</button></div>
@@ -538,17 +540,17 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
 
     <!-- Special Instructions Modal (Using your structure) -->
     <div id="specialInstructionsModal" class="instructions-modal">
-        <div class="instructions-modal-content"><div class="instructions-header"><h3>Special Instructions for <span id="instructionsPoNumber"></span></h3><button class="close-instructions-btn" onclick="closeSpecialInstructions()" style="background:none;border:none;color:white;font-size:1.2em;padding:0;">&times;</button></div><div class="instructions-body" id="instructionsContent"></div><div class="instructions-footer"><button class="close-instructions-btn" onclick="closeSpecialInstructions()">Close</button></div></div>
+        <div class="instructions-modal-content"><div class="instructions-header"><h3>Special Instructions for <span id="instructionsPoNumber"></span></h3><button class="close-instructions-btn" onclick="closeSpecialInstructions()">&times;</button></div><div id="instructionsContent" class="instructions-body"></div><div class="instructions-footer"><button class="close-instructions-btn" onclick="closeSpecialInstructions()">Close</button></div></div>
     </div>
     
     <!-- Order Details Modal (Using your structure) -->
     <div id="orderDetailsModal" class="overlay">
         <div class="overlay-content">
-            <div class="overlay-header"><h2 class="overlay-title"><i class="fas fa-tasks"></i> Order Item Details (<span id="orderStatusView"></span>)</h2><button type="button" class="cancel-btn" onclick="closeOrderDetailsModal()" style="padding: 8px 15px; font-size: 13px;"><i class="fas fa-times"></i> Close</button></div>
-            <div id="overall-progress-info" style="margin-bottom:15px;display:none;"><strong>Overall Order Progress:</strong><div class="progress-bar-container" style="margin-top:5px;height:22px;"><div class="progress-bar" id="overall-progress-bar" style="width:0%;line-height:22px;font-size:12px;"></div><div class="progress-text" id="overall-progress-text" style="line-height:22px;font-size:12px;">0%</div></div></div>
-            <div class="order-details-container"><table class="order-details-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Price</th><th style="text-align:center;">Qty</th><th id="status-header-cell" style="text-align:center;">Item Status/Progress</th></tr></thead><tbody id="orderDetailsBody"></tbody></table></div>
+            <div class="overlay-header"><h2 class="overlay-title"><i class="fas fa-tasks"></i> Order Item Details (<span id="orderStatusView"></span>)</h2><button type="button" class="cancel-btn" onclick="closeOrderDetailsModal()"><i class="fas fa-times"></i> Close</button></div>
+            <div id="overall-progress-info" style="margin-bottom:15px;display:none;"><strong>Overall Order Progress:</strong><div class="progress-bar-container" style="margin-top:5px;height:22px;"><div id="overall-progress-bar" class="progress-bar" style="width:0%;"></div><div id="overall-progress-text" class="progress-text">0%</div></div></div>
+            <div class="order-details-container"><table class="order-details-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Price</th><th style="text-align:center;">Quantity</th><th id="status-header-cell">Status/Progress</th></tr></thead><tbody id="orderDetailsBody"></tbody></table></div>
             <div class="order-details-footer"><div class="total-amount" id="orderTotalAmount">Total: PHP 0.00</div></div>
-            <div class="form-buttons"><button type="button" class="back-btn" onclick="closeOrderDetailsModal()"><i class="fas fa-arrow-left"></i> Back</button><button type="button" class="save-btn save-progress-btn" onclick="confirmSaveProgress()" style="display:none;"><i class="fas fa-save"></i> Save Progress</button></div>
+            <div class="form-buttons"><button type="button" class="back-btn" onclick="closeOrderDetailsModal()"><i class="fas fa-arrow-left"></i> Back</button><button type="button" class="save-btn save-progress-btn" onclick="confirmSaveProgress()"><i class="fas fa-save"></i> Save Progress</button></div>
         </div>
     </div>
 
@@ -679,7 +681,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
                     </div>
                     <div id="custom_address_container_div_add" class="form-group" style="display:none;"> <!-- Changed ID -->
                         <label for="custom_address_input_field_add" id="custom_address_label_add">Custom Delivery Address:</label> <!-- Changed ID -->
-                        <textarea id="custom_address_input_field_add" name="custom_address" rows="3" class="form-control" placeholder="Enter complete address"></textarea> <!-- Removed direct name from textarea, will use hidden field -->
+                        <textarea id="custom_address_input_field_add" name="custom_address" rows="3" class="form-control" placeholder="Enter complete address"></textarea> <!-- Removed direct name, handled by hidden input -->
                     </div>
                     <input type="hidden" name="delivery_address" id="delivery_address_for_submit_add"> <!-- Changed ID -->
                     <div class="form-group">
@@ -687,30 +689,30 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
                         <textarea id="special_instructions_input_add" name="special_instructions" rows="3" class="form-control" placeholder="e.g., Contact person, landmark"></textarea>
                     </div>
                     <div class="centered-button"><button type="button" class="open-inventory-btn" onclick="openInventoryOverlay()"><i class="fas fa-box-open"></i> Select Products</button></div>
-                    <div class="order-summary"><h3>Order Summary <span id="orderSummaryItemCountAdd">(0 items)</span></h3><table class="summary-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Price</th><th style="text-align:center;">Qty</th><th style="text-align:center;">Action</th></tr></thead><tbody id="summaryBodyAdd"><tr><td colspan="6" style="text-align:center;padding:15px;">No products selected.</td></tr></tbody></table><div class="summary-total">Order Total: <span class="summary-total-amount-add">PHP 0.00</span></div></div>
+                    <div class="order-summary"><h3>Order Summary <span id="orderSummaryItemCountAdd">(0 items)</span></h3><table class="summary-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Price</th><th style="text-align:center;">Quantity</th><th style="text-align:center;">Action</th></tr></thead><tbody id="summaryBodyAdd"></tbody></table><div class="summary-total">Total: <span class="summary-total-amount-add">PHP 0.00</span></div></div>
                 </div>
                 <input type="hidden" name="po_number" id="po_number_for_submit_add"> <!-- Changed ID -->
                 <input type="hidden" name="orders" id="orders_json_for_submit_add"> <!-- Changed ID -->
                 <input type="hidden" name="total_amount" id="total_amount_for_submit_add"> <!-- Changed ID -->
                 <input type="hidden" name="company_name_final" id="company_name_final_for_submit_add"> <!-- Changed ID -->
-                <div class="form-buttons"><button type="button" class="cancel-btn" onclick="closeAddOrderForm()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="save-btn" onclick="confirmAddOrder()" id="confirmAddOrderBtnAdd" style="display:none;"><i class="fas fa-check-circle"></i> Review & Confirm</button></div>
+                <div class="form-buttons"><button type="button" class="cancel-btn" onclick="closeAddOrderForm()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="save-btn" id="confirmAddOrderBtnAdd" onclick="confirmAddOrder()"><i class="fas fa-check"></i> Confirm Order</button></div>
             </form>
         </div>
     </div>
 
     <!-- Confirmation modals (Using your structure, removed driver confirmation) -->
-    <div id="addConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm New Order</div><div class="confirmation-message">Are you sure you want to add this order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeAddConfirmation()">No, Go Back</button><button class="confirm-yes" onclick="submitAddOrder()">Yes, Add Order</button></div></div></div>
-    <div id="saveProgressConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Save Progress</div><div class="confirmation-message">Save current item progress for this order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeSaveProgressConfirmation()">No</button><button class="confirm-yes" onclick="saveProgressChanges()">Yes, Save</button></div></div></div>
-    <div id="statusConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Status Change</div><div class="confirmation-message" id="statusConfirmationMessage"></div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeStatusConfirmation()">No</button><button class="confirm-yes" onclick="executeStatusChange()">Yes, Confirm</button></div></div></div>
-    <div id="downloadConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Download</div><div class="confirmation-message">Download this PO?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeDownloadConfirmation()">No</button><button class="confirm-yes" onclick="downloadPODirectly()">Yes, Download</button></div></div></div>
+    <div id="addConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm New Order</div><div class="confirmation-message">Are you sure you want to submit this new order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeAddConfirmation()">No, Review</button><button class="confirm-yes" onclick="submitAddOrder()">Yes, Submit</button></div></div></div>
+    <div id="saveProgressConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Save Progress</div><div class="confirmation-message">Are you sure you want to save the current progress for this order?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeSaveProgressConfirmation()">Cancel</button><button class="confirm-yes" onclick="saveProgressChanges()">Yes, Save</button></div></div></div>
+    <div id="statusConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Status Change</div><div class="confirmation-message" id="statusConfirmationMessage">Are you sure?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeStatusConfirmation()">No</button><button class="confirm-yes" onclick="executeStatusChange()">Yes</button></div></div></div>
+    <div id="downloadConfirmationModal" class="confirmation-modal"><div class="confirmation-content"><div class="confirmation-title">Confirm Download</div><div class="confirmation-message">Download PO as PDF?</div><div class="confirmation-buttons"><button class="confirm-no" onclick="closeDownloadConfirmation()">Cancel</button><button class="confirm-yes" onclick="downloadPODirectly()">Yes, Download</button></div></div></div>
 
     <!-- Inventory Overlay (Using your structure) -->
     <div id="inventoryOverlay" class="overlay">
         <div class="overlay-content">
-             <div class="overlay-header"><h2 class="overlay-title"><i class="fas fa-box-open"></i> Select Products</h2><button class="cart-btn" onclick="window.openCartModal()"><i class="fas fa-shopping-cart"></i> View Cart (<span id="cartItemCountNav">0</span>)</button></div>
+             <div class="overlay-header"><h2 class="overlay-title"><i class="fas fa-box-open"></i> Select Products</h2><button class="cart-btn" onclick="window.openCartModal()"><i class="fas fa-shopping-cart"></i> View Cart (<span id="cartItemCountNav">0</span>)</button><button type="button" class="cancel-btn" onclick="closeInventoryOverlay()"><i class="fas fa-times"></i> Close</button></div>
              <div class="inventory-filter-section"><input type="text" id="inventorySearch" placeholder="Search products..."><select id="inventoryFilter"><option value="all">All Categories</option></select></div>
              <div class="inventory-table-container"><table class="inventory-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody class="inventory"></tbody></table></div>
-             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="cancel-btn" onclick="closeInventoryOverlay()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="save-btn" onclick="closeInventoryOverlay()"><i class="fas fa-check"></i> Done Selecting</button></div>
+             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="cancel-btn" onclick="closeInventoryOverlay()"><i class="fas fa-times"></i> Cancel</button><button type="button" class="confirm-btn" onclick="saveCartChangesAndClose()"><i class="fas fa-check"></i> Confirm Selection</button></div>
         </div>
     </div>
 
@@ -718,9 +720,9 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
     <div id="cartModal" class="overlay">
         <div class="overlay-content">
              <h2><i class="fas fa-shopping-cart"></i> Selected Products for New Order</h2>
-             <div class="cart-table-container"><table class="cart-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody class="cart"></tbody></table><p class="no-products-in-cart-row" style="text-align:center;padding:15px;display:none;">No products selected yet.</p></div>
+             <div class="cart-table-container"><table class="cart-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead><tbody class="cart"></tbody></table></div>
              <div class="cart-total" style="text-align: right; margin-bottom: 20px; font-weight: bold; font-size: 1.1em;">Total: <span class="total-amount-cart">PHP 0.00</span></div>
-             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="back-btn" onclick="closeCartModal()"><i class="fas fa-arrow-left"></i> Back to Inventory</button><button type="button" class="confirm-btn" onclick="saveCartChangesAndClose()"><i class="fas fa-check"></i> Confirm Items</button></div>
+             <div class="form-buttons" style="margin-top: 20px;"><button type="button" class="back-btn" onclick="closeCartModal()"><i class="fas fa-arrow-left"></i> Back to Inventory</button><button type="button" class="confirm-btn" onclick="saveCartChangesAndClose()"><i class="fas fa-check"></i> Confirm & Close Cart</button></div>
         </div>
     </div>
 
@@ -810,7 +812,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
                 const instrSec = $('#printInstructionsSection');
                 const instrContent = $('#printSpecialInstructions');
                 if (specialInstructions && specialInstructions.trim()) {
-                    instrContent.html(specialInstructions.replace(/\n/g, '<br>')); // Use html for <br>
+                    instrContent.html(specialInstructions.replace(/\\n/g, '<br>')); // Use html for <br>
                     instrSec.show();
                 } else {
                     instrSec.hide();
@@ -821,7 +823,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
                 if (itemsArray && itemsArray.length > 0) {
                     itemsArray.forEach(item => {
                         const itemTotal = (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0);
-                        itemsBody.append(`<tr><td>${item.category||'N/A'}</td><td>${item.item_description||'N/A'}</td><td>${item.packaging||'N/A'}</td><td style="text-align:right;">${item.quantity||0}</td><td style="text-align:right;">${(parseFloat(item.price)||0).toFixed(2)}</td><td style="text-align:right;">${itemTotal.toFixed(2)}</td></tr>`);
+                        itemsBody.append(`<tr><td>${item.category||'N/A'}</td><td>${item.item_description||'N/A'}</td><td>${item.packaging||'N/A'}</td><td style="text-align:right;">${item.quantity||0}</td><td style="text-align:right;">${parseFloat(item.price||0).toFixed(2)}</td><td style="text-align:right;">${itemTotal.toFixed(2)}</td></tr>`);
                     });
                 } else {
                     itemsBody.append('<tr><td colspan="6" style="text-align:center;">No items in this order.</td></tr>');
@@ -1058,8 +1060,8 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         }
 
         function closeStatusModal() { $('#statusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; }
-        function closeRejectedStatusModal() { $('#rejectedStatusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; $('#rejectedStatusModal').removeData('po_number');}
-        function closePendingStatusModal() { $('#pendingStatusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; $('#pendingStatusModal').removeData('po_number'); $('#rawMaterialsContainer').html('<h3>Loading inventory status...</h3>'); $('#activeStatusBtn').prop('disabled', true); } // Reset container
+        function closeRejectedStatusModal() { $('#rejectedStatusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; $('#rejectedStatusModal').removeData('po_number'); }
+        function closePendingStatusModal() { $('#pendingStatusModal').css('display', 'none'); selectedStatus = ''; currentOrderOriginalStatus = ''; $('#pendingStatusModal').removeData('po_number'); $('#rawMaterialsContainer').html(''); }
         function closeRelevantStatusModals() { closeStatusModal(); closePendingStatusModal(); closeRejectedStatusModal(); }
 
         // --- Material Display Helpers (Your existing functions, kept for reference if needed elsewhere) ---
@@ -1071,7 +1073,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
              Object.keys(productsData).forEach(product => {
                  const data = productsData[product];
                  const available = parseInt(data.available) || 0; const required = parseInt(data.required) || 0; const isSufficient = data.sufficient; const shortfall = data.shortfall || 0;
-                 html += `<tr><td>${product}</td><td>${available}</td><td>${required}</td><td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">${isSufficient ? 'In Stock' : 'Not Enough'}</td></tr>`;
+                 html += `<tr><td>${product}</td><td>${available}</td><td>${required}</td><td class="${isSufficient ? 'material-sufficient' : 'material-insufficient'}">${isSufficient ? 'In Stock' : `Needs ${shortfall} (Mfg. ${data.canManufacture ? 'Possible' : 'Not Possible'})`}</td></tr>`;
              });
              html += `</tbody></table>`; container.html(html);
              const needsMfg = Object.values(productsData).some(p => !p.sufficient);
@@ -1131,15 +1133,15 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
                         const contributionToOverall = (unitProgress / 100) * contributionPerItem; calculatedOverallProgress += contributionToOverall;
                         const mainRow = $('<tr>').addClass('item-header-row').toggleClass('completed-item', isCompletedByCheckbox || unitProgress === 100).attr('data-item-index', index);
                         mainRow.html(`<td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td>PHP ${parseFloat(item.price).toFixed(2)}</td><td>${item.quantity}</td>
-                            <td class="status-cell"><div style="display: flex; align-items: center; justify-content: space-between;"><input type="checkbox" class="item-status-checkbox" data-index="${index}" ${unitProgress === 100 ? 'checked' : ''} onchange="updateRowStyle(this)"><button type="button" class="expand-units-btn" onclick="toggleQuantityProgress(${index})"><i class="fas fa-chevron-down"></i></button></div>
-                            ${itemQuantity > 0 ? `<div class="item-progress-bar-container"><div class="item-progress-bar" id="item-progress-bar-${index}" style="width: ${unitProgress}%"></div><div class="item-progress-text" id="item-progress-text-${index}">${Math.round(unitProgress)}% Complete</div><div class="item-contribution-text" id="contribution-text-${index}">Contribution: ${contributionPerItem.toFixed(2)}%</div></div>` : ''}
+                            <td class="status-cell"><div style="display: flex; align-items: center; justify-content: space-between;"><input type="checkbox" class="item-status-checkbox" data-index="${index}" onchange="updateRowStyle(this)" ${isCompletedByCheckbox ? 'checked' : ''}>${itemQuantity > 0 ? `<button class="expand-units-btn" onclick="toggleQuantityProgress(${index})"><i class="fas fa-chevron-down"></i></button>` : ''}</div>
+                            ${itemQuantity > 0 ? `<div class="item-progress-bar-container"><div class="item-progress-bar" id="item-progress-bar-${index}" style="width: ${unitProgress}%"></div><div class="item-progress-text" id="item-progress-text-${index}">${Math.round(unitProgress)}%</div></div><div class="item-contribution-text" id="contribution-text-${index}">Contributes: ${contributionToOverall.toFixed(1)}%</div>` : ''}
                             </td>`);
                         orderDetailsBody.append(mainRow);
                         if (itemQuantity > 0) {
-                             const dividerRow = $('<tr>').addClass('units-divider').attr('id', `units-divider-${index}`).hide().html(`<td colspan="6" style="border: none; padding: 2px 0; background-color: #e9ecef; height: 2px;"></td>`);
+                             const dividerRow = $('<tr>').addClass('units-divider').attr('id', `units-divider-${index}`).hide().html(`<td colspan="6" style="border: none; padding: 2px 0; background-color: #e9ecef;"></td>`);
                              orderDetailsBody.append(dividerRow);
-                             for (let i = 0; i < itemQuantity; i++) { const isUnitCompleted = quantityProgressData[index] && quantityProgressData[index][i] === true; const unitRow = $('<tr>').addClass(`unit-row unit-for-item-${index}`).hide(); unitRow.html(`<td colspan="3"></td><td colspan="1">Unit ${i + 1}</td><td colspan="1"></td><td><input type="checkbox" class="unit-status-checkbox" data-item-index="${index}" data-unit-index="${i}" ${isUnitCompleted ? 'checked' : ''} onchange="updateUnitStatus(this)"></td>`); orderDetailsBody.append(unitRow); }
-                             const actionRow = $('<tr>').addClass(`unit-row unit-action-row unit-for-item-${index}`).hide().html(`<td colspan="6" style="text-align: right; padding: 10px;"><button type="button" onclick="selectAllUnits(${index}, ${itemQuantity})">Select All</button><button type="button" onclick="deselectAllUnits(${index}, ${itemQuantity})">Deselect All</button></td>`);
+                             for (let i = 0; i < itemQuantity; i++) { const isUnitCompleted = quantityProgressData[index] && quantityProgressData[index][i] === true; const unitRow = $('<tr>').addClass(`unit-row unit-for-item-${index}`).hide().toggleClass('completed', isUnitCompleted).html(`<td></td><td colspan="4">Unit ${i+1}</td><td><input type="checkbox" class="unit-status-checkbox" data-item-index="${index}" data-unit-index="${i}" onchange="updateUnitStatus(this)" ${isUnitCompleted ? 'checked' : ''}></td>`); orderDetailsBody.append(unitRow); }
+                             const actionRow = $('<tr>').addClass(`unit-row unit-action-row unit-for-item-${index}`).hide().html(`<td colspan="6" style="text-align: right; padding: 10px;"><button onclick="selectAllUnits(${index}, ${itemQuantity})" class="btn btn-sm btn-outline-success">All</button><button onclick="deselectAllUnits(${index}, ${itemQuantity})" class="btn btn-sm btn-outline-secondary">None</button></td>`);
                              orderDetailsBody.append(actionRow);
                         }
                     });
@@ -1153,7 +1155,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         function viewOrderInfo(ordersJson, orderStatus) {
              try {
                  const orderDetails = JSON.parse(ordersJson); const body = $('#orderDetailsBody').empty(); $('#status-header-cell').hide(); $('#orderStatus').text(orderStatus); let total = 0;
-                 orderDetails.forEach(p => { total += parseFloat(p.price) * parseInt(p.quantity); body.append(`<tr><td>${p.category||''}</td><td>${p.item_description}</td><td>${p.packaging||''}</td><td>PHP ${parseFloat(p.price).toFixed(2)}</td><td>${p.quantity}</td><td></td></tr>`); });
+                 orderDetails.forEach(p => { total += parseFloat(p.price) * parseInt(p.quantity); body.append(`<tr><td>${p.category||''}</td><td>${p.item_description}</td><td>${p.packaging||''}</td><td>${parseFloat(p.price).toFixed(2)}</td><td>${p.quantity}</td><td></td></tr>`); });
                  $('#orderTotalAmount').text(`Total: PHP ${total.toFixed(2)}`); $('#overall-progress-info, .save-progress-btn').hide(); $('#orderDetailsModal').css('display', 'flex');
              } catch (e) { showToast('Error displaying info', 'error'); }
         }
@@ -1167,12 +1169,12 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
             const item = currentOrderItems[itemIndex]; const qty = parseInt(item.quantity) || 0; if (qty === 0) return; let completed = 0;
             for (let i = 0; i < qty; i++) if (quantityProgressData[itemIndex] && quantityProgressData[itemIndex][i]) completed++;
             const progress = (completed / qty) * 100; itemProgressPercentages[itemIndex] = progress; const contribution = (progress / 100) * itemContributions[itemIndex];
-            $(`#item-progress-bar-${itemIndex}`).css('width', `${progress}%`); $(`#item-progress-text-${itemIndex}`).text(`${Math.round(progress)}% Complete`); $(`#contribution-text-${itemIndex}`).text(`Contribution: ${(contribution).toFixed(2)}%`);
+            $(`#item-progress-bar-${itemIndex}`).css('width', `${progress}%`); $(`#item-progress-text-${itemIndex}`).text(`${Math.round(progress)}% Complete`); $(`#contribution-text-${itemIndex}`).text(`Contributes: ${contribution.toFixed(1)}%`);
             updateItemStatusBasedOnUnits(itemIndex, completed === qty);
         }
         function updateOverallProgressDisplay() { const rounded = Math.round(overallProgress); $('#overall-progress-bar').css('width', `${rounded}%`); $('#overall-progress-text').text(`${rounded}%`); }
         function updateOverallProgress() {
-            let newProgress = 0; Object.keys(itemProgressPercentages).forEach(idx => { const prog = itemProgressPercentages[idx]; const contrib = itemContributions[idx]; if (prog !== undefined && contrib !== undefined) { newProgress += (prog / 100) * contrib; }});
+            let newProgress = 0; Object.keys(itemProgressPercentages).forEach(idx => { const prog = itemProgressPercentages[idx]; const contrib = itemContributions[idx]; if (prog !== undefined && contrib !== undefined) newProgress += (prog / 100) * contrib; });
             overallProgress = newProgress; updateOverallProgressDisplay(); return Math.round(overallProgress);
         }
         function updateItemStatusBasedOnUnits(itemIndex, allComplete) {
@@ -1195,7 +1197,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
             const unitCheckboxes = $(`.unit-status-checkbox[data-item-index="${index}"]`).prop('checked', isChecked); unitCheckboxes.closest('tr').toggleClass('completed', isChecked);
             if (!quantityProgressData[index]) quantityProgressData[index] = []; for (let i = 0; i < qty; i++) quantityProgressData[index][i] = isChecked;
             itemProgressPercentages[index] = isChecked ? 100 : 0; const contribution = (itemProgressPercentages[index] / 100) * itemContributions[index];
-            $(`#item-progress-bar-${index}`).css('width', `${itemProgressPercentages[index]}%`); $(`#item-progress-text-${index}`).text(`${Math.round(itemProgressPercentages[index])}% Complete`); $(`#contribution-text-${index}`).text(`Contribution: ${(contribution).toFixed(2)}%`);
+            $(`#item-progress-bar-${index}`).css('width', `${itemProgressPercentages[index]}%`); $(`#item-progress-text-${index}`).text(`${Math.round(itemProgressPercentages[index])}% Complete`); $(`#contribution-text-${index}`).text(`Contributes: ${contribution.toFixed(1)}%`);
             updateOverallProgress();
         }
         function closeOrderDetailsModal() { $('#orderDetailsModal').css('display', 'none'); }
@@ -1270,7 +1272,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
 
 
         // --- Special Instructions Modal (Using your structure) ---
-        function viewSpecialInstructions(poNumber, instructions) { $('#instructionsPoNumber').text('PO: ' + poNumber); const content = $('#instructionsContent'); if (instructions && instructions.trim()){ content.html(instructions.replace(/\n/g,'<br>')).removeClass('empty'); } else { content.text('No special instructions provided.').addClass('empty'); } $('#specialInstructionsModal').show(); }
+        function viewSpecialInstructions(poNumber, instructions) { $('#instructionsPoNumber').text('PO: ' + poNumber); const content = $('#instructionsContent'); if (instructions && instructions.trim() !== "") { content.html(instructions.replace(/\\n/g, '<br>')).removeClass('empty'); } else { content.html('No special instructions provided for this order.').addClass('empty'); } $('#specialInstructionsModal').show(); }
         function closeSpecialInstructions() { $('#specialInstructionsModal').hide(); }
 
         // --- Add New Order Form Functions (Using your structure, with unique IDs for Add Order Form) ---
@@ -1314,17 +1316,17 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
             $('#username_online_select_add').val(''); $('#online_company_display_add').val(''); $('#walk_in_name_company_input_add').val('');
             $('#delivery_date_add').val(''); $('#custom_address_input_field_add').val(''); $('#delivery_address_for_submit_add').val(''); $('#po_number_for_submit_add').val('');
 
-            if(selectedOrderType==="Online"){$('#onlineSpecificInputsAdd, #commonOrderFieldsAdd, #confirmAddOrderBtnAdd').show();$('#delivery_date_form_group_add, #delivery_address_type_form_group_add').show();$('#company_address_option_for_delivery_add').show();$('#delivery_address_type_select_add').val('company');handleOnlineUserChangeAdd();}
-            else if(selectedOrderType==="Walk In"){$('#walkInSpecificInputsAdd, #commonOrderFieldsAdd, #confirmAddOrderBtnAdd').show();$('#custom_address_label_add').text('Address (for Walk-In):');$('#custom_address_container_div_add').show();$('#delivery_address_type_select_add').val('custom');fetchAndSetWalkInPONumberAdd();$('#company_name_final_for_submit_add').val('');}
+            if(selectedOrderType==="Online"){$('#onlineSpecificInputsAdd, #commonOrderFieldsAdd, #confirmAddOrderBtnAdd').show();$('#delivery_date_form_group_add, #delivery_address_type_form_group_add').show();$('#company_address_option_for_delivery_add').show();initializeDeliveryDatePickerAdd();}
+            else if(selectedOrderType==="Walk In"){$('#walkInSpecificInputsAdd, #commonOrderFieldsAdd, #confirmAddOrderBtnAdd').show();$('#custom_address_label_add').text('Address (for Walk-In):');$('#company_address_option_for_delivery_add').hide();fetchAndSetWalkInPONumberAdd();}
             
-            if(selectedOrderType){ const today=new Date(); const formattedToday=`${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`; $('#order_date_add').val(formattedToday); if(selectedOrderType==="Online"){initializeDeliveryDatePickerAdd();}}
+            if(selectedOrderType){ const today=new Date(); const formattedToday=`${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`; $('#order_date_add').val(formattedToday); }
             cartItems=[]; updateOrderSummaryAdd(); updateCartItemCountNav(); toggleDeliveryAddressOptionsAdd();
         }
         function fetchAndSetWalkInPONumberAdd(){ // Renamed
             $('#po_number_for_submit_add').val('Generating...');
             fetch('/backend/get_next_walkin_po.php') // Assuming this backend endpoint exists and is correct
             .then(response=>response.json())
-            .then(data=>{ if(data.success&&typeof data.next_sequence_number!=='undefined'){ const po=`WI-${String(data.next_sequence_number).padStart(3,'0')}`; $('#po_number_for_submit_add').val(po); } else { throw new Error(data.message||'Invalid data for PO number.'); } })
+            .then(data=>{ if(data.success&&typeof data.next_sequence_number!=='undefined'){ const po=`WI-${String(data.next_sequence_number).padStart(3,'0')}`; $('#po_number_for_submit_add').val(po); } else { showToast('Could not generate Walk-In PO: '+(data.message||'Unknown error'),'error'); $('#po_number_for_submit_add').val(''); } })
             .catch(error=>{ showToast('Error generating Walk-In PO: '+error.message,'error'); $('#po_number_for_submit_add').val(''); });
         }
         function handleOnlineUserChangeAdd(){ // Renamed
@@ -1334,7 +1336,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
                 $('#company_address_display_field_add').val(companyAddr); // Assuming this ID exists for display
                 if($('#delivery_address_type_select_add').val()==='company')$('#delivery_address_for_submit_add').val(companyAddr);
                 $('#po_number_for_submit_add').val(generateOnlinePONumberAdd(username)); // Use new PO gen
-            } else { $('#online_company_display_add, #company_name_final_for_submit_add, #company_address_display_field_add, #po_number_for_submit_add').val(''); if($('#delivery_address_type_select_add').val()==='company')$('#delivery_address_for_submit_add').val('');}
+            } else { $('#online_company_display_add, #company_name_final_for_submit_add, #company_address_display_field_add, #po_number_for_submit_add').val(''); if($('#delivery_address_type_select_add').val()==='company')$('#delivery_address_for_submit_add').val(''); }
         }
         function generateOnlinePONumberAdd(username){ // Renamed
             if(!username)return ''; const d=new Date(); const userPart=username.substring(0,Math.min(username.length,4)).toUpperCase().replace(/[^A-Z0-9]/g,'');
@@ -1345,7 +1347,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         function toggleDeliveryAddressOptionsAdd(){ // Renamed
             const deliveryTypeSelected=$('#delivery_address_type_select_add').val(); const currentOrderType=$('#order_type_selection_add').val();
             if(currentOrderType==="Walk In"){$('#company_address_container_div_add').hide();$('#custom_address_container_div_add').show();$('#delivery_address_for_submit_add').val($('#custom_address_input_field_add').val().trim());return;}
-            if(deliveryTypeSelected==='company'){$('#company_address_container_div_add').show();$('#custom_address_container_div_add').hide();$('#delivery_address_for_submit_add').val($('#company_address_display_field_add').val());}
+            if(deliveryTypeSelected==='company'){$('#company_address_container_div_add').show();$('#custom_address_container_div_add').hide();$('#delivery_address_for_submit_add').val($('#company_address_display_field_add').val().trim());}
             else{$('#company_address_container_div_add').hide();$('#custom_address_container_div_add').show();$('#delivery_address_for_submit_add').val($('#custom_address_input_field_add').val().trim());}
         }
         $('#custom_address_input_field_add').on('input',function(){ // Bind to new ID
@@ -1356,14 +1358,14 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
             const selectedOrderType=$('#order_type_selection_add').val(); $('#order_type_hidden_for_submit_add').val(selectedOrderType);
             if(!selectedOrderType){showToast('Please select an Order Type.','error');return false;}
             let finalUsernameForDB='';let finalCompanyForDB='';
-            if(selectedOrderType==="Online"){ finalUsernameForDB=$('#username_online_select_add').val(); if(!finalUsernameForDB){showToast('Please select a Client Username for an Online order.','error');return false;} finalCompanyForDB=$('#online_company_display_add').val(); const deliveryDateStr=$('#delivery_date_add').val(); const orderDateStr=$('#order_date_add').val(); if(!deliveryDateStr){showToast('Requested Delivery Date is required for Online orders.','error');return false;} if(!isValidDeliveryDayJS(deliveryDateStr)){showToast('Delivery date must be a Monday, Wednesday, or Friday.','error');return false;} if(!isValidDeliveryGapJS(orderDateStr,deliveryDateStr,5)){showToast('Delivery date must be at least 5 days after the order date.','error',5000);return false;}
-            } else if(selectedOrderType==="Walk In"){ finalUsernameForDB='Walk-In Customer'; finalCompanyForDB=$('#walk_in_name_company_input_add').val().trim(); if(!finalCompanyForDB){showToast('Please enter Full Name / Company Name for Walk-In order.','error');return false;} }
+            if(selectedOrderType==="Online"){ finalUsernameForDB=$('#username_online_select_add').val(); if(!finalUsernameForDB){showToast('Please select a Client Username for an Online order.','error');return false;} finalCompanyForDB=$('#online_company_display_add').val(); }
+            else if(selectedOrderType==="Walk In"){ finalUsernameForDB='Walk-In Customer'; finalCompanyForDB=$('#walk_in_name_company_input_add').val().trim(); if(!finalCompanyForDB){showToast('Please enter Full Name / Company Name for a Walk-In order.','error');return false;} }
             $('#company_name_final_for_submit_add').val(finalCompanyForDB);
             if(cartItems.length===0){showToast('Order cannot be empty. Please select products.','error');return false;}
             $('#orders_json_for_submit_add').val(JSON.stringify(cartItems));
             let currentTotalAmount=0; cartItems.forEach(item=>{currentTotalAmount+=(parseFloat(item.price)||0)*(parseInt(item.quantity)||0);});
             $('#total_amount_for_submit_add').val(currentTotalAmount.toFixed(2));
-            const deliveryAddress=$('#delivery_address_for_submit_add').val().trim(); if(!deliveryAddress){const addressLabel=selectedOrderType==="Walk In"?"Address (for Walk-In)":"Custom Delivery Address";showToast(`${addressLabel} is required.`,'error');return false;}
+            const deliveryAddress=$('#delivery_address_for_submit_add').val().trim(); if(!deliveryAddress){const addressLabel=selectedOrderType==="Walk In"?"Address (for Walk-In)":"Custom Delivery Address";showToast(`Please provide a ${addressLabel}.`,'error');return false;}
             if(!$('#po_number_for_submit_add').val()||($('#po_number_for_submit_add').val()==='Generating...')){showToast('PO Number is not yet generated or is invalid.','error');return false;}
             return true;
         }
@@ -1412,17 +1414,17 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
         }
         
         // --- Inventory Overlay and Cart Functions (Using your structure, with unique IDs for Add Order Form) ---
-        function openInventoryOverlay(){ $('#inventoryOverlay').css('display', 'flex'); const inventoryBody=$('.inventory').html('<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading inventory...</p></td></tr>'); fetch('/backend/get_inventory.php').then(response=>{if(!response.ok)throw new Error(`Network error: ${response.status}`);return response.json();}).then(data=>{if(data.success&&data.inventory){populateInventoryTable(data.inventory);populateCategoryFilter(data.categories||[]);}else{inventoryBody.html('<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Error: '+(data.message||'No inventory data.')+'</td></tr>');showToast('Error loading inventory: '+(data.message||'Unknown'),'error');}}).catch(error=>{inventoryBody.html('<tr><td colspan="6" style="text-align:center;padding:20px;color:red;">Failed: '+error.message+'</td></tr>');showToast('Failed to load inventory: '+error.message,'error');});}
-        function populateInventoryTable(inventoryItems){ const inventoryBody=$('.inventory').empty(); if(!inventoryItems||inventoryItems.length===0){inventoryBody.html('<tr><td colspan="6" style="text-align:center;padding:20px;color:#6c757d;">No products found.</td></tr>');return;} inventoryItems.forEach(item=>{const price=parseFloat(item.price);if(isNaN(price)||item.product_id===undefined||item.product_id===null){return;}inventoryBody.append(`<tr><td>${item.category||'Uncategorized'}</td><td>${item.item_description||'N/A'}</td><td>${item.packaging||'N/A'}</td><td style="text-align:center;">PHP ${price.toFixed(2)}</td><td style="text-align:center;"><input type="number" class="inventory-quantity form-control form-control-sm" value="1" min="1" max="100" style="width:70px;margin:auto;"></td><td style="text-align:center;"><button class="add-to-cart-btn btn btn-primary btn-sm" onclick="addToCartFromInventory(this,'${item.product_id}','${item.category||''}','${item.item_description||''}','${item.packaging||''}','${price}')"><i class="fas fa-cart-plus"></i> Add</button></td></tr>`);});}
-        function populateCategoryFilter(categories){ const categorySelect=$('#inventoryFilter'); categorySelect.find('option:not(:first-child)').remove(); if(!categories||categories.length===0)return; categories.forEach(cat=>categorySelect.append(`<option value="${cat}">${cat}</option>`));}
-        function filterInventory(){ const selectedCategory=$('#inventoryFilter').val(); const searchTerm=$('#inventorySearch').val().toLowerCase().trim(); $('.inventory tr').each(function(){const row=$(this);const rowCategory=row.find('td:first-child').text();const rowTextContent=row.text().toLowerCase();const categoryMatch=(selectedCategory==='all'||rowCategory===selectedCategory);const searchTermMatch=(searchTerm===''||rowTextContent.includes(searchTerm));row.toggle(categoryMatch&&searchTermMatch);});}
+        function openInventoryOverlay(){ $('#inventoryOverlay').css('display', 'flex'); const inventoryBody=$('.inventory').html('<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading inventory...</td></tr>'); fetch('/backend/get_inventory.php').then(r=>r.json()).then(d=>{if(d.success){populateInventoryTable(d.inventory);populateCategoryFilter(d.categories);}else{showToast('Error: '+d.message,'error');inventoryBody.html('<tr><td colspan="6" style="text-align:center;color:red;padding:20px;">Could not load inventory.</td></tr>');}}).catch(e=>{showToast('Network Error: '+e,'error');inventoryBody.html('<tr><td colspan="6" style="text-align:center;color:red;padding:20px;">Network error loading inventory.</td></tr>');}); }
+        function populateInventoryTable(inventoryItems){ const inventoryBody=$('.inventory').empty(); if(!inventoryItems||inventoryItems.length===0){inventoryBody.html('<tr><td colspan="6" style="text-align:center;padding:20px;color:#6c757d;">No inventory items found.</td></tr>');return;} inventoryItems.forEach(item=>{const tr=$('<tr>').attr('data-category',item.category.toLowerCase()).attr('data-product-name',item.item_description.toLowerCase());tr.html(`<td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td style="text-align:center;">PHP ${parseFloat(item.price).toFixed(2)}</td><td><input type="number" class="inventory-quantity" value="1" min="1" max="100"></td><td><button class="add-to-cart-btn" onclick="addToCartFromInventory(this,'${item.product_id}','${item.category}','${item.item_description}','${item.packaging}','${item.price}')"><i class="fas fa-cart-plus"></i> Add</button></td>`);inventoryBody.append(tr);}); }
+        function populateCategoryFilter(categories){ const categorySelect=$('#inventoryFilter'); categorySelect.find('option:not(:first-child)').remove(); if(!categories||categories.length===0)return; categories.forEach(cat=>categorySelect.append(`<option value="${cat.toLowerCase()}">${cat}</option>`)); }
+        function filterInventory(){ const selectedCategory=$('#inventoryFilter').val(); const searchTerm=$('#inventorySearch').val().toLowerCase().trim(); $('.inventory tr').each(function(){const row=$(this);const categoryMatch=selectedCategory==='all'||row.data('category')===selectedCategory;const nameMatch=row.data('product-name').includes(searchTerm);row.toggle(categoryMatch&&nameMatch);}); }
         $('#inventorySearch, #inventoryFilter').off('input change', filterInventory).on('input change', filterInventory);
         function closeInventoryOverlay(){ $('#inventoryOverlay').hide(); }
-        function addToCartFromInventory(button,productId,category,itemDesc,packaging,price){ const quantityInput=$(button).closest('tr').find('.inventory-quantity'); let quantity=parseInt(quantityInput.val()); if(isNaN(quantity)||quantity<1){showToast('Quantity must be at least 1.','error');quantityInput.val(1);return;} if(quantity>100){showToast('Maximum quantity per item is 100.','error');quantity=100;quantityInput.val(100);} const existingCartItemIndex=cartItems.findIndex(i=>String(i.product_id)===String(productId)&&i.packaging===packaging); if(existingCartItemIndex>=0){let newTotalQuantity=cartItems[existingCartItemIndex].quantity+quantity;if(newTotalQuantity>100){showToast(`Cannot add ${quantity}. Total for ${itemDesc} would exceed 100. Current: ${cartItems[existingCartItemIndex].quantity}. Max is 100.`,'warning',4000);return;}else{cartItems[existingCartItemIndex].quantity=newTotalQuantity;}}else{cartItems.push({product_id:productId,category,item_description:itemDesc,packaging,price:parseFloat(price),quantity:quantity});}showToast(`${quantity} x ${itemDesc} added to your order.`,'success');quantityInput.val(1);updateOrderSummaryAdd();updateCartItemCountNav();}
+        function addToCartFromInventory(button,productId,category,itemDesc,packaging,price){ const quantityInput=$(button).closest('tr').find('.inventory-quantity'); let quantity=parseInt(quantityInput.val()); if(isNaN(quantity)||quantity<1){showToast('Please enter a valid quantity (min 1).','error');quantityInput.val(1);return;} if(quantity>100){showToast('Maximum quantity per item is 100.','error');quantity=100;quantityInput.val(100);} const existingItem=cartItems.find(item=>item.product_id===productId&&item.packaging===packaging); if(existingItem){existingItem.quantity+=quantity;if(existingItem.quantity>100){showToast('Total quantity for this item exceeds 100. Adjusted to 100.','warning');existingItem.quantity=100;}}else{cartItems.push({product_id:productId,category:category,item_description:itemDesc,packaging:packaging,price:parseFloat(price),quantity:quantity});} showToast(`${quantity} x ${itemDesc} (${packaging}) added to order.`,'success'); updateCartItemCountNav(); quantityInput.val(1); }
         function updateOrderSummaryAdd(){ // Renamed
             const summaryTableBody=$('#summaryBodyAdd').empty(); let currentOrderTotal=0;
             if(cartItems.length===0){summaryTableBody.html('<tr><td colspan="6" style="text-align:center;padding:15px;color:#6c757d;">No products selected yet. Click "Select Products".</td></tr>');$('#orderSummaryItemCountAdd').text('(0 items)');}
-            else{cartItems.forEach((item,index)=>{currentOrderTotal+=(item.price||0)*(item.quantity||0);summaryTableBody.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td style="text-align:right;">PHP ${(parseFloat(item.price||0)).toFixed(2)}</td><td style="text-align:center;"><input type="number" class="cart-quantity summary-quantity form-control form-control-sm" value="${item.quantity}" min="1" max="100" data-cart-item-index="${index}" onchange="updateSummaryItemQuantityAdd(this)" style="width:70px;margin:auto;"></td><td style="text-align:center;"><button class="remove-item-btn btn btn-danger btn-sm" onclick="removeSummaryItemAdd(${index})"><i class="fas fa-trash-alt"></i></button></td></tr>`);});$('#orderSummaryItemCountAdd').text(`(${cartItems.length} item${cartItems.length===1?'':'s'})`);}
+            else{cartItems.forEach((item,index)=>{currentOrderTotal+=(item.price||0)*(item.quantity||0);summaryTableBody.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td style="text-align:right;">PHP ${parseFloat(item.price||0).toFixed(2)}</td><td><input type="number" class="summary-quantity cart-quantity" value="${item.quantity}" min="1" max="100" data-cart-item-index="${index}" onchange="updateSummaryItemQuantityAdd(this)"></td><td style="text-align:center;"><button class="remove-item-btn" onclick="removeSummaryItemAdd(${index})"><i class="fas fa-trash-alt"></i></button></td></tr>`);});$('#orderSummaryItemCountAdd').text(`(${cartItems.length} item${cartItems.length===1?'':'s'})`);}
             $('.summary-total-amount-add').text(`PHP ${currentOrderTotal.toFixed(2)}`);$('#total_amount_for_submit_add').val(currentOrderTotal.toFixed(2));
         }
         function updateSummaryItemQuantityAdd(inputElement){ // Renamed
@@ -1432,16 +1434,16 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
             cartItems[itemIndexInCart].quantity=newQuantity;updateOrderSummaryAdd();updateCartItemCountNav();updateCartDisplayAdd();
         }
         function removeSummaryItemAdd(itemIndexInCart){ // Renamed
-            if(itemIndexInCart>=0&&itemIndexInCart<cartItems.length){const removedItem=cartItems.splice(itemIndexInCart,1)[0];showToast(`Removed ${removedItem.item_description} from order.`,'info');updateOrderSummaryAdd();updateCartItemCountNav();updateCartDisplayAdd();}
+            if(itemIndexInCart>=0&&itemIndexInCart<cartItems.length){const removedItem=cartItems.splice(itemIndexInCart,1)[0];showToast(`Removed ${removedItem.item_description} from order.`,'info');updateOrderSummaryAdd();updateCartItemCountNav();updateCartDisplayAdd();}else{showToast('Error removing item. Please try again.','error');}
         }
-        function updateCartItemCountNav(){ const count=cartItems.length; $('#cartItemCountNav').text(count); $('#orderSummaryItemCountAdd').text(`(${count} item${count===1?'':'s'})`); if(count===0)$('#orderSummaryItemCountAdd').text('(0 items)');} // Updated target
+        function updateCartItemCountNav(){ const count=cartItems.length; $('#cartItemCountNav').text(count); $('#orderSummaryItemCountAdd').text(`(${count} item${count===1?'':'s'})`); if(count===0)$('#orderSummaryItemCountAdd').text('(0 items)');}
         window.openCartModal=function(){ $('#cartModal').css('display', 'flex'); updateCartDisplayAdd(); } // Use new display function
         function closeCartModal(){ $('#cartModal').hide(); }
         function saveCartChangesAndClose(){ updateOrderSummaryAdd(); closeCartModal(); showToast('Selected items confirmed for the order.','success'); }
         function updateCartDisplayAdd(){ // Renamed
             const cartTableBody=$('.cart').empty(); const noProductsRow=$('.no-products-in-cart-row'); const cartTotalElement=$('.total-amount-cart'); let currentCartModalTotal=0;
-            if(cartItems.length===0){if(noProductsRow.length)noProductsRow.show();else cartTableBody.html('<tr class="no-products-in-cart-row"><td colspan="6" style="text-align:center;padding:20px;color:#6c757d;">No products currently selected.</td></tr>');cartTotalElement.text('PHP 0.00');}
-            else{if(noProductsRow.length)noProductsRow.hide();cartItems.forEach((item,index)=>{currentCartModalTotal+=(item.price||0)*(item.quantity||0);cartTableBody.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td style="text-align:center;">PHP ${(parseFloat(item.price)||0).toFixed(2)}</td><td style="text-align:center;"><input type="number" class="cart-quantity form-control form-control-sm" value="${item.quantity}" min="1" max="100" data-cart-item-index="${index}" onchange="updateCartModalItemQuantityAdd(this)" style="width:70px;margin:auto;"></td><td style="text-align:center;"><button class="remove-item-btn btn btn-danger btn-sm" onclick="removeCartModalItemAdd(${index})"><i class="fas fa-trash-alt"></i></button></td></tr>`);});cartTotalElement.text(`PHP ${currentCartModalTotal.toFixed(2)}`);}
+            if(cartItems.length===0){if(noProductsRow.length)noProductsRow.show();else cartTableBody.html('<tr class="no-products-in-cart-row"><td colspan="6" style="text-align:center;padding:20px;color:#6c757d;">Your cart is empty. Add products from the inventory.</td></tr>'); cartTotalElement.text('PHP 0.00');}
+            else{if(noProductsRow.length)noProductsRow.hide();cartItems.forEach((item,index)=>{currentCartModalTotal+=(item.price||0)*(item.quantity||0);cartTableBody.append(`<tr><td>${item.category}</td><td>${item.item_description}</td><td>${item.packaging}</td><td style="text-align:right;">PHP ${parseFloat(item.price||0).toFixed(2)}</td><td><input type="number" class="cart-quantity" value="${item.quantity}" min="1" max="100" data-cart-item-index="${index}" onchange="updateCartModalItemQuantityAdd(this)"></td><td style="text-align:center;"><button class="remove-item-btn" onclick="removeCartModalItemAdd(${index})"><i class="fas fa-trash-alt"></i></button></td></tr>`);});cartTotalElement.text(`PHP ${currentCartModalTotal.toFixed(2)}`);}
         }
         function updateCartModalItemQuantityAdd(inputElement){ // Renamed
             const itemIndexInCart=parseInt($(inputElement).data('cart-item-index'));let newQuantity=parseInt($(inputElement).val());
@@ -1450,7 +1452,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
             cartItems[itemIndexInCart].quantity=newQuantity;updateCartDisplayAdd();updateOrderSummaryAdd();
         }
         function removeCartModalItemAdd(itemIndexInCart){ // Renamed
-            if(itemIndexInCart>=0&&itemIndexInCart<cartItems.length){const removedItem=cartItems.splice(itemIndexInCart,1)[0];showToast(`Removed ${removedItem.item_description} from selection.`,'info');updateCartDisplayAdd();updateOrderSummaryAdd();updateCartItemCountNav();}
+            if(itemIndexInCart>=0&&itemIndexInCart<cartItems.length){const removedItem=cartItems.splice(itemIndexInCart,1)[0];showToast(`Removed ${removedItem.item_description} from selection. Please confirm changes.`,'info');updateCartDisplayAdd();updateOrderSummaryAdd();}else{showToast('Error removing item.','error');}
         }
         
         // --- Document Ready (Using your structure, adapted for new Add Order Form IDs) ---
@@ -1465,7 +1467,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
             
             // Initialize Add Order Form (using new function names)
             $('#order_type_selection_add').val("").trigger('change'); // Reset and trigger for toggleOrderFormFieldsAdd
-            $('#onlineSpecificInputsAdd,#walkInSpecificInputsAdd,#commonOrderFieldsAdd,#delivery_date_form_group_add,#delivery_address_type_form_group_add,#company_address_container_div_add,#custom_address_container_div_add').hide();
+            $('#onlineSpecificInputsAdd,#walkInSpecificInputsAdd,#commonOrderFieldsAdd,#delivery_date_form_group_add,#delivery_address_type_form_group_add,#company_address_container_div_add,#custom_address_container_div_add,#confirmAddOrderBtnAdd').hide();
             
             // Universal modal closer (your existing logic, adapted slightly for clarity)
             $(document).on('click', function(event) {
