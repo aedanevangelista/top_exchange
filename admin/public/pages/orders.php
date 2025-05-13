@@ -134,7 +134,8 @@ function getSortIcon($column_name, $current_sort_column, $current_sort_direction
     return '<i class="fas fa-sort"></i>';
 }
 
-function getNextAvailableDeliveryDate($baseDateStr = null, $minDaysAfter = 5) {
+// PHP Helper for Delivery Date (not used by JS datepicker directly, but good for server-side checks if needed)
+function getNextAvailableDeliveryDatePHP($baseDateStr = null, $minDaysAfter = 5) {
     $startDate = $baseDateStr ? new DateTime($baseDateStr) : new DateTime();
     $startDate->modify("+{$minDaysAfter} days"); 
     
@@ -486,7 +487,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                                     <?php elseif ($order_item['status'] === 'Rejected'): ?>
                                         <button class="status-btn" onclick="confirmRejectedStatusChange('<?= htmlspecialchars($order_item['po_number']) ?>', '<?= htmlspecialchars($order_item['username'] ?? 'Walk-In') ?>', 'Rejected')"><i class="fas fa-undo"></i> Review Rejected</button>
                                     <?php endif; ?>
-                                    <button class="download-btn" onclick="confirmDownloadPO('<?= htmlspecialchars($order_item['po_number']) ?>', '<?= htmlspecialchars($order_item['username'] ?? 'Walk-In') ?>', '<?= htmlspecialchars($order_item['company'] ?? ($clients_data_map[$order_item['username']]['company'] ?? 'N/A')) ?>', '<?= htmlspecialchars($order_item['order_date']) ?>', '<?= htmlspecialchars($order_item['delivery_date'] ?? '') ?>', '<?= htmlspecialchars($order_item['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order_item['orders'])) ?>', '<?= htmlspecialchars($order_item['total_amount']) ?>', '<?= htmlspecialchars(addslashes($order_item['special_instructions'] ?? '')) ?>')"><i class="fas fa-file-pdf"></i> Invoice</button>
+                                    <button class="download-btn" onclick="confirmDownloadPO('<?= htmlspecialchars($order_item['po_number']) ?>', '<?= htmlspecialchars($order_item['username'] ?? 'Walk-In') ?>', '<?= htmlspecialchars($order_item['company'] ?? ($clients_data_map[$order_item['username']]['company'] ?? 'N/A')) ?>', '<?= htmlspecialchars($order_item['order_date']) ?>', '<?= htmlspecialchars($order_item['delivery_date'] ?? '') ?>', '<?= htmlspecialchars($order_item['delivery_address']) ?>', '<?= htmlspecialchars(addslashes($order_item['orders'])) ?>', '<?= htmlspecialchars($order_item['total_amount']) ?>', '<?= htmlspecialchars(addslashes($order_item['special_instructions'] ?? '')) ?>', '<?= htmlspecialchars($order_item['order_type']) ?>')"><i class="fas fa-file-pdf"></i> Invoice</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -500,7 +501,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
 
     <div class="toast-container" id="toast-container"></div>
 
-    <div id="pdfPreview"><div class="pdf-container"><button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button><div id="contentToDownload"><div class="po-container"><div class="po-header"><div class="po-company" id="printCompany"></div><div class="po-title">Sales Invoice</div></div><div class="po-details"><div class="po-left"><div class="po-detail-row"><span class="po-detail-label">PO Number:</span> <span id="printPoNumber"></span></div><div class="po-detail-row"><span class="po-detail-label">Client/Company:</span> <span id="printUsername"></span></div><div class="po-detail-row"><span class="po-detail-label">Delivery Address:</span> <span id="printDeliveryAddress"></span></div></div><div class="po-right"><div class="po-detail-row"><span class="po-detail-label">Order Date:</span> <span id="printOrderDate"></span></div><div class="po-detail-row" id="printDeliveryDateRow"><span class="po-detail-label">Delivery Date:</span> <span id="printDeliveryDate"></span></div></div></div><div id="printInstructionsSection" style="margin-bottom: 20px; display: none; font-size:12px;"><strong>Special Instructions:</strong><div id="printSpecialInstructions" style="white-space: pre-wrap; word-wrap: break-word; padding: 5px; border: 1px solid #eee; margin-top:5px; border-radius:4px;"></div></div><table class="po-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Unit Price</th><th style="text-align:right;">Total</th></tr></thead><tbody id="printOrderItems"></tbody></table><div class="po-total">Grand Total: PHP <span id="printTotalAmount"></span></div><div class="po-signature"><div class="po-signature-block"><div class="po-signature-line"></div>Prepared by</div><div class="po-signature-block"><div class="po-signature-line"></div>Received by / Signature</div></div></div></div><div class="pdf-actions"><button class="download-pdf-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button></div></div></div>
+    <div id="pdfPreview"><div class="pdf-container"><button class="close-pdf" onclick="closePDFPreview()"><i class="fas fa-times"></i></button><div id="contentToDownload"><div class="po-container"><div class="po-header"><div class="po-company" id="printCompany"></div><div class="po-title">Sales Invoice</div></div><div class="po-details"><div class="po-left"><div class="po-detail-row"><span class="po-detail-label">PO Number:</span> <span id="printPoNumber"></span></div><div class="po-detail-row"><span class="po-detail-label">Client/Company:</span> <span id="printUsername"></span></div><div class="po-detail-row"><span class="po-detail-label">Address:</span> <span id="printDeliveryAddress"></span></div></div><div class="po-right"><div class="po-detail-row"><span class="po-detail-label">Order Date:</span> <span id="printOrderDate"></span></div><div class="po-detail-row" id="printDeliveryDateRow"><span class="po-detail-label">Delivery Date:</span> <span id="printDeliveryDate"></span></div></div></div><div id="printInstructionsSection" style="margin-bottom: 20px; display: none; font-size:12px;"><strong>Special Instructions:</strong><div id="printSpecialInstructions" style="white-space: pre-wrap; word-wrap: break-word; padding: 5px; border: 1px solid #eee; margin-top:5px; border-radius:4px;"></div></div><table class="po-table"><thead><tr><th>Category</th><th>Product</th><th>Packaging</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Unit Price</th><th style="text-align:right;">Total</th></tr></thead><tbody id="printOrderItems"></tbody></table><div class="po-total">Grand Total: PHP <span id="printTotalAmount"></span></div><div class="po-signature"><div class="po-signature-block"><div class="po-signature-line"></div>Prepared by</div><div class="po-signature-block"><div class="po-signature-line"></div>Received by / Signature</div></div></div></div><div class="pdf-actions"><button class="download-pdf-btn" onclick="downloadPDF()"><i class="fas fa-download"></i> Download PDF</button></div></div></div>
 
     <div id="specialInstructionsModal" class="instructions-modal"><div class="instructions-modal-content"><div class="instructions-header"><h3>Special Instructions</h3><button class="close-instructions-btn" onclick="closeSpecialInstructions()" style="background:none; border:none; color:white; font-size:1.2em; padding:0;">&times;</button></div><div class="instructions-body" id="instructionsContent"></div><div class="instructions-footer"><button class="close-instructions-btn" onclick="closeSpecialInstructions()">Close</button></div></div></div>
 
@@ -562,13 +563,13 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                         <input type="text" id="order_date_input" name="order_date" class="form-control" readonly>
                     </div>
                     
-                    <div class="form-group" id="delivery_date_form_group">
+                    <div class="form-group" id="delivery_date_form_group" style="display:none;">
                         <label for="delivery_date_input">Requested Delivery Date:</label>
                         <input type="text" id="delivery_date_input" name="delivery_date" class="form-control" autocomplete="off" placeholder="Select a Mon, Wed, or Fri">
                          <small class="form-text text-muted">Deliveries only on Mon, Wed, Fri. Min. 5 days from order date.</small>
                     </div>
 
-                    <div class="form-group" id="delivery_address_type_form_group">
+                    <div class="form-group" id="delivery_address_type_form_group" style="display:none;">
                         <label for="delivery_address_type_select">Delivery Address Type:</label>
                         <select id="delivery_address_type_select" name="delivery_address_type_display" onchange="toggleDeliveryAddressOptions()" class="form-control">
                             <option value="custom" selected>Enter Custom Address</option>
@@ -579,7 +580,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                         <label for="company_address_display_field">Registered Company Address (Auto-filled):</label>
                         <input type="text" id="company_address_display_field" name="company_address_display" class="form-control" readonly>
                     </div>
-                    <div id="custom_address_container_div" class="form-group">
+                    <div id="custom_address_container_div" class="form-group" style="display:none;">
                         <label for="custom_address_input_field" id="custom_address_label">Custom Delivery Address:</label>
                         <textarea id="custom_address_input_field" name="custom_address_input" rows="3" class="form-control" placeholder="Enter complete address"></textarea>
                     </div>
@@ -660,6 +661,34 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             if (weightInGrams >= 1000) return (weightInGrams / 1000).toFixed(2).replace(/\.00$/, '') + ' kg';
             return (parseFloat(weightInGrams).toFixed(2).replace(/\.00$/, '')) + ' g';
         }
+
+        // JavaScript helper function for delivery date calculation
+        function getNextAvailableDeliveryDate(baseDateStr = null, minDaysAfter = 5) {
+            let startDate;
+            if (baseDateStr) {
+                // Ensure baseDateStr is treated as local date by appending time if not present
+                startDate = new Date(baseDateStr.includes('T') ? baseDateStr : baseDateStr + 'T00:00:00');
+            } else {
+                startDate = new Date();
+                startDate.setHours(0, 0, 0, 0); // Normalize to start of today
+            }
+            
+            startDate.setDate(startDate.getDate() + minDaysAfter);
+
+            while (true) {
+                const dayOfWeek = startDate.getDay(); // 0 (Sun) to 6 (Sat)
+                if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5) { // Monday, Wednesday, or Friday
+                    break;
+                }
+                startDate.setDate(startDate.getDate() + 1);
+            }
+
+            const year = startDate.getFullYear();
+            const month = (startDate.getMonth() + 1).toString().padStart(2, '0');
+            const day = startDate.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
 
         function confirmStatusChange(poNumber, username, originalStatus) { currentPoNumber = poNumber; currentOrderOriginalStatus = originalStatus; $('#statusMessage').text(`Change status for order ${poNumber} (Client: ${username || 'N/A'})? Current: ${originalStatus}.`); $('#statusModal').show(); }
         function confirmRejectedStatusChange(poNumber, username, originalStatus) { currentPoNumber = poNumber; currentOrderOriginalStatus = originalStatus; $('#rejectedStatusModal').data('po_number', poNumber); $('#rejectedStatusMessage').text(`Order ${poNumber} (Client: ${username || 'N/A'}) is currently Rejected. Change status?`); $('#rejectedStatusModal').show(); }
@@ -1188,8 +1217,8 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             return true;
         }
         
-        function confirmDownloadPO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJsonString, totalAmount, specialInstructions) { 
-            poDownloadDataStore = { poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJsonString, totalAmount, specialInstructions }; 
+        function confirmDownloadPO(poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJsonString, totalAmount, specialInstructions, orderType) { 
+            poDownloadDataStore = { poNumber, username, company, orderDate, deliveryDate, deliveryAddress, ordersJsonString, totalAmount, specialInstructions, orderType }; 
             $('#downloadConfirmationModal .confirmation-message').text(`Download Sales Invoice PDF for PO ${poDownloadDataStore.poNumber}?`); 
             $('#downloadConfirmationModal').show(); 
         }
@@ -1207,6 +1236,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 
                 if (currentPODataForPDF.orderType === 'Walk In' || !currentPODataForPDF.deliveryDate) {
                     $('#printDeliveryDateRow').hide();
+                    $('#printDeliveryDate').text('N/A (Walk-In)'); // Or leave blank
                 } else {
                     $('#printDeliveryDate').text(new Date(currentPODataForPDF.deliveryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
                     $('#printDeliveryDateRow').show();
@@ -1287,25 +1317,20 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             if ($.datepicker && deliveryInput.length) {
                 deliveryInput.datepicker("destroy");
 
-                let minDateForPicker;
-                if (baseDateStr) {
-                    minDateForPicker = new Date(baseDateStr);
-                } else {
-                    minDateForPicker = new Date();
-                }
-                minDateForPicker.setDate(minDateForPicker.getDate() + 5);
+                // Use the JS helper function here
+                const minDateForPicker = getNextAvailableDeliveryDate(baseDateStr, 5);
+
 
                 deliveryInput.datepicker({
                     dateFormat: 'yy-mm-dd',
-                    minDate: minDateForPicker,
+                    minDate: minDateForPicker, // Set minDate based on calculation
                     beforeShowDay: function(date) {
                         var day = date.getDay();
                         return [(day == 1 || day == 3 || day == 5), ''];
                     }
                 });
-                if (!deliveryInput.val()) {
-                    const nextValidDate = getNextAvailableDeliveryDate(baseDateStr, 5);
-                    deliveryInput.datepicker("setDate", nextValidDate);
+                if (!deliveryInput.val()) { // If input is empty, set to the calculated next valid date
+                    deliveryInput.datepicker("setDate", minDateForPicker);
                 }
             }
         }
@@ -1327,7 +1352,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             })
             .catch(error => {
                 showToast('Error generating Walk-In PO: ' + error.message, 'error');
-                $('#po_number_for_submit').val(''); // Clear on error
+                $('#po_number_for_submit').val('');
             });
         }
 
@@ -1335,33 +1360,32 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             const selectedOrderType = $('#order_type_selection').val();
             $('#order_type_hidden_for_submit').val(selectedOrderType);
 
+            // Hide all conditional sections initially
             $('#onlineSpecificInputs, #walkInSpecificInputs, #commonOrderFields, #confirmAddOrderBtn').hide();
-            $('#delivery_date_form_group, #delivery_address_type_form_group, #company_address_container_div').hide();
+            $('#delivery_date_form_group, #delivery_address_type_form_group, #company_address_container_div, #custom_address_container_div').hide();
             $('#custom_address_label').text('Custom Delivery Address:'); // Reset label
 
+            // Reset common form fields
             $('#username_online_select').val('');
             $('#online_company_display').val('');
             $('#walk_in_name_company_input').val('');
-            $('#company_address_option_for_delivery').hide();
+            $('#delivery_date_input').val('');
+            $('#custom_address_input_field').val('');
+            $('#delivery_address_for_submit').val('');
+            $('#po_number_for_submit').val('');
+
 
             if (selectedOrderType === "Online") {
-                $('#onlineSpecificInputs').show();
-                $('#commonOrderFields').show();
-                $('#confirmAddOrderBtn').show();
-                $('#delivery_date_form_group').show(); // Show delivery date for Online
-                $('#delivery_address_type_form_group').show(); // Show address type select for Online
+                $('#onlineSpecificInputs, #commonOrderFields, #confirmAddOrderBtn').show();
+                $('#delivery_date_form_group, #delivery_address_type_form_group').show();
                 $('#company_address_option_for_delivery').show();
-                $('#delivery_address_type_select').val('company');
-                handleOnlineUserChange();
-                $('#po_number_for_submit').val(generateOnlinePONumber($('#username_online_select').val())); // Generate after user potentially selected
+                $('#delivery_address_type_select').val('company'); // Default for online
+                handleOnlineUserChange(); // This will also try to set PO based on username
             } else if (selectedOrderType === "Walk In") {
-                $('#walkInSpecificInputs').show();
-                $('#commonOrderFields').show();
-                $('#confirmAddOrderBtn').show();
-                // Delivery date and type selection remain hidden for Walk-In
+                $('#walkInSpecificInputs, #commonOrderFields, #confirmAddOrderBtn').show();
                 $('#custom_address_label').text('Address (for Walk-In):');
-                $('#custom_address_container_div').show(); // Ensure custom address input is shown
-                $('#delivery_address_type_select').val('custom'); // Internally set to custom
+                $('#custom_address_container_div').show(); // Show only custom address input
+                $('#delivery_address_type_select').val('custom'); // Internally, it's custom
                 fetchAndSetWalkInPONumber();
                 $('#company_name_final_for_submit').val('');
             }
@@ -1370,10 +1394,10 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 const today = new Date();
                 const formattedToday = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2,'0')}-${today.getDate().toString().padStart(2,'0')}`;
                 $('#order_date_input').val(formattedToday);
-                if (selectedOrderType === "Online") { // Only init delivery date picker for online
+                if (selectedOrderType === "Online") {
                     initializeDeliveryDatePickerForAddOrder(formattedToday);
                 }
-                toggleDeliveryAddressOptions();
+                toggleDeliveryAddressOptions(); // Call this to set initial address display
             }
             currentCartItems = [];
             updateOrderSummary();
@@ -1413,15 +1437,14 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 $('#company_address_container_div').hide();
                 $('#custom_address_container_div').show();
                 $('#delivery_address_for_submit').val($('#custom_address_input_field').val().trim());
-                return; // Skip further logic for Walk-In as address type dropdown is hidden
+                return;
             }
 
-            // For Online Orders
             if (deliveryTypeSelected === 'company') {
                 $('#company_address_container_div').show();
                 $('#custom_address_container_div').hide();
                 $('#delivery_address_for_submit').val($('#company_address_display_field').val()); 
-            } else { // Custom address for Online
+            } else { 
                 $('#company_address_container_div').hide();
                 $('#custom_address_container_div').show();
                 $('#delivery_address_for_submit').val($('#custom_address_input_field').val().trim());
@@ -1440,10 +1463,10 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             currentCartItems = [];
             updateOrderSummary();
             updateCartItemCount();
-            $('#order_type_selection').val("").trigger('change');
+            $('#order_type_selection').val("").trigger('change'); // This will call toggleOrderFormFields
             $('#onlineSpecificInputs, #walkInSpecificInputs, #commonOrderFields, #confirmAddOrderBtn').hide();
-            $('#delivery_date_form_group, #delivery_address_type_form_group, #company_address_container_div').hide(); // Ensure these are hidden initially
-            $('#custom_address_label').text('Custom Delivery Address:'); // Reset label
+            $('#delivery_date_form_group, #delivery_address_type_form_group, #company_address_container_div, #custom_address_container_div').hide();
+            $('#custom_address_label').text('Custom Delivery Address:');
             $('#addOrderOverlay').show();
         }
         function closeAddOrderForm() { $('#addOrderOverlay').hide(); }
@@ -1455,7 +1478,6 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             const po = `PO-${userPart}-${d.getFullYear().toString().slice(-2)}${(d.getMonth() + 1).toString().padStart(2, '0')}${d.getDate().toString().padStart(2, '0')}-${d.getHours().toString().padStart(2, '0')}${d.getMinutes().toString().padStart(2, '0')}-${Math.floor(100 + Math.random() * 900)}`;
             return po;
         }
-        // generateWalkInPONumber is now handled by fetchAndSetWalkInPONumber
 
         function prepareOrderDataForSubmit() {
             const selectedOrderType = $('#order_type_selection').val();
@@ -1481,7 +1503,6 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
                 finalUsernameForDB = 'Walk-In Customer';
                 finalCompanyForDB = $('#walk_in_name_company_input').val().trim();
                 if (!finalCompanyForDB) { showToast('Please enter the Full Name or Company Name for a Walk-In order.', 'error'); return false;}
-                // No delivery date validation for Walk-In
             }
             $('#company_name_final_for_submit').val(finalCompanyForDB);
 
@@ -1518,9 +1539,9 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             
             const orderType = formData.get('order_type');
             if (orderType === "Walk In") {
-                formData.delete('username_online');
-                formData.append('username_placeholder_for_walkin', 'Walk-In Customer');
-                formData.delete('delivery_date'); // Ensure delivery_date is not sent for Walk-In
+                formData.delete('username_online'); // Ensure not sent
+                // formData.append('username_placeholder_for_walkin', 'Walk-In Customer'); // Backend handles this now
+                formData.delete('delivery_date'); 
             }
             
             fetch('/backend/add_order.php', { method: 'POST', body: formData })
@@ -1735,7 +1756,7 @@ function isValidDeliveryGap($orderDate_str, $deliveryDate_str, $minDays = 5) {
             });
             
             $('#order_type_selection').val(""); 
-            $('#onlineSpecificInputs, #walkInSpecificInputs, #commonOrderFields, #delivery_date_form_group, #delivery_address_type_form_group, #company_address_container_div').hide();
+            $('#onlineSpecificInputs, #walkInSpecificInputs, #commonOrderFields, #delivery_date_form_group, #delivery_address_type_form_group, #company_address_container_div, #custom_address_container_div').hide();
             $('#custom_address_label').text('Custom Delivery Address:');
 
             $(document).on('click', function(event) {
