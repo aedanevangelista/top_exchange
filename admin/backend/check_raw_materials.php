@@ -8,7 +8,6 @@ if (!isset($conn) || !($conn instanceof mysqli) || $conn->connect_error) {
 }
 
 $orders_json = $_POST['orders'] ?? null;
-// $po_number = $_POST['po_number'] ?? null; // Not strictly needed for just checking
 
 if (!$orders_json) {
     echo json_encode(['success' => false, 'message' => 'Order items not provided.']);
@@ -21,78 +20,125 @@ if (json_last_error() !== JSON_ERROR_NONE || !is_array($ordered_items)) {
     exit;
 }
 
-$required_raw_materials = [];
+$required_raw_materials_aggregated = []; // Stores total required, available for each material name
 $all_raw_materials_sufficient = true;
-$raw_material_details = []; // To send back to the frontend
+$raw_material_details_for_response = []; // To send back to the frontend
 
 try {
-    // Get all product IDs from the order to fetch their recipes
+    // Get all product IDs from the order
     $product_ids_in_order = [];
     foreach ($ordered_items as $item) {
         if (isset($item['product_id'])) {
-            $product_ids_in_order[] = $conn->real_escape_string($item['product_id']);
+            // Sanitize product_id just in case, though typically it's an int
+            $product_ids_in_order[] = $conn->real_escape_string(strval($item['product_id']));
         }
     }
 
     if (empty($product_ids_in_order)) {
-        // No products that would require raw materials, or product_id missing
         echo json_encode([
-            'success' => true, 
+            'success' => true,
             'message' => 'No specific products identified for raw material check.',
-            'materials' => [], // No materials to report
-            'all_sufficient' => true // Vacuously true
+            'materials' => [],
+            'all_sufficient' => true
         ]);
         exit;
     }
 
     $product_id_list_sql = "'" . implode("','", $product_ids_in_order) . "'";
 
-    // Fetch recipes for all products in the order
-    $sql_recipes = "SELECT pr.product_id, pr.raw_material_id, pr.quantity_required, rm.material_name, rm.current_stock 
-                    FROM product_recipes pr
-                    JOIN raw_materials rm ON pr.raw_material_id = rm.id
-                    WHERE pr.product_id IN ({$product_id_list_sql})";
-    
-    $result_recipes = $conn->query($sql_recipes);
-    if (!$result_recipes) {
-        throw new Exception("Error fetching product recipes: " . $conn->error);
+    // 1. Fetch ingredients JSON for all products in the order from the 'products' table
+    $sql_product_ingredients = "SELECT product_id, ingredients FROM products WHERE product_id IN ({$product_id_list_sql})";
+    $result_product_ingredients = $conn->query($sql_product_ingredients);
+
+    if (!$result_product_ingredients) {
+        throw new Exception("Error fetching product ingredients from 'products' table: " . $conn->error);
     }
 
-    $recipes_by_product = [];
-    while ($row = $result_recipes->fetch_assoc()) {
-        $recipes_by_product[$row['product_id']][] = $row;
-    }
+    $product_material_requirements = []; // Key: product_id, Value: array of ['material_name' => name, 'quantity_required' => qty]
+    $all_distinct_material_names = []; // To collect all unique raw material names needed
 
-    // Calculate total raw materials needed
-    foreach ($ordered_items as $item) {
-        $product_id = $item['product_id'] ?? null;
-        $order_quantity = intval($item['quantity'] ?? 0);
+    while ($row = $result_product_ingredients->fetch_assoc()) {
+        $p_id = $row['product_id'];
+        $ingredients_json = $row['ingredients'];
 
-        if ($product_id && $order_quantity > 0 && isset($recipes_by_product[$product_id])) {
-            foreach ($recipes_by_product[$product_id] as $ingredient) {
-                $rm_id = $ingredient['raw_material_id'];
-                $qty_per_product = floatval($ingredient['quantity_required']);
-                $total_needed_for_item = $qty_per_product * $order_quantity;
-
-                if (!isset($required_raw_materials[$rm_id])) {
-                    $required_raw_materials[$rm_id] = [
-                        'name' => $ingredient['material_name'],
-                        'total_required' => 0,
-                        'available' => floatval($ingredient['current_stock']) // Get current stock once per material
-                    ];
+        if ($ingredients_json) {
+            $decoded_ingredients = json_decode($ingredients_json, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded_ingredients)) {
+                $product_material_requirements[$p_id] = [];
+                foreach ($decoded_ingredients as $ingredient_pair) {
+                    if (is_array($ingredient_pair) && count($ingredient_pair) >= 2) {
+                        $material_name = $ingredient_pair[0];
+                        $quantity_required_per_unit = floatval($ingredient_pair[1]);
+                        $product_material_requirements[$p_id][] = [
+                            'material_name' => $material_name,
+                            'quantity_required' => $quantity_required_per_unit
+                        ];
+                        if (!in_array($material_name, $all_distinct_material_names)) {
+                            $all_distinct_material_names[] = $material_name;
+                        }
+                    }
                 }
-                $required_raw_materials[$rm_id]['total_required'] += $total_needed_for_item;
+            } else {
+                // Log if JSON is invalid for a product
+                error_log("Invalid ingredients JSON for product_id {$p_id}: {$ingredients_json}");
             }
         }
     }
 
-    // Check sufficiency and prepare details
-    foreach ($required_raw_materials as $rm_id => $data) {
+    // 2. Fetch current stock levels for all distinct raw materials identified
+    // IMPORTANT: This assumes you have a 'raw_materials' table with 'material_name' (unique) and 'current_stock' columns.
+    $raw_material_stock_levels = [];
+    if (!empty($all_distinct_material_names)) {
+        $material_names_sql_safe = array_map(function($name) use ($conn) {
+            return "'" . $conn->real_escape_string($name) . "'";
+        }, $all_distinct_material_names);
+        $material_names_list_sql = implode(",", $material_names_sql_safe);
+
+        $sql_raw_material_stocks = "SELECT material_name, current_stock FROM raw_materials WHERE material_name IN ({$material_names_list_sql})";
+        $result_raw_material_stocks = $conn->query($sql_raw_material_stocks);
+
+        if (!$result_raw_material_stocks) {
+            throw new Exception("Error fetching raw material stocks: " . $conn->error . ". Please ensure 'raw_materials' table exists with 'material_name' and 'current_stock' columns.");
+        }
+        while ($row_stock = $result_raw_material_stocks->fetch_assoc()) {
+            $raw_material_stock_levels[$row_stock['material_name']] = floatval($row_stock['current_stock']);
+        }
+    }
+
+    // 3. Calculate total raw materials needed based on order quantities and product recipes
+    foreach ($ordered_items as $item) {
+        $product_id = $item['product_id'] ?? null;
+        $order_quantity = intval($item['quantity'] ?? 0);
+
+        if ($product_id && $order_quantity > 0 && isset($product_material_requirements[$product_id])) {
+            foreach ($product_material_requirements[$product_id] as $ingredient_recipe) {
+                // $ingredient_recipe is ['material_name' => ..., 'quantity_required' => (per unit of product)]
+                $material_name = $ingredient_recipe['material_name'];
+                $qty_per_product_unit = floatval($ingredient_recipe['quantity_required']);
+                $total_needed_for_this_item_and_material = $qty_per_product_unit * $order_quantity;
+
+                // Get current stock for this material. If not in $raw_material_stock_levels, assume 0 (material not tracked or out of stock).
+                $current_stock_for_material = $raw_material_stock_levels[$material_name] ?? 0;
+
+                if (!isset($required_raw_materials_aggregated[$material_name])) {
+                    $required_raw_materials_aggregated[$material_name] = [
+                        'name' => $material_name,
+                        'total_required' => 0,
+                        'available' => $current_stock_for_material // Set available stock once
+                    ];
+                }
+                $required_raw_materials_aggregated[$material_name]['total_required'] += $total_needed_for_this_item_and_material;
+            }
+        }
+    }
+
+    // 4. Check sufficiency and prepare details for the response
+    foreach ($required_raw_materials_aggregated as $material_name => $data) {
         $is_sufficient = ($data['available'] >= $data['total_required']);
         if (!$is_sufficient) {
             $all_raw_materials_sufficient = false;
         }
-        $raw_material_details[$data['name']] = [
+        $raw_material_details_for_response[$material_name] = [ // Keyed by material name
             'required' => $data['total_required'],
             'available' => $data['available'],
             'sufficient' => $is_sufficient,
@@ -100,19 +146,19 @@ try {
         ];
     }
     
-    // No need to check finished products here
-
     echo json_encode([
         'success' => true,
-        'materials' => $raw_material_details, // Keyed by material name
+        'materials' => $raw_material_details_for_response,
         'all_sufficient' => $all_raw_materials_sufficient,
-        // 'needsManufacturing' can be inferred by client if 'all_sufficient' is true and order is for products that have recipes
     ]);
 
 } catch (Exception $e) {
     error_log("Error in check_raw_materials.php: " . $e->getMessage());
-    echo json_encode(['success' => false, 'message' => 'Server error during raw material check: ' . $e->getMessage()]);
+    // Send a more generic message to the client for security, but log the specific error.
+    echo json_encode(['success' => false, 'message' => 'Server error during raw material check. Details: ' . $e->getMessage()]);
 } finally {
-    $conn->close();
+    if (isset($conn) && $conn instanceof mysqli) {
+        $conn->close();
+    }
 }
 ?>
