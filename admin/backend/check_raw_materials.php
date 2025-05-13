@@ -20,12 +20,11 @@ if (json_last_error() !== JSON_ERROR_NONE || !is_array($ordered_items)) {
     exit;
 }
 
-$required_raw_materials_aggregated = []; // Stores total required, available for each material name
+$required_raw_materials_aggregated = [];
 $all_raw_materials_sufficient = true;
-$raw_material_details_for_response = []; // To send back to the frontend
+$raw_material_details_for_response = [];
 
 try {
-    // Get all product IDs from the order
     $product_ids_in_order = [];
     foreach ($ordered_items as $item) {
         if (isset($item['product_id'])) {
@@ -54,11 +53,11 @@ try {
     }
 
     $product_material_requirements = [];
-    $all_distinct_material_names = [];
+    $all_distinct_material_names = []; // Stores names like "Minced Pork", "Soy Sauce"
 
     while ($row = $result_product_ingredients->fetch_assoc()) {
         $p_id = $row['product_id'];
-        $ingredients_json = $row['ingredients'];
+        $ingredients_json = $row['ingredients']; // This is from the 'products' table
 
         if ($ingredients_json) {
             $decoded_ingredients = json_decode($ingredients_json, true);
@@ -66,7 +65,7 @@ try {
                 $product_material_requirements[$p_id] = [];
                 foreach ($decoded_ingredients as $ingredient_pair) {
                     if (is_array($ingredient_pair) && count($ingredient_pair) >= 2) {
-                        $material_name_from_recipe = $ingredient_pair[0]; // This is the name like "Minced Pork"
+                        $material_name_from_recipe = $ingredient_pair[0];
                         $quantity_required_per_unit = floatval($ingredient_pair[1]);
                         $product_material_requirements[$p_id][] = [
                             'material_name' => $material_name_from_recipe,
@@ -84,8 +83,7 @@ try {
     }
 
     // 2. Fetch current stock levels for all distinct raw materials identified
-    // This now assumes your raw materials inventory table (e.g., 'raw_materials')
-    // has a column named 'ingredients' for the material's name, and 'current_stock' for its quantity.
+    //    This queries the 'raw_materials' table.
     $raw_material_stock_levels = [];
     if (!empty($all_distinct_material_names)) {
         $material_names_sql_safe = array_map(function($name) use ($conn) {
@@ -93,29 +91,32 @@ try {
         }, $all_distinct_material_names);
         $material_names_list_sql = implode(",", $material_names_sql_safe);
 
-        // MODIFIED SQL: Changed 'material_name' to 'ingredients'
-        $sql_raw_material_stocks = "SELECT ingredients, current_stock FROM raw_materials WHERE ingredients IN ({$material_names_list_sql})";
+        // --- MODIFIED SQL QUERY ---
+        // Assumes 'raw_materials' table has:
+        //   - 'material_name' (or similar) for the name of the raw material (e.g., "Minced Pork")
+        //   - 'stock_quantity' for its current stock.
+        $sql_raw_material_stocks = "SELECT material_name, stock_quantity FROM raw_materials WHERE material_name IN ({$material_names_list_sql})";
         
         $result_raw_material_stocks = $conn->query($sql_raw_material_stocks);
 
         if (!$result_raw_material_stocks) {
-            // Enhanced error message
-            throw new Exception("Error fetching raw material stocks: " . $conn->error . ". Please ensure your raw materials inventory table (assumed to be 'raw_materials') exists and has a column for the material's name (e.g., 'ingredients') and a column for its stock (e.g., 'current_stock'). The failing query was: " . $sql_raw_material_stocks);
+            throw new Exception("Error fetching raw material stocks from 'raw_materials' table: " . $conn->error . ". Query: " . $sql_raw_material_stocks);
         }
         while ($row_stock = $result_raw_material_stocks->fetch_assoc()) {
-            // MODIFIED: Using $row_stock['ingredients'] as the key, which is the material name
-            $raw_material_stock_levels[$row_stock['ingredients']] = floatval($row_stock['current_stock']);
+            // --- ADJUSTED ARRAY KEYS ---
+            // Uses 'material_name' from the SELECT to key the stocks, and 'stock_quantity' for the value.
+            $raw_material_stock_levels[$row_stock['material_name']] = floatval($row_stock['stock_quantity']);
         }
     }
 
-    // 3. Calculate total raw materials needed based on order quantities and product recipes
+    // 3. Calculate total raw materials needed
     foreach ($ordered_items as $item) {
         $product_id = $item['product_id'] ?? null;
         $order_quantity = intval($item['quantity'] ?? 0);
 
         if ($product_id && $order_quantity > 0 && isset($product_material_requirements[$product_id])) {
             foreach ($product_material_requirements[$product_id] as $ingredient_recipe) {
-                $material_name = $ingredient_recipe['material_name']; // Name like "Minced Pork"
+                $material_name = $ingredient_recipe['material_name'];
                 $qty_per_product_unit = floatval($ingredient_recipe['quantity_required']);
                 $total_needed_for_this_item_and_material = $qty_per_product_unit * $order_quantity;
 
@@ -123,7 +124,7 @@ try {
 
                 if (!isset($required_raw_materials_aggregated[$material_name])) {
                     $required_raw_materials_aggregated[$material_name] = [
-                        'name' => $material_name, // Keep this for the response structure
+                        'name' => $material_name,
                         'total_required' => 0,
                         'available' => $current_stock_for_material
                     ];
