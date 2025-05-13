@@ -1500,7 +1500,7 @@ function getNextAvailableDeliveryDatePHP($minDaysAfter = 5) {
             .then(response => response.json())
             .then(data => {
                 if (data.unsent_notifications > 0) {
-                    showToast(`${data.unsent_notifications} email notifications are pending to be sent.`, 'info');
+                   // showToast(`${data.unsent_notifications} email notifications are pending to be sent.`, 'info');
                 }
             })
             .catch(error => {
