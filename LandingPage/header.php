@@ -51,8 +51,7 @@ if (!isset($_SESSION['cart'])) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Cart Functions -->
     <script src="/LandingPage/cart_functions.js"></script>
-    <!-- Terms and Conditions Functions -->
-    <script src="/LandingPage/js/terms_conditions.js"></script>
+
 
     <style>
         /* Primary brand colors and variables */
@@ -244,59 +243,7 @@ if (!isset($_SESSION['cart'])) {
             to { opacity: 0; }
         }
 
-        /* Terms and Conditions Modal Styles */
-        #termsModal .modal-header {
-            border-bottom: 2px solid rgba(154, 116, 50, 0.2);
-        }
 
-        #termsModal .modal-title {
-            font-weight: 600;
-        }
-
-        #termsModal .modal-body {
-            padding: 20px 25px;
-        }
-
-        #termsModal h5 {
-            color: var(--primary-color);
-            margin-top: 20px;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-
-        #termsModal h5:first-child {
-            margin-top: 0;
-        }
-
-        #termsModal p {
-            margin-bottom: 15px;
-            line-height: 1.6;
-        }
-
-        #termsModal .modal-footer {
-            border-top: 2px solid rgba(154, 116, 50, 0.2);
-            padding: 15px 25px;
-        }
-
-        #termsWarning {
-            margin-bottom: 20px;
-            padding: 12px 15px;
-        }
-
-        #acceptTermsBtn, #declineTermsBtn {
-            padding: 8px 20px;
-            font-weight: 500;
-        }
-
-        #acceptTermsBtn {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-
-        #acceptTermsBtn:hover {
-            background-color: var(--primary-hover);
-            border-color: var(--primary-hover);
-        }
 
         /* Enhanced Profile Dropdown Styles */
         .profile-dropdown {
@@ -686,63 +633,5 @@ if (!isset($_SESSION['cart'])) {
             </div>
         </div>
 
-        <!-- Terms and Conditions Modal -->
-        <div class="modal fade" id="termsModal" tabindex="-1" role="dialog" aria-labelledby="termsModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-            <div class="modal-dialog modal-lg" role="document">
-                <div class="modal-content">
-                    <div class="modal-header" style="background-color: var(--primary-color); color: white;">
-                        <h5 class="modal-title" id="termsModalLabel">Terms and Conditions</h5>
-                    </div>
-                    <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
-                        <div id="termsWarning" class="alert alert-danger d-none">
-                            <i class="fas fa-exclamation-triangle"></i> You must accept the Terms and Conditions to continue using this website.
-                        </div>
 
-                        <h5>Welcome to Top Exchange Food Corp.</h5>
-                        <p>These terms and conditions outline the rules and regulations for the use of our website.</p>
-
-                        <h5>1. Acceptance of Terms</h5>
-                        <p>By accessing this website, you accept these terms and conditions in full. If you disagree with these terms and conditions or any part of them, you must not use this website.</p>
-
-                        <h5>2. License to Use Website</h5>
-                        <p>Unless otherwise stated, Top Exchange Food Corp and/or its licensors own the intellectual property rights for all material on this website. All intellectual property rights are reserved.</p>
-
-                        <h5>3. User Account</h5>
-                        <p>If you create an account on our website, you are responsible for maintaining the security of your account, and you are fully responsible for all activities that occur under the account and any other actions taken in connection with the account.</p>
-
-                        <h5>4. Products and Services</h5>
-                        <p>All products and services displayed on our website are subject to availability. We reserve the right to discontinue any product or service at any time.</p>
-                        <p>Prices for our products are subject to change without notice. We reserve the right to modify or discontinue the service without notice at any time.</p>
-
-                        <h5>5. Order Processing</h5>
-                        <p>When an item is out of stock, it will be marked as 'pre-order'. Pre-ordered items will be delivered once they become available.</p>
-                        <p>The status of pre-ordered items will be clearly displayed during checkout and in your order history.</p>
-
-                        <h5>6. Payment</h5>
-                        <p>We offer various payment methods including QR payment options that redirect to secure payment gateways.</p>
-                        <p>All payment information is encrypted and securely processed. We do not store your payment details on our servers.</p>
-
-                        <h5>7. Delivery</h5>
-                        <p>Delivery times are estimates and not guaranteed. Factors outside our control may affect delivery times.</p>
-                        <p>Free delivery is available for orders above ₱500. Orders below this amount will incur a delivery fee of ₱50.</p>
-
-                        <h5>8. Returns and Refunds</h5>
-                        <p>Please refer to our Returns and Refunds Policy for detailed information.</p>
-
-                        <h5>9. Privacy Policy</h5>
-                        <p>Your use of our website is also governed by our Privacy Policy.</p>
-
-                        <h5>10. Limitation of Liability</h5>
-                        <p>To the maximum extent permitted by applicable law, we exclude all representations, warranties and conditions relating to our website and the use of this website.</p>
-
-                        <h5>11. Changes to Terms</h5>
-                        <p>We reserve the right to revise these terms and conditions at any time as we see fit, and by using this website you are expected to review these terms regularly to ensure you understand all terms and conditions governing use of this website.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-danger" id="declineTermsBtn">Decline</button>
-                        <button type="button" class="btn btn-success" id="acceptTermsBtn">I Accept</button>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
