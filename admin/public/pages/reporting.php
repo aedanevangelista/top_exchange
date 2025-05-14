@@ -109,7 +109,7 @@ $pageTitle = "Reporting";
                     <option value="sales_summary">Sales Summary</option>
                     <option value="sales_by_client">Sales by Client</option>
                     <!-- **** ADDED NEW REPORT TYPE **** -->
-                    <option value="sales_by_product">Sales by Product</option>
+                    <option value="sales_by_product">Salesas by Product</option>
                     <!-- <option value="inventory_status">Low Inventory Status</option> -->
                     <option value="order_trends">Order Listing</option>
                     <!-- Add more report types here -->
