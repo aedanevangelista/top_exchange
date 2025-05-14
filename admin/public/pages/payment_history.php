@@ -932,8 +932,8 @@ if ($result && $row = $result->fetch_assoc()) {
     let currentYear = new Date().getFullYear();
     let currentUserBalance = 0;
     
-    // Current date for comparison in UTC (as per the user's timestamp: 2025-04-29 13:25:00)
-    const currentDate = new Date('2025-04-29T13:25:00Z');
+    // Current date for comparison
+    const currentDate = new Date(); // Use current system date and time
     const currentYearValue = currentDate.getFullYear();
     const currentMonthValue = currentDate.getMonth(); // 0-based index
 
@@ -2014,7 +2014,7 @@ function showToast(message, type = 'info') {
                             <td>${order.delivery_date}</td>
                             <td class="delivery-address">${deliveryAddress}</td>
                             <td>
-                                <button class="view-button" onclick="viewOrderDetails(${JSON.stringify(order.orders).replace(/"/g, '&quot;')}, '${order.po_number}', '${username}', '${deliveryAddress}')">
+                                <button class="view-button" onclick="viewOrderDetails(${JSON.stringify(order.orders).replace(/"/g, '&quot;')}, '${order.po_number}', '${username}', '${deliveryAddress.replace(/'/g, "\\'")}')">
                                     View Orders
                                 </button>
                             </td>
