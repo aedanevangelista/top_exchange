@@ -37,8 +37,8 @@ if ($amount <= 0) {
     exit;
 }
 
-// Check if the month is in the future (using fixed date: March 26, 2025)
-$current_date = new DateTime('2025-03-26');
+// Check if the month is in the future
+$current_date = new DateTime(); // Use current server date and time
 $check_date = new DateTime("$year-$month-01");
 $last_day_of_month = clone $check_date;
 $last_day_of_month->modify('last day of this month');
@@ -327,7 +327,7 @@ try {
         $param_values[] = $payment_type;
     }
     
-    if ($notes_column_exists) {
+    if ($notes_column_exists) { // Assuming notes column in payment_history is the same as in monthly_payments
         $columns[] = "notes";
         $placeholders[] = "?";
         $param_types .= "s";
