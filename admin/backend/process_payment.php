@@ -364,7 +364,7 @@ try {
         $new_balance = $row['balance'];
     }
     
-    // Commit transaction
+    // Commit transactions
     $conn->commit();
     
     echo json_encode([
