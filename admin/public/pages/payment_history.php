@@ -1190,8 +1190,11 @@ if ($result && $row = $result->fetch_assoc()) {
                     
                     // Determine button status and classes
                     const viewOrdersButtonDisabled = false; // Allow viewing orders even for future months
-                    const payButtonDisabled = isFutureMonth || displayStatus === 'Fully Paid' || parseFloat(monthData.total_amount) === 0;
-                    const statusButtonDisabled = isFutureMonth;
+                    
+                    // MODIFIED: payButtonDisabled no longer considers isFutureMonth
+                    const payButtonDisabled = displayStatus === 'Fully Paid' || parseFloat(monthData.total_amount) === 0;
+                    
+                    const statusButtonDisabled = isFutureMonth; // Status button remains disabled for future months
                     const downloadButtonDisabled = parseFloat(monthData.total_amount) === 0;
                     
                     const viewOrdersBtnClass = viewOrdersButtonDisabled ? 'view-button disabled' : 'view-button';
@@ -1230,9 +1233,9 @@ if ($result && $row = $result->fetch_assoc()) {
                         paymentTypeHtml = `<span class="payment-type ${paymentTypeClass}">${monthData.payment_type}</span>`;
                     }
                     
-                    const tooltip = isFutureMonth ? 'Month has not ended yet' : 
-                                   (displayStatus === 'Fully Paid' ? 'Already paid' : 
-                                   (parseFloat(monthData.total_amount) === 0 ? 'No orders to pay' : 'Make payment'));
+                    // MODIFIED: Tooltip logic updated
+                    const tooltip = displayStatus === 'Fully Paid' ? 'Already paid' :
+                                   (parseFloat(monthData.total_amount) === 0 ? 'No orders to pay' : 'Make payment');
                     
                     monthlyPaymentsHtml += `
                         <tr>
