@@ -2236,7 +2236,7 @@ function showToast(message, type = 'info') {
     const currentYear = now.getUTCFullYear();
     const currentMonth = now.getUTCMonth() + 1; // JavaScript months are 0-indexed
     
-    // Convert parameters to numbers to ensure proper comparison
+    // Convert parameters to numbers to ensure proper comparisons
     const yearNum = parseInt(year);
     const monthNum = parseInt(month);
     
